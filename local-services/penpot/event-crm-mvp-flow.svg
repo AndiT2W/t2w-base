@@ -1,0 +1,72 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#EEF2FF"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C5CFF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="20" flood-color="#1E293B" flood-opacity="0.08"/>
+    </filter>
+    <style>
+      .title { font: 700 38px Inter, Arial, sans-serif; fill: #0F172A; }
+      .h2 { font: 700 20px Inter, Arial, sans-serif; fill: #0F172A; }
+      .body { font: 500 14px Inter, Arial, sans-serif; fill: #334155; }
+      .muted { font: 400 13px Inter, Arial, sans-serif; fill: #64748B; }
+      .chip { font: 600 12px Inter, Arial, sans-serif; fill: #4F46E5; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" fill="url(#bg)"/>
+
+  <text x="96" y="110" class="title">MVP Flow</text>
+  <text x="96" y="142" class="muted">Einfacher Navigationsfluss fuer die erste GCW Base Event-Ansicht</text>
+
+  <g filter="url(#shadow)">
+    <rect x="96" y="212" width="360" height="420" rx="24" fill="#FFFFFF"/>
+    <rect x="540" y="212" width="360" height="420" rx="24" fill="#FFFFFF"/>
+    <rect x="984" y="212" width="360" height="420" rx="24" fill="#FFFFFF"/>
+  </g>
+
+  <rect x="120" y="242" width="120" height="30" rx="15" fill="#EEF2FF"/>
+  <text x="147" y="262" class="chip">Schritt 1</text>
+  <text x="120" y="310" class="h2">Event List MVP</text>
+  <text x="120" y="342" class="body">Einstieg ueber die Event-Liste</text>
+  <text x="120" y="378" class="body">- Suche nach Event, Veranstalter oder Eventcode</text>
+  <text x="120" y="408" class="body">- Status und Datum sofort sichtbar</text>
+  <text x="120" y="438" class="body">- Kontakte und T2W-ID schnell pruefbar</text>
+  <text x="120" y="468" class="body">- Klick auf Event fuehrt ins Detail</text>
+
+  <rect x="564" y="242" width="120" height="30" rx="15" fill="#EEF2FF"/>
+  <text x="591" y="262" class="chip">Schritt 2</text>
+  <text x="564" y="310" class="h2">Event Detail MVP</text>
+  <text x="564" y="342" class="body">Arbeitsansicht fuer das konkrete Event</text>
+  <text x="564" y="378" class="body">- Stammdaten und Adresse</text>
+  <text x="564" y="408" class="body">- Anmeldung und Finanzen</text>
+  <text x="564" y="438" class="body">- OneDrive und Eventfinance</text>
+  <text x="564" y="468" class="body">- Timeline und Vollstaendigkeit</text>
+
+  <rect x="1008" y="242" width="120" height="30" rx="15" fill="#EEF2FF"/>
+  <text x="1035" y="262" class="chip">Schritt 3</text>
+  <text x="1008" y="310" class="h2">TIME2WIN</text>
+  <text x="1008" y="342" class="body">Optionaler Sprung ins bestehende Backend</text>
+  <text x="1008" y="378" class="body">- Nur wenn `t2w_event_id` vorhanden ist</text>
+  <text x="1008" y="408" class="body">- Kleiner Link statt grossem Modul</text>
+  <text x="1008" y="438" class="body">- GCW Base bleibt die Hauptansicht</text>
+  <text x="1008" y="468" class="body">- TIME2WIN bleibt Referenzsystem</text>
+
+  <path d="M456 422H520" stroke="url(#accent)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M900 422H964" stroke="url(#accent)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M508 402L540 422L508 442" fill="none" stroke="#5B5BF0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M952 402L984 422L952 442" fill="none" stroke="#5B5BF0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g filter="url(#shadow)">
+    <rect x="96" y="684" width="1248" height="120" rx="24" fill="#FFFFFF"/>
+  </g>
+  <text x="128" y="726" class="h2">Warum dieser Flow?</text>
+  <text x="128" y="758" class="body">Die Liste ist der Einstieg, das Detail ist die Arbeitsflaeche, und TIME2WIN bleibt bewusst nur ein kleiner Ausstiegspunkt.</text>
+  <text x="128" y="786" class="muted">So bleibt das MVP klein, ohne bestehende Systeme abzuschneiden.</text>
+</svg>

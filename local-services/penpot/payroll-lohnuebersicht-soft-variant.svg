@@ -1,0 +1,182 @@
+<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F7FAFD"/>
+      <stop offset="100%" stop-color="#EFF4FA"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="20" flood-color="#0F172A" flood-opacity="0.08"/>
+    </filter>
+    <style>
+      .title { font: 700 40px Inter, Arial, sans-serif; fill: #0F172A; }
+      .subtitle { font: 400 18px Inter, Arial, sans-serif; fill: #64748B; }
+      .section { font: 700 16px Inter, Arial, sans-serif; fill: #0F172A; }
+      .label { font: 600 13px Inter, Arial, sans-serif; fill: #475569; }
+      .body { font: 500 14px Inter, Arial, sans-serif; fill: #334155; }
+      .small { font: 500 12px Inter, Arial, sans-serif; fill: #64748B; }
+      .nav { font: 500 14px Inter, Arial, sans-serif; fill: #0F172A; }
+      .muted { font: 500 13px Inter, Arial, sans-serif; fill: #94A3B8; }
+      .metric { font: 700 28px Inter, Arial, sans-serif; fill: #0F172A; }
+      .table-head { font: 600 12px Inter, Arial, sans-serif; fill: #64748B; letter-spacing: 0.04em; }
+      .table-cell { font: 500 14px Inter, Arial, sans-serif; fill: #0F172A; }
+      .table-strong { font: 700 14px Inter, Arial, sans-serif; fill: #0F172A; }
+      .pill { font: 600 12px Inter, Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" fill="url(#bg)"/>
+
+  <rect x="0" y="0" width="236" height="980" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="236" height="72" fill="#FFFFFF"/>
+  <text x="20" y="35" class="section">TIME2WIN</text>
+  <text x="20" y="54" class="small">Stundenabrechnung</text>
+  <rect x="0" y="71" width="236" height="1" fill="#E2E8F0"/>
+
+  <text x="20" y="114" class="nav">Dashboard</text>
+  <text x="20" y="154" class="nav">Stunden / Loehne</text>
+  <text x="20" y="194" class="nav">Auszahlungen</text>
+  <text x="20" y="244" class="small">ADMIN</text>
+  <text x="20" y="284" class="nav">Stundenaufzeichnungen</text>
+  <rect x="6" y="306" width="218" height="42" rx="12" fill="#F8FBFF" stroke="#0F172A" stroke-width="2"/>
+  <text x="38" y="333" class="nav">Lohnuebersicht</text>
+  <text x="20" y="388" class="nav">Monatsabrechnung</text>
+  <text x="20" y="428" class="nav">Einstellungen</text>
+  <text x="20" y="468" class="nav">Mitarbeiter</text>
+  <text x="20" y="508" class="nav">Log</text>
+  <text x="20" y="548" class="nav">Warnungen</text>
+
+  <text x="268" y="64" class="title">Lohnuebersicht</text>
+  <text x="268" y="94" class="subtitle">Alternative Monatsansicht mit kompakterem Header, Kennzahlen und ruhiger Tabellenflaeche.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="268" y="132" width="1296" height="110" rx="22" fill="#FFFFFF"/>
+  </g>
+  <text x="292" y="165" class="section">Juli 2026</text>
+  <text x="292" y="188" class="small">Uebersicht ueber aktive, pausierte und abgemeldete Mitarbeiter</text>
+
+  <rect x="292" y="202" width="116" height="24" rx="12" fill="#E8F0FE"/>
+  <text x="318" y="218" class="pill" fill="#1D4ED8">13 Mitarbeiter</text>
+  <rect x="420" y="202" width="106" height="24" rx="12" fill="#ECFDF3"/>
+  <text x="448" y="218" class="pill" fill="#15803D">11 aktiv</text>
+  <rect x="538" y="202" width="120" height="24" rx="12" fill="#FEF3C7"/>
+  <text x="560" y="218" class="pill" fill="#B45309">2 abgemeldet</text>
+
+  <rect x="1000" y="154" width="164" height="64" rx="18" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="1022" y="180" class="small">Gesamtsumme</text>
+  <text x="1022" y="208" class="metric">24 827,19 EUR</text>
+
+  <rect x="1180" y="154" width="164" height="64" rx="18" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="1202" y="180" class="small">Fixbetraege</text>
+  <text x="1202" y="208" class="metric">24 769,29 EUR</text>
+
+  <rect x="1360" y="154" width="180" height="64" rx="18" fill="#0F172A"/>
+  <text x="1400" y="193" class="label" fill="#FFFFFF">Export vorbereiten</text>
+
+  <g filter="url(#shadow)">
+    <rect x="268" y="266" width="1296" height="126" rx="22" fill="#FFFFFF"/>
+  </g>
+  <text x="292" y="301" class="section">Filter und Anzeige</text>
+
+  <text x="292" y="332" class="label">Monat</text>
+  <rect x="292" y="344" width="168" height="42" rx="12" fill="#FFFFFF" stroke="#D7E0EA"/>
+  <text x="310" y="371" class="body">Juli</text>
+  <text x="430" y="371" class="muted">v</text>
+
+  <text x="478" y="332" class="label">Jahr</text>
+  <rect x="478" y="344" width="128" height="42" rx="12" fill="#FFFFFF" stroke="#D7E0EA"/>
+  <text x="496" y="371" class="body">2026</text>
+  <text x="570" y="371" class="muted">v</text>
+
+  <text x="632" y="332" class="label">Status</text>
+  <rect x="632" y="344" width="124" height="42" rx="12" fill="#EFF6FF" stroke="#BFDBFE"/>
+  <text x="654" y="371" class="body" fill="#1D4ED8">Alle</text>
+
+  <rect x="776" y="344" width="146" height="42" rx="12" fill="#FFFFFF" stroke="#D7E0EA"/>
+  <text x="799" y="371" class="body">Nur aktive</text>
+  <rect x="786" y="355" width="30" height="18" rx="9" fill="#DBEAFE"/>
+  <circle cx="803" cy="364" r="7" fill="#FFFFFF"/>
+
+  <rect x="946" y="344" width="134" height="42" rx="12" fill="#FFFFFF" stroke="#D7E0EA"/>
+  <text x="969" y="371" class="body">Mit Eintraegen</text>
+
+  <rect x="1100" y="344" width="134" height="42" rx="12" fill="#FFFFFF" stroke="#D7E0EA"/>
+  <text x="1125" y="371" class="body">Abweichungen</text>
+
+  <rect x="1254" y="344" width="120" height="42" rx="12" fill="#FFFFFF" stroke="#D7E0EA"/>
+  <text x="1278" y="371" class="body">Zuruecksetzen</text>
+
+  <rect x="1392" y="344" width="148" height="42" rx="12" fill="#0F172A"/>
+  <text x="1432" y="371" class="label" fill="#FFFFFF">Ansicht anwenden</text>
+
+  <g filter="url(#shadow)">
+    <rect x="268" y="416" width="1296" height="444" rx="22" fill="#FFFFFF"/>
+  </g>
+  <text x="292" y="452" class="section">Lohnliste</text>
+  <text x="292" y="474" class="small">Kompakte Variante mit Summenzeile und weniger visuellem Rauschen.</text>
+
+  <rect x="1416" y="438" width="124" height="32" rx="16" fill="#F8FAFC" stroke="#E2E8F0"/>
+  <text x="1450" y="459" class="small">Details oeffnen</text>
+
+  <rect x="292" y="498" width="1248" height="1" fill="#E2E8F0"/>
+  <text x="300" y="526" class="table-head">NAME</text>
+  <text x="540" y="526" class="table-head">POSITION</text>
+  <text x="688" y="526" class="table-head">GRUPPE</text>
+  <text x="792" y="526" class="table-head">STATUS</text>
+  <text x="980" y="526" class="table-head">STD.</text>
+  <text x="1080" y="526" class="table-head">EINTRAEGE</text>
+  <text x="1198" y="526" class="table-head">FIX EUR</text>
+  <text x="1376" y="526" class="table-head">GESAMT EUR</text>
+
+  <g>
+    <rect x="292" y="544" width="1248" height="56" rx="14" fill="#FBFDFF"/>
+    <text x="300" y="578" class="table-cell">Dorfinger, Jonas</text>
+    <text x="540" y="578" class="table-cell">timer</text>
+    <rect x="688" y="557" width="42" height="22" rx="11" fill="#EFF6FF"/><text x="702" y="572" class="pill" fill="#1D4ED8">F&amp;S</text>
+    <rect x="792" y="555" width="92" height="26" rx="13" fill="#0F172A"/><text x="810" y="572" class="pill" fill="#FFFFFF">angemeldet</text>
+    <text x="980" y="578" class="table-cell">0.00</text>
+    <text x="1090" y="578" class="table-cell">1</text>
+    <text x="1198" y="578" class="table-cell">1 457,00</text>
+    <text x="1376" y="578" class="table-strong">1 457,00</text>
+  </g>
+  <g>
+    <rect x="292" y="608" width="1248" height="56" rx="14" fill="#FFFFFF"/>
+    <text x="300" y="642" class="table-cell">Eder, Andreas</text>
+    <text x="540" y="642" class="table-cell">geschaeftsfuehrer</text>
+    <rect x="688" y="621" width="28" height="22" rx="11" fill="#F1F5F9"/><text x="700" y="636" class="pill" fill="#334155">F</text>
+    <rect x="792" y="619" width="92" height="26" rx="13" fill="#0F172A"/><text x="810" y="636" class="pill" fill="#FFFFFF">angemeldet</text>
+    <text x="980" y="642" class="table-cell">0.00</text>
+    <text x="1090" y="642" class="table-cell">2</text>
+    <text x="1198" y="642" class="table-cell">6 919,00</text>
+    <text x="1376" y="642" class="table-strong">6 919,00</text>
+  </g>
+  <g>
+    <rect x="292" y="672" width="1248" height="56" rx="14" fill="#FBFDFF"/>
+    <text x="300" y="706" class="table-cell">Eder, Barbara</text>
+    <text x="540" y="706" class="table-cell">backoffice</text>
+    <rect x="688" y="685" width="28" height="22" rx="11" fill="#F1F5F9"/><text x="700" y="700" class="pill" fill="#334155">F</text>
+    <rect x="792" y="683" width="92" height="26" rx="13" fill="#0F172A"/><text x="810" y="700" class="pill" fill="#FFFFFF">angemeldet</text>
+    <text x="980" y="706" class="table-cell">0.00</text>
+    <text x="1090" y="706" class="table-cell">1</text>
+    <text x="1198" y="706" class="table-cell">1 600,00</text>
+    <text x="1376" y="706" class="table-strong">1 600,00</text>
+  </g>
+  <g>
+    <rect x="292" y="736" width="1248" height="56" rx="14" fill="#FFFFFF"/>
+    <text x="300" y="770" class="table-cell">Heiter, Emilia</text>
+    <text x="540" y="770" class="table-cell">backoffice</text>
+    <rect x="688" y="749" width="28" height="22" rx="11" fill="#F8FAFC"/><text x="700" y="764" class="pill" fill="#64748B">-</text>
+    <rect x="792" y="747" width="92" height="26" rx="13" fill="#DC2626"/><text x="810" y="764" class="pill" fill="#FFFFFF">abgemeldet</text>
+    <text x="980" y="770" class="table-cell">0.00</text>
+    <text x="1090" y="770" class="table-cell">1</text>
+    <text x="1198" y="770" class="table-cell">51,90</text>
+    <text x="1376" y="770" class="table-strong">51,90</text>
+  </g>
+
+  <rect x="292" y="812" width="1248" height="1" fill="#E2E8F0"/>
+  <text x="1000" y="841" class="table-strong">Summe</text>
+  <text x="1090" y="841" class="table-strong">14</text>
+  <text x="1198" y="841" class="table-strong">24 827,19</text>
+  <text x="1376" y="841" class="table-strong">24 827,19</text>
+
+  <text x="292" y="892" class="small">Hinweis: Diese Variante priorisiert Lesbarkeit, Summen und schnelle Monatskontrolle.</text>
+</svg>

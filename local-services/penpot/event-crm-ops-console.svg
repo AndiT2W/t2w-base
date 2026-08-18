@@ -1,0 +1,95 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1440" height="900" fill="#0F172A"/>
+  <rect x="0" y="0" width="286" height="900" fill="#111827"/>
+  <rect x="24" y="24" width="238" height="52" rx="16" fill="#0B1220" stroke="#1F2937"/>
+  <circle cx="48" cy="50" r="12" fill="#D4A373"/>
+  <text x="72" y="55" fill="#F8FAFC" font-family="Arial, sans-serif" font-size="18" font-weight="700">Time2Win Base</text>
+  <text x="24" y="124" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">NAVIGATION</text>
+  <text x="24" y="164" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15" font-weight="700">Events</text>
+  <text x="24" y="198" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15">Organizers</text>
+  <text x="24" y="232" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15">Contacts</text>
+  <text x="24" y="266" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15">Invoices</text>
+  <text x="24" y="300" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15">Files</text>
+  <text x="24" y="380" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">WORKSPACE</text>
+  <rect x="20" y="404" width="246" height="116" rx="20" fill="#0B1220" stroke="#243041"/>
+  <text x="40" y="440" fill="#F8FAFC" font-family="Arial, sans-serif" font-size="14" font-weight="700">Current event</text>
+  <text x="40" y="472" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="18" font-weight="700">Tauern Circle 2026</text>
+  <text x="40" y="500" fill="#94A3B8" font-family="Arial, sans-serif" font-size="14">3 contacts · 4 invoices · 12 notes</text>
+
+  <text x="326" y="60" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="14" letter-spacing="2">EVENT OPS CONSOLE</text>
+  <text x="326" y="132" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="50" font-weight="700" letter-spacing="-1.2">Operational control for one event.</text>
+  <text x="326" y="176" fill="#94A3B8" font-family="Arial, sans-serif" font-size="16">A denser admin view for quick work, with events, contacts, invoices, and status in one place.</text>
+  <rect x="1146" y="42" width="214" height="44" rx="22" fill="#0B1220" stroke="#243041"/>
+  <circle cx="1170" cy="64" r="5" fill="#8FB996"/>
+  <text x="1184" y="69" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="14" font-weight="700">Sync active</text>
+
+  <rect x="326" y="214" width="338" height="118" rx="22" fill="#111827" stroke="#243041"/>
+  <text x="350" y="250" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">OPEN TASKS</text>
+  <text x="350" y="294" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="36" font-weight="700">14</text>
+  <text x="420" y="294" fill="#D1D5DB" font-family="Arial, sans-serif" font-size="15">up next today</text>
+
+  <rect x="682" y="214" width="338" height="118" rx="22" fill="#111827" stroke="#243041"/>
+  <text x="706" y="250" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">INVOICES</text>
+  <text x="706" y="294" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="36" font-weight="700">€18.4k</text>
+  <text x="838" y="294" fill="#D1D5DB" font-family="Arial, sans-serif" font-size="15">linked value</text>
+
+  <rect x="1038" y="214" width="338" height="118" rx="22" fill="#111827" stroke="#243041"/>
+  <text x="1062" y="250" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">CONTACTS</text>
+  <text x="1062" y="294" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="36" font-weight="700">8</text>
+  <text x="1110" y="294" fill="#D1D5DB" font-family="Arial, sans-serif" font-size="15">roles covered</text>
+
+  <rect x="326" y="364" width="726" height="458" rx="26" fill="#0B1220" stroke="#243041"/>
+  <text x="350" y="404" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">EVENT LIST</text>
+  <rect x="350" y="424" width="678" height="44" rx="22" fill="#111827" stroke="#243041"/>
+  <text x="372" y="452" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">EVENT</text>
+  <text x="520" y="452" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">ORGANIZER</text>
+  <text x="702" y="452" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">DATE</text>
+  <text x="816" y="452" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">STATUS</text>
+  <text x="930" y="452" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">VALUE</text>
+
+  <line x1="350" y1="490" x2="1028" y2="490" stroke="#1F2937"/>
+  <line x1="350" y1="566" x2="1028" y2="566" stroke="#1F2937"/>
+  <line x1="350" y1="642" x2="1028" y2="642" stroke="#1F2937"/>
+  <line x1="350" y1="718" x2="1028" y2="718" stroke="#1F2937"/>
+
+  <text x="372" y="532" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15" font-weight="700">T2W-241</text>
+  <text x="520" y="532" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15">Tauern Circle 2026</text>
+  <text x="702" y="532" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15">21-23 Jun</text>
+  <rect x="804" y="512" width="76" height="28" rx="14" fill="#163024"/>
+  <circle cx="820" cy="526" r="4" fill="#8FB996"/>
+  <text x="833" y="531" fill="#8FB996" font-family="Arial, sans-serif" font-size="11" font-weight="700">Planned</text>
+  <text x="930" y="532" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15">€18,400</text>
+
+  <text x="372" y="608" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15" font-weight="700">T2W-242</text>
+  <text x="520" y="608" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15">Salzburg Trail Night</text>
+  <text x="702" y="608" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15">08-09 Aug</text>
+  <rect x="804" y="588" width="82" height="28" rx="14" fill="#2A1C14"/>
+  <circle cx="820" cy="602" r="4" fill="#D4A373"/>
+  <text x="833" y="607" fill="#D4A373" font-family="Arial, sans-serif" font-size="11" font-weight="700">Partial</text>
+  <text x="930" y="608" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15">€9,200</text>
+
+  <text x="372" y="684" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15" font-weight="700">T2W-243</text>
+  <text x="520" y="684" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15">Lake Run Series</text>
+  <text x="702" y="684" fill="#94A3B8" font-family="Arial, sans-serif" font-size="15">14-16 Sep</text>
+  <rect x="804" y="664" width="70" height="28" rx="14" fill="#182033"/>
+  <text x="822" y="683" fill="#A5B4FC" font-family="Arial, sans-serif" font-size="11" font-weight="700">Sent</text>
+  <text x="930" y="684" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="15">€12,500</text>
+
+  <rect x="1086" y="364" width="290" height="204" rx="26" fill="#111827" stroke="#243041"/>
+  <text x="1110" y="404" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">DETAILS</text>
+  <text x="1110" y="444" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="24" font-weight="700">Tauern Circle 2026</text>
+  <text x="1110" y="476" fill="#D1D5DB" font-family="Arial, sans-serif" font-size="15">Organizer: Trail Club Innsbruck</text>
+  <text x="1110" y="506" fill="#D1D5DB" font-family="Arial, sans-serif" font-size="15">Finance: 3 contacts · 1 payout recipient</text>
+  <text x="1110" y="536" fill="#D1D5DB" font-family="Arial, sans-serif" font-size="15">Files: offer.xlsx, invoice.pdf, folder</text>
+
+  <rect x="1086" y="594" width="290" height="228" rx="26" fill="#0B1220" stroke="#243041"/>
+  <text x="1110" y="634" fill="#94A3B8" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">FILTERS</text>
+  <rect x="1110" y="652" width="242" height="38" rx="12" fill="#111827" stroke="#243041"/>
+  <text x="1126" y="677" fill="#94A3B8" font-family="Arial, sans-serif" font-size="14">Search event / organizer</text>
+  <rect x="1110" y="706" width="112" height="36" rx="18" fill="#1F2937"/>
+  <text x="1134" y="729" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="13">Planned</text>
+  <rect x="1230" y="706" width="122" height="36" rx="18" fill="#1F2937"/>
+  <text x="1254" y="729" fill="#E2E8F0" font-family="Arial, sans-serif" font-size="13">Invoices</text>
+  <rect x="1110" y="756" width="242" height="44" rx="22" fill="#D4A373"/>
+  <text x="1178" y="783" fill="#0F172A" font-family="Arial, sans-serif" font-size="14" font-weight="700">Open event</text>
+</svg>

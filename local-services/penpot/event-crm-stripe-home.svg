@@ -1,0 +1,99 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1440" height="900" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="286" height="900" fill="#FBFCFE" stroke="#E5EAF2"/>
+
+  <circle cx="34" cy="30" r="11" fill="#111827"/>
+  <circle cx="34" cy="30" r="7" fill="#7C3AED"/>
+  <text x="56" y="35" fill="#111827" font-family="Arial, sans-serif" font-size="18" font-weight="700">TIME2WIN</text>
+  <text x="238" y="34" fill="#94A3B8" font-family="Arial, sans-serif" font-size="18">⌄</text>
+
+  <text x="20" y="110" fill="#4F46E5" font-family="Arial, sans-serif" font-size="15" font-weight="700">⌂ Home</text>
+  <text x="20" y="144" fill="#334155" font-family="Arial, sans-serif" font-size="15">⇄ Salden</text>
+  <text x="20" y="178" fill="#334155" font-family="Arial, sans-serif" font-size="15">↻ Transaktionen</text>
+  <text x="20" y="212" fill="#334155" font-family="Arial, sans-serif" font-size="15">◯ Kunden</text>
+  <text x="20" y="246" fill="#334155" font-family="Arial, sans-serif" font-size="15">▣ Produktkatalog</text>
+
+  <text x="20" y="304" fill="#64748B" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">VERKNÜPFUNGEN</text>
+  <text x="20" y="338" fill="#334155" font-family="Arial, sans-serif" font-size="15">╳ Rechnungen</text>
+  <text x="20" y="372" fill="#334155" font-family="Arial, sans-serif" font-size="15">▤ Berichte</text>
+
+  <text x="20" y="432" fill="#64748B" font-family="Arial, sans-serif" font-size="12" letter-spacing="2">PRODUKTE</text>
+  <text x="20" y="466" fill="#334155" font-family="Arial, sans-serif" font-size="15">◇ Connect</text>
+  <text x="20" y="500" fill="#334155" font-family="Arial, sans-serif" font-size="15">◆ Payments</text>
+  <text x="20" y="534" fill="#334155" font-family="Arial, sans-serif" font-size="15">◧ Billing</text>
+  <text x="20" y="568" fill="#334155" font-family="Arial, sans-serif" font-size="15">▥ Apps</text>
+  <text x="20" y="602" fill="#334155" font-family="Arial, sans-serif" font-size="15">⋯ Mehr</text>
+
+  <rect x="326" y="26" width="394" height="38" rx="12" fill="#F7F8FC" stroke="#EDF2F7"/>
+  <text x="344" y="50" fill="#94A3B8" font-family="Arial, sans-serif" font-size="14">Suche</text>
+  <circle cx="1226" cy="45" r="14" fill="#F3F4F6"/>
+  <circle cx="1264" cy="45" r="14" fill="#F3F4F6"/>
+  <circle cx="1302" cy="45" r="14" fill="#F3F4F6"/>
+  <circle cx="1340" cy="45" r="14" fill="#F3F4F6"/>
+  <circle cx="1378" cy="45" r="14" fill="#4F46E5"/>
+  <text x="1374" y="50" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="16" font-weight="700">+</text>
+
+  <text x="326" y="122" fill="#0F172A" font-family="Arial, sans-serif" font-size="36" font-weight="700">Heute</text>
+  <rect x="1282" y="88" width="128" height="30" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="1300" y="108" fill="#0F172A" font-family="Arial, sans-serif" font-size="13" font-weight="700">Gelder auszahlen</text>
+
+  <line x1="326" y1="128" x2="1384" y2="128" stroke="#E5EAF2"/>
+
+  <text x="326" y="188" fill="#334155" font-family="Arial, sans-serif" font-size="13" font-weight="700">Bruttovolumen</text>
+  <text x="326" y="220" fill="#0F172A" font-family="Arial, sans-serif" font-size="34" font-weight="700">12.820,21 €</text>
+  <text x="326" y="244" fill="#64748B" font-family="Arial, sans-serif" font-size="13">15:34</text>
+
+  <text x="456" y="188" fill="#334155" font-family="Arial, sans-serif" font-size="13" font-weight="700">1. Jan. 2024</text>
+  <text x="456" y="220" fill="#0F172A" font-family="Arial, sans-serif" font-size="34" font-weight="700">4.365,56 €</text>
+
+  <text x="326" y="392" fill="#4F46E5" font-family="Arial, sans-serif" font-size="12" font-weight="700">00:00</text>
+  <text x="1338" y="392" fill="#4F46E5" font-family="Arial, sans-serif" font-size="12" font-weight="700">00:00</text>
+  <path d="M326 376 C400 377 430 375 456 374 C500 374 510 374 526 374 C560 374 578 373 604 360 C634 345 644 328 676 318 C710 308 742 310 770 299 C808 284 818 256 846 250 C878 244 902 246 930 239 C962 230 980 220 1000 219 C1046 217 1070 219 1110 223 C1160 228 1210 229 1260 230 C1308 231 1340 231 1380 231" stroke="#8B5CF6" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M326 376 C400 377 430 377 456 377 C500 377 510 377 526 377 C560 377 578 376 604 375 C634 373 644 371 676 368 C710 365 742 361 770 360 C808 359 818 357 846 355 C878 352 902 349 930 347 C962 343 980 341 1000 338 C1046 335 1070 333 1110 331 C1160 329 1210 329 1260 329 C1308 329 1340 329 1380 329" stroke="#94A3B8" stroke-width="3" stroke-dasharray="5 6" fill="none" stroke-linecap="round"/>
+  <line x1="326" y1="374" x2="1380" y2="374" stroke="#E5EAF2"/>
+
+  <text x="326" y="470" fill="#0F172A" font-family="Arial, sans-serif" font-size="14" font-weight="700">EUR-Guthaben</text>
+  <text x="326" y="504" fill="#0F172A" font-family="Arial, sans-serif" font-size="28" font-weight="700">66.658,62 €</text>
+  <text x="870" y="470" fill="#4F46E5" font-family="Arial, sans-serif" font-size="14" font-weight="700">Details anzeigen</text>
+
+  <text x="326" y="592" fill="#0F172A" font-family="Arial, sans-serif" font-size="32" font-weight="700">Ihre Übersicht</text>
+  <rect x="326" y="608" width="108" height="28" rx="14" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="338" y="626" fill="#334155" font-family="Arial, sans-serif" font-size="12">Datumsbereich</text>
+  <rect x="438" y="608" width="124" height="28" rx="14" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="450" y="626" fill="#4F46E5" font-family="Arial, sans-serif" font-size="12">Letzte 7 Tage</text>
+  <rect x="568" y="608" width="86" height="28" rx="14" fill="#F8FAFC" stroke="#CBD5E1"/>
+  <text x="585" y="626" fill="#334155" font-family="Arial, sans-serif" font-size="12">Täglich</text>
+
+  <rect x="1168" y="608" width="110" height="30" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="1184" y="628" fill="#0F172A" font-family="Arial, sans-serif" font-size="13" font-weight="700">+ Hinzufügen</text>
+  <rect x="1288" y="608" width="102" height="30" rx="10" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="1306" y="628" fill="#0F172A" font-family="Arial, sans-serif" font-size="13" font-weight="700">Bearbeiten</text>
+
+  <rect x="326" y="656" width="388" height="220" rx="20" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="346" y="694" fill="#0F172A" font-family="Arial, sans-serif" font-size="16" font-weight="700">Zahlungen</text>
+  <rect x="346" y="718" width="340" height="14" rx="7" fill="#EDE9FE"/>
+  <rect x="346" y="718" width="324" height="14" rx="7" fill="#8B5CF6"/>
+  <rect x="670" y="718" width="16" height="14" rx="7" fill="#DC2626"/>
+  <text x="346" y="760" fill="#7C3AED" font-family="Arial, sans-serif" font-size="14">Erfolgreich</text>
+  <text x="646" y="760" fill="#0F172A" font-family="Arial, sans-serif" font-size="14" font-weight="700">35.361,03 €</text>
+  <text x="346" y="794" fill="#2563EB" font-family="Arial, sans-serif" font-size="14">Nicht erfasst</text>
+  <text x="666" y="794" fill="#0F172A" font-family="Arial, sans-serif" font-size="14" font-weight="700">0,00 €</text>
+  <text x="346" y="828" fill="#0EA5E9" font-family="Arial, sans-serif" font-size="14">Zurückerstattet</text>
+  <text x="666" y="828" fill="#0F172A" font-family="Arial, sans-serif" font-size="14" font-weight="700">0,00 €</text>
+
+  <rect x="732" y="656" width="300" height="220" rx="20" fill="#FFFFFF" stroke="#E5EAF2"/>
+  <text x="752" y="694" fill="#0F172A" font-family="Arial, sans-serif" font-size="16" font-weight="700">Bruttovolumen</text>
+  <text x="752" y="726" fill="#0F172A" font-family="Arial, sans-serif" font-size="24" font-weight="700">68.818,16 €</text>
+  <text x="870" y="726" fill="#16A34A" font-family="Arial, sans-serif" font-size="14" font-weight="700">+26,79 %</text>
+  <path d="M752 846 C780 845 802 840 826 822 C852 802 868 770 896 742 C922 714 948 684 976 692 C1000 698 1010 724 1030 738" stroke="#8B5CF6" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M752 846 C778 843 804 842 826 834 C850 826 868 820 896 798 C922 776 948 748 976 742 C1000 738 1016 748 1030 762" stroke="#94A3B8" stroke-width="3" stroke-dasharray="5 6" fill="none" stroke-linecap="round"/>
+  <text x="752" y="882" fill="#64748B" font-family="Arial, sans-serif" font-size="12">24.06</text>
+  <text x="992" y="882" fill="#64748B" font-family="Arial, sans-serif" font-size="12">30.06</text>
+
+  <rect x="1050" y="656" width="256" height="220" rx="20" fill="#F8FAFC" stroke="#E5EAF2"/>
+  <text x="1070" y="694" fill="#0F172A" font-family="Arial, sans-serif" font-size="16" font-weight="700">Empfehlung</text>
+  <text x="1070" y="736" fill="#0F172A" font-family="Arial, sans-serif" font-size="24" font-weight="700">Manuellen Abgleich vermeiden</text>
+  <text x="1070" y="770" fill="#334155" font-family="Arial, sans-serif" font-size="14">Zahlungen automatisch zuordnen</text>
+  <text x="1070" y="794" fill="#334155" font-family="Arial, sans-serif" font-size="14">und Rechnungen beschleunigen.</text>
+  <text x="1070" y="834" fill="#4F46E5" font-family="Arial, sans-serif" font-size="14" font-weight="700">Invoicing ausprobieren →</text>
+</svg>
