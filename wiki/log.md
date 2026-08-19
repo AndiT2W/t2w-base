@@ -119,3 +119,19 @@
 
 - Split the lean Invoice MVP parent issue [#1](https://github.com/AndiT2W/t2w-base/issues/1) into twelve dependency-ordered tracer-bullet tickets #2–#13, all marked `ready-for-agent`.
 - The first implementation target is [#2 Billing-Grundgerüst und erster Angebotsentwurf](https://github.com/AndiT2W/t2w-base/issues/2).
+# 2026-08-19
+
+- Verbindliche Eventstatuswerte aus dem Wiki bestätigt: Anfrage, Angebot gesendet, Zugesagt, Abgesagt, Akquise und Datum prüfen. Die bisherige UI-Statusliste ist fachlich überholt.
+- Neue Events starten standardmäßig mit dem Status `Anfrage`.
+- Eventfeldentscheidung: Risiko wird nicht als Eventfeld geführt.
+- Eventort bleibt im aktuellen MVP ein Freitextfeld; strukturierte Adressdaten sind nicht erforderlich.
+- Sportart wird als erweiterbares Dropdown mit direkter Option zum Hinzufügen einer neuen Sportart geführt.
+- Veranstalter wird über ein Such-Dropdown gewählt; neue Veranstalter können direkt aus dem Modal angelegt werden.
+- Ort bleibt ein optionales Freitextfeld.
+- Hauptverantwortlicher ist im Anlageformular optional. Teilnehmerzahlen werden nicht manuell im Modal erfasst, sondern bei gesetzter `t2w_event_id` einmal täglich aus TIME2WIN synchronisiert. Technologien/technische Leistungen werden optional auf der Detailseite gepflegt.
+- Teilnehmerprognose und aktueller, aus TIME2WIN synchronisierter Teilnehmerstand werden getrennt gespeichert.
+- `t2w_event_id` erhält auf der Eventdetailseite einen eigenen Reiter `TIME2WIN-Verknüpfung` neben `Stammdaten`.
+- Die TIME2WIN-Verknüpfung zeigt Bewerbe und Teilnehmerstatistiken je Bewerb sowie Synchronisierungsstatus und manuelle Aktualisierung.
+- Pro Bewerb wird im MVP ausschließlich die Zahl der gemeldeten Teilnehmer angezeigt.
+- Einzelteilnehmer und Teams werden dabei nicht getrennt ausgewiesen.
+- Sportart kann bei verknüpfter `t2w_event_id` aus der TIME2WIN-API stammen. Ohne ID wird sie manuell gepflegt; eine spätere API-Abweichung überschreibt den manuellen Wert nicht ungefragt.

@@ -28,6 +28,7 @@ Define the first usable version of `t2w-base` for event data, organizer/contact 
 - `eventcode`
 - optional `t2w_event_id`
 - `eventname`
+- `ort` als Freitext
 - `eventstatus`
 - `veranstalter`
 - `start_at`
@@ -41,7 +42,7 @@ Define the first usable version of `t2w-base` for event data, organizer/contact 
 - optional event-specific contact overrides
 - optional default invoice recipient
 - optional default payout recipient
-- structured address
+- keine strukturierte Adresse im aktuellen MVP; `ort` bleibt Freitext
 - OneDrive event folder path
 - Eventfinance folder path
 - notes
