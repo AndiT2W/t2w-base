@@ -135,3 +135,4 @@
 - Pro Bewerb wird im MVP ausschließlich die Zahl der gemeldeten Teilnehmer angezeigt.
 - Einzelteilnehmer und Teams werden dabei nicht getrennt ausgewiesen.
 - Sportart kann bei verknüpfter `t2w_event_id` aus der TIME2WIN-API stammen. Ohne ID wird sie manuell gepflegt; eine spätere API-Abweichung überschreibt den manuellen Wert nicht ungefragt.
+- Die Lovable-Referenzoberfläche wurde als UI-Basis übernommen und auf dem Hostinger-VPS unter `https://base.time2win.cloud` deployed. Traefik terminiert TLS; der Zugriff ist per HTTP Basic Auth geschützt. Deployment-Konfiguration: `Dockerfile.hostinger`, `docker-compose.hostinger.yml` und `nginx/hostinger.conf`.
