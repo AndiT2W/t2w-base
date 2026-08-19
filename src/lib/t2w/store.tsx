@@ -11,7 +11,7 @@ import { DEMO_EVENTS, DEMO_SETTINGS } from "./demo";
 import { buildEventcode } from "./eventcode";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
-import { apiCreateEvent, apiEvents } from "./api";
+import { apiCreateEvent, apiEvents, apiUpdateEvent } from "./api";
 import { LoginView } from "@/components/t2w/LoginView";
 
 const KEY = "t2w-demo-state-v1";
@@ -120,6 +120,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
         e.id === id ? { ...e, ...patch, eventcode: e.eventcode } : e,
       ),
     }));
+    void apiUpdateEvent(id, patch).catch(() => setLadefehler("Änderungen konnten nicht dauerhaft gespeichert werden."));
   }, []);
 
   const value = useMemo<Ctx>(

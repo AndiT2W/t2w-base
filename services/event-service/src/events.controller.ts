@@ -10,6 +10,7 @@ export class CreateEventDto {
   @IsOptional() @IsDateString() endAt?: string;
   @IsOptional() @IsEnum(EventStatus) status?: EventStatus;
   @IsOptional() @IsString() organizerId?: string;
+  @IsOptional() @IsString() organizerName?: string;
   @IsOptional() @IsString() sportId?: string;
   @IsOptional() @IsString() location?: string;
   @IsOptional() @IsString() responsible?: string;
@@ -44,14 +45,18 @@ export class EventsController {
   }
 
   @Patch(":id") update(@Param("id", ParseUUIDPipe) id: string, @Body() dto: Partial<CreateEventDto> & { version?: number }) {
-    const { version, ...changes } = dto;
+    const { version, organizerName, ...changes } = dto;
     return this.prisma.$transaction(async (tx) => {
+      const organizerId = organizerName?.trim()
+        ? (await tx.organizer.findFirst({ where: { name: organizerName.trim(), active: true } }))?.id
+          ?? (await tx.organizer.create({ data: { name: organizerName.trim(), type: "ORGANISATION" } })).id
+        : organizerName === "" ? null : undefined;
       const updated = await tx.event.updateMany({
         where: { id, ...(version === undefined ? {} : { version }) },
-        data: { ...changes, version: { increment: 1 }, startAt: changes.startAt ? new Date(changes.startAt) : undefined, endAt: changes.endAt ? new Date(changes.endAt) : undefined },
+        data: { ...changes, organizerId, version: { increment: 1 }, startAt: changes.startAt ? new Date(changes.startAt) : undefined, endAt: changes.endAt ? new Date(changes.endAt) : undefined },
       });
       if (updated.count !== 1) throw new Error("EVENT_VERSION_CONFLICT");
-      return tx.event.findUniqueOrThrow({ where: { id } });
+      return tx.event.findUniqueOrThrow({ where: { id }, include: { organizer: true, sport: true } });
     });
   }
 }

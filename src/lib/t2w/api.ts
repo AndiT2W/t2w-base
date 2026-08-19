@@ -54,3 +54,9 @@ export async function apiCreateEvent(input: { name: string; start: string; ende:
   if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
   return mapApiEvent(await response.json() as ApiEvent);
 }
+
+export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
+  const response = await fetch(`/api/v1/events/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: patch.name, startAt: patch.start, endAt: patch.ende, location: patch.ort, responsible: patch.verantwortlicher, participantForecast: patch.teilnehmer, notes: patch.notizen, organizerName: patch.veranstalter }) });
+  if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
+  return mapApiEvent(await response.json() as ApiEvent);
+}
