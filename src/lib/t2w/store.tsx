@@ -33,7 +33,6 @@ type Ctx = State & {
     ende?: string;
     status: T2WEvent["status"];
     verantwortlicher: string;
-    risiko?: T2WEvent["risiko"];
     teilnehmer?: number;
     teilnehmerprognose?: number | null;
     sportart?: string;
@@ -90,9 +89,8 @@ export function T2WProvider({ children }: { children: ReactNode }) {
         ende,
         status: input.status,
         verantwortlicher: input.verantwortlicher,
-        risiko: input.risiko ?? "keins",
         teilnehmer: input.teilnehmerprognose ?? input.teilnehmer ?? 0,
-        sportart: input.sportart,
+        sportart: input.sportart ?? "",
         teilnehmerwerte: {
           prognose: input.teilnehmerprognose ?? input.teilnehmer ?? null,
           aktuell: null,

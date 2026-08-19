@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VariantSwitcher } from "@/components/t2w/VariantSwitcher";
-import { RiskIndicator, StatusBadge } from "@/components/t2w/StatusBadge";
+import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { naechsteAufgabe } from "@/lib/t2w/kalender";
@@ -173,7 +173,6 @@ function Karte({
       <div className="flex flex-wrap items-center gap-2">
         <Ordner ok={Boolean(event.outlookOrdner)} text="Outlook" />
         <Ordner ok={Boolean(event.sharepointOrdner)} text="SharePoint" />
-        <RiskIndicator risiko={event.risiko} />
       </div>
 
       <div className="mt-auto flex flex-wrap gap-2">

@@ -27,9 +27,7 @@ import { VERANTWORTLICHE } from "@/lib/t2w/demo";
 import {
   STATUS_ORDER,
   STATUS_LABEL,
-  RISK_LABEL,
   type EventStatus,
-  type Risk,
 } from "@/lib/t2w/types";
 
 export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
@@ -43,7 +41,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const [ende, setEnde] = useState("");
   const [status, setStatus] = useState<EventStatus>("entwurf");
   const [verantwortlicher, setVerantwortlicher] = useState(VERANTWORTLICHE[0]!);
-  const [risiko, setRisiko] = useState<Risk>("keins");
   const [teilnehmer, setTeilnehmer] = useState("");
   const [notizen, setNotizen] = useState("");
 
@@ -63,7 +60,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
     setStart("");
     setEnde("");
     setStatus("entwurf");
-    setRisiko("keins");
     setTeilnehmer("");
     setNotizen("");
   }
@@ -89,7 +85,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
       ende,
       status,
       verantwortlicher,
-      risiko,
       teilnehmer: Number(teilnehmer) || 0,
       notizen: notizen.trim(),
     });
@@ -191,21 +186,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
                 {VERANTWORTLICHE.map((v) => (
                   <SelectItem key={v} value={v}>
                     {v}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Risikoindikator</Label>
-            <Select value={risiko} onValueChange={(v) => setRisiko(v as Risk)}>
-              <SelectTrigger className="mt-1.5">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(RISK_LABEL) as Risk[]).map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {RISK_LABEL[r]}
                   </SelectItem>
                 ))}
               </SelectContent>

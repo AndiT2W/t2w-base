@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VariantSwitcher } from "@/components/t2w/VariantSwitcher";
-import { StatusBadge, StatusDot, RiskIndicator } from "@/components/t2w/StatusBadge";
+import { StatusBadge, StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import {
@@ -39,12 +39,11 @@ export const Route = createFileRoute("/varianten/timeline")({
   component: TimelineVariante,
 });
 
-type Ansicht = "alle" | "zugesagt" | "risiko" | "quartal";
+type Ansicht = "alle" | "zugesagt" | "quartal";
 
 const GESPEICHERTE_ANSICHTEN: { key: Ansicht; label: string; hinweis: string }[] = [
   { key: "alle", label: "Alle aktiven Events", hinweis: "Standardansicht" },
   { key: "zugesagt", label: "Nur zugesagte Events", hinweis: "Produktionsplanung" },
-  { key: "risiko", label: "Events mit Risiko", hinweis: "Wöchentliche Kontrolle" },
   { key: "quartal", label: "Laufendes Quartal", hinweis: "Ordnerpflege Outlook" },
 ];
 
@@ -70,7 +69,6 @@ function TimelineVariante() {
       .filter((e) => (statusFilter.length ? statusFilter.includes(e.status) : true))
       .filter((e) => {
         if (ansicht === "zugesagt") return e.status === "zugesagt";
-        if (ansicht === "risiko") return e.risiko !== "keins";
         if (ansicht === "quartal") return e.start.slice(0, 4) === jahr && quartalVon(e.start) === q;
         return true;
       });
@@ -346,7 +344,6 @@ function Drawer({ event, onClose }: { event: T2WEvent; onClose: () => void }) {
       </dl>
 
       <div className="flex items-center justify-between gap-2">
-        <RiskIndicator risiko={event.risiko} />
         <Button asChild size="sm">
           <Link to="/events/$eventcode" params={{ eventcode: event.eventcode }}>
             Detailseite öffnen

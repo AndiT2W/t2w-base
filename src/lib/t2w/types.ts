@@ -33,14 +33,6 @@ export const STATUS_ORDER: EventStatus[] = [
   "datum-pruefen",
 ];
 
-export type Risk = "keins" | "beobachten" | "kritisch";
-
-export const RISK_LABEL: Record<Risk, string> = {
-  keins: "Kein Risiko",
-  beobachten: "Beobachten",
-  kritisch: "Kritisch",
-};
-
 export type Contact = {
   id: string;
   name: string;
@@ -102,7 +94,6 @@ export type T2WEvent = {
   ende: string; // yyyy-mm-dd
   status: EventStatus;
   verantwortlicher: string;
-  risiko: Risk;
   teilnehmer: number;
   teilnehmerwerte?: Teilnehmerwerte;
   archiviert: boolean;
@@ -121,7 +112,7 @@ export type Settings = {
 };
 
 export type ColumnKey =
-  "eventcode" | "name" | "veranstalter" | "zeitraum" | "verantwortlicher" | "status" | "risiko";
+  "eventcode" | "name" | "veranstalter" | "zeitraum" | "verantwortlicher" | "status";
 
 export const COLUMN_LABEL: Record<ColumnKey, string> = {
   eventcode: "Eventcode",
@@ -130,7 +121,6 @@ export const COLUMN_LABEL: Record<ColumnKey, string> = {
   zeitraum: "Zeitraum",
   verantwortlicher: "Verantwortlicher",
   status: "Statusfarbe",
-  risiko: "Risikoindikator",
 };
 
 export const ALL_COLUMNS: ColumnKey[] = [
@@ -140,5 +130,4 @@ export const ALL_COLUMNS: ColumnKey[] = [
   "zeitraum",
   "verantwortlicher",
   "status",
-  "risiko",
 ];

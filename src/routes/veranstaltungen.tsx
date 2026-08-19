@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { RiskIndicator, StatusBadge } from "@/components/t2w/StatusBadge";
+import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import {
@@ -239,7 +239,6 @@ function Veranstaltungen() {
                         <span className="text-sm">{e.verantwortlicher}</span>
                       )}
                       {c === "status" && <StatusBadge status={e.status} />}
-                      {c === "risiko" && <RiskIndicator risiko={e.risiko} />}
                     </TableCell>
                   ))}
                   <TableCell className="text-right">

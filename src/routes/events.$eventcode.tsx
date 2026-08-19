@@ -27,17 +27,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { RiskIndicator, StatusBadge } from "@/components/t2w/StatusBadge";
+import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
-import { VERANTWORTLICHE } from "@/lib/t2w/demo";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr, quartal } from "@/lib/t2w/eventcode";
 import {
-  RISK_LABEL,
   STATUS_LABEL,
   STATUS_ORDER,
   type EventStatus,
-  type Risk,
   type T2WEvent,
 } from "@/lib/t2w/types";
 
@@ -131,12 +128,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <span>{event.veranstalter}</span>
             <span>·</span>
             <span>{formatZeitraum(event.start, event.ende)}</span>
-            <span>·</span>
-            <span>{event.verantwortlicher}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <StatusBadge status={form.status} />
-            <RiskIndicator risiko={form.risiko} />
             {vergangen && (
               <span className="rounded bg-secondary px-2 py-1 text-xs text-muted-foreground">
                 Vergangenes Event – weiterhin bearbeitbar
@@ -235,16 +229,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 />
               </div>
               <div>
-                <Label htmlFor="d-tn">Teilnehmer</Label>
-                <Input
-                  id="d-tn"
-                  inputMode="numeric"
-                  value={String(form.teilnehmer)}
-                  onChange={(e) => set("teilnehmer", Number(e.target.value) || 0)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => set("status", v as EventStatus)}>
                   <SelectTrigger className="mt-1.5">
@@ -254,39 +238,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     {STATUS_ORDER.map((s) => (
                       <SelectItem key={s} value={s}>
                         {STATUS_LABEL[s]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Verantwortlicher</Label>
-                <Select
-                  value={form.verantwortlicher}
-                  onValueChange={(v) => set("verantwortlicher", v)}
-                >
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[...new Set([...VERANTWORTLICHE, form.verantwortlicher])].map((v) => (
-                      <SelectItem key={v} value={v}>
-                        {v}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Risikoindikator</Label>
-                <Select value={form.risiko} onValueChange={(v) => set("risiko", v as Risk)}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(RISK_LABEL) as Risk[]).map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {RISK_LABEL[r]}
                       </SelectItem>
                     ))}
                   </SelectContent>

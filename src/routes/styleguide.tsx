@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { RiskIndicator, StatusBadge } from "@/components/t2w/StatusBadge";
+import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { STATUS_ORDER } from "@/lib/t2w/types";
 
 export const Route = createFileRoute("/styleguide")({
@@ -109,9 +109,6 @@ function Styleguide() {
               ))}
             </div>
             <div className="mt-3 flex flex-wrap gap-4">
-              <RiskIndicator risiko="keins" />
-              <RiskIndicator risiko="beobachten" />
-              <RiskIndicator risiko="kritisch" />
             </div>
           </section>
 

@@ -30,10 +30,10 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     veranstalter: event.organizer?.name ?? "—", ort: event.location ?? "",
     start: dateOnly(event.startAt), ende: dateOnly(event.endAt),
     status: statusFromApi[event.status] ?? "anfrage", verantwortlicher: event.responsible ?? "—",
-    risiko: "keins", teilnehmer: event.participantForecast ?? 0,
+    teilnehmer: event.participantForecast ?? 0,
     teilnehmerwerte: { prognose: event.participantForecast, aktuell: event.participantCurrent, aktuellQuelle: event.participantCurrent == null ? null : "time2win", aktuellSynchronisiertAm: null },
     archiviert: event.archived, notizen: event.notes ?? "", outlookOrdner: null, sharepointOrdner: null,
-    kontakte: [], aufgaben: [], dateien: [], kommunikation: [], sportart: event.sport?.name,
+    kontakte: [], aufgaben: [], dateien: [], kommunikation: [], sportart: event.sport?.name ?? "",
   };
 }
 

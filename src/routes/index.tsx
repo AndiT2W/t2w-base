@@ -28,13 +28,12 @@ export const Route = createFileRoute("/")({
   component: Uebersicht,
 });
 
-type Schnellfilter = "alle" | "diese-woche" | "offen" | "risiko" | "ohne-ordner";
+type Schnellfilter = "alle" | "diese-woche" | "offen" | "ohne-ordner";
 
 const SCHNELLFILTER: { key: Schnellfilter; label: string }[] = [
   { key: "alle", label: "Alle aktiven" },
   { key: "diese-woche", label: "Nächste 14 Tage" },
   { key: "offen", label: "Offene Aufgaben" },
-  { key: "risiko", label: "Mit Risiko" },
   { key: "ohne-ordner", label: "Ordner fehlt" },
 ];
 
@@ -67,7 +66,6 @@ function Uebersicht() {
       .filter((e) => {
         if (filter === "diese-woche") return e.ende >= heute && inTagen(e.start, 14, heute);
         if (filter === "offen") return e.aufgaben.some((a) => !a.erledigt);
-        if (filter === "risiko") return e.risiko !== "keins";
         if (filter === "ohne-ordner") return !e.outlookOrdner || !e.sharepointOrdner;
         return true;
       })

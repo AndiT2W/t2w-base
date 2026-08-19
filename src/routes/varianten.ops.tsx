@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, CalendarClock, CheckSquare, Euro, Folder, Search } from "lucide-react";
+import { CalendarClock, CheckSquare, Euro, Folder, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { VariantSwitcher } from "@/components/t2w/VariantSwitcher";
 import { StatusDot } from "@/components/t2w/StatusBadge";
@@ -29,20 +29,18 @@ export const Route = createFileRoute("/varianten/ops")({
   component: OpsVariante,
 });
 
-type Schnellfilter = "alle" | "diese-woche" | "offen" | "risiko" | "ohne-ordner";
+type Schnellfilter = "alle" | "diese-woche" | "offen" | "ohne-ordner";
 
 const SCHNELLFILTER: { key: Schnellfilter; label: string }[] = [
   { key: "alle", label: "Alle aktiven" },
   { key: "diese-woche", label: "Nächste 14 Tage" },
   { key: "offen", label: "Offene Aufgaben" },
-  { key: "risiko", label: "Mit Risiko" },
   { key: "ohne-ordner", label: "Ordner fehlt" },
 ];
 
 const SEITEN_NAV = [
   { key: "alle" as const, label: "Alle Events", icon: CalendarClock },
   { key: "offen" as const, label: "Aufgaben", icon: CheckSquare },
-  { key: "risiko" as const, label: "Risiken", icon: AlertTriangle },
   { key: "ohne-ordner" as const, label: "Ordner", icon: Folder },
 ];
 
@@ -64,9 +62,8 @@ function OpsVariante() {
   const kpi = useMemo(() => {
     const kommend = aktive.filter((e) => e.ende >= heute && inTagen(e.start, 14, heute)).length;
     const aufgaben = aktive.reduce((n, e) => n + e.aufgaben.filter((a) => !a.erledigt).length, 0);
-    const risiken = aktive.filter((e) => e.risiko !== "keins").length;
     const luecken = aktive.filter((e) => e.status === "angefragt" || e.status === "entwurf").length;
-    return { kommend, aufgaben, risiken, luecken };
+    return { kommend, aufgaben, luecken };
   }, [aktive, heute]);
 
   const zeilen = useMemo(() => {
@@ -76,7 +73,6 @@ function OpsVariante() {
       .filter((e) => {
         if (filter === "diese-woche") return e.ende >= heute && inTagen(e.start, 14, heute);
         if (filter === "offen") return e.aufgaben.some((a) => !a.erledigt);
-        if (filter === "risiko") return e.risiko !== "keins";
         if (filter === "ohne-ordner") return !e.outlookOrdner || !e.sharepointOrdner;
         return true;
       })
@@ -123,13 +119,7 @@ function OpsVariante() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Kpi icon={CalendarClock} label="Events nächste 14 Tage" wert={kpi.kommend} />
             <Kpi icon={CheckSquare} label="Offene Aufgaben" wert={kpi.aufgaben} />
-            <Kpi icon={AlertTriangle} label="Events mit Risiko" wert={kpi.risiken} ton="warn" />
-            <Kpi
-              icon={Euro}
-              label="Finanzielle Lücken (unbestätigt)"
-              wert={kpi.luecken}
-              ton="warn"
-            />
+            <Kpi icon={Euro} label="Finanzielle Lücken (unbestätigt)" wert={kpi.luecken} ton="warn" />
           </div>
 
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2">
@@ -226,19 +216,6 @@ function OpsVariante() {
                           <Marke aktiv={Boolean(e.outlookOrdner)} text="OL" />
                           <Marke aktiv={Boolean(e.sharepointOrdner)} text="SP" />
                         </span>
-                      </td>
-                      <td className="px-2 py-1">
-                        {e.risiko === "keins" ? (
-                          <span className="text-muted-foreground">–</span>
-                        ) : (
-                          <span
-                            title={e.risiko === "kritisch" ? "Kritisch" : "Beobachten"}
-                            className={cn(
-                              "inline-block size-2 rounded-sm",
-                              e.risiko === "kritisch" ? "bg-risk-kritisch" : "bg-risk-beobachten",
-                            )}
-                          />
-                        )}
                       </td>
                       <td className="whitespace-nowrap px-2 py-1 text-right">
                         <Link
