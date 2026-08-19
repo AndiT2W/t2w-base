@@ -13,7 +13,7 @@ This repository contains the Karpathy-style LLM wiki for GCW Base, the planned T
 1. Drop new material into `raw/inbox/`.
 2. Ask the agent to ingest it into the wiki.
 3. Let the agent update `wiki/overview.md`, relevant topic pages, and `wiki/log.md`.
-4. Use the wiki as the first stop for future project questions.
+4. Use the wiki as the first stop for future sessions.
 
 ## Starting Point
 
@@ -26,3 +26,4 @@ Begin in [wiki/index.md](wiki/index.md).
 - [Delivery Phases](wiki/phases.md)
 - [Roadmap](wiki/roadmap.md)
 - [Migration Concept](wiki/concepts/tool-consolidation-and-migration.md)
+

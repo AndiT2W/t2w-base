@@ -15,6 +15,7 @@ Track ingested evidence and source summaries here.
 - [2026-06-29 Tauern Circle ART Workbook](2026-06-29-tauern-circle-art-workbook.md)
 - [2026-06-29 User Event Communication Vision](2026-06-29-user-event-communication-vision.md)
 - [2026-06-30 User Target Model V1](2026-06-30-user-target-model-v1.md)
+- [2026-08-19 Lovable Event Navigator](2026-08-19-lovable-event-navigator.md)
 
 ## Notes
 

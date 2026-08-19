@@ -59,3 +59,4 @@
 
 - [../sources/2026-06-15-veranstaltungen-xlsx.md](../sources/2026-06-15-veranstaltungen-xlsx.md)
 - [../sources/2026-06-30-user-target-model-v1.md](../sources/2026-06-30-user-target-model-v1.md)
+- User clarification dated 2026-08-19: ClickUp field `Teilnehmer` represents the forecast and maps to `Event.participantForecast`, not the current participant count.

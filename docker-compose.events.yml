@@ -1,0 +1,74 @@
+services:
+  event-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EVENT_DB_NAME:-t2w_events}
+      POSTGRES_USER: ${EVENT_DB_USER:-t2w_events}
+      POSTGRES_PASSWORD: ${EVENT_DB_PASSWORD:?EVENT_DB_PASSWORD is required}
+    volumes:
+      - event_db_data:/var/lib/postgresql/data
+      - event_db_backups:/backups
+    networks: [event_internal]
+
+  event-service:
+    build: ./services/event-service
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
+      PORT: 3000
+    depends_on:
+      event-db: { condition: service_started }
+    networks: [event_internal, traefik_proxy]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
+      - traefik.http.routers.t2w-events.rule=Host(`base.time2win.cloud`) && PathPrefix(`/api`)
+      - traefik.http.routers.t2w-events.entrypoints=websecure
+      - traefik.http.routers.t2w-events.tls=true
+      - traefik.http.routers.t2w-events.tls.certresolver=letsencrypt
+      - traefik.http.services.t2w-events.loadbalancer.server.port=3000
+
+  event-migrate:
+    build: ./services/event-service
+    profiles: ["migrate"]
+    environment:
+      DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
+    depends_on:
+      event-db: { condition: service_started }
+    command: ["npm", "run", "prisma:migrate"]
+    networks: [event_internal]
+
+  event-seed:
+    build: ./services/event-service
+    profiles: ["seed"]
+    environment:
+      DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:?SEED_ADMIN_EMAIL is required}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?SEED_ADMIN_PASSWORD is required}
+    depends_on:
+      event-db: { condition: service_started }
+    command: ["node", "dist/seed.js"]
+    networks: [event_internal]
+
+  event-backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${EVENT_DB_PASSWORD:?EVENT_DB_PASSWORD is required}
+    depends_on:
+      event-db: { condition: service_started }
+    volumes:
+      - event_db_backups:/backups
+    networks: [event_internal]
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["while true; do pg_dump -h event-db -U ${EVENT_DB_USER:-t2w_events} -d ${EVENT_DB_NAME:-t2w_events} -Fc > /backups/t2w-events-$$(date +%Y%m%d).dump; find /backups -type f -mtime +14 -delete; sleep 86400; done"]
+
+volumes:
+  event_db_data:
+  event_db_backups:
+
+networks:
+  event_internal:
+  traefik_proxy:
+    external: true
