@@ -9,6 +9,8 @@ import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso, tageZwischen } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
 import { cn } from "@/lib/utils";
+import { FolderLink } from "@/components/t2w/FolderLink";
+import { jahr } from "@/lib/t2w/eventcode";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,7 +46,7 @@ function inTagen(iso: string, tage: number, heute: string) {
 }
 
 function Uebersicht() {
-  const { events } = useT2W();
+  const { events, settings } = useT2W();
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
@@ -185,8 +187,12 @@ function Uebersicht() {
                     </td>
                     <td className="px-2 py-1">
                       <span className="flex gap-1">
-                        <Marke aktiv={Boolean(e.outlookOrdner)} text="OL" />
-                        <Marke aktiv={Boolean(e.sharepointOrdner)} text="SP" />
+                        <FolderLink label="Outlook" href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(e.outlookOrdner)}>{e.outlookOrdner ?? "OL"}</FolderLink>
+                        <FolderLink
+                          label="SharePoint"
+                          href={(() => { const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start)); return e.sharepointOrdner && site ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}` : null; })()}
+                          available={Boolean(e.sharepointOrdner)}
+                        >{e.sharepointOrdner ?? "SP"}</FolderLink>
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-2 py-1 text-right">

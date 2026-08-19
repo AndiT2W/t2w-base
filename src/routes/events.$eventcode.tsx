@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { StatusBadge } from "@/components/t2w/StatusBadge";
+import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr, quartal } from "@/lib/t2w/eventcode";
@@ -96,6 +97,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const quartalsAbweichung =
     !!form.outlookOrdner && !form.outlookOrdner.includes(`/${aktuellesQuartal}/`);
   const jahresSite = settings.jahresSites.find((s) => s.jahr === jahr(form.start));
+  const sharepointLink = form.sharepointOrdner && jahresSite
+    ? `${jahresSite.url.replace(/\/$/, "")}/${form.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
+    : null;
 
   function set<K extends keyof T2WEvent>(key: K, wert: T2WEvent[K]) {
     setForm((p) => ({ ...p, [key]: wert }));
@@ -291,6 +295,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Link2 className="size-4" />
                   Vorschlag übernehmen
                 </Button>
+                <div className="mt-2 text-xs"><FolderLink label="Outlook" href={form.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(form.outlookOrdner)}>{form.outlookOrdner}</FolderLink></div>
               </div>
               <div>
                 <Label htmlFor="d-sp">SharePoint-Ordner</Label>
@@ -305,6 +310,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   Jahres-Site:{" "}
                   {jahresSite ? jahresSite.url : "in Einstellungen noch nicht hinterlegt"}
                 </p>
+                <div className="mt-2 text-xs"><FolderLink label="SharePoint" href={sharepointLink} available={Boolean(form.sharepointOrdner)}>{form.sharepointOrdner}</FolderLink></div>
               </div>
             </CardContent>
           </Card>
