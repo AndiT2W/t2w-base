@@ -14,7 +14,9 @@ services:
   event-service:
     build: ./services/event-service
     restart: unless-stopped
-    env_file: ./services/event-service/.env
+    environment:
+      DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
+      PORT: 3000
     depends_on:
       event-db: { condition: service_started }
     networks: [event_internal, traefik_proxy]
@@ -26,6 +28,28 @@ services:
       - traefik.http.routers.t2w-events.tls=true
       - traefik.http.routers.t2w-events.tls.certresolver=letsencrypt
       - traefik.http.services.t2w-events.loadbalancer.server.port=3000
+
+  event-migrate:
+    build: ./services/event-service
+    profiles: ["migrate"]
+    env_file: ./services/event-service/.env
+    depends_on:
+      event-db: { condition: service_started }
+    command: ["npm", "run", "prisma:migrate"]
+    networks: [event_internal]
+
+  event-backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${EVENT_DB_PASSWORD:?EVENT_DB_PASSWORD is required}
+    depends_on:
+      event-db: { condition: service_started }
+    volumes:
+      - event_db_backups:/backups
+    networks: [event_internal]
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["while true; do pg_dump -h event-db -U ${EVENT_DB_USER:-t2w_events} -d ${EVENT_DB_NAME:-t2w_events} -Fc > /backups/t2w-events-$$(date +%Y%m%d).dump; find /backups -type f -mtime +14 -delete; sleep 86400; done"]
 
 volumes:
   event_db_data:

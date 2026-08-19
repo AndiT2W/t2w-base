@@ -7,10 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole { ADMIN MITARBEITER }
-enum OrganizerType { ORGANISATION PERSON }
-enum EventStatus { ANFRAGE ANGEBOT_GESENDET ZUGESAGT ABGESAGT AKQUISE DATUM_PRUEFEN }
-enum SyncStatus { NEVER SYNCING SUCCESS ERROR }
+enum UserRole {
+  ADMIN
+  MITARBEITER
+}
+
+enum OrganizerType {
+  ORGANISATION
+  PERSON
+}
+
+enum EventStatus {
+  ANFRAGE
+  ANGEBOT_GESENDET
+  ZUGESAGT
+  ABGESAGT
+  AKQUISE
+  DATUM_PRUEFEN
+}
+
+enum SyncStatus {
+  NEVER
+  SYNCING
+  SUCCESS
+  ERROR
+}
 
 model User {
   id           String   @id @default(uuid()) @db.Uuid
@@ -23,6 +44,7 @@ model User {
   lastLoginAt  DateTime?
   auditEntries AuditLog[]
   events       Event[]  @relation("EventUpdatedBy")
+  sessions     Session[]
 }
 
 model Organizer {
@@ -121,4 +143,14 @@ model AuditLog {
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique
+  userId    String   @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
 }

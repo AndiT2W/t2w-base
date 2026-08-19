@@ -16,6 +16,10 @@ Die Migrationen werden mit `npm run prisma:migrate` innerhalb des Service-
 Containers ausgeführt. Swagger ist unter `/docs`, Health unter `/health` und
 Readiness unter `/ready` verfügbar.
 
+Der erste Admin wird ausschließlich über `SEED_ADMIN_EMAIL` und
+`SEED_ADMIN_PASSWORD` im geschützten Deployment-Umfeld mit `npm run seed`
+angelegt. Das Passwort wird nur als Hash gespeichert.
+
 ## API
 
 Die Event-API beginnt mit `/api/v1/events`. Listen unterstützen `q`, `limit`
