@@ -2,8 +2,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarClock, CheckSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { EventDialog } from "@/components/t2w/EventDialog";
+import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso, tageZwischen } from "@/lib/t2w/format";
@@ -96,11 +96,16 @@ function Uebersicht() {
 
   return (
     <div>
+      <PageHeader
+        titel="Übersicht"
+        suche={{
+          value: suche,
+          onChange: setSuche,
+          placeholder: "Event, Veranstalter oder Ort suchen …",
+        }}
+        aktion={<EventDialog trigger={<Button><Plus className="size-4" />Event anlegen</Button>} />}
+      />
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Input value={suche} onChange={(e) => setSuche(e.target.value)} placeholder="Event, Veranstalter oder Ort suchen …" className="max-w-sm" />
-          <EventDialog trigger={<Button><Plus className="size-4" />Event anlegen</Button>} />
-        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Kpi icon={CalendarClock} label="Events nächste 14 Tage" wert={kpi.kommend} />
           <Kpi icon={CheckSquare} label="Offene Aufgaben" wert={kpi.aufgaben} />
