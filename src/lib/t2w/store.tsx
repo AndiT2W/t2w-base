@@ -11,6 +11,8 @@ import { DEMO_EVENTS, DEMO_SETTINGS } from "./demo";
 import { buildEventcode } from "./eventcode";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
+import { apiCreateEvent, apiEvents } from "./api";
+import { LoginView } from "@/components/t2w/LoginView";
 
 const KEY = "t2w-demo-state-v1";
 
@@ -55,25 +57,19 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initial);
   const [bereit, setBereit] = useState(false);
   const [ladefehler, setLadefehler] = useState<string | null>(null);
+  const [angemeldet, setAngemeldet] = useState(true);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(KEY);
-      if (raw) setState({ ...initial, ...(JSON.parse(raw) as State) });
-    } catch {
-      setLadefehler("Die zentrale Eventquelle konnte nicht geladen werden.");
-    }
-    setBereit(true);
+    void (async () => {
+      try {
+        const events = await apiEvents();
+        setState((current) => ({ ...current, events }));
+      } catch {
+        setLadefehler("Die zentrale Eventquelle konnte nicht geladen werden.");
+        setAngemeldet(false);
+      } finally { setBereit(true); }
+    })();
   }, []);
-
-  useEffect(() => {
-    if (!bereit) return;
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(state));
-    } catch {
-      /* Speicher nicht verfügbar */
-    }
-  }, [state, bereit]);
 
   const neuesEvent: Ctx["neuesEvent"] = useCallback((input) => {
     const ende = input.ende && input.ende.length ? input.ende : input.start;
@@ -113,6 +109,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
         kommunikation: [],
       };
       created = ev;
+      void apiCreateEvent({ name: ev.name, start: ev.start, ende: ev.ende, ort: ev.ort, verantwortlicher: ev.verantwortlicher, teilnehmerprognose: ev.teilnehmer, notizen: ev.notizen, status: ev.status });
       return { ...prev, events: [...prev.events, ev] };
     });
     return created as unknown as T2WEvent;
@@ -141,6 +138,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     [state, bereit, ladefehler, neuesEvent, updateEvent],
   );
 
+  if (!angemeldet) return <LoginView onLogin={() => { setAngemeldet(true); setBereit(false); window.location.reload(); }} />;
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
