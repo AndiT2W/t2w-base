@@ -22,6 +22,7 @@ type State = {
 
 type Ctx = State & {
   bereit: boolean;
+  ladefehler: string | null;
   neuesEvent: (input: {
     name: string;
     veranstalter: string;
@@ -30,8 +31,10 @@ type Ctx = State & {
     ende?: string;
     status: T2WEvent["status"];
     verantwortlicher: string;
-    risiko: T2WEvent["risiko"];
-    teilnehmer: number;
+    risiko?: T2WEvent["risiko"];
+    teilnehmer?: number;
+    teilnehmerprognose?: number | null;
+    sportart?: string;
     notizen: string;
   }) => T2WEvent;
   updateEvent: (id: string, patch: Partial<T2WEvent>) => void;
@@ -51,13 +54,14 @@ const initial: State = {
 export function T2WProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initial);
   const [bereit, setBereit] = useState(false);
+  const [ladefehler, setLadefehler] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(KEY);
       if (raw) setState({ ...initial, ...(JSON.parse(raw) as State) });
     } catch {
-      /* Demo-Zustand ignorieren */
+      setLadefehler("Die zentrale Eventquelle konnte nicht geladen werden.");
     }
     setBereit(true);
   }, []);
@@ -90,8 +94,15 @@ export function T2WProvider({ children }: { children: ReactNode }) {
         ende,
         status: input.status,
         verantwortlicher: input.verantwortlicher,
-        risiko: input.risiko,
-        teilnehmer: input.teilnehmer,
+        risiko: input.risiko ?? "keins",
+        teilnehmer: input.teilnehmerprognose ?? input.teilnehmer ?? 0,
+        sportart: input.sportart,
+        teilnehmerwerte: {
+          prognose: input.teilnehmerprognose ?? input.teilnehmer ?? null,
+          aktuell: null,
+          aktuellQuelle: null,
+          aktuellSynchronisiertAm: null,
+        },
         archiviert: false,
         notizen: input.notizen,
         outlookOrdner: null,
@@ -120,13 +131,14 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       bereit,
+      ladefehler,
       neuesEvent,
       updateEvent,
       setSettings: (s) => setState((p) => ({ ...p, settings: s })),
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
       zuruecksetzen: () => setState(initial),
     }),
-    [state, bereit, neuesEvent, updateEvent],
+    [state, bereit, ladefehler, neuesEvent, updateEvent],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

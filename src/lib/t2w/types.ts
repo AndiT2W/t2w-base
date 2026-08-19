@@ -1,19 +1,36 @@
-export type EventStatus = "entwurf" | "angefragt" | "zugesagt" | "abgeschlossen" | "storniert";
+export type EventStatus =
+  | "anfrage"
+  | "angebot-gesendet"
+  | "zugesagt"
+  | "abgesagt"
+  | "akquise"
+  | "datum-pruefen"
+  /** Legacy values are accepted only while persisted demo records migrate. */
+  | "entwurf"
+  | "angefragt"
+  | "abgeschlossen"
+  | "storniert";
 
 export const STATUS_LABEL: Record<EventStatus, string> = {
-  entwurf: "Entwurf",
-  angefragt: "Angefragt",
+  anfrage: "Anfrage",
+  "angebot-gesendet": "Angebot gesendet",
   zugesagt: "Zugesagt",
-  abgeschlossen: "Abgeschlossen",
-  storniert: "Storniert",
+  abgesagt: "Abgesagt",
+  akquise: "Akquise",
+  "datum-pruefen": "Datum prüfen",
+  entwurf: "Anfrage",
+  angefragt: "Anfrage",
+  abgeschlossen: "Zugesagt",
+  storniert: "Abgesagt",
 };
 
 export const STATUS_ORDER: EventStatus[] = [
-  "entwurf",
-  "angefragt",
+  "anfrage",
+  "angebot-gesendet",
   "zugesagt",
-  "abgeschlossen",
-  "storniert",
+  "abgesagt",
+  "akquise",
+  "datum-pruefen",
 ];
 
 export type Risk = "keins" | "beobachten" | "kritisch";
@@ -30,6 +47,22 @@ export type Contact = {
   rolle: string;
   email: string;
   telefon: string;
+};
+
+export type Veranstalter = {
+  id: string;
+  name: string;
+  typ: "organisation" | "person";
+  kontakte: Contact[];
+};
+
+export type Sportart = { id: string; name: string };
+
+export type Teilnehmerwerte = {
+  prognose: number | null;
+  aktuell: number | null;
+  aktuellQuelle: "manuell" | "time2win" | null;
+  aktuellSynchronisiertAm: string | null;
 };
 
 export type Task = {
@@ -61,6 +94,9 @@ export type T2WEvent = {
   eventcode: string;
   name: string;
   veranstalter: string;
+  veranstalterId?: string;
+  sportartId?: string;
+  sportart?: string;
   ort: string;
   start: string; // yyyy-mm-dd
   ende: string; // yyyy-mm-dd
@@ -68,6 +104,7 @@ export type T2WEvent = {
   verantwortlicher: string;
   risiko: Risk;
   teilnehmer: number;
+  teilnehmerwerte?: Teilnehmerwerte;
   archiviert: boolean;
   notizen: string;
   outlookOrdner: string | null;
