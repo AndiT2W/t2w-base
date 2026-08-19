@@ -7,14 +7,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DEMO_EVENTS, DEMO_SETTINGS } from "./demo";
 import { buildEventcode } from "./eventcode";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
 import { apiCreateEvent, apiEvents, apiUpdateEvent } from "./api";
 import { LoginView } from "@/components/t2w/LoginView";
-
-const KEY = "t2w-demo-state-v1";
 
 type State = {
   events: T2WEvent[];
@@ -47,8 +44,8 @@ type Ctx = State & {
 const StoreContext = createContext<Ctx | null>(null);
 
 const initial: State = {
-  events: DEMO_EVENTS,
-  settings: DEMO_SETTINGS,
+  events: [],
+  settings: { outlookStammordner: "Auftraege26", jahresSites: [] },
   spalten: ALL_COLUMNS,
 };
 

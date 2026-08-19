@@ -105,6 +105,8 @@ model Event {
   participantForecast   Int?
   participantCurrent    Int?
   notes                 String?
+  outlookFolder         String?
+  sharepointFolder      String?
   archived              Boolean     @default(false)
   archivedAt            DateTime?
   t2wEventId            Int?

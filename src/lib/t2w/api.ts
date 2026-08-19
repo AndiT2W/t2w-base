@@ -12,6 +12,8 @@ type ApiEvent = {
   participantForecast: number | null;
   participantCurrent: number | null;
   notes: string | null;
+  outlookFolder: string | null;
+  sharepointFolder: string | null;
   archived: boolean;
   organizer?: { name: string } | null;
   sport?: { name: string } | null;
@@ -32,7 +34,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     status: statusFromApi[event.status] ?? "anfrage", verantwortlicher: event.responsible ?? "—",
     teilnehmer: event.participantForecast ?? 0,
     teilnehmerwerte: { prognose: event.participantForecast, aktuell: event.participantCurrent, aktuellQuelle: event.participantCurrent == null ? null : "time2win", aktuellSynchronisiertAm: null },
-    archiviert: event.archived, notizen: event.notes ?? "", outlookOrdner: null, sharepointOrdner: null,
+    archiviert: event.archived, notizen: event.notes ?? "", outlookOrdner: event.outlookFolder, sharepointOrdner: event.sharepointFolder,
     kontakte: [], aufgaben: [], dateien: [], kommunikation: [], sportart: event.sport?.name ?? "",
   };
 }
@@ -56,7 +58,7 @@ export async function apiCreateEvent(input: { name: string; start: string; ende:
 }
 
 export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
-  const response = await fetch(`/api/v1/events/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: patch.name, startAt: patch.start, endAt: patch.ende, location: patch.ort, responsible: patch.verantwortlicher, participantForecast: patch.teilnehmer, notes: patch.notizen, organizerName: patch.veranstalter }) });
+  const response = await fetch(`/api/v1/events/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: patch.name, startAt: patch.start, endAt: patch.ende, location: patch.ort, responsible: patch.verantwortlicher, participantForecast: patch.teilnehmer, notes: patch.notizen, organizerName: patch.veranstalter, outlookFolder: patch.outlookOrdner, sharepointFolder: patch.sharepointOrdner }) });
   if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
   return mapApiEvent(await response.json() as ApiEvent);
 }

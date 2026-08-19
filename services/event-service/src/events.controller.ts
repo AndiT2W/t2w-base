@@ -16,6 +16,8 @@ export class CreateEventDto {
   @IsOptional() @IsString() responsible?: string;
   @IsOptional() @IsInt() @Min(0) participantForecast?: number;
   @IsOptional() @IsString() notes?: string;
+  @IsOptional() @IsString() outlookFolder?: string;
+  @IsOptional() @IsString() sharepointFolder?: string;
 }
 
 @ApiTags("events")
