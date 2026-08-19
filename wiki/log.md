@@ -140,3 +140,4 @@
 - Issue #23 Event-Service auf Hostinger deployed: eigene PostgreSQL-Instanz, Prisma-Migration, NestJS-API, Session-Auth, Stammdaten-CRUD und täglicher Backup-Container. Login und geschützter Event-GET-Smoke-Test erfolgreich.
 - Eventdetailseite bereinigt: Teilnehmer, Verantwortlicher und Risikoindikator entfernt. Risiko ist nun auch aus dem zentralen `T2WEvent`-Modell, Eventdialog, Filtern, Spalten und Variantenansichten entfernt.
 - 2026-08-19: Stammdaten und Eventübersicht zeigen Outlook- und SharePoint-Ordner als klickbare Links mit Kopierfunktion. SharePoint-Links werden aus Jahres-Site und kodiertem Ordnerpfad gebildet; Outlook verweist derzeit auf Outlook Web, da im Modell nur der Ordnerpfad gespeichert ist.
+- 2026-08-19: Fehlerbehebung deployed: Event-Stammdaten werden beim Speichern über die PATCH-API persistiert, Veranstalter werden als Organizer wiederverwendet/angelegt, und ein SVG-Favicon verhindert den bisherigen `/favicon.ico`-404.
