@@ -1,0 +1,37 @@
+services:
+  event-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EVENT_DB_NAME:-t2w_events}
+      POSTGRES_USER: ${EVENT_DB_USER:-t2w_events}
+      POSTGRES_PASSWORD: ${EVENT_DB_PASSWORD:?EVENT_DB_PASSWORD is required}
+    volumes:
+      - event_db_data:/var/lib/postgresql/data
+      - event_db_backups:/backups
+    networks: [event_internal]
+
+  event-service:
+    build: ./services/event-service
+    restart: unless-stopped
+    env_file: ./services/event-service/.env
+    depends_on:
+      event-db: { condition: service_started }
+    networks: [event_internal, traefik_proxy]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
+      - traefik.http.routers.t2w-events.rule=Host(`base.time2win.cloud`) && PathPrefix(`/api`)
+      - traefik.http.routers.t2w-events.entrypoints=websecure
+      - traefik.http.routers.t2w-events.tls=true
+      - traefik.http.routers.t2w-events.tls.certresolver=letsencrypt
+      - traefik.http.services.t2w-events.loadbalancer.server.port=3000
+
+volumes:
+  event_db_data:
+  event_db_backups:
+
+networks:
+  event_internal:
+  traefik_proxy:
+    external: true

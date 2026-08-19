@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole { ADMIN MITARBEITER }
+enum OrganizerType { ORGANISATION PERSON }
+enum EventStatus { ANFRAGE ANGEBOT_GESENDET ZUGESAGT ABGESAGT AKQUISE DATUM_PRUEFEN }
+enum SyncStatus { NEVER SYNCING SUCCESS ERROR }
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  displayName  String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(MITARBEITER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  lastLoginAt  DateTime?
+  auditEntries AuditLog[]
+  events       Event[]  @relation("EventUpdatedBy")
+}
+
+model Organizer {
+  id           String      @id @default(uuid()) @db.Uuid
+  name         String
+  type         OrganizerType
+  active       Boolean     @default(true)
+  billingInfo  String?
+  payoutInfo   String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  events       Event[]
+  contacts     OrganizerContact[]
+  @@index([name])
+}
+
+model Contact {
+  id          String              @id @default(uuid()) @db.Uuid
+  name        String
+  email       String?
+  phone       String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  organizers  OrganizerContact[]
+  eventRoles  EventContact[]
+}
+
+model OrganizerContact {
+  organizerId String @db.Uuid
+  contactId   String @db.Uuid
+  role        String?
+  organizer   Organizer @relation(fields: [organizerId], references: [id], onDelete: Restrict)
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  @@id([organizerId, contactId])
+}
+
+model Sport {
+  id        String  @id @default(uuid()) @db.Uuid
+  name      String
+  active    Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  events    Event[]
+  @@unique([name])
+}
+
+model Event {
+  id                    String      @id @default(uuid()) @db.Uuid
+  eventCode             String      @unique
+  name                  String
+  status                EventStatus  @default(ANFRAGE)
+  organizerId           String?     @db.Uuid
+  sportId               String?     @db.Uuid
+  startAt               DateTime
+  endAt                 DateTime
+  location              String?
+  responsible           String?
+  participantForecast   Int?
+  participantCurrent    Int?
+  notes                 String?
+  archived              Boolean     @default(false)
+  archivedAt            DateTime?
+  t2wEventId            Int?
+  time2winSyncStatus    SyncStatus  @default(NEVER)
+  time2winLastSuccessAt DateTime?
+  time2winLastError     String?
+  version               Int         @default(1)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  updatedById           String?     @db.Uuid
+  organizer             Organizer?  @relation(fields: [organizerId], references: [id], onDelete: SetNull)
+  sport                 Sport?      @relation(fields: [sportId], references: [id], onDelete: SetNull)
+  updatedBy             User?       @relation("EventUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  contacts              EventContact[]
+  @@index([status, archived])
+  @@index([startAt, endAt])
+}
+
+model EventContact {
+  eventId   String @db.Uuid
+  contactId String @db.Uuid
+  role      String
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  @@id([eventId, contactId, role])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  action     String
+  entity     String
+  entityId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
