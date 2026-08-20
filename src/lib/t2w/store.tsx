@@ -7,7 +7,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { buildEventcode } from "./eventcode";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
 import { apiCreateEvent, apiEvents, apiUpdateEvent } from "./api";
@@ -34,7 +33,7 @@ type Ctx = State & {
     teilnehmerprognose?: number | null;
     sportart?: string;
     notizen: string;
-  }) => T2WEvent;
+  }) => Promise<T2WEvent>;
   updateEvent: (id: string, patch: Partial<T2WEvent>) => void;
   setSettings: (s: Settings) => void;
   setSpalten: (c: ColumnKey[]) => void;
@@ -67,47 +66,11 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  const neuesEvent: Ctx["neuesEvent"] = useCallback((input) => {
+  const neuesEvent: Ctx["neuesEvent"] = useCallback(async (input) => {
     const ende = input.ende && input.ende.length ? input.ende : input.start;
-    let created: T2WEvent | null = null;
-    setState((prev) => {
-      const code = buildEventcode(
-        input.name,
-        input.start,
-        prev.events.map((e) => e.eventcode),
-      );
-      const ev: T2WEvent = {
-        id: `e-${Date.now()}`,
-        eventcode: code,
-        name: input.name,
-        veranstalter: input.veranstalter,
-        ort: input.ort,
-        start: input.start,
-        ende,
-        status: input.status,
-        verantwortlicher: input.verantwortlicher,
-        teilnehmer: input.teilnehmerprognose ?? input.teilnehmer ?? 0,
-        sportart: input.sportart ?? "",
-        teilnehmerwerte: {
-          prognose: input.teilnehmerprognose ?? input.teilnehmer ?? null,
-          aktuell: null,
-          aktuellQuelle: null,
-          aktuellSynchronisiertAm: null,
-        },
-        archiviert: false,
-        notizen: input.notizen,
-        outlookOrdner: null,
-        sharepointOrdner: null,
-        kontakte: [],
-        aufgaben: [],
-        dateien: [],
-        kommunikation: [],
-      };
-      created = ev;
-      void apiCreateEvent({ name: ev.name, start: ev.start, ende: ev.ende, ort: ev.ort, verantwortlicher: ev.verantwortlicher, teilnehmerprognose: ev.teilnehmer, notizen: ev.notizen, status: ev.status });
-      return { ...prev, events: [...prev.events, ev] };
-    });
-    return created as unknown as T2WEvent;
+    const created = await apiCreateEvent({ name: input.name, veranstalter: input.veranstalter, start: input.start, ende, ort: input.ort, verantwortlicher: input.verantwortlicher, teilnehmerprognose: input.teilnehmerprognose ?? input.teilnehmer ?? 0, notizen: input.notizen, status: input.status });
+    setState((prev) => ({ ...prev, events: [...prev.events, created] }));
+    return created;
   }, []);
 
   const updateEvent = useCallback((id: string, patch: Partial<T2WEvent>) => {

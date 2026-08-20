@@ -43,7 +43,16 @@ export class EventsController {
   @Post()
   create(@Body() dto: CreateEventDto) {
     const start = new Date(dto.startAt);
-    return this.prisma.event.create({ data: { eventCode: `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`, name: dto.name, startAt: start, endAt: new Date(dto.endAt ?? dto.startAt), status: dto.status ?? EventStatus.ANFRAGE, organizerId: dto.organizerId, sportId: dto.sportId, location: dto.location, responsible: dto.responsible, participantForecast: dto.participantForecast, notes: dto.notes } });
+    return this.prisma.$transaction(async (tx) => {
+      const organizerId = dto.organizerName?.trim()
+        ? (await tx.organizer.findFirst({ where: { name: dto.organizerName.trim(), active: true } }))?.id
+          ?? (await tx.organizer.create({ data: { name: dto.organizerName.trim(), type: "ORGANISATION" } })).id
+        : dto.organizerId;
+      return tx.event.create({
+        data: { eventCode: `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`, name: dto.name, startAt: start, endAt: new Date(dto.endAt ?? dto.startAt), status: dto.status ?? EventStatus.ANFRAGE, organizerId, sportId: dto.sportId, location: dto.location, responsible: dto.responsible, participantForecast: dto.participantForecast, notes: dto.notes, outlookFolder: dto.outlookFolder, sharepointFolder: dto.sharepointFolder },
+        include: { organizer: true, sport: true },
+      });
+    });
   }
 
   @Patch(":id") update(@Param("id", ParseUUIDPipe) id: string, @Body() dto: Partial<CreateEventDto> & { version?: number }) {

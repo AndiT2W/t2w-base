@@ -64,7 +64,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
     setNotizen("");
   }
 
-  function speichern() {
+  async function speichern() {
     if (!name.trim()) {
       toast.error("Bitte einen Eventnamen angeben.");
       return;
@@ -77,7 +77,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
       toast.error("Das Enddatum darf nicht vor dem Startdatum liegen.");
       return;
     }
-    const ev = neuesEvent({
+    const ev = await neuesEvent({
       name: name.trim(),
       veranstalter: veranstalter.trim() || "—",
       ort: ort.trim() || "—",
