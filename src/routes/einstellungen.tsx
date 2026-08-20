@@ -57,28 +57,28 @@ function Einstellungen() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Label htmlFor="stamm">Stammordner</Label>
-          <Input
-            id="stamm"
-            value={stamm}
-            onChange={(e) => setStamm(e.target.value)}
-            className="mt-1.5 max-w-sm"
-          />
-          <div className="mt-4 space-y-3">
+          <Label htmlFor="stamm">Fallback-Stammordner</Label>
+          <Input id="stamm" value={stamm} onChange={(e) => setStamm(e.target.value)} className="mt-1.5 max-w-sm" />
+          <div className="mt-4 overflow-x-auto">
+            <div className="min-w-[34rem]">
+              <div className="grid grid-cols-[7rem_1fr_5.5rem] items-center gap-2 px-2 pb-2 text-sm font-medium text-muted-foreground">
+                <span>Jahr</span><span>Ordnerpfad</span><span>Aktionen</span>
+              </div>
+              <div className="space-y-2">
             {outlookJahresordner.map((s, i) => (
-              <div key={i} className="flex flex-wrap items-end gap-2">
-                <div className="w-24">
-                  <Label htmlFor={`outlook-jahr-${i}`}>Jahr</Label>
-                  <Input id={`outlook-jahr-${i}`} value={s.jahr} onChange={(e) => setOutlookJahresordner(outlookJahresordner.map((x, xi) => xi === i ? { ...x, jahr: e.target.value } : x))} className="mt-1.5" />
-                </div>
-                <div className="min-w-[16rem] flex-1">
-                  <Label htmlFor={`outlook-url-${i}`}>Ordnerpfad</Label>
-                  <Input id={`outlook-url-${i}`} value={s.url} onChange={(e) => setOutlookJahresordner(outlookJahresordner.map((x, xi) => xi === i ? { ...x, url: e.target.value } : x))} className="mt-1.5" />
-                </div>
+              <div key={i} className="grid grid-cols-[7rem_1fr_5.5rem] items-center gap-2">
+                <Input id={`outlook-jahr-${i}`} aria-label="Jahr" value={s.jahr} onChange={(e) => setOutlookJahresordner(outlookJahresordner.map((x, xi) => xi === i ? { ...x, jahr: e.target.value } : x))} />
+                <Input id={`outlook-url-${i}`} aria-label="Ordnerpfad" value={s.url} onChange={(e) => setOutlookJahresordner(outlookJahresordner.map((x, xi) => xi === i ? { ...x, url: e.target.value } : x))} />
+                <div className="flex items-center justify-end gap-1">
                 <a href="https://outlook.office.com/mail/" target="_blank" rel="noreferrer" aria-label="Outlook-Jahresordner öffnen" title="Outlook öffnen" className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><ExternalLink className="size-4" /></a>
                 <Button variant="ghost" size="icon" aria-label="Outlook-Jahresordner entfernen" onClick={() => setOutlookJahresordner(outlookJahresordner.filter((_, xi) => xi !== i))}><Trash2 className="size-4" /></Button>
+                </div>
               </div>
             ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-3">
             <Button variant="outline" onClick={() => setOutlookJahresordner([...outlookJahresordner, { jahr: "", url: "" }])}><Plus className="size-4" />Outlook-Jahresordner hinzufügen</Button>
           </div>
         </CardContent>
@@ -91,31 +91,32 @@ function Einstellungen() {
             Events liegen direkt im Jahresbereich – ohne Quartalsordner.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
+          <div className="overflow-x-auto">
+            <div className="min-w-[34rem]">
+              <div className="grid grid-cols-[7rem_1fr_5.5rem] items-center gap-2 px-2 pb-2 text-sm font-medium text-muted-foreground">
+                <span>Jahr</span><span>Site-URL</span><span>Aktionen</span>
+              </div>
+              <div className="space-y-2">
           {sites.map((s, i) => (
-            <div key={i} className="flex flex-wrap items-end gap-2">
-              <div className="w-24">
-                <Label htmlFor={`jahr-${i}`}>Jahr</Label>
+            <div key={i} className="grid grid-cols-[7rem_1fr_5.5rem] items-center gap-2">
                 <Input
                   id={`jahr-${i}`}
+                  aria-label="Jahr"
                   value={s.jahr}
                   onChange={(e) =>
                     setSites(sites.map((x, xi) => (xi === i ? { ...x, jahr: e.target.value } : x)))
                   }
-                  className="mt-1.5"
                 />
-              </div>
-              <div className="min-w-[16rem] flex-1">
-                <Label htmlFor={`url-${i}`}>Site-URL</Label>
                 <Input
                   id={`url-${i}`}
+                  aria-label="Site-URL"
                   value={s.url}
                   onChange={(e) =>
                     setSites(sites.map((x, xi) => (xi === i ? { ...x, url: e.target.value } : x)))
                   }
-                  className="mt-1.5"
                 />
-              </div>
+              <div className="flex items-center justify-end gap-1">
               {s.url.trim() && <a href={s.url.trim()} target="_blank" rel="noreferrer" aria-label="SharePoint-Jahres-Site öffnen" title="SharePoint öffnen" className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><ExternalLink className="size-4" /></a>}
               <Button
                 variant="ghost"
@@ -125,12 +126,18 @@ function Einstellungen() {
               >
                 <Trash2 className="size-4" />
               </Button>
+              </div>
             </div>
           ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-3">
           <Button variant="outline" onClick={() => setSites([...sites, { jahr: "", url: "" }])}>
             <Plus className="size-4" />
             Jahres-Site hinzufügen
           </Button>
+          </div>
         </CardContent>
       </Card>
 
