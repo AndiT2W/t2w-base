@@ -92,7 +92,7 @@ function Einstellungen() {
             </div>
           </div>
           <div className="mt-3">
-            <Button variant="outline" onClick={() => setOutlookJahresordner([...outlookJahresordner, { jahr: "", url: "" }])}><Plus className="size-4" />Outlook-Jahresordner hinzufügen</Button>
+            <Button type="button" variant="outline" onClick={() => setOutlookJahresordner((current) => [...current, { jahr: "", url: "" }])}><Plus className="size-4" />Outlook-Jahresordner hinzufügen</Button>
           </div>
         </CardContent>
       </Card>
@@ -146,7 +146,7 @@ function Einstellungen() {
             </div>
           </div>
           <div className="mt-3">
-          <Button variant="outline" onClick={() => setSites([...sites, { jahr: "", url: "" }])}>
+          <Button type="button" variant="outline" onClick={() => setSites((current) => [...current, { jahr: "", url: "" }])}>
             <Plus className="size-4" />
             Jahres-Site hinzufügen
           </Button>
@@ -155,7 +155,7 @@ function Einstellungen() {
       </Card>
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={speichern}>Speichern</Button>
+        <Button type="button" onClick={speichern}>Speichern</Button>
       </div>
     </div>
   );

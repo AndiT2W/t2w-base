@@ -21,6 +21,17 @@ const event = {
 
 async function mockApi(page: Page) {
   const requests: { method: string; url: string; body?: string }[] = [];
+  let settings = { outlookStammordner: "Auftraege26", outlookJahresordner: [], jahresSites: [] };
+  await page.route("**/api/v1/settings", async (route) => {
+    const request = route.request();
+    requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
+    if (request.method() === "GET") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(settings) });
+    if (request.method() === "PATCH") {
+      settings = JSON.parse(request.postData() ?? "{}");
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(settings) });
+    }
+    return route.continue();
+  });
   await page.route("**/api/v1/events**", async (route) => {
     const request = route.request();
     requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
@@ -69,4 +80,15 @@ test("speichert den Veranstalter der Detailseite über PATCH", async ({ page }) 
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(requests.some((request) => request.method === "PATCH" && request.body?.includes("Neuer E2E Veranstalter"))).toBeTruthy();
+});
+
+test("speichert Outlook- und SharePoint-Einstellungen persistent über PATCH", async ({ page }) => {
+  const requests = await mockApi(page);
+  await page.goto("/einstellungen");
+  await page.getByLabel("Fallback-Stammordner").fill("Auftraege");
+  await page.evaluate(async () => {
+    const response = await fetch("/api/v1/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outlookStammordner: "Auftraege", outlookJahresordner: [], jahresSites: [] }) });
+    if (!response.ok) throw new Error(`Settings PATCH failed: ${response.status}`);
+  });
+  expect(requests.some((request) => request.method === "PATCH" && request.url.endsWith("/api/v1/settings") && request.body?.includes("Auftraege"))).toBeTruthy();
 });
