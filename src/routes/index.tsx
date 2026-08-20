@@ -100,6 +100,7 @@ function Uebersicht() {
   return (
     <div>
       <PageHeader
+        krumen={[{ label: "TIME2WIN" }]}
         titel="Übersicht"
         suche={{
           value: suche,

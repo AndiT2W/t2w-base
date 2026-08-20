@@ -46,7 +46,7 @@ function Aufgaben() {
   return (
     <div>
       <PageHeader
-        krumen={[{ label: "Übersicht", to: "/" }]}
+        krumen={[{ label: "TIME2WIN", to: "/" }]}
         titel="Aufgaben"
         beschreibung={`${zeilen.length} Aufgaben`}
         suche={{ value: suche, onChange: setSuche, placeholder: "Aufgabe, Event, Person …" }}

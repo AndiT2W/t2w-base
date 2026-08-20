@@ -43,7 +43,7 @@ function Kontakte() {
   return (
     <div>
       <PageHeader
-        krumen={[{ label: "Übersicht", to: "/" }]}
+        krumen={[{ label: "TIME2WIN", to: "/" }]}
         titel="Kontakte"
         beschreibung={`${zeilen.length} Ansprechpartner`}
         suche={{ value: suche, onChange: setSuche, placeholder: "Name, Rolle, Event …" }}

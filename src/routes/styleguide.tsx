@@ -48,7 +48,7 @@ function Styleguide() {
   return (
     <div>
       <PageHeader
-        krumen={[{ label: "Übersicht", to: "/" }]}
+        krumen={[{ label: "TIME2WIN", to: "/" }]}
         titel="Styleguide"
         beschreibung="Verbindliche Designrichtlinie für alle TIME2WIN Module"
       />
