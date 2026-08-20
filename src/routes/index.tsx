@@ -11,6 +11,7 @@ import { STATUS_LABEL, STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
 import { cn } from "@/lib/utils";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { jahr } from "@/lib/t2w/eventcode";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -46,6 +47,7 @@ function inTagen(iso: string, tage: number, heute: string) {
 }
 
 function Uebersicht() {
+  const { t } = useI18n();
   const { events, settings } = useT2W();
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
@@ -99,18 +101,18 @@ function Uebersicht() {
   return (
     <div>
       <PageHeader
-        titel="Übersicht"
+          titel={t("nav.overview")}
         suche={{
           value: suche,
           onChange: setSuche,
-          placeholder: "Event, Veranstalter oder Ort suchen …",
+          placeholder: t("overview.search"),
         }}
-        aktion={<EventDialog trigger={<Button><Plus className="size-4" />Event anlegen</Button>} />}
+        aktion={<EventDialog trigger={<Button><Plus className="size-4" />{t("actions.createEvent")}</Button>} />}
       />
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Kpi icon={CalendarClock} label="Events nächste 14 Tage" wert={kpi.kommend} />
-          <Kpi icon={CheckSquare} label="Offene Aufgaben" wert={kpi.aufgaben} />
+          <Kpi icon={CalendarClock} label={t("overview.next")} wert={kpi.kommend} />
+          <Kpi icon={CheckSquare} label={t("overview.tasks")} wert={kpi.aufgaben} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2">
@@ -141,7 +143,7 @@ function Uebersicht() {
               )}
             >
               {s !== "alle" && <StatusDot status={s} />}
-              {s === "alle" ? "Alle Status" : STATUS_LABEL[s]}
+              {s === "alle" ? t("status.all") : t(`status.${s}` as Parameters<typeof t>[0])}
             </button>
           ))}
         </div>
@@ -210,7 +212,7 @@ function Uebersicht() {
               {zeilen.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-2 py-8 text-center text-muted-foreground">
-                    Keine Events für diese Schnellfilter.
+                    {t("events.empty")}
                   </td>
                 </tr>
               )}
@@ -219,7 +221,7 @@ function Uebersicht() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          {zeilen.length} Zeilen · Aufg. = offene Aufgaben, OL/SP = Outlook- bzw. SharePoint-Ordner
+          {zeilen.length} {t("overview.rows")}
         </p>
       </div>
     </div>

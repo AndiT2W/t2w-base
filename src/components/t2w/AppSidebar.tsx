@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useI18n, type Locale } from "@/lib/i18n";
 
 export const HAUPT_NAV = [
   { to: "/", label: "Übersicht", icon: LayoutDashboard, exact: true },
@@ -54,6 +55,7 @@ const linkClass =
   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-nav-muted transition-colors hover:bg-nav-active/60 hover:text-nav-foreground data-[status=active]:bg-nav-active data-[status=active]:text-nav-foreground";
 
 function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
+  const { t, locale, setLocale } = useI18n();
   return (
     <div className="flex h-full flex-col gap-6 bg-nav px-3 py-4 text-nav-foreground">
       <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-2">
@@ -61,14 +63,14 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
           T2
         </span>
         <span className="min-w-0">
-          <span className="block text-sm font-semibold tracking-tight">TIME2WIN</span>
-          <span className="block truncate text-xs text-nav-muted">Eventverwaltung</span>
+          <span className="block text-sm font-semibold tracking-tight">{t("app.name")}</span>
+          <span className="block truncate text-xs text-nav-muted">{t("app.subtitle")}</span>
         </span>
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1">
         <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          Module
+          {t("nav.modules")}
         </p>
         {HAUPT_NAV.map((item) => (
           <Link
@@ -79,24 +81,27 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             className={linkClass}
           >
             <item.icon className="size-4 shrink-0" />
-            {item.label}
+            {t(({ "/": "nav.overview", "/veranstaltungen": "nav.events", "/aufgaben": "nav.tasks", "/kontakte": "nav.contacts", "/angebote": "nav.offers", "/rechnungen": "nav.invoices", "/einstellungen": "nav.settings" } as const)[item.to])}
           </Link>
         ))}
 
         <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          Weitere
+          {t("nav.more")}
         </p>
         {NEBEN_NAV.map((item) => (
           <Link key={item.to} to={item.to} onClick={onNavigate} className={linkClass}>
             <item.icon className="size-4 shrink-0" />
-            {item.label}
+            {t(({ "/kalender": "nav.calendar", "/varianten": "nav.variants", "/styleguide": "nav.styleguide" } as const)[item.to])}
           </Link>
         ))}
       </nav>
 
       <p className="px-3 text-[11px] leading-relaxed text-nav-muted">
-        Demo-Zustand · keine echten Integrationen
+        {t("nav.demo")}
       </p>
+      <div className="flex gap-1 px-2" aria-label={t("language")}>
+        {(["de", "en"] as Locale[]).map((code) => <button key={code} type="button" data-testid={`locale-${code}`} aria-pressed={locale === code} onClick={() => setLocale(code)} className={cn("rounded px-2 py-1 text-xs", locale === code ? "bg-nav-active text-nav-foreground" : "text-nav-muted")}>{code.toUpperCase()}</button>)}
+      </div>
     </div>
   );
 }
