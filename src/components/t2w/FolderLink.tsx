@@ -1,4 +1,4 @@
-import { Copy, ExternalLink } from "lucide-react";
+import { Copy, ExternalLink, FolderX } from "lucide-react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ export function FolderLink({ label, href, available, children }: { label: string
     await navigator.clipboard.writeText(href);
     toast.success(`${label}-Link kopiert.`);
   }
-  if (!available || !href) return <span className="text-muted-foreground">nicht verknüpft</span>;
+  if (!available || !href) return <span className="inline-flex items-center text-muted-foreground" title={`${label}: nicht verknüpft`} aria-label={`${label}: nicht verknüpft`}><FolderX className="size-4" /></span>;
   return <span className="flex min-w-0 items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
     <a href={href} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1 truncate text-primary hover:underline" title={href}>
       <span className="truncate">{children}</span><ExternalLink className="size-3 shrink-0" />
