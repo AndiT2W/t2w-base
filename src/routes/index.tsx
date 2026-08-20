@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarClock, CheckSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
@@ -47,6 +47,7 @@ function inTagen(iso: string, tage: number, heute: string) {
 
 function Uebersicht() {
   const { events, settings } = useT2W();
+  const navigate = useNavigate();
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
@@ -164,7 +165,20 @@ function Uebersicht() {
               {zeilen.map((e) => {
                 const offen = e.aufgaben.filter((a) => !a.erledigt).length;
                 return (
-                  <tr key={e.id} className="border-t border-border hover:bg-accent/50">
+                  <tr
+                    key={e.id}
+                    className="cursor-pointer border-t border-border hover:bg-accent/50"
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } });
+                      }
+                    }}
+                    aria-label={`${e.name} öffnen`}
+                  >
                     <td className="px-2 py-1" title={STATUS_LABEL[e.status]}>
                       <StatusDot status={e.status} />
                     </td>

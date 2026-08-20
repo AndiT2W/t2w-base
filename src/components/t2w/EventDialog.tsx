@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/select";
 import { useT2W } from "@/lib/t2w/store";
 import { buildEventcode } from "@/lib/t2w/eventcode";
-import { VERANTWORTLICHE } from "@/lib/t2w/demo";
 import {
   STATUS_ORDER,
   STATUS_LABEL,
@@ -40,8 +39,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const [start, setStart] = useState("");
   const [ende, setEnde] = useState("");
   const [status, setStatus] = useState<EventStatus>("anfrage");
-  const [verantwortlicher, setVerantwortlicher] = useState(VERANTWORTLICHE[0]!);
-  const [teilnehmer, setTeilnehmer] = useState("");
   const [notizen, setNotizen] = useState("");
 
   const vorschau =
@@ -60,7 +57,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
     setStart("");
     setEnde("");
     setStatus("anfrage");
-    setTeilnehmer("");
     setNotizen("");
   }
 
@@ -84,8 +80,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
       start,
       ende,
       status,
-      verantwortlicher,
-      teilnehmer: Number(teilnehmer) || 0,
       notizen: notizen.trim(),
     });
     toast.success(`Event angelegt: ${ev.eventcode}`);
@@ -175,31 +169,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label>Verantwortlicher</Label>
-            <Select value={verantwortlicher} onValueChange={setVerantwortlicher}>
-              <SelectTrigger className="mt-1.5">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VERANTWORTLICHE.map((v) => (
-                  <SelectItem key={v} value={v}>
-                    {v}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="tn">Teilnehmer</Label>
-            <Input
-              id="tn"
-              inputMode="numeric"
-              value={teilnehmer}
-              onChange={(e) => setTeilnehmer(e.target.value)}
-              className="mt-1.5"
-            />
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="notizen">Notizen</Label>

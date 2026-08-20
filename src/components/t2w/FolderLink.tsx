@@ -10,7 +10,7 @@ export function FolderLink({ label, href, available, children }: { label: string
     toast.success(`${label}-Link kopiert.`);
   }
   if (!available || !href) return <span className="text-muted-foreground">nicht verknüpft</span>;
-  return <span className="flex min-w-0 items-center gap-1.5">
+  return <span className="flex min-w-0 items-center gap-1.5" onClick={(event) => event.stopPropagation()}>
     <a href={href} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1 truncate text-primary hover:underline" title={href}>
       <span className="truncate">{children}</span><ExternalLink className="size-3 shrink-0" />
     </a>

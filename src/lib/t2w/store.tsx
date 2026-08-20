@@ -28,7 +28,7 @@ type Ctx = State & {
     start: string;
     ende?: string;
     status: T2WEvent["status"];
-    verantwortlicher: string;
+    verantwortlicher?: string;
     teilnehmer?: number;
     teilnehmerprognose?: number | null;
     sportart?: string;
@@ -68,7 +68,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
 
   const neuesEvent: Ctx["neuesEvent"] = useCallback(async (input) => {
     const ende = input.ende && input.ende.length ? input.ende : input.start;
-    const created = await apiCreateEvent({ name: input.name, veranstalter: input.veranstalter, start: input.start, ende, ort: input.ort, verantwortlicher: input.verantwortlicher, teilnehmerprognose: input.teilnehmerprognose ?? input.teilnehmer ?? 0, notizen: input.notizen, status: input.status });
+    const created = await apiCreateEvent({ name: input.name, veranstalter: input.veranstalter, start: input.start, ende, ort: input.ort, verantwortlicher: input.verantwortlicher ?? "", teilnehmerprognose: input.teilnehmerprognose ?? input.teilnehmer ?? 0, notizen: input.notizen, status: input.status });
     setState((prev) => ({ ...prev, events: [...prev.events, created] }));
     return created;
   }, []);
