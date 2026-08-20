@@ -7,11 +7,7 @@ const STATUS_BG: Record<EventStatus, string> = {
   abgesagt: "bg-status-storniert",
   akquise: "bg-status-angefragt",
   "datum-pruefen": "bg-status-angefragt",
-  entwurf: "bg-status-entwurf",
-  angefragt: "bg-status-angefragt",
   zugesagt: "bg-status-zugesagt",
-  abgeschlossen: "bg-status-abgeschlossen",
-  storniert: "bg-status-storniert",
 };
 
 export function StatusDot({ status, className }: { status: EventStatus; className?: string }) {

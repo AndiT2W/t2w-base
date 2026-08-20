@@ -29,7 +29,7 @@ function Rechnungen() {
   const { events } = useT2W();
   const heute = heuteIso();
   const faellig = events
-    .filter((e) => e.ende < heute && e.status !== "storniert")
+    .filter((e) => e.ende < heute && e.status !== "abgesagt")
     .sort((a, b) => b.ende.localeCompare(a.ende));
 
   return (

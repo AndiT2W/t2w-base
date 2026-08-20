@@ -10,7 +10,7 @@ export const Route = createFileRoute("/styleguide")({
       {
         name: "description",
         content:
-          "Verbindliche TIME2WIN Designrichtlinie: permanente linke App-Navigation, dichter Arbeitsbereich rechts, Status- und Risikofarben.",
+          "Verbindliche TIME2WIN Designrichtlinie: permanente linke App-Navigation, dichter Arbeitsbereich rechts und klare Statusfarben.",
       },
       { property: "og:title", content: "Styleguide – TIME2WIN Eventverwaltung" },
       {
@@ -101,7 +101,7 @@ function Styleguide() {
 
           <section className="rounded-lg border border-border bg-surface p-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Status und Risiko
+              Status
             </h2>
             <div className="mt-3 flex flex-wrap gap-2">
               {STATUS_ORDER.map((s) => (

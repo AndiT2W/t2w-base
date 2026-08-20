@@ -39,7 +39,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const [ort, setOrt] = useState("");
   const [start, setStart] = useState("");
   const [ende, setEnde] = useState("");
-  const [status, setStatus] = useState<EventStatus>("entwurf");
+  const [status, setStatus] = useState<EventStatus>("anfrage");
   const [verantwortlicher, setVerantwortlicher] = useState(VERANTWORTLICHE[0]!);
   const [teilnehmer, setTeilnehmer] = useState("");
   const [notizen, setNotizen] = useState("");
@@ -59,7 +59,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
     setOrt("");
     setStart("");
     setEnde("");
-    setStatus("entwurf");
+    setStatus("anfrage");
     setTeilnehmer("");
     setNotizen("");
   }

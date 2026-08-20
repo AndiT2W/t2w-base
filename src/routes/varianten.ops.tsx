@@ -62,7 +62,7 @@ function OpsVariante() {
   const kpi = useMemo(() => {
     const kommend = aktive.filter((e) => e.ende >= heute && inTagen(e.start, 14, heute)).length;
     const aufgaben = aktive.reduce((n, e) => n + e.aufgaben.filter((a) => !a.erledigt).length, 0);
-    const luecken = aktive.filter((e) => e.status === "angefragt" || e.status === "entwurf").length;
+    const luecken = aktive.filter((e) => e.status === "anfrage" || e.status === "angebot-gesendet").length;
     return { kommend, aufgaben, luecken };
   }, [aktive, heute]);
 

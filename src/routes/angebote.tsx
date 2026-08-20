@@ -28,7 +28,7 @@ export const Route = createFileRoute("/angebote")({
 function Angebote() {
   const { events } = useT2W();
   const offen = events.filter(
-    (e) => !e.archiviert && (e.status === "entwurf" || e.status === "angefragt"),
+    (e) => !e.archiviert && (e.status === "anfrage" || e.status === "angebot-gesendet"),
   );
 
   return (

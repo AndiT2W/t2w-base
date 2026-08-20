@@ -5,11 +5,7 @@ export type EventStatus =
   | "abgesagt"
   | "akquise"
   | "datum-pruefen"
-  /** Legacy values are accepted only while persisted demo records migrate. */
-  | "entwurf"
-  | "angefragt"
-  | "abgeschlossen"
-  | "storniert";
+;
 
 export const STATUS_LABEL: Record<EventStatus, string> = {
   anfrage: "Anfrage",
@@ -18,10 +14,6 @@ export const STATUS_LABEL: Record<EventStatus, string> = {
   abgesagt: "Abgesagt",
   akquise: "Akquise",
   "datum-pruefen": "Datum prüfen",
-  entwurf: "Anfrage",
-  angefragt: "Anfrage",
-  abgeschlossen: "Zugesagt",
-  storniert: "Abgesagt",
 };
 
 export const STATUS_ORDER: EventStatus[] = [

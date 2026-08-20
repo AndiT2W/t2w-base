@@ -51,7 +51,7 @@ export async function apiEvents() {
 }
 
 export async function apiCreateEvent(input: { name: string; start: string; ende: string; ort: string; verantwortlicher: string; teilnehmerprognose: number; notizen: string; status: string }) {
-  const status = input.status === "anfrage" || input.status === "entwurf" || input.status === "angefragt" ? "ANFRAGE" : input.status === "angebot-gesendet" ? "ANGEBOT_GESENDET" : input.status === "datum-pruefen" ? "DATUM_PRUEFEN" : input.status === "akquise" ? "AKQUISE" : input.status === "abgesagt" || input.status === "storniert" ? "ABGESAGT" : "ZUGESAGT";
+  const status = input.status === "anfrage" ? "ANFRAGE" : input.status === "angebot-gesendet" ? "ANGEBOT_GESENDET" : input.status === "datum-pruefen" ? "DATUM_PRUEFEN" : input.status === "akquise" ? "AKQUISE" : input.status === "abgesagt" ? "ABGESAGT" : "ZUGESAGT";
   const response = await fetch("/api/v1/events", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: input.name, startAt: input.start, endAt: input.ende, location: input.ort, responsible: input.verantwortlicher, participantForecast: input.teilnehmerprognose, notes: input.notizen, status }) });
   if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
   return mapApiEvent(await response.json() as ApiEvent);
