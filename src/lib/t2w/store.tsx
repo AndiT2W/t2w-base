@@ -37,14 +37,13 @@ type Ctx = State & {
   updateEvent: (id: string, patch: Partial<T2WEvent>) => void;
   setSettings: (s: Settings) => void;
   setSpalten: (c: ColumnKey[]) => void;
-  zuruecksetzen: () => void;
 };
 
 const StoreContext = createContext<Ctx | null>(null);
 
 const initial: State = {
   events: [],
-  settings: { outlookStammordner: "Auftraege26", jahresSites: [] },
+  settings: { outlookStammordner: "Auftraege26", outlookJahresordner: [], jahresSites: [] },
   spalten: ALL_COLUMNS,
 };
 
@@ -92,7 +91,6 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       updateEvent,
       setSettings: (s) => setState((p) => ({ ...p, settings: s })),
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
-      zuruecksetzen: () => setState(initial),
     }),
     [state, bereit, ladefehler, neuesEvent, updateEvent],
   );

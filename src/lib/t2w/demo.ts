@@ -244,6 +244,7 @@ export const DEMO_EVENTS: T2WEvent[] = [
 
 export const DEMO_SETTINGS: Settings = {
   outlookStammordner: "Auftraege26",
+  outlookJahresordner: [],
   jahresSites: [
     { jahr: "2025", url: "https://time2win.sharepoint.com/sites/Events2025" },
     { jahr: "2026", url: "https://time2win.sharepoint.com/sites/Events2026" },

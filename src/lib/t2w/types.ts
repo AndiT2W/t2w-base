@@ -100,6 +100,7 @@ export type T2WEvent = {
 
 export type Settings = {
   outlookStammordner: string;
+  outlookJahresordner: { jahr: string; url: string }[];
   jahresSites: { jahr: string; url: string }[];
 };
 

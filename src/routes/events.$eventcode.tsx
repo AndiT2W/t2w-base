@@ -93,7 +93,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
   const vergangen = event.ende < heuteIso();
   const aktuellesQuartal = quartal(form.start);
-  const outlookVorschlag = `${settings.outlookStammordner}/${aktuellesQuartal}/${event.eventcode}`;
+  const outlookJahresordner = settings.outlookJahresordner.find((s) => s.jahr === jahr(form.start));
+  const outlookBasis = outlookJahresordner?.url || settings.outlookStammordner;
+  const outlookVorschlag = `${outlookBasis.replace(/\/$/, "")}/${aktuellesQuartal}/${event.eventcode}`;
   const quartalsAbweichung =
     !!form.outlookOrdner && !form.outlookOrdner.includes(`/${aktuellesQuartal}/`);
   const jahresSite = settings.jahresSites.find((s) => s.jahr === jahr(form.start));

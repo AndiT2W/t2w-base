@@ -28,12 +28,13 @@ export const Route = createFileRoute("/einstellungen")({
 });
 
 function Einstellungen() {
-  const { settings, setSettings, zuruecksetzen } = useT2W();
+  const { settings, setSettings } = useT2W();
   const [stamm, setStamm] = useState(settings.outlookStammordner);
+  const [outlookJahresordner, setOutlookJahresordner] = useState(settings.outlookJahresordner);
   const [sites, setSites] = useState(settings.jahresSites);
 
   function speichern() {
-    setSettings({ outlookStammordner: stamm.trim(), jahresSites: sites });
+    setSettings({ outlookStammordner: stamm.trim(), outlookJahresordner, jahresSites: sites });
     toast.success("Einstellungen gespeichert.");
   }
 
@@ -49,9 +50,9 @@ function Einstellungen() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Outlook-Stammordner</CardTitle>
+          <CardTitle className="text-base">Outlook-Jahresordner</CardTitle>
           <CardDescription>
-            Struktur: Stammordner / Quartal / Eventcode – z. B. {stamm || "Auftraege26"}
+            Struktur: Jahresordner / Quartal / Eventcode – z. B. {outlookJahresordner[0]?.url || stamm || "Auftraege26"}
             /Q2/260612_haendlertag_sued
           </CardDescription>
         </CardHeader>
@@ -63,6 +64,22 @@ function Einstellungen() {
             onChange={(e) => setStamm(e.target.value)}
             className="mt-1.5 max-w-sm"
           />
+          <div className="mt-4 space-y-3">
+            {outlookJahresordner.map((s, i) => (
+              <div key={i} className="flex flex-wrap items-end gap-2">
+                <div className="w-24">
+                  <Label htmlFor={`outlook-jahr-${i}`}>Jahr</Label>
+                  <Input id={`outlook-jahr-${i}`} value={s.jahr} onChange={(e) => setOutlookJahresordner(outlookJahresordner.map((x, xi) => xi === i ? { ...x, jahr: e.target.value } : x))} className="mt-1.5" />
+                </div>
+                <div className="min-w-[16rem] flex-1">
+                  <Label htmlFor={`outlook-url-${i}`}>Ordnerpfad</Label>
+                  <Input id={`outlook-url-${i}`} value={s.url} onChange={(e) => setOutlookJahresordner(outlookJahresordner.map((x, xi) => xi === i ? { ...x, url: e.target.value } : x))} className="mt-1.5" />
+                </div>
+                <Button variant="ghost" size="icon" aria-label="Outlook-Jahresordner entfernen" onClick={() => setOutlookJahresordner(outlookJahresordner.filter((_, xi) => xi !== i))}><Trash2 className="size-4" /></Button>
+              </div>
+            ))}
+            <Button variant="outline" onClick={() => setOutlookJahresordner([...outlookJahresordner, { jahr: "", url: "" }])}><Plus className="size-4" />Outlook-Jahresordner hinzufügen</Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -117,16 +134,6 @@ function Einstellungen() {
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={speichern}>Speichern</Button>
-        <Button
-          variant="outline"
-          onClick={() => {
-            zuruecksetzen();
-            setStamm("Auftraege26");
-            toast.success("Demo-Daten zurückgesetzt.");
-          }}
-        >
-          Demo-Daten zurücksetzen
-        </Button>
       </div>
     </div>
   );
