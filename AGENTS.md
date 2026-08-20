@@ -112,3 +112,7 @@ This repo uses the default Matt Pocock triage label vocabulary. See `docs/agents
 ### Domain docs
 
 This is a single-context repository; domain context and ADRs are read from the repository root and `docs/adr/`. See `docs/agents/domain.md`.
+
+### Feature testing rule
+
+Every additional feature must include a regression test in the same change. Prefer a real browser E2E test that drives the complete user workflow and verifies the observable result, including persistence after reload where applicable. Run the relevant browser tests before committing and keep the test as a durable guard for future changes.
