@@ -21,7 +21,7 @@ const event = {
 
 async function mockApi(page: Page) {
   const requests: { method: string; url: string; body?: string }[] = [];
-  let settings = { outlookStammordner: "Auftraege26", outlookJahresordner: [], jahresSites: [] };
+  let settings = { outlookStammordner: "Auftraege26", outlookJahresordner: [], jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }] };
   await page.route("**/api/v1/settings", async (route) => {
     const request = route.request();
     requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
@@ -56,6 +56,19 @@ test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) =>
   await expect(page.getByText("Alter Veranstalter")).toBeVisible();
 });
 
+test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/veranstaltungen");
+  await expect(page.getByRole("navigation", { name: "Veranstaltungsansichten" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Liste" })).toHaveAttribute("aria-current", "page");
+  await page.getByRole("navigation", { name: "Veranstaltungsansichten" }).getByRole("link", { name: "Kalender" }).click();
+  await expect(page).toHaveURL(/\/kalender$/);
+  await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
+  await page.goto("/gantt");
+  await expect(page.getByRole("link", { name: "Gantt" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText("Bestehendes Event")).toBeVisible();
+});
+
 test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/");
@@ -82,13 +95,19 @@ test("speichert den Veranstalter der Detailseite über PATCH", async ({ page }) 
   expect(requests.some((request) => request.method === "PATCH" && request.body?.includes("Neuer E2E Veranstalter"))).toBeTruthy();
 });
 
+test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  await expect(page.getByText("Der Eventcode ist unveränderlich.", { exact: true })).not.toBeVisible();
+  await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
+});
+
 test("speichert Outlook- und SharePoint-Einstellungen persistent über PATCH", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/einstellungen");
   await page.getByLabel("Fallback-Stammordner").fill("Auftraege");
-  await page.evaluate(async () => {
-    const response = await fetch("/api/v1/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ outlookStammordner: "Auftraege", outlookJahresordner: [], jahresSites: [] }) });
-    if (!response.ok) throw new Error(`Settings PATCH failed: ${response.status}`);
-  });
+  await page.getByLabel("Site-URL").fill("https://example.sharepoint.com/sites/Auftraege26");
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect(requests.some((request) => request.method === "PATCH" && request.url.endsWith("/api/v1/settings") && request.body?.includes("Auftraege"))).toBeTruthy();
+  await expect(page.getByText("Einstellungen gespeichert.")).toBeVisible();
 });

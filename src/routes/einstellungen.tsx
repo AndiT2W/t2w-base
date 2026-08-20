@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -43,6 +43,12 @@ function Einstellungen() {
   const [stamm, setStamm] = useState(settings.outlookStammordner);
   const [outlookJahresordner, setOutlookJahresordner] = useState(settings.outlookJahresordner);
   const [sites, setSites] = useState(() => nachJahrAbsteigend(settings.jahresSites));
+
+  useEffect(() => {
+    setStamm(settings.outlookStammordner);
+    setOutlookJahresordner(settings.outlookJahresordner);
+    setSites(nachJahrAbsteigend(settings.jahresSites));
+  }, [settings]);
 
   async function speichern() {
     const sortierteSites = nachJahrAbsteigend(sites);
