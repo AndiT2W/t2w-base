@@ -47,8 +47,12 @@ function Einstellungen() {
   async function speichern() {
     const sortierteSites = nachJahrAbsteigend(sites);
     setSites(sortierteSites);
-    await setSettings({ outlookStammordner: stamm.trim(), outlookJahresordner, jahresSites: sortierteSites });
-    toast.success("Einstellungen gespeichert.");
+    try {
+      await setSettings({ outlookStammordner: stamm.trim(), outlookJahresordner, jahresSites: sortierteSites });
+      toast.success("Einstellungen gespeichert.");
+    } catch {
+      toast.error("Einstellungen konnten nicht gespeichert werden.");
+    }
   }
 
   return (
