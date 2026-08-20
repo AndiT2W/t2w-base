@@ -91,6 +91,7 @@ export type T2WEvent = {
   archiviert: boolean;
   notizen: string;
   outlookOrdner: string | null;
+  outlookWebUrl: string | null;
   sharepointOrdner: string | null;
   kontakte: Contact[];
   aufgaben: Task[];

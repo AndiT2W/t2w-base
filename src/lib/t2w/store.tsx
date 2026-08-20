@@ -9,7 +9,7 @@ import {
 } from "react";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
-import { apiCreateEvent, apiEvents, apiUpdateEvent } from "./api";
+import { apiCreateEvent, apiEvents, apiSettings, apiUpdateEvent, apiUpdateSettings } from "./api";
 import { LoginView } from "@/components/t2w/LoginView";
 
 type State = {
@@ -35,7 +35,7 @@ type Ctx = State & {
     notizen: string;
   }) => Promise<T2WEvent>;
   updateEvent: (id: string, patch: Partial<T2WEvent>) => void;
-  setSettings: (s: Settings) => void;
+  setSettings: (s: Settings) => Promise<void>;
   setSpalten: (c: ColumnKey[]) => void;
 };
 
@@ -56,8 +56,8 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void (async () => {
       try {
-        const events = await apiEvents();
-        setState((current) => ({ ...current, events }));
+        const [events, settings] = await Promise.all([apiEvents(), apiSettings()]);
+        setState((current) => ({ ...current, events, settings }));
       } catch {
         setLadefehler("Die zentrale Eventquelle konnte nicht geladen werden.");
         setAngemeldet(false);
@@ -89,7 +89,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       ladefehler,
       neuesEvent,
       updateEvent,
-      setSettings: (s) => setState((p) => ({ ...p, settings: s })),
+      setSettings: async (s) => { const saved = await apiUpdateSettings(s); setState((p) => ({ ...p, settings: saved })); },
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
     }),
     [state, bereit, ladefehler, neuesEvent, updateEvent],

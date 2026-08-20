@@ -17,6 +17,7 @@ export class CreateEventDto {
   @IsOptional() @IsInt() @Min(0) participantForecast?: number;
   @IsOptional() @IsString() notes?: string;
   @IsOptional() @IsString() outlookFolder?: string;
+  @IsOptional() @IsString() outlookWebUrl?: string;
   @IsOptional() @IsString() sharepointFolder?: string;
 }
 
@@ -49,7 +50,7 @@ export class EventsController {
           ?? (await tx.organizer.create({ data: { name: dto.organizerName.trim(), type: "ORGANISATION" } })).id
         : dto.organizerId;
       return tx.event.create({
-        data: { eventCode: `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`, name: dto.name, startAt: start, endAt: new Date(dto.endAt ?? dto.startAt), status: dto.status ?? EventStatus.ANFRAGE, organizerId, sportId: dto.sportId, location: dto.location, responsible: dto.responsible, participantForecast: dto.participantForecast, notes: dto.notes, outlookFolder: dto.outlookFolder, sharepointFolder: dto.sharepointFolder },
+        data: { eventCode: `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`, name: dto.name, startAt: start, endAt: new Date(dto.endAt ?? dto.startAt), status: dto.status ?? EventStatus.ANFRAGE, organizerId, sportId: dto.sportId, location: dto.location, responsible: dto.responsible, participantForecast: dto.participantForecast, notes: dto.notes, outlookFolder: dto.outlookFolder, outlookWebUrl: dto.outlookWebUrl, sharepointFolder: dto.sharepointFolder },
         include: { organizer: true, sport: true },
       });
     });

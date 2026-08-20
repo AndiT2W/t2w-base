@@ -18,6 +18,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Live ClickUp review also shows cleanup needs such as duplicate customers and mixed contact/entity types.
 - The inspected `260225_ART_tauern_circle.xlsx` workbook shows a strongly position-based offer and invoice structure with shared sheets for customer data, event data, services, price logic, and calculations.
 - The target end-state now also includes an event-centered communication view that should eventually aggregate Outlook, WhatsApp, and other relevant communication into the event record.
+- Event records store both the readable Outlook folder path and an optional direct Outlook Web URL for opening the exact folder.
 - A first architecture concept now exists for an event communication knowledge service that ingests inbound and outbound mail, matches messages to events, and builds structured event knowledge on top of the communication history.
 - A first user-defined target model for events, organizers, contacts, offers, calculations, files, and communication was consolidated on 2026-06-30.
 - The first MVP task now focuses on event CRM with contacts, event communication, and external invoice references while keeping offer/invoice editing in Excel.

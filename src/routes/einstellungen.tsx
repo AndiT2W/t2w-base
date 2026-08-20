@@ -8,6 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useT2W } from "@/lib/t2w/store";
 
+function nachJahrAbsteigend<T extends { jahr: string }>(eintraege: T[]) {
+  return [...eintraege].sort((a, b) => {
+    const jahrA = Number.parseInt(a.jahr, 10);
+    const jahrB = Number.parseInt(b.jahr, 10);
+    if (Number.isNaN(jahrA) && Number.isNaN(jahrB)) return 0;
+    if (Number.isNaN(jahrA)) return 1;
+    if (Number.isNaN(jahrB)) return -1;
+    return jahrB - jahrA;
+  });
+}
+
 export const Route = createFileRoute("/einstellungen")({
   head: () => ({
     meta: [
@@ -31,10 +42,12 @@ function Einstellungen() {
   const { settings, setSettings } = useT2W();
   const [stamm, setStamm] = useState(settings.outlookStammordner);
   const [outlookJahresordner, setOutlookJahresordner] = useState(settings.outlookJahresordner);
-  const [sites, setSites] = useState(settings.jahresSites);
+  const [sites, setSites] = useState(() => nachJahrAbsteigend(settings.jahresSites));
 
-  function speichern() {
-    setSettings({ outlookStammordner: stamm.trim(), outlookJahresordner, jahresSites: sites });
+  async function speichern() {
+    const sortierteSites = nachJahrAbsteigend(sites);
+    setSites(sortierteSites);
+    await setSettings({ outlookStammordner: stamm.trim(), outlookJahresordner, jahresSites: sortierteSites });
     toast.success("Einstellungen gespeichert.");
   }
 

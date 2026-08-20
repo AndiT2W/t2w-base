@@ -1,4 +1,4 @@
-import type { T2WEvent } from "./types";
+import type { Settings, T2WEvent } from "./types";
 
 type ApiEvent = {
   id: string;
@@ -13,6 +13,7 @@ type ApiEvent = {
   participantCurrent: number | null;
   notes: string | null;
   outlookFolder: string | null;
+  outlookWebUrl: string | null;
   sharepointFolder: string | null;
   archived: boolean;
   organizer?: { name: string } | null;
@@ -34,7 +35,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     status: statusFromApi[event.status] ?? "anfrage", verantwortlicher: event.responsible ?? "—",
     teilnehmer: event.participantForecast ?? 0,
     teilnehmerwerte: { prognose: event.participantForecast, aktuell: event.participantCurrent, aktuellQuelle: event.participantCurrent == null ? null : "time2win", aktuellSynchronisiertAm: null },
-    archiviert: event.archived, notizen: event.notes ?? "", outlookOrdner: event.outlookFolder, sharepointOrdner: event.sharepointFolder,
+    archiviert: event.archived, notizen: event.notes ?? "", outlookOrdner: event.outlookFolder, outlookWebUrl: event.outlookWebUrl, sharepointOrdner: event.sharepointFolder,
     kontakte: [], aufgaben: [], dateien: [], kommunikation: [], sportart: event.sport?.name ?? "",
   };
 }
@@ -57,8 +58,20 @@ export async function apiCreateEvent(input: { name: string; veranstalter: string
   return mapApiEvent(await response.json() as ApiEvent);
 }
 
+export async function apiSettings(): Promise<Settings> {
+  const response = await fetch("/api/v1/settings", { credentials: "include" });
+  if (!response.ok) throw new Error("Einstellungen konnten nicht geladen werden");
+  return await response.json() as Settings;
+}
+
+export async function apiUpdateSettings(settings: Settings): Promise<Settings> {
+  const response = await fetch("/api/v1/settings", { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(settings) });
+  if (!response.ok) throw new Error("Einstellungen konnten nicht gespeichert werden");
+  return await response.json() as Settings;
+}
+
 export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
-  const response = await fetch(`/api/v1/events/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: patch.name, startAt: patch.start, endAt: patch.ende, location: patch.ort, responsible: patch.verantwortlicher, participantForecast: patch.teilnehmer, notes: patch.notizen, organizerName: patch.veranstalter, outlookFolder: patch.outlookOrdner, sharepointFolder: patch.sharepointOrdner }) });
+  const response = await fetch(`/api/v1/events/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: patch.name, startAt: patch.start, endAt: patch.ende, location: patch.ort, responsible: patch.verantwortlicher, participantForecast: patch.teilnehmer, notes: patch.notizen, organizerName: patch.veranstalter, outlookFolder: patch.outlookOrdner, outlookWebUrl: patch.outlookWebUrl, sharepointFolder: patch.sharepointOrdner }) });
   if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
   return mapApiEvent(await response.json() as ApiEvent);
 }

@@ -106,6 +106,7 @@ model Event {
   participantCurrent    Int?
   notes                 String?
   outlookFolder         String?
+  outlookWebUrl         String?
   sharepointFolder      String?
   archived              Boolean     @default(false)
   archivedAt            DateTime?
@@ -155,4 +156,12 @@ model Session {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([expiresAt])
+}
+
+model AppSettings {
+  id                  Int      @id @default(1)
+  outlookStammordner  String   @default("Auftraege26")
+  outlookJahresordner Json     @default("[]")
+  jahresSites         Json     @default("[]")
+  updatedAt           DateTime @updatedAt
 }

@@ -297,7 +297,17 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Link2 className="size-4" />
                   Vorschlag übernehmen
                 </Button>
-                <div className="mt-2 text-xs"><FolderLink label="Outlook" href={form.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(form.outlookOrdner)}>{form.outlookOrdner}</FolderLink></div>
+                <div className="mt-2 text-xs"><FolderLink label="Outlook" href={form.outlookWebUrl} available={Boolean(form.outlookWebUrl)}>{form.outlookOrdner}</FolderLink></div>
+                <Label htmlFor="d-outlook-url" className="mt-3 block">Outlook-Web-Link</Label>
+                <Input
+                  id="d-outlook-url"
+                  type="url"
+                  value={form.outlookWebUrl ?? ""}
+                  placeholder="https://outlook.office.com/mail/..."
+                  onChange={(e) => set("outlookWebUrl", e.target.value || null)}
+                  className="mt-1.5 text-xs"
+                />
+                <p className="mt-1.5 text-xs text-muted-foreground">Öffnet den konkreten Ordner direkt in Outlook Web.</p>
               </div>
               <div>
                 <Label htmlFor="d-sp">SharePoint-Ordner</Label>
