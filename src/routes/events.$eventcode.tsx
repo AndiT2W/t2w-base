@@ -387,7 +387,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Dateien</CardTitle>
-              <CardDescription>Demo-Ansicht des verknüpften SharePoint-Ordners.</CardDescription>
+              <CardDescription>Ansicht des verknüpften SharePoint-Ordners.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               {form.dateien.length === 0 && (
@@ -453,7 +453,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               onClick={() => {
                 set("outlookOrdner", outlookVorschlag);
                 updateEvent(event.id, { outlookOrdner: outlookVorschlag });
-                toast.success("Outlook-Verschiebung bestätigt (Demo).");
+                toast.success("Outlook-Verschiebung bestätigt.");
               }}
             >
               Verschiebung bestätigen

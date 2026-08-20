@@ -13,7 +13,7 @@ export const Route = createFileRoute("/angebote")({
       {
         name: "description",
         content:
-          "Angebotsmodul der TIME2WIN Eventverwaltung: offene Angebote je Event als Demo-Vorschau.",
+          "Angebotsmodul der TIME2WIN Eventverwaltung: offene Angebote je Event.",
       },
       { property: "og:title", content: "Angebote – TIME2WIN Eventverwaltung" },
       {

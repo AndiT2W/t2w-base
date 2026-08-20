@@ -48,7 +48,7 @@ function Aufgaben() {
       <PageHeader
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Aufgaben"
-        beschreibung={`${zeilen.length} Aufgaben · Demo-Daten`}
+        beschreibung={`${zeilen.length} Aufgaben`}
         suche={{ value: suche, onChange: setSuche, placeholder: "Aufgabe, Event, Person …" }}
         aktion={
           <button

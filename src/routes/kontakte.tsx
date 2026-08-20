@@ -45,7 +45,7 @@ function Kontakte() {
       <PageHeader
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Kontakte"
-        beschreibung={`${zeilen.length} Ansprechpartner · Demo-Daten`}
+        beschreibung={`${zeilen.length} Ansprechpartner`}
         suche={{ value: suche, onChange: setSuche, placeholder: "Name, Rolle, Event …" }}
       />
 

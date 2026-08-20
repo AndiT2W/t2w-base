@@ -13,7 +13,7 @@ export const Route = createFileRoute("/rechnungen")({
       {
         name: "description",
         content:
-          "Rechnungsmodul der TIME2WIN Eventverwaltung: abrechnungsreife Events als Demo-Vorschau.",
+          "Rechnungsmodul der TIME2WIN Eventverwaltung: abrechnungsreife Events.",
       },
       { property: "og:title", content: "Rechnungen – TIME2WIN Eventverwaltung" },
       {

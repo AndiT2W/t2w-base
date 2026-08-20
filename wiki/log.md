@@ -146,3 +146,4 @@
 - 2026-08-20: Issue #22 Anlageflow nachgeschärft: neue Events werden erst nach erfolgreichem POST in den Store übernommen und anschließend mit dem echten API-Datensatz geöffnet; Veranstalter werden bereits beim Anlegen persistiert. TIME2WIN-Synchronisierung bleibt abhängig von Issue #21.
 - 2026-08-20: Playwright/Chromium-Browser-E2E-Testsetup für Issue #22 ergänzt. Drei Szenarien decken Übersichtsladen, Eventanlage per POST und Veranstalteränderung per PATCH ab; vollständiger Lauf: 3/3 bestanden.
 - 2026-08-20: Einstellungen erweitert: Outlook kann je Jahr einen eigenen Stammordner verwenden; der globale Stammordner bleibt als Fallback. Das Zurücksetzen der Einstellungen leert den Eventbestand nicht mehr.
+- 2026-08-20: Demo-Datei und Demo-Texte aus der Anwendung entfernt; die Oberfläche verweist nun auf den zentralen Event-Service als Datenquelle.

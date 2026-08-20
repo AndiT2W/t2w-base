@@ -111,7 +111,7 @@ function Veranstaltungen() {
       <PageHeader
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Veranstaltungen"
-        beschreibung={`${gefiltert.length} von ${events.length} Events · Demo-Daten`}
+        beschreibung={`${gefiltert.length} von ${events.length} Events`}
         suche={{
           value: suche,
           onChange: setSuche,

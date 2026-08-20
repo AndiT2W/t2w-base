@@ -95,7 +95,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <p className="px-3 text-[11px] leading-relaxed text-nav-muted">
-        Demo-Zustand · keine echten Integrationen
+        Zentrale Datenquelle: Event-Service
       </p>
     </div>
   );
