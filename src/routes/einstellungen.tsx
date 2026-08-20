@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +75,7 @@ function Einstellungen() {
                   <Label htmlFor={`outlook-url-${i}`}>Ordnerpfad</Label>
                   <Input id={`outlook-url-${i}`} value={s.url} onChange={(e) => setOutlookJahresordner(outlookJahresordner.map((x, xi) => xi === i ? { ...x, url: e.target.value } : x))} className="mt-1.5" />
                 </div>
+                <a href="https://outlook.office.com/mail/" target="_blank" rel="noreferrer" aria-label="Outlook-Jahresordner öffnen" title="Outlook öffnen" className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><ExternalLink className="size-4" /></a>
                 <Button variant="ghost" size="icon" aria-label="Outlook-Jahresordner entfernen" onClick={() => setOutlookJahresordner(outlookJahresordner.filter((_, xi) => xi !== i))}><Trash2 className="size-4" /></Button>
               </div>
             ))}
@@ -115,6 +116,7 @@ function Einstellungen() {
                   className="mt-1.5"
                 />
               </div>
+              {s.url.trim() && <a href={s.url.trim()} target="_blank" rel="noreferrer" aria-label="SharePoint-Jahres-Site öffnen" title="SharePoint öffnen" className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"><ExternalLink className="size-4" /></a>}
               <Button
                 variant="ghost"
                 size="icon"
