@@ -35,6 +35,8 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Product specification drafted in `wiki/specification-v1.md`.
 - Delivery phases and roadmap documented for later AI-assisted implementation.
 - Initial entity, concept, and decision pages now exist for project context.
+- Design foundation added on 2026-08-20: the product is multilingual from the start, with German (`de`) as default and English (`en`) supported in parallel.
+- Persistente Outlook-/SharePoint-Einstellungen liegen im Event-Service/PostgreSQL; UI-Features mit Persistenz werden künftig bevorzugt durch echte Browser-E2E-Tests abgesichert. Siehe [Persistente Einstellungen und Browser-Regressionstests](concepts/settings-persistence-and-browser-tests.md).
 
 ## Next Best Actions
 
@@ -52,3 +54,4 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Prioritize the MVP feature set into an implementation backlog.
 - Choose the initial technical stack and architecture approach.
 - Add any existing process docs, spreadsheets, or notes to `raw/inbox/` for ingestion.
+- Establish the translation-key, locale-formatting, and language-switching foundation before expanding feature UI.

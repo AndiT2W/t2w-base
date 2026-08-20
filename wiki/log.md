@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-08-20
+
+- Veranstaltungsbereich um kompakte Reiter für Liste, Kalender und Gantt ergänzt; die Liste bleibt die tabellarische Standardansicht.
+
 ## 2026-08-17
 
 - Adopted Invoice Ninja-inspired canonical statuses for offers, invoices, and credits/gutschriften in `t2w-base`; `Overdue` and `Unpaid` remain derived indicators.
@@ -151,3 +155,12 @@
 - 2026-08-20: Event-Stammdaten um `outlookWebUrl` erweitert. Der direkte Outlook-Web-Link wird nun pro Event gespeichert, über die API persistiert und beim Outlook-Link verwendet; der bisherige Ordnerpfad bleibt als lesbare Zusatzinformation erhalten.
 - 2026-08-20: SharePoint-Jahres-Sites werden in den Einstellungen numerisch absteigend nach Jahr sortiert; die aktuellste Site steht oben und die Sortierung wird beim Speichern dauerhaft übernommen.
 - 2026-08-20: Demo-Datei und Demo-Texte aus der Anwendung entfernt; die Oberfläche verweist nun auf den zentralen Event-Service als Datenquelle.
+- 2026-08-20: Hinweis zur Unveränderlichkeit des Eventcodes aus der Stammdaten-Kopfzeile entfernt und als kleine Zusatzinformation direkt an die Eventcode-Feldbeschriftung verschoben; E2E-Regressionstest ergänzt.
+- 2026-08-20: Eventcode in der Eventdetail-Kopfzeile in dieselbe Metadatenzeile wie Veranstalter und Datum verschoben; E2E-Regressionstest ergänzt.
+- 2026-08-20: Mehrsprachigkeit als Designgrundlage festgehalten: Deutsch (`de`) ist Default und Fallback, Englisch (`en`) wird ab Beginn parallel unterstützt; UI-Texte, Formatierungen und stabile sprachneutrale Fachcodes sind entsprechend auszulegen.
+- 2026-08-20: Spezifikation für die mehrsprachige Produktgrundlage als [GitHub Issue #26](https://github.com/AndiT2W/t2w-base/issues/26) veröffentlicht und mit `enhancement` sowie `ready-for-agent` markiert.
+# 2026-08-20
+
+- Implemented the first Outlook folder integration slice for issue #25: Graph adapter seam, stable event folder IDs/status fields, idempotent year/quarter/event folder provisioning, and a protected event sync endpoint.
+- Verified with `npm run build` and the event-service Vitest suite.
+- Dokumentation nachgezogen: Issue #24 und die Wiki-Konvention beschreiben jetzt die AppSettings-PostgreSQL-Persistenz, die Ursache des asynchronen Formular-State-Fehlers sowie die verbindliche E2E-Regel für neue persistente Features. Der Browser-Test muss den vollständigen UI-Ablauf abdecken und darf den PATCH nicht nur direkt per `fetch` auslösen.
