@@ -43,7 +43,7 @@ const StoreContext = createContext<Ctx | null>(null);
 
 const initial: State = {
   events: [],
-  settings: { outlookStammordner: "Auftraege26", outlookJahresordner: [], jahresSites: [] },
+  settings: { outlookStammordner: "Auftraege26", outlookJahresordner: [], jahresSites: [], outlookMailbox: null, outlookRootFolderId: null },
   spalten: ALL_COLUMNS,
 };
 

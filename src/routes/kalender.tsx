@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, GanttChartSquare, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
@@ -217,6 +217,11 @@ function KalenderSeite() {
 
   return (
     <div className="space-y-5">
+      <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
+        <KalenderReiter to="/veranstaltungen" label="Liste" icon={List} />
+        <KalenderReiter to="/kalender" label="Kalender" icon={CalendarDays} aktiv />
+        <KalenderReiter to="/gantt" label="Gantt" icon={GanttChartSquare} />
+      </nav>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Kalender</h1>
@@ -291,5 +296,32 @@ function KalenderSeite() {
         )}
       </div>
     </div>
+  );
+}
+
+function KalenderReiter({
+  to,
+  label,
+  icon: Icon,
+  aktiv = false,
+}: {
+  to: "/veranstaltungen" | "/kalender" | "/gantt";
+  label: string;
+  icon: typeof List;
+  aktiv?: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      aria-current={aktiv ? "page" : undefined}
+      className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
+        aktiv
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+      }`}
+    >
+      <Icon className="size-4" />
+      {label}
+    </Link>
   );
 }

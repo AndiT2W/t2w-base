@@ -157,6 +157,7 @@
 - 2026-08-20: Demo-Datei und Demo-Texte aus der Anwendung entfernt; die Oberfläche verweist nun auf den zentralen Event-Service als Datenquelle.
 - 2026-08-20: Hinweis zur Unveränderlichkeit des Eventcodes aus der Stammdaten-Kopfzeile entfernt und als kleine Zusatzinformation direkt an die Eventcode-Feldbeschriftung verschoben; E2E-Regressionstest ergänzt.
 - 2026-08-20: Eventcode in der Eventdetail-Kopfzeile in dieselbe Metadatenzeile wie Veranstalter und Datum verschoben; E2E-Regressionstest ergänzt.
+- 2026-08-20: In der Eventübersicht die Sammelüberschrift `Ordner` durch Outlook-/SharePoint-Symbole ersetzt und dieselben Symbole in den klickbaren Zeilenlinks ergänzt; E2E-Regressionstest ergänzt.
 - 2026-08-20: Mehrsprachigkeit als Designgrundlage festgehalten: Deutsch (`de`) ist Default und Fallback, Englisch (`en`) wird ab Beginn parallel unterstützt; UI-Texte, Formatierungen und stabile sprachneutrale Fachcodes sind entsprechend auszulegen.
 - 2026-08-20: Spezifikation für die mehrsprachige Produktgrundlage als [GitHub Issue #26](https://github.com/AndiT2W/t2w-base/issues/26) veröffentlicht und mit `enhancement` sowie `ready-for-agent` markiert.
 # 2026-08-20

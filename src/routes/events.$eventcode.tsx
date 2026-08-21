@@ -128,9 +128,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-5">
         <div className="space-y-2">
-          <p className="font-mono text-xs text-muted-foreground">{event.eventcode}</p>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">{event.name}</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span className="font-mono text-xs">{event.eventcode}</span>
+            <span>·</span>
             <span>{event.veranstalter}</span>
             <span>·</span>
             <span>{formatZeitraum(event.start, event.ende)}</span>
@@ -174,7 +175,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Stammdaten</CardTitle>
-              <CardDescription>Der Eventcode ist unveränderlich.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -187,7 +187,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 />
               </div>
               <div>
-                <Label htmlFor="d-code">Eventcode</Label>
+                <Label htmlFor="d-code">
+                  Eventcode <span className="text-xs font-normal text-muted-foreground">(unveränderlich)</span>
+                </Label>
                 <Input
                   id="d-code"
                   value={form.eventcode}

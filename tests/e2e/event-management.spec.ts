@@ -64,6 +64,8 @@ test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) 
   await page.getByRole("navigation", { name: "Veranstaltungsansichten" }).getByRole("link", { name: "Kalender" }).click();
   await expect(page).toHaveURL(/\/kalender$/);
   await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Veranstaltungsansichten" }).getByRole("link", { name: "Liste" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Veranstaltungsansichten" }).getByRole("link", { name: "Kalender" })).toHaveAttribute("aria-current", "page");
   await page.goto("/gantt");
   await expect(page.getByRole("link", { name: "Gantt" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByText("Bestehendes Event")).toBeVisible();
@@ -100,6 +102,24 @@ test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) 
   await page.goto("/events/260820_demo_event");
   await expect(page.getByText("Der Eventcode ist unveränderlich.", { exact: true })).not.toBeVisible();
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
+});
+
+test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/");
+  const ordnerSpalte = page.locator("thead th").nth(6).locator("[title='Outlook und SharePoint']");
+  await expect(ordnerSpalte).toHaveAttribute("title", "Outlook und SharePoint");
+  await expect(page.getByLabel("Outlook: nicht verknüpft")).toBeVisible();
+  await expect(page.getByLabel("SharePoint: nicht verknüpft")).toBeVisible();
+});
+
+test("zeigt den Eventcode in der Metadatenzeile des Events", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  const metadaten = page.locator("h1 + div");
+  await expect(metadaten).toContainText("260820_demo_event");
+  await expect(metadaten).toContainText("Alter Veranstalter");
+  await expect(metadaten).toContainText("20.08.2026");
 });
 
 test("speichert Outlook- und SharePoint-Einstellungen persistent über PATCH", async ({ page }) => {

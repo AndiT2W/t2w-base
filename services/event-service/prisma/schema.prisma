@@ -107,6 +107,14 @@ model Event {
   notes                 String?
   outlookFolder         String?
   outlookWebUrl         String?
+  outlookMailbox        String?
+  outlookRootFolderId   String?
+  outlookYearFolderId   String?
+  outlookQuarterFolderId String?
+  outlookFolderId       String?
+  outlookFolderSyncStatus SyncStatus @default(NEVER)
+  outlookFolderLastSuccessAt DateTime?
+  outlookFolderLastError String?
   sharepointFolder      String?
   archived              Boolean     @default(false)
   archivedAt            DateTime?
@@ -163,5 +171,7 @@ model AppSettings {
   outlookStammordner  String   @default("Auftraege26")
   outlookJahresordner Json     @default("[]")
   jahresSites         Json     @default("[]")
+  outlookMailbox      String?
+  outlookRootFolderId String?
   updatedAt           DateTime @updatedAt
 }

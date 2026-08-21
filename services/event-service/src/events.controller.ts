@@ -3,6 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 import { EventStatus } from "@prisma/client";
 import { PrismaService } from "./prisma.service.js";
+import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
 
 export class CreateEventDto {
   @IsString() name!: string;
@@ -24,7 +25,12 @@ export class CreateEventDto {
 @ApiTags("events")
 @Controller("api/v1/events")
 export class EventsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly outlookFolders: OutlookFolderService) {}
+
+  @Post(":id/outlook-folder/sync")
+  syncOutlookFolder(@Param("id", ParseUUIDPipe) id: string, @Body() dto: { mailbox: string; rootFolderId: string }) {
+    return this.outlookFolders.ensureEventFolder(id, dto.mailbox, dto.rootFolderId);
+  }
 
   @Get()
   list(@Query("q") q?: string, @Query("limit") limit = "200", @Query("offset") offset = "0") {

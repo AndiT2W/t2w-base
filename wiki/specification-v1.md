@@ -41,6 +41,11 @@ At present, key workflows are spread across a Zendooin backend, ClickUp, and `n8
 - The product should support multiple roles with different views and permissions.
 - The first release should favor operational clarity over feature breadth.
 - Exact Temptwin-specific workflows still need validation in later discovery.
+- The product is multilingual from the start: German (`de`) is the default language and English (`en`) is supported from the first usable release.
+
+## Multilingual Design Foundation
+
+The UI and product language must be designed for German and English from the beginning. Visible text, domain labels, status presentations, validation, notifications, empty states, and system messages use translation keys rather than hard-coded strings. German is the default and fallback locale; English is delivered alongside each new feature. Dates, times, numbers, and currencies use locale-aware formatting, while persisted domain codes and API values remain language-neutral and stable. Layouts must tolerate different text lengths.
 
 ## Users And Roles
 

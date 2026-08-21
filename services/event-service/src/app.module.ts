@@ -8,6 +8,7 @@ import { MasterDataController } from "./master-data.controller.js";
 import { AuthGuard } from "./auth.guard.js";
 import { APP_GUARD } from "@nestjs/core";
 import { SettingsController } from "./settings.controller.js";
+import { OutlookModule } from "./outlook/outlook.module.js";
 
-@Module({ controllers: [HealthController, EventsController, AuthController, MasterDataController, SettingsController], providers: [PrismaService, AuthService, { provide: APP_GUARD, useClass: AuthGuard }] })
+@Module({ imports: [OutlookModule], controllers: [HealthController, EventsController, AuthController, MasterDataController, SettingsController], providers: [PrismaService, AuthService, { provide: APP_GUARD, useClass: AuthGuard }] })
 export class AppModule {}

@@ -103,6 +103,8 @@ export type Settings = {
   outlookStammordner: string;
   outlookJahresordner: { jahr: string; url: string }[];
   jahresSites: { jahr: string; url: string }[];
+  outlookMailbox?: string | null;
+  outlookRootFolderId?: string | null;
 };
 
 export type ColumnKey =

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, SlidersHorizontal } from "lucide-react";
+import { CalendarDays, GanttChartSquare, List, Plus, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -130,6 +130,11 @@ function Veranstaltungen() {
       />
 
       <div className="space-y-4">
+        <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
+          <AnsichtsReiter to="/veranstaltungen" aktiv label="Liste" icon={List} />
+          <AnsichtsReiter to="/kalender" label="Kalender" icon={CalendarDays} />
+          <AnsichtsReiter to="/gantt" label="Gantt" icon={GanttChartSquare} />
+        </nav>
         <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-surface p-3">
           <Select value={status} onValueChange={(v) => setStatus(v as EventStatus | "alle")}>
             <SelectTrigger className="w-44">
@@ -265,5 +270,32 @@ function Veranstaltungen() {
         </div>
       </div>
     </div>
+  );
+}
+
+function AnsichtsReiter({
+  to,
+  label,
+  icon: Icon,
+  aktiv = false,
+}: {
+  to: "/veranstaltungen" | "/kalender" | "/gantt";
+  label: string;
+  icon: typeof List;
+  aktiv?: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      aria-current={aktiv ? "page" : undefined}
+      className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
+        aktiv
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
+      }`}
+    >
+      <Icon className="size-4" />
+      {label}
+    </Link>
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarClock, CheckSquare, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarClock, CheckSquare, Mail, Plus, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -158,7 +158,13 @@ function Uebersicht() {
                 <th className="px-2 py-1.5"><SortHeader feld="start">Zeitraum</SortHeader></th>
                 <th className="px-2 py-1.5 font-semibold">Tg</th>
                 <th className="px-2 py-1.5"><SortHeader feld="aufgaben">Aufg.</SortHeader></th>
-                <th className="px-2 py-1.5 font-semibold">Ordner</th>
+                <th className="px-2 py-1.5 font-semibold">
+                  <span className="sr-only">Ordner: </span>
+                  <span className="inline-flex items-center gap-2" title="Outlook und SharePoint">
+                    <Mail className="size-3.5" aria-label="Outlook" />
+                    <Share2 className="size-3.5" aria-label="SharePoint" />
+                  </span>
+                </th>
                 <th className="px-2 py-1.5 text-right font-semibold">Aktion</th>
               </tr>
             </thead>
@@ -202,8 +208,9 @@ function Uebersicht() {
                     </td>
                     <td className="px-2 py-1">
                       <span className="flex gap-1">
-                        <FolderLink label="Outlook" href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(e.outlookOrdner)}>{e.outlookOrdner ?? "OL"}</FolderLink>
+                        <FolderLink icon="outlook" label="Outlook" href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(e.outlookOrdner)}>{e.outlookOrdner ?? "OL"}</FolderLink>
                         <FolderLink
+                          icon="sharepoint"
                           label="SharePoint"
                           href={(() => { const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start)); return e.sharepointOrdner && site ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}` : null; })()}
                           available={Boolean(e.sharepointOrdner)}
