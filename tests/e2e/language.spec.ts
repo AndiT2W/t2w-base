@@ -7,19 +7,19 @@ test("switches language, preserves event data, and persists the preference", asy
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Englisch" }).click();
+  await page.getByRole("link", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("link", { name: "Events" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Tasks" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Contacts" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Offers" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Invoices" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Calendar" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Design variants" })).toBeVisible();
+  await expect(page.locator(".lang-en-only", { hasText: "Events" }).first()).toBeVisible();
+  await expect(page.locator(".lang-en-only", { hasText: "Tasks" }).first()).toBeVisible();
+  await expect(page.locator(".lang-en-only", { hasText: "Contacts" }).first()).toBeVisible();
+  await expect(page.locator(".lang-en-only", { hasText: "Offers" }).first()).toBeVisible();
+  await expect(page.locator(".lang-en-only", { hasText: "Invoices" }).first()).toBeVisible();
+  await expect(page.locator(".lang-en-only", { hasText: "Settings" }).first()).toBeVisible();
+  await expect(page.locator(".lang-en-only", { hasText: "Calendar" }).first()).toBeVisible();
+  await expect(page.locator(".lang-en-only", { hasText: "Design variants" }).first()).toBeVisible();
   await page.waitForTimeout(1000);
   await expect(page.getByText("Demo Event")).toBeVisible();
-  await page.getByRole("button", { name: "German" }).click();
+  await page.getByRole("link", { name: "German" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
 });
@@ -33,7 +33,7 @@ test("loads the event detail page", async ({ page }) => {
   );
   await page.goto("/events/260820_demo_event");
   await expect(page.getByRole("tab", { name: "Stammdaten" })).toBeVisible({ timeout: 10000 });
-  await page.getByRole("button", { name: "Englisch" }).click();
+  await page.getByRole("link", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator(".lang-en-only", { hasText: "Basic data" }).first()).toBeVisible();
   await expect(page.locator(".lang-en-only", { hasText: "Contacts" }).first()).toBeVisible();

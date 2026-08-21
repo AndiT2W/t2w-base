@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type Locale = "de" | "en";
 
@@ -28,22 +28,18 @@ const pageTextTranslations: Record<string, string> = {
 type Key = keyof typeof translations.de;
 const LocaleContext = createContext<{ locale: Locale; setLocale: (locale: Locale) => void; t: (key: Key) => string; formatDate: (iso: string) => string; formatNumber: (value: number) => string }>({ locale: "de", setLocale: () => {}, t: (key) => translations.de[key], formatDate: (iso) => iso, formatNumber: String });
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("de");
+export function I18nProvider({ children, initialLocale = "de" }: { children: ReactNode; initialLocale?: Locale }) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const setLocale = (next: Locale) => {
     setLocaleState(next);
     window.localStorage.setItem("t2w-locale", next);
     document.documentElement.lang = next;
   };
-  useLayoutEffect(() => {
-    const queryLocale = new URLSearchParams(window.location.search).get("locale");
-    const preferredLocale: Locale = queryLocale === "en" || window.localStorage.getItem("t2w-locale") === "en" ? "en" : "de";
-    if (preferredLocale !== locale) setLocaleState(preferredLocale);
-    document.documentElement.lang = preferredLocale;
-    window.localStorage.setItem("t2w-locale", preferredLocale);
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    window.localStorage.setItem("t2w-locale", locale);
   }, [locale]);
   useEffect(() => {
-    if (locale !== "en" && document.documentElement.lang !== "en") return;
     const translate = () => {
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
       let node: Node | null;
@@ -55,10 +51,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }
       document.title = pageTextTranslations[document.title] ?? document.title;
     };
-    translate();
-    const observer = new MutationObserver(translate);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
+    let observer: MutationObserver | null = null;
+    const timer = window.setTimeout(() => {
+      if (document.documentElement.lang === "en" || locale === "en") translate();
+      observer = new MutationObserver(translate);
+      observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      observer?.disconnect();
+    };
   }, [locale]);
   const value = useMemo(() => ({ locale, setLocale, t: (key: Key) => translations[locale][key] ?? translations.de[key], formatDate: (iso: string) => new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB").format(new Date(`${iso}T00:00:00`)), formatNumber: (n: number) => new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB").format(n) }), [locale]);
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;

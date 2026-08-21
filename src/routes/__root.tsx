@@ -3,6 +3,7 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  useRouterState,
   useRouter,
   HeadContent,
   Scripts,
@@ -109,8 +110,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const href = useRouterState({ select: (state) => state.location.href });
+  const locale = href.includes("locale=en") ? "en" : "de";
   return (
-    <html lang="de">
+    <html lang={locale}>
       <head>
         <HeadContent />
       </head>
@@ -141,10 +144,12 @@ function AppShell() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const href = useRouterState({ select: (state) => state.location.href });
+  const locale = href.includes("locale=en") ? "en" : "de";
 
   return (
     <QueryClientProvider client={queryClient}>
-      <I18nProvider>
+      <I18nProvider initialLocale={locale}>
         <T2WProvider>
           <CrmProvider>
             <AppShell />
