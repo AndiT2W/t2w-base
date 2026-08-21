@@ -212,7 +212,7 @@ function Einstellungen() {
                 <p className="mt-2 font-mono text-xs text-muted-foreground">2026 / Q2 / 260612_haendlertag_sued</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" disabled={outlookStatus === "checking" || !mailbox.trim() || !rootFolderId.trim()} onClick={async () => { setOutlookStatus("checking"); try { const response = await fetch("/api/v1/settings/outlook/status", { credentials: "include" }); if (!response.ok) throw new Error(); setOutlookStatus("success"); } catch { setOutlookStatus("error"); } }}>Verbindung prüfen</Button>
+                  <Button type="button" variant="outline" disabled={outlookStatus === "checking" || !mailbox.trim() || !rootFolderId.trim()} onClick={async () => { setOutlookStatus("checking"); try { const response = await fetch("/api/v1/settings/outlook/status", { credentials: "include" }); const result = await response.json() as { connected?: boolean }; if (!response.ok || result.connected !== true) throw new Error(); setOutlookStatus("success"); } catch { setOutlookStatus("error"); } }}>Verbindung prüfen</Button>
                 <a href="https://outlook.office.com/mail/" target="_blank" rel="noreferrer">
                   <Button type="button" variant="outline"><ExternalLink className="size-4" />Outlook öffnen</Button>
                 </a>
