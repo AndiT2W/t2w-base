@@ -1,16 +1,7 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, GanttChartSquare, List, Plus, SlidersHorizontal } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { CalendarDays, GanttChartSquare, List, Mail, Plus, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -18,31 +9,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { EventDialog } from "@/components/t2w/EventDialog";
+import { GanttSeite } from "@/routes/gantt";
+import { KalenderSeite } from "@/routes/kalender";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { StatusBadge } from "@/components/t2w/StatusBadge";
+import { StatusDot } from "@/components/t2w/StatusBadge";
+import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
-import {
-  ALL_COLUMNS,
-  COLUMN_LABEL,
-  STATUS_LABEL,
-  STATUS_ORDER,
-  type ColumnKey,
-  type EventStatus,
-} from "@/lib/t2w/types";
+import { STATUS_LABEL, STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
+import { jahr } from "@/lib/t2w/eventcode";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
     q: typeof search["q"] === "string" ? (search["q"] as string) : "",
+    ansicht: search["ansicht"] === "kalender" || search["ansicht"] === "gantt" ? search["ansicht"] : "liste",
   }),
   head: () => ({
     meta: [
@@ -66,8 +47,9 @@ type Zeitraum = "alle" | "kommend" | "laufend" | "vergangen" | "monat";
 type ArchivFilter = "aktiv" | "archiv" | "alle";
 
 function Veranstaltungen() {
-  const { q } = Route.useSearch();
-  const { events, spalten, setSpalten } = useT2W();
+  const { q, ansicht } = Route.useSearch();
+  const { events, settings } = useT2W();
+  const navigate = useNavigate();
   const [suche, setSuche] = useState(q);
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [zeitraum, setZeitraum] = useState<Zeitraum>("alle");
@@ -100,11 +82,8 @@ function Veranstaltungen() {
       .sort((a, b) => a.start.localeCompare(b.start));
   }, [events, suche, status, zeitraum, archiv, heute]);
 
-  const sichtbar = ALL_COLUMNS.filter((c) => spalten.includes(c));
-
-  function toggleSpalte(c: ColumnKey) {
-    setSpalten(spalten.includes(c) ? spalten.filter((x) => x !== c) : [...spalten, c]);
-  }
+  if (ansicht === "kalender") return <KalenderSeite veranstaltungsmenue />;
+  if (ansicht === "gantt") return <GanttSeite veranstaltungsmenue />;
 
   return (
     <div>
@@ -132,8 +111,8 @@ function Veranstaltungen() {
       <div className="space-y-4">
         <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
           <AnsichtsReiter to="/veranstaltungen" aktiv label="Liste" icon={List} />
-          <AnsichtsReiter to="/kalender" label="Kalender" icon={CalendarDays} />
-          <AnsichtsReiter to="/gantt" label="Gantt" icon={GanttChartSquare} />
+          <AnsichtsReiter to="/veranstaltungen" search={{ ansicht: "kalender" }} label="Kalender" icon={CalendarDays} />
+          <AnsichtsReiter to="/veranstaltungen" search={{ ansicht: "gantt" }} label="Gantt" icon={GanttChartSquare} />
         </nav>
         <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-surface p-3">
           <Select value={status} onValueChange={(v) => setStatus(v as EventStatus | "alle")}>
@@ -174,99 +153,26 @@ function Veranstaltungen() {
             </SelectContent>
           </Select>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <SlidersHorizontal className="size-4" />
-                Spalten
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Team-Spalten</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="space-y-2 p-2">
-                {ALL_COLUMNS.map((c) => (
-                  <div key={c} className="flex items-center gap-2">
-                    <Checkbox
-                      id={`col-${c}`}
-                      checked={spalten.includes(c)}
-                      onCheckedChange={() => toggleSpalte(c)}
-                    />
-                    <Label htmlFor={`col-${c}`} className="text-sm font-normal">
-                      {COLUMN_LABEL[c]}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {sichtbar.map((c) => (
-                  <TableHead key={c} className={c === "status" ? "w-44" : undefined}>
-                    {COLUMN_LABEL[c]}
-                  </TableHead>
-                ))}
-                <TableHead className="w-24 text-right">Aktion</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <table className="w-full min-w-[54rem] border-collapse text-xs">
+            <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground"><tr>
+              <th className="px-2 py-1.5 font-semibold">St</th><th className="px-2 py-1.5">Event</th><th className="px-2 py-1.5">Veranstalter</th><th className="px-2 py-1.5">Zeitraum</th><th className="px-2 py-1.5 font-semibold">Tg</th><th className="px-2 py-1.5">Aufg.</th><th className="px-2 py-1.5"><span className="inline-flex gap-2" title="Outlook und SharePoint"><Mail className="size-3.5" aria-label="Outlook" /><Share2 className="size-3.5" aria-label="SharePoint" /></span></th><th className="px-2 py-1.5 text-right">Aktion</th>
+            </tr></thead>
+            <tbody>
               {gefiltert.map((e) => (
-                <TableRow key={e.id} className="align-middle">
-                  {sichtbar.map((c) => (
-                    <TableCell key={c}>
-                      {c === "eventcode" && (
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {e.eventcode}
-                        </span>
-                      )}
-                      {c === "name" && (
-                        <span className="flex items-center gap-2 font-medium text-foreground">
-                          {e.name}
-                          {e.archiviert && (
-                            <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
-                              Archiv
-                            </span>
-                          )}
-                        </span>
-                      )}
-                      {c === "veranstalter" && <span className="text-sm">{e.veranstalter}</span>}
-                      {c === "zeitraum" && (
-                        <span className="whitespace-nowrap text-sm">
-                          {formatZeitraum(e.start, e.ende)}
-                        </span>
-                      )}
-                      {c === "verantwortlicher" && (
-                        <span className="text-sm">{e.verantwortlicher}</span>
-                      )}
-                      {c === "status" && <StatusBadge status={e.status} />}
-                    </TableCell>
-                  ))}
-                  <TableCell className="text-right">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link to="/events/$eventcode" params={{ eventcode: e.eventcode }}>
-                        Öffnen
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <tr key={e.id} className="cursor-pointer border-t border-border hover:bg-accent/50" onClick={() => navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })}>
+                  <td className="px-2 py-1" title={STATUS_LABEL[e.status]}><StatusDot status={e.status} /></td><td className="max-w-[16rem] truncate px-2 py-1 font-medium">{e.name}</td><td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td><td className="whitespace-nowrap px-2 py-1">{formatZeitraum(e.start, e.ende)}</td><td className="px-2 py-1 tabular-nums">{Math.max(1, Math.round((new Date(e.ende).getTime() - new Date(e.start).getTime()) / 86400000) + 1)}</td><td className="px-2 py-1 tabular-nums">{e.aufgaben.filter((a) => !a.erledigt).length || "–"}</td><td className="px-2 py-1"><span className="flex gap-1"><FolderLink icon="outlook" label="Outlook" href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(e.outlookOrdner)}>OL</FolderLink><FolderLink icon="sharepoint" label="SharePoint" href={(() => { const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start)); return e.sharepointOrdner && site ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}` : null; })()} available={Boolean(e.sharepointOrdner)}>SP</FolderLink></span></td><td className="px-2 py-1 text-right"><Link to="/events/$eventcode" params={{ eventcode: e.eventcode }} className="font-medium text-primary hover:underline">Öffnen</Link></td>
+                </tr>
               ))}
               {gefiltert.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={sichtbar.length + 1}
-                    className="py-10 text-center text-sm text-muted-foreground"
-                  >
+                <tr><td colSpan={8} className="px-2 py-8 text-center text-muted-foreground">
                     Keine Events für die aktuelle Filterauswahl.
-                  </TableCell>
-                </TableRow>
+                </td></tr>
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -275,11 +181,13 @@ function Veranstaltungen() {
 
 function AnsichtsReiter({
   to,
+  search,
   label,
   icon: Icon,
   aktiv = false,
 }: {
   to: "/veranstaltungen" | "/kalender" | "/gantt";
+  search?: { ansicht: "kalender" | "gantt" };
   label: string;
   icon: typeof List;
   aktiv?: boolean;
@@ -287,6 +195,7 @@ function AnsichtsReiter({
   return (
     <Link
       to={to}
+      search={search}
       aria-current={aktiv ? "page" : undefined}
       className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
         aktiv

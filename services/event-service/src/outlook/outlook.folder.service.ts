@@ -21,21 +21,22 @@ export class OutlookFolderService {
     }
   }
 
-  async checkConnection(mailbox: string, rootFolderId: string) {
-    await this.graph.listChildFolders(mailbox, rootFolderId);
-    return { connected: true, mailbox, rootFolderId };
+  async checkConnection(mailbox: string) {
+    await this.graph.listChildFolders(mailbox, "inbox");
+    return { connected: true, mailbox, rootFolderId: "inbox" };
   }
 
-  async ensureEventFolder(eventId: string, mailbox: string, rootFolderId: string) {
+  async ensureEventFolder(eventId: string, mailbox: string, yearFolderName: string) {
     const event = await this.prisma.event.findUniqueOrThrow({ where: { id: eventId } });
+    const rootFolderId = "inbox";
     await this.prisma.event.update({ where: { id: eventId }, data: { outlookMailbox: mailbox, outlookRootFolderId: rootFolderId, outlookFolderSyncStatus: "SYNCING", outlookFolderLastError: null } });
     try {
-      const year = String(event.startAt.getUTCFullYear());
+      if (!yearFolderName.trim()) throw new Error(`OUTLOOK_YEAR_FOLDER_MISSING:${event.startAt.getUTCFullYear()}`);
       const quarter = `Q${Math.floor(event.startAt.getUTCMonth() / 3) + 1}`;
-      const yearFolder = await this.ensureFolder(mailbox, rootFolderId, year);
+      const yearFolder = await this.ensureFolder(mailbox, rootFolderId, yearFolderName.trim());
       const quarterFolder = await this.ensureFolder(mailbox, yearFolder.id, quarter);
       const eventFolder = await this.ensureFolder(mailbox, quarterFolder.id, event.eventCode);
-      return this.prisma.event.update({ where: { id: eventId }, data: { outlookMailbox: mailbox, outlookRootFolderId: rootFolderId, outlookYearFolderId: yearFolder.id, outlookQuarterFolderId: quarterFolder.id, outlookFolderId: eventFolder.id, outlookFolder: eventFolder.displayName, outlookWebUrl: eventFolder.webUrl, outlookFolderSyncStatus: "SUCCESS", outlookFolderLastSuccessAt: new Date(), outlookFolderLastError: null } });
+      return this.prisma.event.update({ where: { id: eventId }, data: { outlookMailbox: mailbox, outlookRootFolderId: rootFolderId, outlookYearFolderId: yearFolder.id, outlookQuarterFolderId: quarterFolder.id, outlookFolderId: eventFolder.id, outlookFolder: eventFolder.displayName, outlookWebUrl: eventFolder.webUrl ?? `https://outlook.office.com/mail/deeplink/folder/${encodeURIComponent(eventFolder.id)}`, outlookFolderSyncStatus: "SUCCESS", outlookFolderLastSuccessAt: new Date(), outlookFolderLastError: null } });
     } catch (error) {
       const message = error instanceof OutlookGraphError && error.status === 429 ? `OUTLOOK_GRAPH_RATE_LIMITED${error.retryAfter ? `; retry-after=${error.retryAfter}` : ""}` : error instanceof Error ? error.message : "OUTLOOK_FOLDER_SYNC_FAILED";
       await this.prisma.event.update({ where: { id: eventId }, data: { outlookMailbox: mailbox, outlookRootFolderId: rootFolderId, outlookFolderSyncStatus: "ERROR", outlookFolderLastError: message } });

@@ -26,13 +26,13 @@ describe("OutlookFolderService", () => {
     };
     const { subject } = service(graph);
 
-    await subject.ensureEventFolder("event-1", "shared@example.com", "root");
-    await subject.ensureEventFolder("event-1", "shared@example.com", "root");
+    await subject.ensureEventFolder("event-1", "shared@example.com", "06_auftraege_26");
+    await subject.ensureEventFolder("event-1", "shared@example.com", "06_auftraege_26");
 
     expect(graph.createChildFolder).toHaveBeenCalledTimes(3);
-    expect(graph.createChildFolder).toHaveBeenNthCalledWith(1, "shared@example.com", "root", "2026");
-    expect(graph.createChildFolder).toHaveBeenNthCalledWith(2, "shared@example.com", "root/2026", "Q2");
-    expect(graph.createChildFolder).toHaveBeenNthCalledWith(3, "shared@example.com", "root/2026/Q2", "260612_sommerfest");
+    expect(graph.createChildFolder).toHaveBeenNthCalledWith(1, "shared@example.com", "inbox", "06_auftraege_26");
+    expect(graph.createChildFolder).toHaveBeenNthCalledWith(2, "shared@example.com", "inbox/06_auftraege_26", "Q2");
+    expect(graph.createChildFolder).toHaveBeenNthCalledWith(3, "shared@example.com", "inbox/06_auftraege_26/Q2", "260612_sommerfest");
   });
 
   it("searches again after a concurrent create conflict", async () => {

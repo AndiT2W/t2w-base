@@ -4,11 +4,9 @@ import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
 
 export class UpdateSettingsDto {
-  @IsOptional() @IsString() outlookStammordner?: string;
   @IsOptional() @IsArray() @IsObject({ each: true }) outlookJahresordner?: { jahr: string; url: string }[];
   @IsOptional() @IsArray() @IsObject({ each: true }) jahresSites?: { jahr: string; url: string }[];
   @IsOptional() @IsString() outlookMailbox?: string;
-  @IsOptional() @IsString() outlookRootFolderId?: string;
 }
 
 @Controller("api/v1/settings")
@@ -19,8 +17,8 @@ export class SettingsController {
   @Get("outlook/status")
   async outlookStatus() {
     const settings = await this.prisma.appSettings.findUnique({ where: { id: 1 } });
-    if (!settings?.outlookMailbox || !settings.outlookRootFolderId) return { connected: false, reason: "OUTLOOK_SETTINGS_MISSING" };
-    try { return await this.outlook.checkConnection(settings.outlookMailbox, settings.outlookRootFolderId); }
+    if (!settings?.outlookMailbox) return { connected: false, reason: "OUTLOOK_SETTINGS_MISSING" };
+    try { return await this.outlook.checkConnection(settings.outlookMailbox); }
     catch (error) { return { connected: false, reason: error instanceof Error ? error.message : "OUTLOOK_CONNECTION_FAILED" }; }
   }
 }

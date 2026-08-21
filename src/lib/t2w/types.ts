@@ -1,11 +1,5 @@
 export type EventStatus =
-  | "anfrage"
-  | "angebot-gesendet"
-  | "zugesagt"
-  | "abgesagt"
-  | "akquise"
-  | "datum-pruefen"
-;
+  "anfrage" | "angebot-gesendet" | "zugesagt" | "abgesagt" | "akquise" | "datum-pruefen";
 
 export const STATUS_LABEL: Record<EventStatus, string> = {
   anfrage: "Anfrage",
@@ -31,6 +25,23 @@ export type Contact = {
   rolle: string;
   email: string;
   telefon: string;
+  vorname?: string;
+  nachname?: string;
+  notiz?: string;
+  archiviert?: boolean;
+  kundenprofil?: Customer | null;
+};
+
+export type Customer = {
+  id: string;
+  name: string;
+  adresse?: string | null;
+  uid?: string | null;
+  iban?: string | null;
+  bic?: string | null;
+  bankname?: string | null;
+  rechnungsEmail?: string | null;
+  personId?: string | null;
 };
 
 export type Veranstalter = {
@@ -100,11 +111,9 @@ export type T2WEvent = {
 };
 
 export type Settings = {
-  outlookStammordner: string;
   outlookJahresordner: { jahr: string; url: string }[];
   jahresSites: { jahr: string; url: string }[];
   outlookMailbox?: string | null;
-  outlookRootFolderId?: string | null;
   outlookYearFolderId?: string | null;
   outlookQuarterFolderId?: string | null;
   outlookFolderId?: string | null;

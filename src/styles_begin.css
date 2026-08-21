@@ -2,10 +2,6 @@
 @source "../src";
 @import "tw-animate-css";
 
-.lang-en-only { display: none; }
-html[lang="en"] .lang-de-only { display: none; }
-html[lang="en"] .lang-en-only { display: inline; }
-
 @custom-variant dark (&:is(.dark *));
 
 /*
@@ -78,13 +74,9 @@ html[lang="en"] .lang-en-only { display: inline; }
 
 :root {
   --radius: 0.5rem;
-
-  /* TIME2WIN CI: switch this block back to the legacy values below to revert. */
-  --brand-green: oklch(0.746 0.184 125);
-  --brand-navy: oklch(0.185 0.07 255);
   --background: oklch(0.985 0.003 250);
   --foreground: oklch(0.24 0.02 255);
-  --nav: var(--brand-navy);
+  --nav: oklch(0.24 0.028 255);
   --nav-foreground: oklch(0.96 0.005 250);
   --nav-muted: oklch(0.72 0.02 255);
   --nav-active: oklch(0.32 0.04 250);
@@ -99,7 +91,7 @@ html[lang="en"] .lang-en-only { display: inline; }
   --card-foreground: oklch(0.24 0.02 255);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.24 0.02 255);
-  --primary: var(--brand-green);
+  --primary: oklch(0.45 0.11 240);
   --primary-foreground: oklch(0.99 0.003 250);
   --secondary: oklch(0.955 0.006 250);
   --secondary-foreground: oklch(0.3 0.02 255);
@@ -111,7 +103,7 @@ html[lang="en"] .lang-en-only { display: inline; }
   --destructive-foreground: oklch(0.99 0.003 250);
   --border: oklch(0.915 0.008 250);
   --input: oklch(0.9 0.008 250);
-  --ring: var(--brand-green);
+  --ring: oklch(0.6 0.08 240);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -135,8 +127,8 @@ html[lang="en"] .lang-en-only { display: inline; }
   --card-foreground: oklch(0.984 0.003 247.858);
   --popover: oklch(0.208 0.042 265.755);
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: var(--brand-green);
-  --primary-foreground: var(--brand-navy);
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
   --secondary: oklch(0.279 0.041 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
   --muted: oklch(0.279 0.041 260.031);
@@ -173,3 +165,4 @@ html[lang="en"] .lang-en-only { display: inline; }
     color: var(--color-foreground);
   }
 }
+

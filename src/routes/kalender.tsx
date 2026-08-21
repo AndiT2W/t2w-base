@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, ChevronLeft, ChevronRight, GanttChartSquare, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
@@ -190,7 +191,7 @@ function WochenGitter({
   );
 }
 
-function KalenderSeite() {
+export function KalenderSeite({ veranstaltungsmenue = false }: { veranstaltungsmenue?: boolean } = {}) {
   const { events } = useT2W();
   const [modus, setModus] = useState<"monat" | "woche">("monat");
   const [anker, setAnker] = useState(() => new Date());
@@ -217,10 +218,17 @@ function KalenderSeite() {
 
   return (
     <div className="space-y-5">
+      {veranstaltungsmenue && (
+        <PageHeader
+          krumen={[{ label: "TIME2WIN", to: "/" }]}
+          titel="Veranstaltungen"
+          beschreibung={`${sichtbareEvents.length} aktive Events`}
+        />
+      )}
       <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
         <KalenderReiter to="/veranstaltungen" label="Liste" icon={List} />
-        <KalenderReiter to="/kalender" label="Kalender" icon={CalendarDays} aktiv />
-        <KalenderReiter to="/gantt" label="Gantt" icon={GanttChartSquare} />
+        <KalenderReiter to="/veranstaltungen" search={{ ansicht: "kalender" }} label="Kalender" icon={CalendarDays} aktiv={veranstaltungsmenue || undefined} />
+        <KalenderReiter to="/veranstaltungen" search={{ ansicht: "gantt" }} label="Gantt" icon={GanttChartSquare} />
       </nav>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -301,11 +309,13 @@ function KalenderSeite() {
 
 function KalenderReiter({
   to,
+  search,
   label,
   icon: Icon,
   aktiv = false,
 }: {
   to: "/veranstaltungen" | "/kalender" | "/gantt";
+  search?: { ansicht: "kalender" | "gantt" };
   label: string;
   icon: typeof List;
   aktiv?: boolean;
@@ -313,6 +323,7 @@ function KalenderReiter({
   return (
     <Link
       to={to}
+      search={search}
       aria-current={aktiv ? "page" : undefined}
       className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
         aktiv

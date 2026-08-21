@@ -40,6 +40,8 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 ## Next Best Actions
 
+CI-Branding aktualisiert: TIME2WIN-Farben `#8DC63F` und `#05193A` sowie das freigegebene Logo-Asset sind integriert; der vorherige Style ist als `src/styles_begin.css` rückwechselbar archiviert. Siehe [TIME2WIN CI und Branding](concepts/time2win-ci-branding.md).
+
 - Decide whether MVP treats `Event` and `Project` as separate domain objects or one combined operational record.
 - Normalize current ClickUp CRM-like data, especially customer duplicates and non-person contact records.
 - Verify how `Kunde`, `Veranstalter`, `Organisator`, and `Rechnungsempfänger` differ operationally in the current process.

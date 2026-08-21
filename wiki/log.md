@@ -160,9 +160,16 @@
 - 2026-08-20: In der Eventübersicht die Sammelüberschrift `Ordner` durch Outlook-/SharePoint-Symbole ersetzt und dieselben Symbole in den klickbaren Zeilenlinks ergänzt; E2E-Regressionstest ergänzt.
 - 2026-08-20: Mehrsprachigkeit als Designgrundlage festgehalten: Deutsch (`de`) ist Default und Fallback, Englisch (`en`) wird ab Beginn parallel unterstützt; UI-Texte, Formatierungen und stabile sprachneutrale Fachcodes sind entsprechend auszulegen.
 - 2026-08-20: Spezifikation für die mehrsprachige Produktgrundlage als [GitHub Issue #26](https://github.com/AndiT2W/t2w-base/issues/26) veröffentlicht und mit `enhancement` sowie `ready-for-agent` markiert.
+- 2026-08-21: Sichtbarer Sprachumschalter in der gemeinsamen Sidebar ergänzt; Deutsch/Englisch kann dort gewählt werden und die Präferenz bleibt über Sitzungen erhalten. Browser-E2E-Test für den Bedienablauf ergänzt.
+- 2026-08-21: TIME2WIN-CI umgesetzt: Markenfarben `#8DC63F`/`#05193A`, freigegebenes `time2win_logo_button.svg` als Sidebar-Icon und Favicon integriert. Ausgangs-Stylesheet als `src/styles_begin.css` archiviert; CI-Stand auf `https://base.time2win.cloud` deployed.
 # 2026-08-20
 
 - Implemented the first Outlook folder integration slice for issue #25: Graph adapter seam, stable event folder IDs/status fields, idempotent year/quarter/event folder provisioning, and a protected event sync endpoint.
 - Verified with `npm run build` and the event-service Vitest suite.
 - Dokumentation nachgezogen: Issue #24 und die Wiki-Konvention beschreiben jetzt die AppSettings-PostgreSQL-Persistenz, die Ursache des asynchronen Formular-State-Fehlers sowie die verbindliche E2E-Regel für neue persistente Features. Der Browser-Test muss den vollständigen UI-Ablauf abdecken und darf den PATCH nicht nur direkt per `fetch` auslösen.
 - 2026-08-21: Issue #25 vervollständigt: Microsoft-Graph-Client-Credentials, paginierte Child-Folder-Suche, 409-Race-Recovery, Rate-Limit-/Sync-Status, Eventdetail-Sync-Aktion, Persistenzanzeige und Outlook-Adaptertests ergänzt.
+- 2026-08-21: Die Listenansicht „Veranstaltungen“ verwendet nun dieselbe schlanke Eventtabelle wie die Übersicht; ein Browser-E2E-Test schützt die acht Kernspalten und Ordner-Symbole.
+- 2026-08-21: Kontakte-Menü als „Kunden & Kontakte“ spezifiziert. Person und optionales Kundenprofil werden als ein Stammdatensatz modelliert; Veranstalter, Auszahlungsempfänger und ein oder mehrere Rechnungsempfänger sind getrennte Eventrollen. Outlook-/Gmail-Synchronisation wird nur vorbereitet. Siehe [Entscheidung Person, Kundenprofil und Eventrollen](decisions/2026-08-21-person-kundenprofil-und-eventrollen.md) und [Issue #27](https://github.com/AndiT2W/t2w-base/issues/27).
+- 2026-08-21: Gantt-Ansicht um eine dreistufige Zeitachse mit Monaten, Kalenderwochen und Tageszahlen sowie Tagesraster ergänzt; Browser-E2E-Test erweitert.
+- 2026-08-21: Gantt-Wochenenden und österreichische gesetzliche Feiertage werden in Kopfzeile und Tagesraster hervorgehoben; Feiertagsnamen sind per Tooltip sichtbar.
+- 2026-08-21: Fehler bei der Eventcode-Persistenz behoben: Die automatisch erzeugte Vorschau ist beim Anlegen editierbar, wird im POST mitgesendet und bleibt nach dem Speichern unveränderlich; der Service verwendet den übergebenen Code statt `YYMMDD_event_<Zeitstempel>`.

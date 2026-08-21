@@ -15,12 +15,13 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 export const HAUPT_NAV = [
   { to: "/", label: "Übersicht", icon: LayoutDashboard, exact: true },
   { to: "/veranstaltungen", label: "Veranstaltungen", icon: CalendarDays, exact: false },
   { to: "/aufgaben", label: "Aufgaben", icon: CheckSquare, exact: false },
-  { to: "/kontakte", label: "Kontakte", icon: Users, exact: false },
+  { to: "/kontakte", label: "Kunden & Kontakte", icon: Users, exact: false },
   { to: "/angebote", label: "Angebote", icon: FileText, exact: false },
   { to: "/rechnungen", label: "Rechnungen", icon: Receipt, exact: false },
   { to: "/einstellungen", label: "Einstellungen", icon: Settings2, exact: false },
@@ -31,6 +32,26 @@ export const NEBEN_NAV = [
   { to: "/varianten", label: "Design-Varianten", icon: Palette },
   { to: "/styleguide", label: "Styleguide", icon: Ruler },
 ] as const;
+
+const HAUPT_NAV_KEYS = {
+  "/": "nav.overview",
+  "/veranstaltungen": "nav.events",
+  "/aufgaben": "nav.tasks",
+  "/kontakte": "nav.contacts",
+  "/angebote": "nav.offers",
+  "/rechnungen": "nav.invoices",
+  "/einstellungen": "nav.settings",
+} as const;
+
+const NEBEN_NAV_KEYS = {
+  "/kalender": "nav.calendar",
+  "/varianten": "nav.variants",
+  "/styleguide": "nav.styleguide",
+} as const;
+
+const ENGLISH_NAV = {
+  "nav.overview": "Overview", "nav.events": "Events", "nav.tasks": "Tasks", "nav.contacts": "Contacts", "nav.offers": "Offers", "nav.invoices": "Invoices", "nav.settings": "Settings", "nav.calendar": "Calendar", "nav.variants": "Design variants", "nav.styleguide": "Style guide",
+} as const;
 
 const SidebarUiContext = createContext<{
   offen: boolean;
@@ -54,12 +75,11 @@ const linkClass =
   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-nav-muted transition-colors hover:bg-nav-active/60 hover:text-nav-foreground data-[status=active]:bg-nav-active data-[status=active]:text-nav-foreground";
 
 function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
+  const { locale, setLocale, t } = useI18n();
   return (
     <div className="flex h-full flex-col gap-6 bg-nav px-3 py-4 text-nav-foreground">
       <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-2">
-        <span className="grid size-8 place-items-center rounded-md bg-nav-active text-sm font-bold tracking-tight">
-          T2
-        </span>
+        <img src="/time2win_logo_button.svg" alt="TIME2WIN Logo" className="size-8 rounded-md" />
         <span className="min-w-0">
           <span className="block text-sm font-semibold tracking-tight">TIME2WIN</span>
           <span className="block truncate text-xs text-nav-muted">Eventverwaltung</span>
@@ -68,7 +88,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex flex-1 flex-col gap-1">
         <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          Module
+          <><span className="lang-de-only">Module</span><span className="lang-en-only">Modules</span></>
         </p>
         {HAUPT_NAV.map((item) => (
           <Link
@@ -79,24 +99,51 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             className={linkClass}
           >
             <item.icon className="size-4 shrink-0" />
-            {item.label}
+            <><span className="lang-de-only">{item.label}</span><span className="lang-en-only">{ENGLISH_NAV[HAUPT_NAV_KEYS[item.to]]}</span></>
           </Link>
         ))}
 
         <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          Weitere
+          <><span className="lang-de-only">Weitere</span><span className="lang-en-only">More</span></>
         </p>
         {NEBEN_NAV.map((item) => (
           <Link key={item.to} to={item.to} onClick={onNavigate} className={linkClass}>
             <item.icon className="size-4 shrink-0" />
-            {item.label}
+            <><span className="lang-de-only">{item.label}</span><span className="lang-en-only">{ENGLISH_NAV[NEBEN_NAV_KEYS[item.to]]}</span></>
           </Link>
         ))}
       </nav>
 
-      <p className="px-3 text-[11px] leading-relaxed text-nav-muted">
-        Zentrale Datenquelle: Event-Service
-      </p>
+      <div className="space-y-3 px-3">
+        <div className="flex items-center justify-between gap-2 text-xs text-nav-muted">
+          <span>{t("language")}</span>
+          <div
+            className="flex rounded border border-nav-active p-0.5"
+            role="group"
+            aria-label={t("language")}
+          >
+            {(["de", "en"] as const).map((option) => (
+              <a
+                key={option}
+                href={`/?locale=${option}`}
+                aria-pressed={locale === option}
+                aria-label={option === "de" ? t("language.de") : t("language.en")}
+                className={cn(
+                  "rounded px-2 py-1 text-xs",
+                  locale === option
+                    ? "bg-nav-active text-nav-foreground"
+                    : "text-nav-muted hover:text-nav-foreground",
+                )}
+              >
+                {option.toUpperCase()}
+              </a>
+            ))}
+          </div>
+        </div>
+        <p className="text-[11px] leading-relaxed text-nav-muted">
+          Zentrale Datenquelle: Event-Service
+        </p>
+      </div>
     </div>
   );
 }

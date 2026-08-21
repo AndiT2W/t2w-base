@@ -23,6 +23,7 @@ type Ctx = State & {
   ladefehler: string | null;
   neuesEvent: (input: {
     name: string;
+    eventcode?: string;
     veranstalter: string;
     ort: string;
     start: string;
@@ -43,7 +44,7 @@ const StoreContext = createContext<Ctx | null>(null);
 
 const initial: State = {
   events: [],
-  settings: { outlookStammordner: "Auftraege26", outlookJahresordner: [], jahresSites: [], outlookMailbox: null, outlookRootFolderId: null },
+  settings: { outlookJahresordner: [], jahresSites: [], outlookMailbox: null },
   spalten: ALL_COLUMNS,
 };
 
@@ -67,7 +68,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
 
   const neuesEvent: Ctx["neuesEvent"] = useCallback(async (input) => {
     const ende = input.ende && input.ende.length ? input.ende : input.start;
-    const created = await apiCreateEvent({ name: input.name, veranstalter: input.veranstalter, start: input.start, ende, ort: input.ort, verantwortlicher: input.verantwortlicher ?? "", teilnehmerprognose: input.teilnehmerprognose ?? input.teilnehmer ?? 0, notizen: input.notizen, status: input.status });
+    const created = await apiCreateEvent({ name: input.name, eventcode: input.eventcode ?? "", veranstalter: input.veranstalter, start: input.start, ende, ort: input.ort, verantwortlicher: input.verantwortlicher ?? "", teilnehmerprognose: input.teilnehmerprognose ?? input.teilnehmer ?? 0, notizen: input.notizen, status: input.status });
     setState((prev) => ({ ...prev, events: [...prev.events, created] }));
     return created;
   }, []);

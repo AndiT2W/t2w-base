@@ -37,6 +37,8 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const [veranstalter, setVeranstalter] = useState("");
   const [ort, setOrt] = useState("");
   const [start, setStart] = useState("");
+  const [eventcode, setEventcode] = useState("");
+  const [eventcodeManuell, setEventcodeManuell] = useState(false);
   const [ende, setEnde] = useState("");
   const [status, setStatus] = useState<EventStatus>("anfrage");
   const [notizen, setNotizen] = useState("");
@@ -55,6 +57,8 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
     setVeranstalter("");
     setOrt("");
     setStart("");
+    setEventcode("");
+    setEventcodeManuell(false);
     setEnde("");
     setStatus("anfrage");
     setNotizen("");
@@ -75,6 +79,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
     }
     const ev = await neuesEvent({
       name: name.trim(),
+      eventcode: eventcode.trim() || vorschau,
       veranstalter: veranstalter.trim() || "—",
       ort: ort.trim() || "—",
       start,
@@ -111,7 +116,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { const value = e.target.value; setName(value); if (!eventcodeManuell && start) setEventcode(value.trim() ? buildEventcode(value.trim(), start, events.map((item) => item.eventcode)) : ""); }}
               placeholder="z. B. Sommerfest Nordwerk 2026"
               className="mt-1.5"
             />
@@ -140,7 +145,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
               id="start"
               type="date"
               value={start}
-              onChange={(e) => setStart(e.target.value)}
+              onChange={(e) => { const value = e.target.value; setStart(value); if (!eventcodeManuell && name.trim() && value) setEventcode(buildEventcode(name.trim(), value, events.map((item) => item.eventcode))); }}
               className="mt-1.5"
             />
           </div>
@@ -182,7 +187,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
           </div>
           <div className="sm:col-span-2 rounded-md border border-border bg-secondary px-3 py-2">
             <p className="text-xs text-muted-foreground">Eventcode-Vorschau</p>
-            <p className="font-mono text-sm text-foreground">{vorschau}</p>
+            <Input aria-label="Eventcode-Vorschau" value={eventcode || vorschau} onChange={(e) => { setEventcode(e.target.value); setEventcodeManuell(true); }} className="mt-1 font-mono text-sm" />
           </div>
         </div>
 

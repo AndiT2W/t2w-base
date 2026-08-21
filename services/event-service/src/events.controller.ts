@@ -6,6 +6,7 @@ import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
 
 export class CreateEventDto {
+  @IsOptional() @IsString() eventCode?: string;
   @IsString() name!: string;
   @IsDateString() startAt!: string;
   @IsOptional() @IsDateString() endAt?: string;
@@ -20,6 +21,8 @@ export class CreateEventDto {
   @IsOptional() @IsString() outlookFolder?: string;
   @IsOptional() @IsString() outlookWebUrl?: string;
   @IsOptional() @IsString() sharepointFolder?: string;
+  @IsOptional() @IsString() payoutRecipientId?: string;
+  @IsOptional() invoiceRecipientIds?: string[];
 }
 
 @ApiTags("events")
@@ -28,12 +31,15 @@ export class EventsController {
   constructor(private readonly prisma: PrismaService, private readonly outlookFolders: OutlookFolderService) {}
 
   @Post(":id/outlook-folder/sync")
-  async syncOutlookFolder(@Param("id", ParseUUIDPipe) id: string, @Body() dto: { mailbox?: string; rootFolderId?: string }) {
+  async syncOutlookFolder(@Param("id", ParseUUIDPipe) id: string, @Body() dto: { mailbox?: string }) {
     const settings = await this.prisma.appSettings.findUnique({ where: { id: 1 } });
     const mailbox = dto.mailbox?.trim() || settings?.outlookMailbox;
-    const rootFolderId = dto.rootFolderId?.trim() || settings?.outlookRootFolderId;
-    if (!mailbox || !rootFolderId) throw new Error("OUTLOOK_SETTINGS_MISSING");
-    return this.outlookFolders.ensureEventFolder(id, mailbox, rootFolderId);
+    if (!mailbox) throw new Error("OUTLOOK_SETTINGS_MISSING");
+    const event = await this.prisma.event.findUniqueOrThrow({ where: { id } });
+    const mappings = Array.isArray(settings?.outlookJahresordner) ? settings.outlookJahresordner as { jahr?: string; url?: string }[] : [];
+    const mapping = mappings.find((entry) => entry.jahr === String(event.startAt.getUTCFullYear()));
+    if (!mapping?.url?.trim()) throw new Error(`OUTLOOK_YEAR_FOLDER_MISSING:${event.startAt.getUTCFullYear()}`);
+    return this.outlookFolders.ensureEventFolder(id, mailbox, mapping.url);
   }
 
   @Get()
@@ -60,14 +66,14 @@ export class EventsController {
           ?? (await tx.organizer.create({ data: { name: dto.organizerName.trim(), type: "ORGANISATION" } })).id
         : dto.organizerId;
       return tx.event.create({
-        data: { eventCode: `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`, name: dto.name, startAt: start, endAt: new Date(dto.endAt ?? dto.startAt), status: dto.status ?? EventStatus.ANFRAGE, organizerId, sportId: dto.sportId, location: dto.location, responsible: dto.responsible, participantForecast: dto.participantForecast, notes: dto.notes, outlookFolder: dto.outlookFolder, outlookWebUrl: dto.outlookWebUrl, sharepointFolder: dto.sharepointFolder },
+        data: { eventCode: dto.eventCode?.trim() || `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`, name: dto.name, startAt: start, endAt: new Date(dto.endAt ?? dto.startAt), status: dto.status ?? EventStatus.ANFRAGE, organizerId, payoutRecipientId: dto.payoutRecipientId ?? organizerId, invoiceRecipients: { create: (dto.invoiceRecipientIds?.length ? dto.invoiceRecipientIds : organizerId ? [organizerId] : []).map((organizerId) => ({ organizerId })) }, sportId: dto.sportId, location: dto.location, responsible: dto.responsible, participantForecast: dto.participantForecast, notes: dto.notes, outlookFolder: dto.outlookFolder, outlookWebUrl: dto.outlookWebUrl, sharepointFolder: dto.sharepointFolder },
         include: { organizer: true, sport: true },
       });
     });
   }
 
   @Patch(":id") update(@Param("id", ParseUUIDPipe) id: string, @Body() dto: Partial<CreateEventDto> & { version?: number }) {
-    const { version, organizerName, ...changes } = dto;
+    const { version, organizerName, invoiceRecipientIds, ...changes } = dto;
     return this.prisma.$transaction(async (tx) => {
       const organizerId = organizerName?.trim()
         ? (await tx.organizer.findFirst({ where: { name: organizerName.trim(), active: true } }))?.id
@@ -78,6 +84,10 @@ export class EventsController {
         data: { ...changes, organizerId, version: { increment: 1 }, startAt: changes.startAt ? new Date(changes.startAt) : undefined, endAt: changes.endAt ? new Date(changes.endAt) : undefined },
       });
       if (updated.count !== 1) throw new Error("EVENT_VERSION_CONFLICT");
+      if (invoiceRecipientIds) {
+        await tx.eventInvoiceRecipient.deleteMany({ where: { eventId: id } });
+        await tx.eventInvoiceRecipient.createMany({ data: invoiceRecipientIds.map((organizerId) => ({ eventId: id, organizerId })) });
+      }
       return tx.event.findUniqueOrThrow({ where: { id }, include: { organizer: true, sport: true } });
     });
   }

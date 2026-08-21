@@ -54,22 +54,41 @@ model Organizer {
   active       Boolean     @default(true)
   billingInfo  String?
   payoutInfo   String?
+  address      String?
+  uid          String?
+  iban         String?
+  bic          String?
+  bankName     String?
+  invoiceEmail String?
+  personId     String?     @unique @db.Uuid
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   events       Event[]
   contacts     OrganizerContact[]
+  person       Contact?    @relation("CustomerPerson", fields: [personId], references: [id], onDelete: SetNull)
+  payoutEvents Event[]     @relation("EventPayoutRecipient")
+  invoiceRecipients EventInvoiceRecipient[]
   @@index([name])
 }
 
 model Contact {
   id          String              @id @default(uuid()) @db.Uuid
   name        String
+  firstName   String?
+  lastName    String?
+  note        String?
+  archived    Boolean             @default(false)
+  syncSource  String?
+  externalId  String?
+  syncStatus  SyncStatus          @default(NEVER)
+  lastSyncedAt DateTime?
   email       String?
   phone       String?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   organizers  OrganizerContact[]
   eventRoles  EventContact[]
+  customerProfile Organizer? @relation("CustomerPerson")
 }
 
 model OrganizerContact {
@@ -97,6 +116,7 @@ model Event {
   name                  String
   status                EventStatus  @default(ANFRAGE)
   organizerId           String?     @db.Uuid
+  payoutRecipientId     String?     @db.Uuid
   sportId               String?     @db.Uuid
   startAt               DateTime
   endAt                 DateTime
@@ -127,11 +147,21 @@ model Event {
   updatedAt             DateTime    @updatedAt
   updatedById           String?     @db.Uuid
   organizer             Organizer?  @relation(fields: [organizerId], references: [id], onDelete: SetNull)
+  payoutRecipient       Organizer?  @relation("EventPayoutRecipient", fields: [payoutRecipientId], references: [id], onDelete: SetNull)
   sport                 Sport?      @relation(fields: [sportId], references: [id], onDelete: SetNull)
   updatedBy             User?       @relation("EventUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   contacts              EventContact[]
+  invoiceRecipients     EventInvoiceRecipient[]
   @@index([status, archived])
   @@index([startAt, endAt])
+}
+
+model EventInvoiceRecipient {
+  eventId     String @db.Uuid
+  organizerId String @db.Uuid
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  organizer   Organizer @relation(fields: [organizerId], references: [id], onDelete: Restrict)
+  @@id([eventId, organizerId])
 }
 
 model EventContact {
@@ -168,7 +198,6 @@ model Session {
 
 model AppSettings {
   id                  Int      @id @default(1)
-  outlookStammordner  String   @default("Auftraege26")
   outlookJahresordner Json     @default("[]")
   jahresSites         Json     @default("[]")
   outlookMailbox      String?
