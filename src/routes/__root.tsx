@@ -18,6 +18,7 @@ import {
   SidebarShellProvider,
 } from "@/components/t2w/AppSidebar";
 import { T2WProvider } from "@/lib/t2w/store";
+import { I18nProvider } from "@/lib/i18n";
 
 function NotFoundComponent() {
   return (
@@ -142,10 +143,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <T2WProvider>
+      <I18nProvider>
+       <T2WProvider>
         <AppShell />
         <Toaster />
-      </T2WProvider>
+       </T2WProvider>
+      </I18nProvider>
     </QueryClientProvider>
   );
 }

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { STATUS_LABEL, type EventStatus } from "@/lib/t2w/types";
+import { useI18n } from "@/lib/i18n";
 
 const STATUS_BG: Record<EventStatus, string> = {
   anfrage: "bg-status-angefragt",
@@ -20,10 +21,11 @@ export function StatusDot({ status, className }: { status: EventStatus; classNam
 }
 
 export function StatusBadge({ status }: { status: EventStatus }) {
+  const { t } = useI18n();
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground">
       <StatusDot status={status} />
-      {STATUS_LABEL[status]}
+      {t(`status.${status}` as Parameters<typeof t>[0])}
     </span>
   );
 }
