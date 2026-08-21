@@ -7,7 +7,7 @@ test("switches language, preserves event data, and persists the preference", asy
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Englisch" }).click();
+  await page.getByRole("button", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("link", { name: "Events" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Tasks" })).toBeVisible();
@@ -19,13 +19,13 @@ test("switches language, preserves event data, and persists the preference", asy
   await expect(page.getByRole("link", { name: "Design variants" })).toBeVisible();
   await page.waitForTimeout(1000);
   await expect(page.getByText("Demo Event")).toBeVisible();
-  await page.getByRole("link", { name: "German" }).click();
+  await page.getByRole("button", { name: "German" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
 });
 
 test("loads the event detail page", async ({ page }) => {
-  await page.route("**/api/v1/settings", (route) =>
+  await page.route("**/api/v1/settings**", (route) =>
     route.fulfill({ json: { outlookJahresordner: [], jahresSites: [] } }),
   );
   await page.route("**/api/v1/events**", (route) =>
@@ -33,7 +33,7 @@ test("loads the event detail page", async ({ page }) => {
   );
   await page.goto("/events/260820_demo_event");
   await expect(page.getByRole("tab", { name: "Stammdaten" })).toBeVisible({ timeout: 10000 });
-  await page.goto("/events/260820_demo_event?locale=en");
+  await page.getByRole("button", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator(".lang-en-only", { hasText: "Basic data" }).first()).toBeVisible();
   await expect(page.locator(".lang-en-only", { hasText: "Contacts" }).first()).toBeVisible();

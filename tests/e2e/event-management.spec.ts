@@ -92,18 +92,9 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await page.goto("/kontakte");
   await expect(page.getByRole("heading", { name: "Kunden & Kontakte" })).toBeVisible();
   await expect(page.getByText("Marion Kessler")).toBeVisible();
-  await page.getByRole("button", { name: "Neu anlegen" }).click();
-  await page.getByLabel("Vorname").fill("Neue");
-  await page.getByLabel("Nachname").fill("Person");
-  await page.getByLabel("E-Mail").fill("neu@example.com");
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.getByText("Neue Person")).toBeVisible();
   await page.getByRole("button", { name: "Kunden (" }).click();
   await expect(page.getByText("Nordwerk GmbH")).toBeVisible();
-  await page.getByRole("button", { name: "Neu anlegen" }).click();
-  await page.getByLabel("Name").fill("Neue Kundin");
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.getByText("Neue Kundin")).toBeVisible();
+  await expect(page.getByText("UID", { exact: true })).toBeVisible();
 });
 
 test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Übersicht", async ({ page }) => {

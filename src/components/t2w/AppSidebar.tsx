@@ -123,9 +123,10 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             aria-label={t("language")}
           >
             {(["de", "en"] as const).map((option) => (
-              <a
+              <button
                 key={option}
-                href={`/?locale=${option}`}
+                type="button"
+                onClick={() => setLocale(option)}
                 aria-pressed={locale === option}
                 aria-label={option === "de" ? t("language.de") : t("language.en")}
                 className={cn(
@@ -136,7 +137,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
                 )}
               >
                 {option.toUpperCase()}
-              </a>
+              </button>
             ))}
           </div>
         </div>
