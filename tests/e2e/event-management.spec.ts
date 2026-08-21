@@ -74,6 +74,28 @@ test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) 
   await expect(page.locator(".border-b").filter({ hasText: /2026/ }).first()).toBeVisible();
 });
 
+test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/veranstaltungen?ansicht=kalender");
+  await page.getByRole("button", { name: "Tag" }).click();
+  await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
+  await expect(page.getByText("Keine Events", { exact: true })).not.toBeVisible();
+
+  await page.goto("/veranstaltungen?ansicht=gantt");
+  await page.getByLabel("Ansicht").selectOption("monat");
+  await expect(page.getByLabel("Ansicht")).toHaveValue("monat");
+  await expect(page.locator("text=1").first()).toBeVisible();
+});
+
+test("reduziert die Navigation und verwendet das Bearbeiten-Symbol", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/veranstaltungen");
+  await expect(page.getByRole("link", { name: "Kalender", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "Design-Varianten", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Zentrale Datenquelle: Event-Service", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ })).toBeVisible();
+});
+
 test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) => {
   let contacts = [{ id: "person-1", name: "Bestehender Kontakt", email: "alt@example.com", phone: "" }];
   let customers = [{ id: "customer-1", name: "Bestehender Kunde", uid: "ATU123", iban: "" }];

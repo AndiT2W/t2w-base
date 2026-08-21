@@ -1,13 +1,11 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
   CalendarDays,
-  CalendarRange,
   CheckSquare,
   FileText,
   LayoutDashboard,
   Menu,
-  Palette,
   Receipt,
   Ruler,
   Settings2,
@@ -27,11 +25,7 @@ export const HAUPT_NAV = [
   { to: "/einstellungen", label: "Einstellungen", icon: Settings2, exact: false },
 ] as const;
 
-export const NEBEN_NAV = [
-  { to: "/kalender", label: "Kalender", icon: CalendarRange },
-  { to: "/varianten", label: "Design-Varianten", icon: Palette },
-  { to: "/styleguide", label: "Styleguide", icon: Ruler },
-] as const;
+export const NEBEN_NAV = [{ to: "/styleguide", label: "Styleguide", icon: Ruler }] as const;
 
 const HAUPT_NAV_KEYS = {
   "/": "nav.overview",
@@ -44,13 +38,20 @@ const HAUPT_NAV_KEYS = {
 } as const;
 
 const NEBEN_NAV_KEYS = {
-  "/kalender": "nav.calendar",
-  "/varianten": "nav.variants",
   "/styleguide": "nav.styleguide",
 } as const;
 
 const ENGLISH_NAV = {
-  "nav.overview": "Overview", "nav.events": "Events", "nav.tasks": "Tasks", "nav.contacts": "Contacts", "nav.offers": "Offers", "nav.invoices": "Invoices", "nav.settings": "Settings", "nav.calendar": "Calendar", "nav.variants": "Design variants", "nav.styleguide": "Style guide",
+  "nav.overview": "Overview",
+  "nav.events": "Events",
+  "nav.tasks": "Tasks",
+  "nav.contacts": "Contacts",
+  "nav.offers": "Offers",
+  "nav.invoices": "Invoices",
+  "nav.settings": "Settings",
+  "nav.calendar": "Calendar",
+  "nav.variants": "Design variants",
+  "nav.styleguide": "Style guide",
 } as const;
 
 const SidebarUiContext = createContext<{
@@ -76,6 +77,7 @@ const linkClass =
 
 function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
   const { locale, setLocale, t } = useI18n();
+  const { pathname } = useLocation();
   return (
     <div className="flex h-full flex-col gap-6 bg-nav px-3 py-4 text-nav-foreground">
       <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-2">
@@ -88,7 +90,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex flex-1 flex-col gap-1">
         <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          <><span className="lang-de-only">Module</span><span className="lang-en-only">Modules</span></>
+          {locale === "en" ? "Modules" : "Module"}
         </p>
         {HAUPT_NAV.map((item) => (
           <Link
@@ -99,33 +101,32 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             className={linkClass}
           >
             <item.icon className="size-4 shrink-0" />
-            <><span className="lang-de-only">{item.label}</span><span className="lang-en-only">{ENGLISH_NAV[HAUPT_NAV_KEYS[item.to]]}</span></>
+            {locale === "en" ? ENGLISH_NAV[HAUPT_NAV_KEYS[item.to]] : item.label}
           </Link>
         ))}
 
         <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          <><span className="lang-de-only">Weitere</span><span className="lang-en-only">More</span></>
+          {locale === "en" ? "More" : "Weitere"}
         </p>
         {NEBEN_NAV.map((item) => (
           <Link key={item.to} to={item.to} onClick={onNavigate} className={linkClass}>
             <item.icon className="size-4 shrink-0" />
-            <><span className="lang-de-only">{item.label}</span><span className="lang-en-only">{ENGLISH_NAV[NEBEN_NAV_KEYS[item.to]]}</span></>
+            {locale === "en" ? ENGLISH_NAV[NEBEN_NAV_KEYS[item.to]] : item.label}
           </Link>
         ))}
       </nav>
 
       <div className="space-y-3 px-3">
         <div className="flex items-center justify-between gap-2 text-xs text-nav-muted">
-          <span>{t("language")}</span>
           <div
             className="flex rounded border border-nav-active p-0.5"
             role="group"
             aria-label={t("language")}
           >
             {(["de", "en"] as const).map((option) => (
-              <button
+              <a
                 key={option}
-                type="button"
+                href={`/?locale=${option}`}
                 onClick={() => setLocale(option)}
                 aria-pressed={locale === option}
                 aria-label={option === "de" ? t("language.de") : t("language.en")}
@@ -137,13 +138,10 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
                 )}
               >
                 {option.toUpperCase()}
-              </button>
+              </a>
             ))}
           </div>
         </div>
-        <p className="text-[11px] leading-relaxed text-nav-muted">
-          Zentrale Datenquelle: Event-Service
-        </p>
       </div>
     </div>
   );

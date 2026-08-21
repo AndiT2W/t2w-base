@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, GanttChartSquare, List, Mail, Plus, Share2 } from "lucide-react";
+import { CalendarDays, GanttChartSquare, List, Mail, Pencil, Plus, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,7 +23,10 @@ import { jahr } from "@/lib/t2w/eventcode";
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
     q: typeof search["q"] === "string" ? (search["q"] as string) : "",
-    ansicht: search["ansicht"] === "kalender" || search["ansicht"] === "gantt" ? search["ansicht"] : "liste",
+    ansicht:
+      search["ansicht"] === "kalender" || search["ansicht"] === "gantt"
+        ? search["ansicht"]
+        : "liste",
   }),
   head: () => ({
     meta: [
@@ -111,8 +114,18 @@ function Veranstaltungen() {
       <div className="space-y-4">
         <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
           <AnsichtsReiter to="/veranstaltungen" aktiv label="Liste" icon={List} />
-          <AnsichtsReiter to="/veranstaltungen" search={{ ansicht: "kalender" }} label="Kalender" icon={CalendarDays} />
-          <AnsichtsReiter to="/veranstaltungen" search={{ ansicht: "gantt" }} label="Gantt" icon={GanttChartSquare} />
+          <AnsichtsReiter
+            to="/veranstaltungen"
+            search={{ ansicht: "kalender" }}
+            label="Kalender"
+            icon={CalendarDays}
+          />
+          <AnsichtsReiter
+            to="/veranstaltungen"
+            search={{ ansicht: "gantt" }}
+            label="Gantt"
+            icon={GanttChartSquare}
+          />
         </nav>
         <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-surface p-3">
           <Select value={status} onValueChange={(v) => setStatus(v as EventStatus | "alle")}>
@@ -152,24 +165,97 @@ function Veranstaltungen() {
               <SelectItem value="alle">Aktive & Archiv</SelectItem>
             </SelectContent>
           </Select>
-
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full min-w-[54rem] border-collapse text-xs">
-            <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground"><tr>
-              <th className="px-2 py-1.5 font-semibold">St</th><th className="px-2 py-1.5">Event</th><th className="px-2 py-1.5">Veranstalter</th><th className="px-2 py-1.5">Zeitraum</th><th className="px-2 py-1.5 font-semibold">Tg</th><th className="px-2 py-1.5">Aufg.</th><th className="px-2 py-1.5"><span className="inline-flex gap-2" title="Outlook und SharePoint"><Mail className="size-3.5" aria-label="Outlook" /><Share2 className="size-3.5" aria-label="SharePoint" /></span></th><th className="px-2 py-1.5 text-right">Aktion</th>
-            </tr></thead>
+            <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-2 py-1.5 font-semibold">St</th>
+                <th className="px-2 py-1.5">Event</th>
+                <th className="px-2 py-1.5">Veranstalter</th>
+                <th className="px-2 py-1.5">Zeitraum</th>
+                <th className="px-2 py-1.5 font-semibold">Tg</th>
+                <th className="px-2 py-1.5">Aufg.</th>
+                <th className="px-2 py-1.5">
+                  <span className="inline-flex gap-2" title="Outlook und SharePoint">
+                    <Mail className="size-3.5" aria-label="Outlook" />
+                    <Share2 className="size-3.5" aria-label="SharePoint" />
+                  </span>
+                </th>
+                <th className="px-2 py-1.5 text-right">Aktion</th>
+              </tr>
+            </thead>
             <tbody>
               {gefiltert.map((e) => (
-                <tr key={e.id} className="cursor-pointer border-t border-border hover:bg-accent/50" onClick={() => navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })}>
-                  <td className="px-2 py-1" title={STATUS_LABEL[e.status]}><StatusDot status={e.status} /></td><td className="max-w-[16rem] truncate px-2 py-1 font-medium">{e.name}</td><td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td><td className="whitespace-nowrap px-2 py-1">{formatZeitraum(e.start, e.ende)}</td><td className="px-2 py-1 tabular-nums">{Math.max(1, Math.round((new Date(e.ende).getTime() - new Date(e.start).getTime()) / 86400000) + 1)}</td><td className="px-2 py-1 tabular-nums">{e.aufgaben.filter((a) => !a.erledigt).length || "–"}</td><td className="px-2 py-1"><span className="flex gap-1"><FolderLink icon="outlook" label="Outlook" href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(e.outlookOrdner)}>OL</FolderLink><FolderLink icon="sharepoint" label="SharePoint" href={(() => { const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start)); return e.sharepointOrdner && site ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}` : null; })()} available={Boolean(e.sharepointOrdner)}>SP</FolderLink></span></td><td className="px-2 py-1 text-right"><Link to="/events/$eventcode" params={{ eventcode: e.eventcode }} className="font-medium text-primary hover:underline">Öffnen</Link></td>
+                <tr
+                  key={e.id}
+                  className="cursor-pointer border-t border-border hover:bg-accent/50"
+                  onClick={() =>
+                    navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })
+                  }
+                >
+                  <td className="px-2 py-1" title={STATUS_LABEL[e.status]}>
+                    <StatusDot status={e.status} />
+                  </td>
+                  <td className="max-w-[16rem] truncate px-2 py-1 font-medium">{e.name}</td>
+                  <td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td>
+                  <td className="whitespace-nowrap px-2 py-1">{formatZeitraum(e.start, e.ende)}</td>
+                  <td className="px-2 py-1 tabular-nums">
+                    {Math.max(
+                      1,
+                      Math.round(
+                        (new Date(e.ende).getTime() - new Date(e.start).getTime()) / 86400000,
+                      ) + 1,
+                    )}
+                  </td>
+                  <td className="px-2 py-1 tabular-nums">
+                    {e.aufgaben.filter((a) => !a.erledigt).length || "–"}
+                  </td>
+                  <td className="px-2 py-1">
+                    <span className="flex gap-1">
+                      <FolderLink
+                        icon="outlook"
+                        label="Outlook"
+                        href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null}
+                        available={Boolean(e.outlookOrdner)}
+                      >
+                        OL
+                      </FolderLink>
+                      <FolderLink
+                        icon="sharepoint"
+                        label="SharePoint"
+                        href={(() => {
+                          const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start));
+                          return e.sharepointOrdner && site
+                            ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
+                            : null;
+                        })()}
+                        available={Boolean(e.sharepointOrdner)}
+                      >
+                        SP
+                      </FolderLink>
+                    </span>
+                  </td>
+                  <td className="px-2 py-1 text-right">
+                    <Link
+                      to="/events/$eventcode"
+                      params={{ eventcode: e.eventcode }}
+                      className="inline-flex rounded p-1 text-primary hover:bg-accent"
+                      title="Event bearbeiten"
+                      aria-label={`Event bearbeiten: ${e.name}`}
+                    >
+                      <Pencil className="size-4" />
+                    </Link>
+                  </td>
                 </tr>
               ))}
               {gefiltert.length === 0 && (
-                <tr><td colSpan={8} className="px-2 py-8 text-center text-muted-foreground">
+                <tr>
+                  <td colSpan={8} className="px-2 py-8 text-center text-muted-foreground">
                     Keine Events für die aktuelle Filterauswahl.
-                </td></tr>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

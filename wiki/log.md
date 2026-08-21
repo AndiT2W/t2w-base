@@ -173,3 +173,4 @@
 - 2026-08-21: Gantt-Ansicht um eine dreistufige Zeitachse mit Monaten, Kalenderwochen und Tageszahlen sowie Tagesraster ergänzt; Browser-E2E-Test erweitert.
 - 2026-08-21: Gantt-Wochenenden und österreichische gesetzliche Feiertage werden in Kopfzeile und Tagesraster hervorgehoben; Feiertagsnamen sind per Tooltip sichtbar.
 - 2026-08-21: Fehler bei der Eventcode-Persistenz behoben: Die automatisch erzeugte Vorschau ist beim Anlegen editierbar, wird im POST mitgesendet und bleibt nach dem Speichern unveränderlich; der Service verwendet den übergebenen Code statt `YYMMDD_event_<Zeitstempel>`.
+- 2026-08-21: Issue #28 umgesetzt: Sidebar bereinigt, Sprachumschalter auf DE/EN reduziert, Eventaktion als Bearbeiten-Symbol dargestellt, Kalender um Tagesansicht sowie Wochenend-/Feiertagsmarkierung ergänzt und Gantt um horizontales Scrollen, Zoomauswahl und Eventzählung erweitert.

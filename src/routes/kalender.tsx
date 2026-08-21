@@ -142,19 +142,28 @@ function WochenGitter({
   wochenStart,
   events,
   monat,
+  tageAnzahl = 7,
 }: {
   wochenStart: Date;
   events: T2WEvent[];
   monat?: number;
+  tageAnzahl?: number;
 }) {
-  const zeilen = segmenteFuerWoche(events, wochenStart);
+  const zeilen = segmenteFuerWoche(events, wochenStart).map((zeile) =>
+    tageAnzahl === 1 ? zeile.filter((seg) => seg.start === 0) : zeile,
+  );
   const heute = heuteIso();
   return (
     <div className="border-b border-border last:border-b-0">
-      <div className="grid grid-cols-7">
-        {Array.from({ length: 7 }, (_, i) => {
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: `repeat(${tageAnzahl}, minmax(0, 1fr))` }}
+      >
+        {Array.from({ length: tageAnzahl }, (_, i) => {
           const d = addDays(wochenStart, i);
           const imMonat = monat === undefined || d.getMonth() === monat;
+          const feiertag = oesterreichischerFeiertag(d);
+          const wochenende = d.getDay() === 0 || d.getDay() === 6;
           return (
             <div
               key={i}
@@ -162,7 +171,9 @@ function WochenGitter({
                 "border-r border-border px-2 py-1.5 text-xs last:border-r-0",
                 imMonat ? "text-foreground" : "text-muted-foreground/50",
                 iso(d) === heute && "bg-accent font-semibold",
+                feiertag ? "bg-amber-100 text-amber-900" : wochenende && "bg-muted/70",
               )}
+              title={feiertag ?? undefined}
             >
               {d.getDate()}.
             </div>
@@ -171,7 +182,11 @@ function WochenGitter({
       </div>
       <div className="relative space-y-1 px-1 pb-2 pt-0.5" style={{ minHeight: "3rem" }}>
         {zeilen.map((zeile, zi) => (
-          <div key={zi} className="grid grid-cols-7 gap-x-0">
+          <div
+            key={zi}
+            className="grid gap-x-0"
+            style={{ gridTemplateColumns: `repeat(${tageAnzahl}, minmax(0, 1fr))` }}
+          >
             {zeile.map((seg) => (
               <div
                 key={seg.event.id}
@@ -183,17 +198,16 @@ function WochenGitter({
             ))}
           </div>
         ))}
-        {zeilen.length === 0 && (
-          <p className="px-2 py-2 text-xs text-muted-foreground">Keine Events</p>
-        )}
       </div>
     </div>
   );
 }
 
-export function KalenderSeite({ veranstaltungsmenue = false }: { veranstaltungsmenue?: boolean } = {}) {
+export function KalenderSeite({
+  veranstaltungsmenue = false,
+}: { veranstaltungsmenue?: boolean } = {}) {
   const { events } = useT2W();
-  const [modus, setModus] = useState<"monat" | "woche">("monat");
+  const [modus, setModus] = useState<"monat" | "woche" | "tag">("monat");
   const [anker, setAnker] = useState(() => new Date());
   const sichtbareEvents = useMemo(() => events.filter((e) => !e.archiviert), [events]);
 
@@ -206,7 +220,8 @@ export function KalenderSeite({ veranstaltungsmenue = false }: { veranstaltungsm
     setAnker((prev) => {
       const d = new Date(prev);
       if (modus === "monat") d.setMonth(d.getMonth() + richtung);
-      else d.setDate(d.getDate() + richtung * 7);
+      else if (modus === "woche") d.setDate(d.getDate() + richtung * 7);
+      else d.setDate(d.getDate() + richtung);
       return d;
     });
   }
@@ -214,7 +229,9 @@ export function KalenderSeite({ veranstaltungsmenue = false }: { veranstaltungsm
   const titel =
     modus === "monat"
       ? `${MONATE[anker.getMonth()]} ${anker.getFullYear()}`
-      : `Woche ab ${wochenStart.getDate()}. ${MONATE[wochenStart.getMonth()]} ${wochenStart.getFullYear()}`;
+      : modus === "woche"
+        ? `Woche ab ${wochenStart.getDate()}. ${MONATE[wochenStart.getMonth()]} ${wochenStart.getFullYear()}`
+        : `${anker.getDate()}. ${MONATE[anker.getMonth()]} ${anker.getFullYear()}`;
 
   return (
     <div className="space-y-5">
@@ -227,19 +244,27 @@ export function KalenderSeite({ veranstaltungsmenue = false }: { veranstaltungsm
       )}
       <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
         <KalenderReiter to="/veranstaltungen" label="Liste" icon={List} />
-        <KalenderReiter to="/veranstaltungen" search={{ ansicht: "kalender" }} label="Kalender" icon={CalendarDays} aktiv={veranstaltungsmenue || undefined} />
-        <KalenderReiter to="/veranstaltungen" search={{ ansicht: "gantt" }} label="Gantt" icon={GanttChartSquare} />
+        <KalenderReiter
+          to="/veranstaltungen"
+          search={{ ansicht: "kalender" }}
+          label="Kalender"
+          icon={CalendarDays}
+          aktiv={veranstaltungsmenue || undefined}
+        />
+        <KalenderReiter
+          to="/veranstaltungen"
+          search={{ ansicht: "gantt" }}
+          label="Gantt"
+          icon={GanttChartSquare}
+        />
       </nav>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Kalender</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Mehrtägige Events werden als durchgehender Balken dargestellt.
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-md border border-border bg-surface p-0.5">
-            {(["monat", "woche"] as const).map((m) => (
+            {(["monat", "woche", "tag"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setModus(m)}
@@ -250,7 +275,7 @@ export function KalenderSeite({ veranstaltungsmenue = false }: { veranstaltungsm
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {m === "monat" ? "Monat" : "Woche"}
+                {m === "monat" ? "Monat" : m === "woche" ? "Woche" : "Tag"}
               </button>
             ))}
           </div>
@@ -279,8 +304,13 @@ export function KalenderSeite({ veranstaltungsmenue = false }: { veranstaltungsm
           </div>
         </div>
 
-        <div className="grid grid-cols-7 border-b border-border bg-secondary">
-          {WOCHENTAGE.map((t) => (
+        <div
+          className={cn(
+            "grid border-b border-border bg-secondary",
+            modus === "tag" ? "grid-cols-1" : "grid-cols-7",
+          )}
+        >
+          {(modus === "tag" ? [WOCHENTAGE[(anker.getDay() + 6) % 7]] : WOCHENTAGE).map((t) => (
             <div
               key={t}
               className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
@@ -299,8 +329,10 @@ export function KalenderSeite({ veranstaltungsmenue = false }: { veranstaltungsm
               monat={anker.getMonth()}
             />
           ))
-        ) : (
+        ) : modus === "woche" ? (
           <WochenGitter wochenStart={wochenStart} events={sichtbareEvents} />
+        ) : (
+          <WochenGitter wochenStart={anker} events={sichtbareEvents} tageAnzahl={1} />
         )}
       </div>
     </div>
@@ -335,4 +367,46 @@ function KalenderReiter({
       {label}
     </Link>
   );
+}
+
+function oesterreichischerFeiertag(datum: Date) {
+  const fix = new Map([
+    ["1-1", "Neujahr"],
+    ["1-6", "Heilige Drei Könige"],
+    ["5-1", "Staatsfeiertag"],
+    ["8-15", "Mariä Himmelfahrt"],
+    ["10-26", "Nationalfeiertag"],
+    ["11-1", "Allerheiligen"],
+    ["12-8", "Mariä Empfängnis"],
+    ["12-25", "Christtag"],
+    ["12-26", "Stefanitag"],
+  ]);
+  const fixerFeiertag = fix.get(`${datum.getMonth() + 1}-${datum.getDate()}`);
+  if (fixerFeiertag) return fixerFeiertag;
+  const ostersonntag = ostersonntagFuer(datum.getFullYear());
+  const tageSeitOstern = Math.round((datum.getTime() - ostersonntag.getTime()) / 86400000);
+  return new Map([
+    [1, "Ostermontag"],
+    [39, "Christi Himmelfahrt"],
+    [50, "Pfingstmontag"],
+    [60, "Fronleichnam"],
+  ]).get(tageSeitOstern);
+}
+
+function ostersonntagFuer(jahr: number) {
+  const a = jahr % 19,
+    b = Math.floor(jahr / 100),
+    c = jahr % 100,
+    d = Math.floor(b / 4),
+    e = b % 4,
+    f = Math.floor((b + 8) / 25),
+    g = Math.floor((b - f + 1) / 3),
+    h = (19 * a + b - d - g + 15) % 30,
+    i = Math.floor(c / 4),
+    k = c % 4,
+    l = (32 + 2 * e + 2 * i - h - k) % 7,
+    m = Math.floor((a + 11 * h + 22 * l) / 451),
+    monat = Math.floor((h + l - 7 * m + 114) / 31),
+    tag = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(jahr, monat - 1, tag));
 }
