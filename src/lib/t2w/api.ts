@@ -14,6 +14,14 @@ type ApiEvent = {
   notes: string | null;
   outlookFolder: string | null;
   outlookWebUrl: string | null;
+  outlookMailbox?: string | null;
+  outlookRootFolderId?: string | null;
+  outlookYearFolderId?: string | null;
+  outlookQuarterFolderId?: string | null;
+  outlookFolderId?: string | null;
+  outlookFolderSyncStatus?: string;
+  outlookFolderLastSuccessAt?: string | null;
+  outlookFolderLastError?: string | null;
   sharepointFolder: string | null;
   archived: boolean;
   organizer?: { name: string } | null;
@@ -35,7 +43,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     status: statusFromApi[event.status] ?? "anfrage", verantwortlicher: event.responsible ?? "—",
     teilnehmer: event.participantForecast ?? 0,
     teilnehmerwerte: { prognose: event.participantForecast, aktuell: event.participantCurrent, aktuellQuelle: event.participantCurrent == null ? null : "time2win", aktuellSynchronisiertAm: null },
-    archiviert: event.archived, notizen: event.notes ?? "", outlookOrdner: event.outlookFolder, outlookWebUrl: event.outlookWebUrl, sharepointOrdner: event.sharepointFolder,
+    archiviert: event.archived, notizen: event.notes ?? "", outlookOrdner: event.outlookFolder, outlookWebUrl: event.outlookWebUrl, outlookMailbox: event.outlookMailbox, outlookRootFolderId: event.outlookRootFolderId, outlookYearFolderId: event.outlookYearFolderId, outlookQuarterFolderId: event.outlookQuarterFolderId, outlookFolderId: event.outlookFolderId, outlookFolderSyncStatus: event.outlookFolderSyncStatus, outlookFolderLastSuccessAt: event.outlookFolderLastSuccessAt, outlookFolderLastError: event.outlookFolderLastError, sharepointOrdner: event.sharepointFolder,
     kontakte: [], aufgaben: [], dateien: [], kommunikation: [], sportart: event.sport?.name ?? "",
   };
 }
@@ -73,5 +81,11 @@ export async function apiUpdateSettings(settings: Settings): Promise<Settings> {
 export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
   const response = await fetch(`/api/v1/events/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: patch.name, startAt: patch.start, endAt: patch.ende, location: patch.ort, responsible: patch.verantwortlicher, participantForecast: patch.teilnehmer, notes: patch.notizen, organizerName: patch.veranstalter, outlookFolder: patch.outlookOrdner, outlookWebUrl: patch.outlookWebUrl, sharepointFolder: patch.sharepointOrdner }) });
   if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
+  return mapApiEvent(await response.json() as ApiEvent);
+}
+
+export async function apiSyncOutlookFolder(id: string, input?: { mailbox?: string; rootFolderId?: string }) {
+  const response = await fetch(`/api/v1/events/${id}/outlook-folder/sync`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input ?? {}) });
+  if (!response.ok) throw new Error("OUTLOOK_FOLDER_SYNC_FAILED");
   return mapApiEvent(await response.json() as ApiEvent);
 }

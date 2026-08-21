@@ -17,6 +17,10 @@ services:
     environment:
       DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
       PORT: 3000
+      OUTLOOK_TENANT_ID: ${OUTLOOK_TENANT_ID:-}
+      OUTLOOK_CLIENT_ID: ${OUTLOOK_CLIENT_ID:-}
+      OUTLOOK_CLIENT_SECRET: ${OUTLOOK_CLIENT_SECRET:-}
+      OUTLOOK_GRAPH_ACCESS_TOKEN: ${OUTLOOK_GRAPH_ACCESS_TOKEN:-}
     depends_on:
       event-db: { condition: service_started }
     networks: [event_internal, traefik_proxy]

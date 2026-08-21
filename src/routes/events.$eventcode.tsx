@@ -30,6 +30,7 @@ import {
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
+import { apiSyncOutlookFolder } from "@/lib/t2w/api";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr, quartal } from "@/lib/t2w/eventcode";
 import {
@@ -86,6 +87,7 @@ function EventDetail() {
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
   const { updateEvent, settings } = useT2W();
+  const [outlookSyncing, setOutlookSyncing] = useState(false);
   const [form, setForm] = useState(event);
   const [quartalsDialog, setQuartalsDialog] = useState(false);
 
@@ -115,6 +117,18 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     const ende = form.ende && form.ende >= form.start ? form.ende : form.start;
     updateEvent(event.id, { ...form, ende });
     toast.success("Änderungen gespeichert.");
+  }
+
+  async function outlookSynchronisieren() {
+    setOutlookSyncing(true);
+    try {
+      const synced = await apiSyncOutlookFolder(event.id);
+      updateEvent(event.id, synced);
+      setForm(synced);
+      toast.success("Outlook-Ordner synchronisiert.");
+    } catch {
+      toast.error("Outlook-Ordner konnte nicht synchronisiert werden.");
+    } finally { setOutlookSyncing(false); }
   }
 
   return (
@@ -299,7 +313,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Link2 className="size-4" />
                   Vorschlag übernehmen
                 </Button>
-                <div className="mt-2 text-xs"><FolderLink label="Outlook" href={form.outlookWebUrl} available={Boolean(form.outlookWebUrl)}>{form.outlookOrdner}</FolderLink></div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><FolderLink label="Outlook" href={form.outlookWebUrl} available={Boolean(form.outlookWebUrl)}>{form.outlookOrdner}</FolderLink><Button type="button" variant="outline" size="sm" disabled={outlookSyncing || !settings.outlookMailbox || !settings.outlookRootFolderId} onClick={() => void outlookSynchronisieren()}>{outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}</Button></div>
+                <p className="mt-2 text-xs text-muted-foreground">Graph-Sync: {form.outlookFolderSyncStatus === "SUCCESS" ? `erfolgreich${form.outlookFolderLastSuccessAt ? ` am ${formatDatum(form.outlookFolderLastSuccessAt.slice(0, 10))}` : ""}` : form.outlookFolderSyncStatus === "ERROR" ? `Fehler${form.outlookFolderLastError ? `: ${form.outlookFolderLastError}` : ""}` : form.outlookFolderSyncStatus === "SYNCING" ? "läuft …" : "noch nicht ausgeführt"}</p>
                 <Label htmlFor="d-outlook-url" className="mt-3 block">Outlook-Web-Link</Label>
                 <Input
                   id="d-outlook-url"

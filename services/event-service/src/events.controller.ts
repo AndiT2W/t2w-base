@@ -28,8 +28,12 @@ export class EventsController {
   constructor(private readonly prisma: PrismaService, private readonly outlookFolders: OutlookFolderService) {}
 
   @Post(":id/outlook-folder/sync")
-  syncOutlookFolder(@Param("id", ParseUUIDPipe) id: string, @Body() dto: { mailbox: string; rootFolderId: string }) {
-    return this.outlookFolders.ensureEventFolder(id, dto.mailbox, dto.rootFolderId);
+  async syncOutlookFolder(@Param("id", ParseUUIDPipe) id: string, @Body() dto: { mailbox?: string; rootFolderId?: string }) {
+    const settings = await this.prisma.appSettings.findUnique({ where: { id: 1 } });
+    const mailbox = dto.mailbox?.trim() || settings?.outlookMailbox;
+    const rootFolderId = dto.rootFolderId?.trim() || settings?.outlookRootFolderId;
+    if (!mailbox || !rootFolderId) throw new Error("OUTLOOK_SETTINGS_MISSING");
+    return this.outlookFolders.ensureEventFolder(id, mailbox, rootFolderId);
   }
 
   @Get()

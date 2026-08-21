@@ -73,6 +73,8 @@ Example interaction flow:
 
 The event service now has an initial Outlook folder adapter seam. It stores the configured mailbox and stable Graph IDs for the root, year, quarter, and event folders. The adapter exposes idempotent folder creation under a known parent and an event endpoint can synchronize the `year / quarter / eventCode` structure. The current Graph client uses an injected access token as an initial deployment seam; Entra client-credentials token acquisition and message ingestion remain follow-up work.
 
+Issue #25 extends this seam with Entra client-credentials token acquisition (`OUTLOOK_TENANT_ID`, `OUTLOOK_CLIENT_ID`, `OUTLOOK_CLIENT_SECRET`), paginated child-folder lookup, concurrent-create recovery, rate-limit-aware sync errors, persisted sync state, and a visible event-detail resync action. `OUTLOOK_GRAPH_ACCESS_TOKEN` remains an explicit local/test override and must not be used as a production secret in repository files.
+
 The current convention of one Outlook folder per event is a strong initial integration seam. The connector can discover the folder tree, persist the Outlook folder ID together with the event, and synchronize messages from that folder into the event timeline. Microsoft Graph supports traversing child folders, listing messages in a folder, and delta synchronization for incremental changes.
 
 Sent messages require an explicit policy:

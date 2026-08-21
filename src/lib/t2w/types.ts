@@ -105,6 +105,12 @@ export type Settings = {
   jahresSites: { jahr: string; url: string }[];
   outlookMailbox?: string | null;
   outlookRootFolderId?: string | null;
+  outlookYearFolderId?: string | null;
+  outlookQuarterFolderId?: string | null;
+  outlookFolderId?: string | null;
+  outlookFolderSyncStatus?: "NEVER" | "SYNCING" | "SUCCESS" | "ERROR";
+  outlookFolderLastSuccessAt?: string | null;
+  outlookFolderLastError?: string | null;
 };
 
 export type ColumnKey =

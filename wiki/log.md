@@ -165,3 +165,4 @@
 - Implemented the first Outlook folder integration slice for issue #25: Graph adapter seam, stable event folder IDs/status fields, idempotent year/quarter/event folder provisioning, and a protected event sync endpoint.
 - Verified with `npm run build` and the event-service Vitest suite.
 - Dokumentation nachgezogen: Issue #24 und die Wiki-Konvention beschreiben jetzt die AppSettings-PostgreSQL-Persistenz, die Ursache des asynchronen Formular-State-Fehlers sowie die verbindliche E2E-Regel für neue persistente Features. Der Browser-Test muss den vollständigen UI-Ablauf abdecken und darf den PATCH nicht nur direkt per `fetch` auslösen.
+- 2026-08-21: Issue #25 vervollständigt: Microsoft-Graph-Client-Credentials, paginierte Child-Folder-Suche, 409-Race-Recovery, Rate-Limit-/Sync-Status, Eventdetail-Sync-Aktion, Persistenzanzeige und Outlook-Adaptertests ergänzt.
