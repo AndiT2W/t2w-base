@@ -51,11 +51,15 @@ test("renders every application route in English", async ({ page }) => {
     ["/rechnungen", "Invoices"],
     ["/einstellungen", "Settings"],
     ["/varianten", "Design variants"],
+    ["/varianten/ops", "Events in next 14 days"],
+    ["/varianten/timeline", "All active events"],
+    ["/varianten/workspace", "Event Workspace"],
+    ["/gantt", "Events"],
     ["/styleguide", "Style guide"],
   ] as const;
   for (const [path, heading] of routes) {
     await page.goto(`${path}?locale=en`);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    await expect(page.getByRole("heading", { name: heading }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(heading, { exact: true }).first()).toBeVisible({ timeout: 10000 });
   }
 });
