@@ -30,6 +30,7 @@ import {
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
+import { useI18n } from "@/lib/i18n";
 import { apiSyncOutlookFolder } from "@/lib/t2w/api";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr, quartal } from "@/lib/t2w/eventcode";
@@ -87,6 +88,7 @@ function EventDetail() {
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
   const { updateEvent, settings } = useT2W();
+  const { t } = useI18n();
   const [outlookSyncing, setOutlookSyncing] = useState(false);
   const [form, setForm] = useState(event);
   const [quartalsDialog, setQuartalsDialog] = useState(false);
@@ -177,17 +179,17 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <Tabs defaultValue="stammdaten">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="stammdaten"><span className="lang-de-only">Stammdaten</span><span className="lang-en-only">Basic data</span></TabsTrigger>
-          <TabsTrigger value="kontakte"><span className="lang-de-only">Kontakte</span><span className="lang-en-only">Contacts</span></TabsTrigger>
-          <TabsTrigger value="aufgaben"><span className="lang-de-only">Aufgaben</span><span className="lang-en-only">Tasks</span></TabsTrigger>
-          <TabsTrigger value="dateien"><span className="lang-de-only">Dateien</span><span className="lang-en-only">Files</span></TabsTrigger>
-          <TabsTrigger value="kommunikation"><span className="lang-de-only">Kommunikation</span><span className="lang-en-only">Communication</span></TabsTrigger>
+          <TabsTrigger value="stammdaten">{t("detail.basicData")}</TabsTrigger>
+          <TabsTrigger value="kontakte">{t("nav.contacts")}</TabsTrigger>
+          <TabsTrigger value="aufgaben">{t("nav.tasks")}</TabsTrigger>
+          <TabsTrigger value="dateien">{t("detail.files")}</TabsTrigger>
+          <TabsTrigger value="kommunikation">{t("detail.communication")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stammdaten" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base"><span className="lang-de-only">Stammdaten</span><span className="lang-en-only">Basic data</span></CardTitle>
+              <CardTitle className="text-base">{t("detail.basicData")}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -347,7 +349,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         <TabsContent value="kontakte">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Kontakte</CardTitle>
+              <CardTitle className="text-base">{t("nav.contacts")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {form.kontakte.length === 0 && (
@@ -369,7 +371,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         <TabsContent value="aufgaben">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Aufgaben</CardTitle>
+              <CardTitle className="text-base">{t("nav.tasks")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {form.aufgaben.length === 0 && (

@@ -7,6 +7,7 @@ import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/kalender")({
@@ -207,6 +208,7 @@ export function KalenderSeite({
   veranstaltungsmenue = false,
 }: { veranstaltungsmenue?: boolean } = {}) {
   const { events } = useT2W();
+  const { t } = useI18n();
   const [modus, setModus] = useState<"monat" | "woche" | "tag">("monat");
   const [anker, setAnker] = useState(() => new Date());
   const sichtbareEvents = useMemo(() => events.filter((e) => !e.archiviert), [events]);
@@ -260,7 +262,7 @@ export function KalenderSeite({
       </nav>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Kalender</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t("nav.calendar")}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-md border border-border bg-surface p-0.5">

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { translatePageText, useI18n } from "@/lib/i18n";
 
 export type Krume = { label: string; to?: "/" | "/veranstaltungen" };
 
@@ -19,6 +20,7 @@ export function PageHeader({
   aktion?: ReactNode;
 }) {
   const navigate = useNavigate();
+  const { locale } = useI18n();
   const [global, setGlobal] = useState("");
 
   return (
@@ -33,20 +35,20 @@ export function PageHeader({
               <span key={k.label} className="flex items-center gap-1">
                 {k.to ? (
                   <Link to={k.to} className="transition-colors hover:text-foreground">
-                    {k.label}
+                    {translatePageText(k.label, locale)}
                   </Link>
                 ) : (
-                  <span>{k.label}</span>
+                <span>{translatePageText(k.label, locale)}</span>
                 )}
                 <ChevronRight className="size-3" />
               </span>
             ))}
-            <span className="font-medium text-foreground">{titel}</span>
+            <span className="font-medium text-foreground">{translatePageText(titel, locale)}</span>
           </nav>
           <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
-            {titel}
+            {translatePageText(titel, locale)}
           </h1>
-          {beschreibung && <p className="mt-0.5 text-sm text-muted-foreground">{beschreibung}</p>}
+          {beschreibung && <p className="mt-0.5 text-sm text-muted-foreground">{translatePageText(beschreibung, locale)}</p>}
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -61,7 +63,7 @@ export function PageHeader({
             <Input
               value={suche ? suche.value : global}
               onChange={(e) => (suche ? suche.onChange(e.target.value) : setGlobal(e.target.value))}
-              placeholder={suche?.placeholder ?? "Global suchen …"}
+              placeholder={translatePageText(suche?.placeholder ?? "Global suchen …", locale)}
               aria-label="Suche"
               className="h-9 pl-8"
             />
@@ -82,7 +84,7 @@ export function PageHeader({
           <Input
             value={suche ? suche.value : global}
             onChange={(e) => (suche ? suche.onChange(e.target.value) : setGlobal(e.target.value))}
-            placeholder={suche?.placeholder ?? "Global suchen …"}
+            placeholder={translatePageText(suche?.placeholder ?? "Global suchen …", locale)}
             aria-label="Suche"
             className="h-9 pl-8"
           />

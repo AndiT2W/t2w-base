@@ -90,7 +90,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex flex-1 flex-col gap-1">
         <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          <><span className="lang-de-only">Module</span><span className="lang-en-only">Modules</span></>
+          {t("nav.modules")}
         </p>
         {HAUPT_NAV.map((item) => (
           <Link
@@ -101,17 +101,17 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             className={linkClass}
           >
             <item.icon className="size-4 shrink-0" />
-            <><span className="lang-de-only">{item.label}</span><span className="lang-en-only">{ENGLISH_NAV[HAUPT_NAV_KEYS[item.to]]}</span></>
+            {t(HAUPT_NAV_KEYS[item.to])}
           </Link>
         ))}
 
         <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          <><span className="lang-de-only">Weitere</span><span className="lang-en-only">More</span></>
+          {t("nav.more")}
         </p>
         {NEBEN_NAV.map((item) => (
           <Link key={item.to} to={item.to} onClick={onNavigate} className={linkClass}>
             <item.icon className="size-4 shrink-0" />
-            <><span className="lang-de-only">{item.label}</span><span className="lang-en-only">{ENGLISH_NAV[NEBEN_NAV_KEYS[item.to]]}</span></>
+            {t(NEBEN_NAV_KEYS[item.to])}
           </Link>
         ))}
       </nav>
@@ -127,6 +127,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
               <a
                 key={option}
                 href={`/?locale=${option}`}
+                onClick={() => window.localStorage.setItem("t2w-locale", option)}
                 aria-pressed={locale === option}
                 aria-label={option === "de" ? t("language.de") : t("language.en")}
                 className={cn(

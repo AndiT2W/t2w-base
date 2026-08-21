@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { VARIANTEN } from "@/components/t2w/VariantSwitcher";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/varianten/")({
   head: () => ({
@@ -44,10 +45,11 @@ const DETAILS: Record<string, string[]> = {
 };
 
 function Galerie() {
+  const { t } = useI18n();
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Design-Galerie</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t("nav.variants")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Drei Varianten derselben Event-Übersicht mit unterschiedlicher Informationsarchitektur.
           Alle nutzen dieselben Eventdaten, Statuswerte, Eventcodes und Ordnerregeln.
