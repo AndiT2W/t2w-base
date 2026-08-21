@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -18,6 +19,7 @@ import {
   SidebarShellProvider,
 } from "@/components/t2w/AppSidebar";
 import { T2WProvider } from "@/lib/t2w/store";
+import { CrmProvider } from "@/lib/crm/store";
 import { I18nProvider } from "@/lib/i18n";
 
 function NotFoundComponent() {
@@ -108,8 +110,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  const href = useRouterState({ select: (state) => state.location.href });
+  const locale = href.includes("locale=en") ? "en" : "de";
   return (
-        <html>
+    <html lang={locale}>
       <head>
         <HeadContent />
       </head>
@@ -141,14 +145,16 @@ function AppShell() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-    return (
-      <QueryClientProvider client={queryClient}>
+  return (
+    <QueryClientProvider client={queryClient}>
       <I18nProvider>
-       <T2WProvider>
-        <AppShell />
-        <Toaster />
-       </T2WProvider>
+        <T2WProvider>
+          <CrmProvider>
+            <AppShell />
+            <Toaster />
+          </CrmProvider>
+        </T2WProvider>
       </I18nProvider>
-      </QueryClientProvider>
+    </QueryClientProvider>
   );
 }

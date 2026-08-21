@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT2W } from "@/lib/t2w/store";
+import { PageHeader } from "@/components/t2w/PageHeader";
 
 function nachJahrAbsteigend<T extends { jahr: string }>(eintraege: T[]) {
   return [...eintraege].sort((a, b) => {
@@ -64,14 +65,9 @@ function Einstellungen() {
   }
 
   return (
-    <div className="max-w-3xl space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Einstellungen</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Ordnerkonventionen für Outlook und SharePoint. Es bestehen keine echten Integrationen –
-          Verknüpfungen werden manuell gepflegt.
-        </p>
-      </div>
+    <div className="space-y-5">
+      <PageHeader krumen={[{ label: "TIME2WIN", to: "/" }]} titel="Einstellungen" beschreibung="Outlook- und SharePoint-Ordnerkonventionen zentral verwalten." />
+      <div className="max-w-3xl space-y-5">
 
       <Tabs defaultValue="allgemein" className="space-y-5">
         <TabsList>
@@ -205,6 +201,7 @@ function Einstellungen() {
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" onClick={speichern}>Speichern</Button>
+      </div>
       </div>
     </div>
   );

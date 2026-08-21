@@ -177,17 +177,17 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <Tabs defaultValue="stammdaten">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-          <TabsTrigger value="kontakte">Kontakte</TabsTrigger>
-          <TabsTrigger value="aufgaben">Aufgaben</TabsTrigger>
-          <TabsTrigger value="dateien">Dateien</TabsTrigger>
-          <TabsTrigger value="kommunikation">Kommunikation</TabsTrigger>
+          <TabsTrigger value="stammdaten"><span className="lang-de-only">Stammdaten</span><span className="lang-en-only">Basic data</span></TabsTrigger>
+          <TabsTrigger value="kontakte"><span className="lang-de-only">Kontakte</span><span className="lang-en-only">Contacts</span></TabsTrigger>
+          <TabsTrigger value="aufgaben"><span className="lang-de-only">Aufgaben</span><span className="lang-en-only">Tasks</span></TabsTrigger>
+          <TabsTrigger value="dateien"><span className="lang-de-only">Dateien</span><span className="lang-en-only">Files</span></TabsTrigger>
+          <TabsTrigger value="kommunikation"><span className="lang-de-only">Kommunikation</span><span className="lang-en-only">Communication</span></TabsTrigger>
         </TabsList>
 
         <TabsContent value="stammdaten" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Stammdaten</CardTitle>
+              <CardTitle className="text-base"><span className="lang-de-only">Stammdaten</span><span className="lang-en-only">Basic data</span></CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
