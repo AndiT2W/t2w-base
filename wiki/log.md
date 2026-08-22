@@ -190,3 +190,6 @@
 - Ticket #29 umgesetzt/weitergeführt: Dashboard zeigt Outlook-/SharePoint-Ordner in der Tabellenansicht nur noch als Symbole; Kalenderansichten erlauben horizontales Scrollen und zeigen Feiertagsnamen sichtbar an.
 - Zahlungsziel aus dem CRM-Kundenmodell, Demo-Daten, Erzeugung und UI entfernt. CRM-Zuordnungen unterstützen Suche und Aufheben.
 - Verifikation: `npm run build` erfolgreich. Repository-Lint bleibt wegen bestehender Prettier-/CRLF-Fehler in vielen Dateien rot.
+# 2026-08-22
+
+- Deepened the locale rendering module: removed the global DOM `MutationObserver`, added the explicit `useI18n().text` rendering seam, migrated shared page headers and overview status/filter text, and verified all language E2E tests.

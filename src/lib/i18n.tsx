@@ -410,17 +410,24 @@ export function translatePageText(text: string, locale: Locale) {
   return locale === "en" ? (pageTextTranslations[text] ?? text) : text;
 }
 
+/** Translate legacy route copy at the rendering seam while it is migrated to keyed text. */
+export function localizeText(text: string, locale: Locale) {
+  return translatePageText(text, locale);
+}
+
 type Key = keyof typeof translations.de;
 const LocaleContext = createContext<{
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: Key) => string;
+  text: (value: string) => string;
   formatDate: (iso: string) => string;
   formatNumber: (value: number) => string;
 }>({
   locale: "de",
   setLocale: () => {},
   t: (key) => translations.de[key],
+  text: (value) => value,
   formatDate: (iso) => iso,
   formatNumber: String,
 });
@@ -456,33 +463,12 @@ export function I18nProvider({
     window.addEventListener("hashchange", applyHashLocale);
     return () => window.removeEventListener("hashchange", applyHashLocale);
   }, []);
-  useEffect(() => {
-    if (locale !== "en") return;
-    const translate = () => {
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      let node: Node | null;
-      while ((node = walker.nextNode())) {
-        const element = node.parentElement;
-        if (element?.closest("script,style,[data-i18n-ignore]")) continue;
-        const value = node.nodeValue?.trim();
-        const translated = value ? pageTextTranslations[value] : undefined;
-        if (translated && node.nodeValue)
-          node.nodeValue = node.nodeValue.replace(value, translated);
-      }
-    };
-    const timer = window.setTimeout(translate, 150);
-    const observer = new MutationObserver(() => window.setTimeout(translate, 0));
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      window.clearTimeout(timer);
-      observer.disconnect();
-    };
-  }, [locale]);
   const value = useMemo(
     () => ({
       locale,
       setLocale,
       t: (key: Key) => translations[locale][key] ?? translations.de[key],
+      text: (value: string) => localizeText(value, locale),
       formatDate: (iso: string) =>
         new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB").format(
           new Date(`${iso}T00:00:00`),

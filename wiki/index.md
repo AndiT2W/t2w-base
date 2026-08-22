@@ -7,6 +7,7 @@
 - [Delivery Phases](phases.md)
 - [Roadmap](roadmap.md)
 - [Migration Concept](concepts/tool-consolidation-and-migration.md)
+- [Locale Rendering Module](concepts/locale-rendering-module.md)
 - [Maintenance Log](log.md)
 
 ## Knowledge Areas

@@ -20,6 +20,7 @@ import { STATUS_LABEL, STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
 import { cn } from "@/lib/utils";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { jahr } from "@/lib/t2w/eventcode";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -56,6 +57,7 @@ function inTagen(iso: string, tage: number, heute: string) {
 
 function Uebersicht() {
   const { events, settings } = useT2W();
+  const { t, text } = useI18n();
   const navigate = useNavigate();
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
@@ -185,7 +187,7 @@ function Uebersicht() {
                   : "bg-secondary text-muted-foreground hover:text-foreground",
               )}
             >
-              {f.label}
+              {text(f.label)}
             </button>
           ))}
           <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
@@ -201,7 +203,7 @@ function Uebersicht() {
               )}
             >
               {s !== "alle" && <StatusDot status={s} />}
-              {s === "alle" ? "Alle Status" : STATUS_LABEL[s]}
+              {s === "alle" ? t("status.all") : t(`status.${s}` as Parameters<typeof t>[0])}
             </button>
           ))}
           <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
@@ -270,7 +272,10 @@ function Uebersicht() {
                     }}
                     aria-label={`${e.name} öffnen`}
                   >
-                    <td className="px-2 py-1" title={STATUS_LABEL[e.status]}>
+                    <td
+                      className="px-2 py-1"
+                      title={t(`status.${e.status}` as Parameters<typeof t>[0])}
+                    >
                       <StatusDot status={e.status} />
                       <span className="sr-only">{STATUS_LABEL[e.status]}</span>
                     </td>
