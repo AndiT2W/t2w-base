@@ -32,7 +32,8 @@ test("loads the event detail page", async ({ page }) => {
   );
   await page.goto("/events/260820_demo_event");
   await expect(page.getByRole("tab", { name: "Stammdaten" })).toBeVisible({ timeout: 10000 });
-  await page.goto("/events/260820_demo_event?locale=en");
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("link", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("tab", { name: "Basic data" })).toBeVisible({ timeout: 10000 });
   await expect(page.getByText("Contacts", { exact: true }).first()).toBeVisible();
@@ -58,7 +59,8 @@ test("renders every application route in English", async ({ page }) => {
     ["/styleguide", "Style guide"],
   ] as const;
   for (const [path, heading] of routes) {
-    await page.goto(`${path}?locale=en`);
+    await page.goto(path);
+    await page.getByRole("link", { name: "Englisch" }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.getByText(heading, { exact: true }).first()).toBeVisible({ timeout: 10000 });
   }

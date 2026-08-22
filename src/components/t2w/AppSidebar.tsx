@@ -126,8 +126,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             {(["de", "en"] as const).map((option) => (
               <a
                 key={option}
-                href={`/?locale=${option}`}
-                onClick={() => window.localStorage.setItem("t2w-locale", option)}
+                href={`#locale=${option}`}
                 aria-pressed={locale === option}
                 aria-label={option === "de" ? t("language.de") : t("language.en")}
                 className={cn(

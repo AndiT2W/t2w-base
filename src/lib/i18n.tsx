@@ -61,6 +61,15 @@ export function I18nProvider({ children, initialLocale = "de" }: { children: Rea
     window.localStorage.setItem("t2w-locale", locale);
   }, [locale]);
   useEffect(() => {
+    const applyHashLocale = () => {
+      const hashLocale = window.location.hash === "#locale=en" ? "en" : window.location.hash === "#locale=de" ? "de" : null;
+      if (hashLocale) setLocaleState(hashLocale);
+    };
+    applyHashLocale();
+    window.addEventListener("hashchange", applyHashLocale);
+    return () => window.removeEventListener("hashchange", applyHashLocale);
+  }, []);
+  useEffect(() => {
     if (locale !== "en") return;
     const translate = () => {
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -78,12 +87,6 @@ export function I18nProvider({ children, initialLocale = "de" }: { children: Rea
     observer.observe(document.body, { childList: true, subtree: true });
     return () => { window.clearTimeout(timer); observer.disconnect(); };
   }, [locale]);
-  useEffect(() => {
-    const queryLocale = new URLSearchParams(window.location.search).get("locale");
-    const storedLocale = window.localStorage.getItem("t2w-locale");
-    const next = queryLocale === "en" || queryLocale === "de" ? queryLocale : storedLocale;
-    if (next === "en" || next === "de") setLocaleState(next);
-  }, []);
   const value = useMemo(() => ({ locale, setLocale, t: (key: Key) => translations[locale][key] ?? translations.de[key], formatDate: (iso: string) => new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB").format(new Date(`${iso}T00:00:00`)), formatNumber: (n: number) => new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB").format(n) }), [locale]);
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
