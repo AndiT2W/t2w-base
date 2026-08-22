@@ -97,28 +97,29 @@ test("reduziert die Navigation und verwendet das Bearbeiten-Symbol", async ({ pa
 });
 
 test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) => {
-  let contacts = [{ id: "person-1", name: "Bestehender Kontakt", email: "alt@example.com", phone: "" }];
-  let customers = [{ id: "customer-1", name: "Bestehender Kunde", uid: "ATU123", iban: "" }];
-  await page.route("**/api/v1/contacts", async (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(contacts) });
-    const body = JSON.parse(route.request().postData() ?? "{}"); contacts = [...contacts, { id: "person-2", ...body }];
-    return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(contacts.at(-1)) });
-  });
-  await page.route("**/api/v1/organizers", async (route) => {
-    if (route.request().method() === "GET") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(customers) });
-    const body = JSON.parse(route.request().postData() ?? "{}"); customers = [...customers, { id: "customer-2", ...body }];
-    return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(customers.at(-1)) });
-  });
-  await page.route("**/api/v1/settings", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ outlookJahresordner: [], jahresSites: [] }) }));
-  await page.route("**/api/v1/events", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([]) }));
+  await page.addInitScript(() => localStorage.removeItem("t2w-crm-v1"));
+  await mockApi(page);
   await page.goto("/kontakte");
   await expect(page.getByRole("heading", { name: "Kunden & Kontakte" })).toBeVisible();
-  await expect(page.getByText("Marion Kessler")).toBeVisible();
-  await page.getByRole("link", { name: "Kunden (2)" }).click();
-  await expect(page).toHaveURL(/\/kontakte\?tab=kunden$/);
-  await expect(page.getByRole("link", { name: "Kunden (2)" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("link", { name: "Neu anlegen" }).click();
+  await page.getByLabel("Vorname").fill("Neue");
+  await page.getByLabel("Nachname").fill("Kontaktperson");
+  await page.getByLabel("E-Mail").fill("neu@example.com");
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await page.waitForTimeout(100);
+  await page.getByLabel("Suche").first().fill("Kontaktperson");
+  await expect(page.getByText("Neue Kontaktperson")).toBeVisible();
+  await page.getByText("Neue Kontaktperson").click();
+  const email = page.getByLabel("E-Mail").last();
+  await email.fill("geändert@example.com");
+  await email.blur();
+  await page.reload();
+  await page.getByLabel("Suche").first().fill("geändert@example.com");
+  await expect(page.getByText("Neue Kontaktperson")).toBeVisible();
+  await page.getByRole("button", { name: /Kunden \(/ }).click();
   await expect(page.getByText("Nordwerk GmbH")).toBeVisible();
-  await expect(page.getByText("UID", { exact: true })).toBeVisible();
+  await page.getByText("Nordwerk GmbH").click();
+  await expect(page.getByLabel("Kundenname")).toHaveValue("Nordwerk GmbH");
 });
 
 test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Übersicht", async ({ page }) => {

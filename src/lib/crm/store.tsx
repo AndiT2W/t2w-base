@@ -4,7 +4,7 @@ import { personName, type Kunde, type Person } from "./types";
 type Ctx = {
   personen: Person[];
   kunden: Kunde[];
-  neuePerson: (p: Omit<Person, "id" | "kundenprofilId" | "eventRollen">) => void;
+  neuePerson: (p: Omit<Person, "id" | "kundenprofilId" | "eventRollen">) => Person;
   neuerKunde: (
     k: Omit<Kunde, "id" | "kontaktIds" | "events" | "personId"> & { personId?: string | null },
   ) => void;
@@ -23,32 +23,32 @@ const Ctx = createContext<Ctx | null>(null);
 const KEY = "t2w-crm-v1";
 export function CrmProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState({ personen: DEMO_PERSONEN, kunden: DEMO_KUNDEN });
+  const [bereit, setBereit] = useState(false);
   useEffect(() => {
     try {
       const x = localStorage.getItem(KEY);
       if (x) setState(JSON.parse(x));
-    } catch {}
+    } catch {} finally { setBereit(true); }
   }, []);
   useEffect(() => {
+    if (!bereit) return;
     localStorage.setItem(KEY, JSON.stringify(state));
-  }, [state]);
+  }, [state, bereit]);
   const value = useMemo<Ctx>(
     () => ({
       ...state,
-      neuePerson: (p) =>
-        setState((s) => ({
-          ...s,
-          personen: [
-            ...s.personen,
-            { ...p, id: `p_${Date.now()}`, kundenprofilId: null, eventRollen: [] },
-          ],
-        })),
+      neuePerson: (input) => {
+        const person: Person = { ...input, id: `p_${Date.now()}`, kundenprofilId: null, eventRollen: [] };
+        setState((s) => ({ ...s, personen: [...s.personen, person] }));
+        return person;
+      },
       neuerKunde: (k) =>
         setState((s) => ({
           ...s,
           kunden: [
             ...s.kunden,
             {
+              zahlungsziel: k.zahlungsziel ?? "30 Tage netto",
               ...k,
               id: `c_${Date.now()}`,
               personId: k.personId ?? null,
@@ -68,6 +68,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
             kunden: [
               ...s.kunden,
               {
+                zahlungsziel: k.zahlungsziel ?? "30 Tage netto",
                 ...k,
                 id: cid,
                 name: p ? personName(p) : "",
