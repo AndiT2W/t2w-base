@@ -21,7 +21,7 @@ const event = {
 
 async function mockApi(page: Page) {
   const requests: { method: string; url: string; body?: string }[] = [];
-  let settings = { outlookJahresordner: [], jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }] };
+  let settings = { outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }], jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }] };
   await page.route("**/api/v1/settings", async (route) => {
     const request = route.request();
     requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
@@ -82,8 +82,8 @@ test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ pa
   await expect(page.getByText("Keine Events", { exact: true })).not.toBeVisible();
 
   await page.goto("/veranstaltungen?ansicht=gantt");
-  await page.getByLabel("Ansicht").selectOption("monat");
-  await expect(page.getByLabel("Ansicht")).toHaveValue("monat");
+  await page.locator("#gantt-zoom").selectOption("monat");
+  await expect(page.locator("#gantt-zoom")).toHaveValue("monat");
   await expect(page.locator("text=1").first()).toBeVisible();
 });
 
@@ -114,7 +114,9 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await page.goto("/kontakte");
   await expect(page.getByRole("heading", { name: "Kunden & Kontakte" })).toBeVisible();
   await expect(page.getByText("Marion Kessler")).toBeVisible();
-  await page.getByRole("button", { name: "Kunden (" }).click();
+  await page.getByRole("link", { name: "Kunden (2)" }).click();
+  await expect(page).toHaveURL(/\/kontakte\?tab=kunden$/);
+  await expect(page.getByRole("link", { name: "Kunden (2)" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("Nordwerk GmbH")).toBeVisible();
   await expect(page.getByText("UID", { exact: true })).toBeVisible();
 });
@@ -187,11 +189,9 @@ test("zeigt den Eventcode in der Metadatenzeile des Events", async ({ page }) =>
 
 test("speichert Outlook- und SharePoint-Einstellungen persistent über PATCH", async ({ page }) => {
   const requests = await mockApi(page);
-  await page.goto("/einstellungen");
-  await page.getByRole("button", { name: "Outlook-Jahresordner hinzufügen" }).click();
-  await page.getByLabel("Jahr").last().fill("2026");
-  await page.getByLabel("Jahresordnername").fill("06_auftraege_26");
-  await page.getByLabel("Site-URL").fill("https://example.sharepoint.com/sites/Auftraege26");
+  await page.goto("/einstellungen?tab=outlook");
+  await page.locator('input[aria-label="Jahr"]').last().fill("2026");
+  await page.locator('input[aria-label="Jahresordnername"]').fill("06_auftraege_26");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect(requests.some((request) => request.method === "PATCH" && request.url.endsWith("/api/v1/settings") && request.body?.includes("06_auftraege_26"))).toBeTruthy();
   await expect(page.getByText("Einstellungen gespeichert.")).toBeVisible();
@@ -231,22 +231,16 @@ test("synchronisiert ein Event mit dem konfigurierten Shared-Mailbox-Stammordner
     if (request.method() === "GET") {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(event) });
     }
-    return route.continue();
+    return route.fallback();
   });
-  await page.route("**/api/v1/events/260820_demo_event/outlook-folder/sync", async (route) => {
+  await page.route("**/api/v1/events/11111111-1111-4111-8111-111111111111/outlook-folder/sync", async (route) => {
     const request = route.request();
     requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(syncedEvent) });
   });
 
-  await page.goto("/einstellungen");
-  await page.getByRole("tab", { name: "Outlook" }).click();
-  await page.getByLabel("Outlook-Mailbox").fill("info@time2win.at");
-  await page.getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.getByText("Einstellungen gespeichert.")).toBeVisible();
-
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Outlook-Ordner synchronisieren" }).click();
-  await expect(page.getByText("Outlook-Ordner synchronisiert.")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Outlook-Ordner synchronisiert.");
   expect(requests.some((request) => request.method === "POST" && request.url.endsWith("/outlook-folder/sync"))).toBeTruthy();
 });

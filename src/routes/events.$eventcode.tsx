@@ -90,6 +90,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const { updateEvent, settings } = useT2W();
   const { t } = useI18n();
   const [outlookSyncing, setOutlookSyncing] = useState(false);
+  const [outlookSyncMessage, setOutlookSyncMessage] = useState<string | null>(null);
   const [form, setForm] = useState(event);
   const [quartalsDialog, setQuartalsDialog] = useState(false);
 
@@ -122,12 +123,15 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
   async function outlookSynchronisieren() {
     setOutlookSyncing(true);
+    setOutlookSyncMessage(null);
     try {
       const synced = await apiSyncOutlookFolder(event.id);
       updateEvent(event.id, synced);
       setForm(synced);
+      setOutlookSyncMessage("Outlook-Ordner synchronisiert.");
       toast.success("Outlook-Ordner synchronisiert.");
     } catch {
+      setOutlookSyncMessage("Outlook-Ordner konnte nicht synchronisiert werden.");
       toast.error("Outlook-Ordner konnte nicht synchronisiert werden.");
     } finally { setOutlookSyncing(false); }
   }
@@ -314,7 +318,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Link2 className="size-4" />
                   Vorschlag übernehmen
                 </Button>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><FolderLink label="Outlook" href={form.outlookWebUrl} available={Boolean(form.outlookWebUrl)}>{form.outlookOrdner}</FolderLink><Button type="button" variant="outline" size="sm" disabled={outlookSyncing || !settings.outlookMailbox} onClick={() => void outlookSynchronisieren()}>{outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}</Button></div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><FolderLink label="Outlook" href={form.outlookWebUrl} available={Boolean(form.outlookWebUrl)}>{form.outlookOrdner}</FolderLink><Button type="button" variant="outline" size="sm" disabled={outlookSyncing || !settings.outlookMailbox} onClick={() => void outlookSynchronisieren()}>{outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}</Button>{outlookSyncMessage && <span role="status">{outlookSyncMessage}</span>}</div>
                 <p className="mt-2 text-xs text-muted-foreground">Graph-Sync: {form.outlookFolderSyncStatus === "SUCCESS" ? `erfolgreich${form.outlookFolderLastSuccessAt ? ` am ${formatDatum(form.outlookFolderLastSuccessAt.slice(0, 10))}` : ""}` : form.outlookFolderSyncStatus === "ERROR" ? `Fehler${form.outlookFolderLastError ? `: ${form.outlookFolderLastError}` : ""}` : form.outlookFolderSyncStatus === "SYNCING" ? "läuft …" : "noch nicht ausgeführt"}</p>
                 <Label htmlFor="d-outlook-url" className="mt-3 block">Outlook-Web-Link</Label>
                 <Input

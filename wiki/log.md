@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-08-22
+
+- Issue #28 abgeschlossen: Gantt-Zoom-Test präzisiert, Kunden- und Outlook-Ansichten über stabile URL-Zustände erreichbar gemacht, Outlook-Sync mit sichtbarer Statusmeldung ergänzt und E2E-Mocks korrigiert. Verifiziert mit 13 grünen Browser-E2E-Tests und erfolgreichem Produktions-Build.
+
 ## 2026-08-20
 
 - Veranstaltungsbereich um kompakte Reiter für Liste, Kalender und Gantt ergänzt; die Liste bleibt die tabellarische Standardansicht.

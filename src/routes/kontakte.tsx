@@ -1,11 +1,14 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, SlidersHorizontal, X } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { useCrm, passtKunde, passtPerson } from "@/lib/crm/store";
 import { KUNDENSTATUS_LABEL, personName, type Kunde, type Person } from "@/lib/crm/types";
 
-export const Route = createFileRoute("/kontakte")({ component: KundenKontakte });
+export const Route = createFileRoute("/kontakte")({
+  validateSearch: (search) => ({ tab: search.tab === "kunden" ? "kunden" as const : "kontakte" as const }),
+  component: KundenKontakte,
+});
 type Auswahl = { art: "person" | "kunde"; id: string } | null;
 function Chip({ children, good = false }: { children: ReactNode; good?: boolean }) {
   return (
@@ -18,7 +21,7 @@ function Chip({ children, good = false }: { children: ReactNode; good?: boolean 
 }
 function KundenKontakte() {
   const { personen, kunden, neuePerson, neuerKunde, personAlsKunde, findeDublette } = useCrm();
-  const [tab, setTab] = useState<"kontakte" | "kunden">("kontakte");
+  const { tab } = Route.useSearch();
   const [suche, setSuche] = useState("");
   const [auswahl, setAuswahl] = useState<Auswahl>(null);
   const [neu, setNeu] = useState(false);
@@ -109,18 +112,22 @@ function KundenKontakte() {
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
           <div className="flex rounded-md border border-border p-1">
-            <button
-              onClick={() => setTab("kontakte")}
+            <Link
+              to="/kontakte"
+              search={{ tab: "kontakte" }}
+              aria-pressed={tab === "kontakte"}
               className={`rounded px-3 py-1.5 text-sm ${tab === "kontakte" ? "bg-accent font-medium" : ""}`}
             >
               Kontakte ({ps.length})
-            </button>
-            <button
-              onClick={() => setTab("kunden")}
+            </Link>
+            <Link
+              to="/kontakte"
+              search={{ tab: "kunden" }}
+              aria-pressed={tab === "kunden"}
               className={`rounded px-3 py-1.5 text-sm ${tab === "kunden" ? "bg-accent font-medium" : ""}`}
             >
               Kunden ({ks.length})
-            </button>
+            </Link>
           </div>
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <SlidersHorizontal className="size-3.5" /> Suche über Stammdaten

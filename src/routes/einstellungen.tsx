@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ function nachJahrAbsteigend<T extends { jahr: string }>(eintraege: T[]) {
 }
 
 export const Route = createFileRoute("/einstellungen")({
+  validateSearch: (search) => ({ tab: search.tab === "outlook" ? "outlook" as const : "allgemein" as const }),
   head: () => ({
     meta: [
       { title: "Einstellungen – TIME2WIN Eventverwaltung" },
@@ -42,6 +43,8 @@ export const Route = createFileRoute("/einstellungen")({
 
 function Einstellungen() {
   const { settings, setSettings } = useT2W();
+  const { tab } = Route.useSearch();
+  const navigate = useNavigate();
   const [outlookJahresordner, setOutlookJahresordner] = useState(settings.outlookJahresordner);
   const [sites, setSites] = useState(() => nachJahrAbsteigend(settings.jahresSites));
   const [mailbox, setMailbox] = useState(settings.outlookMailbox ?? "");
@@ -69,7 +72,7 @@ function Einstellungen() {
       <PageHeader krumen={[{ label: "TIME2WIN", to: "/" }]} titel="Einstellungen" beschreibung="Outlook- und SharePoint-Ordnerkonventionen zentral verwalten." />
       <div className="max-w-3xl space-y-5">
 
-      <Tabs defaultValue="allgemein" className="space-y-5">
+      <Tabs value={tab} onValueChange={(nextTab) => void navigate({ search: { tab: nextTab === "outlook" ? "outlook" : "allgemein" } })} className="space-y-5">
         <TabsList>
           <TabsTrigger value="allgemein">Allgemein</TabsTrigger>
           <TabsTrigger value="outlook">Outlook</TabsTrigger>
