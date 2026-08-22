@@ -74,7 +74,6 @@ export const DEMO_KUNDEN: Kunde[] = [
     bank: "Commerzbank Hamburg",
     rechnungsAdresse: "Elbchaussee 12, 22765 Hamburg",
     rechnungsEmail: "rechnung@nordwerk.de",
-    zahlungsziel: "30 Tage netto",
     status: "aktiv",
     kontaktIds: ["p1", "p2", "p3"],
     events: [
@@ -100,7 +99,6 @@ export const DEMO_KUNDEN: Kunde[] = [
     bank: "Erste Bank",
     rechnungsAdresse: "Am Deich 4, 28199 Bremen",
     rechnungsEmail: "jonas.feld@feld-timing.de",
-    zahlungsziel: "30 Tage netto",
     status: "pruefung",
     kontaktIds: ["p3"],
     events: [

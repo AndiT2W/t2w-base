@@ -19,6 +19,7 @@
 
 - Inventory the current ClickUp structures, statuses, automations, and fields before implementation.
 - Plan explicit cleanup rules for duplicate customers, non-person contacts, and ambiguous billing-recipient records before migration.
+- The saved ClickUp event import workbook `outputs/clickup-import/t2w-events-import.xlsx` is not yet sufficient for role-linked migration: `Rechnungsempfänger` has no populated event values, `Auszahlungsempfänger` is free text, and the populated relationship fields contain display text plus ClickUp URLs rather than stable target identifiers. The workbook also contains repeated export-header rows and visible encoding damage (`�`) in German text. Import preparation therefore needs normalized customer records plus an event-role mapping keyed by stable IDs.
 - Preserve the relationship between the event overview rows and the linked event-management structures.
 - Clarify what remains in the Zendooin backend and what should move into GCW Base.
 - Decide whether `n8n` remains an integration layer or whether critical automations move into the application itself.

@@ -15,6 +15,7 @@ type Ctx = {
   updatePerson: (id: string, p: Partial<Person>) => void;
   updateKunde: (id: string, p: Partial<Kunde>) => void;
   verknuepfe: (personId: string, kundeId: string) => void;
+  loeseVerknuepfung: (personId: string, kundeId: string) => void;
   kundenVonPerson: (p: Person) => Kunde[];
   kontakteVonKunde: (id: string) => Person[];
   findeDublette: (v: string, n: string, e: string) => Person | undefined;
@@ -48,7 +49,6 @@ export function CrmProvider({ children }: { children: ReactNode }) {
           kunden: [
             ...s.kunden,
             {
-              zahlungsziel: k.zahlungsziel ?? "30 Tage netto",
               ...k,
               id: `c_${Date.now()}`,
               personId: k.personId ?? null,
@@ -68,7 +68,6 @@ export function CrmProvider({ children }: { children: ReactNode }) {
             kunden: [
               ...s.kunden,
               {
-                zahlungsziel: k.zahlungsziel ?? "30 Tage netto",
                 ...k,
                 id: cid,
                 name: p ? personName(p) : "",
@@ -101,6 +100,15 @@ export function CrmProvider({ children }: { children: ReactNode }) {
             k.id === cid && !k.kontaktIds.includes(pid)
               ? { ...k, kontaktIds: [...k.kontaktIds, pid] }
               : k,
+          ),
+        })),
+      loeseVerknuepfung: (pid, cid) =>
+        setState((s) => ({
+          personen: s.personen.map((p) =>
+            p.id === pid ? { ...p, kundenIds: p.kundenIds.filter((id) => id !== cid) } : p,
+          ),
+          kunden: s.kunden.map((k) =>
+            k.id === cid ? { ...k, kontaktIds: k.kontaktIds.filter((id) => id !== pid) } : k,
           ),
         })),
       kundenVonPerson: (p) => state.kunden.filter((k) => p.kundenIds.includes(k.id)),

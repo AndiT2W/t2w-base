@@ -208,13 +208,13 @@ function Uebersicht() {
                     </td>
                     <td className="px-2 py-1">
                       <span className="flex gap-1">
-                        <FolderLink icon="outlook" label="Outlook" href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(e.outlookOrdner)}>{e.outlookOrdner ?? "OL"}</FolderLink>
+                        <FolderLink icon="outlook" label="Outlook" href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(e.outlookOrdner)} />
                         <FolderLink
                           icon="sharepoint"
                           label="SharePoint"
                           href={(() => { const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start)); return e.sharepointOrdner && site ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}` : null; })()}
                           available={Boolean(e.sharepointOrdner)}
-                        >{e.sharepointOrdner ?? "SP"}</FolderLink>
+                        />
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-2 py-1 text-right">

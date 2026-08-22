@@ -185,3 +185,8 @@
 - 2026-08-22: ClickUp-Import-Excel geprüft. Für den Eventimport müssen Kunde, Veranstalter, Rechnungsempfänger und Auszahlungsempfänger über stabile Stammdaten-IDs bzw. eine separate Zuordnungstabelle verknüpft werden; `Rechnungsempfänger` ist im Export leer, `Auszahlungsempfänger` Freitext. Wiederholte Kopfzeilen und Zeichencodierungsfehler wurden als zusätzliche Bereinigungen festgestellt.
 - 2026-08-22: Importregel vereinbart: Ist der Rechnungsempfänger leer, wird der Auszahlungsempfänger als Rechnungsempfänger verwendet; die automatische Übernahme soll nachvollziehbar markiert werden.
 - 2026-08-22: Fehlende englische Übersetzungen für Eventstatus und Schnellfilter ergänzt; die Sprach-E2E-Tests prüfen jetzt auch „Confirmed“ und „All statuses“.
+## 2026-08-22
+
+- Ticket #29 umgesetzt/weitergeführt: Dashboard zeigt Outlook-/SharePoint-Ordner in der Tabellenansicht nur noch als Symbole; Kalenderansichten erlauben horizontales Scrollen und zeigen Feiertagsnamen sichtbar an.
+- Zahlungsziel aus dem CRM-Kundenmodell, Demo-Daten, Erzeugung und UI entfernt. CRM-Zuordnungen unterstützen Suche und Aufheben.
+- Verifikation: `npm run build` erfolgreich. Repository-Lint bleibt wegen bestehender Prettier-/CRLF-Fehler in vielen Dateien rot.

@@ -20,6 +20,7 @@ sources:
 - `Veranstalter`, `Auszahlungsempfänger` und `Rechnungsempfänger` sind Eventrollen, die auf Kunden verweisen.
 - Ein Event hat genau einen Veranstalter, genau einen Auszahlungsempfänger und einen oder mehrere Rechnungsempfänger.
 - Der Veranstalter wird standardmäßig als Auszahlungsempfänger und Rechnungsempfänger vorbelegt; manuelle Abweichungen bleiben unabhängig erhalten.
+- Importregel: Wenn beim Import eines Events kein Rechnungsempfänger vorhanden ist, wird der Auszahlungsempfänger als Rechnungsempfänger übernommen. Die Quelle der Übernahme sollte als automatisch übernommen markiert bleiben, damit sie später überprüft oder geändert werden kann.
 - Initiale Eventkontaktrollen sind `Anmeldung`, `Finanzen` und `Timing`.
 - Outlook-/Gmail-Synchronisation wird durch externe Identität und Statusfelder vorbereitet, aber nicht in diesem Schritt implementiert.
 

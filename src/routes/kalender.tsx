@@ -176,7 +176,8 @@ function WochenGitter({
               )}
               title={feiertag ?? undefined}
             >
-              {d.getDate()}.
+              <span>{d.getDate()}.</span>
+              {feiertag && <span className="ml-1 block truncate text-[10px] font-medium" title={feiertag}>{feiertag}</span>}
             </div>
           );
         })}
@@ -308,7 +309,7 @@ export function KalenderSeite({
 
         <div
           className={cn(
-            "grid border-b border-border bg-secondary",
+            "min-w-[42rem] grid border-b border-border bg-secondary",
             modus === "tag" ? "grid-cols-1" : "grid-cols-7",
           )}
         >
@@ -322,6 +323,7 @@ export function KalenderSeite({
           ))}
         </div>
 
+        <div className="overflow-x-auto">
         {modus === "monat" ? (
           Array.from({ length: wochenAnzahl }, (_, i) => (
             <WochenGitter
@@ -336,6 +338,7 @@ export function KalenderSeite({
         ) : (
           <WochenGitter wochenStart={anker} events={sichtbareEvents} tageAnzahl={1} />
         )}
+        </div>
       </div>
     </div>
   );

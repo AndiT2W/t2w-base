@@ -33,7 +33,6 @@ export type Kunde = {
   bank: string;
   rechnungsAdresse: string;
   rechnungsEmail: string;
-  zahlungsziel: string;
   status: KundenStatus;
   kontaktIds: string[];
   events: {
