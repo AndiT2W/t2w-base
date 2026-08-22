@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { STATUS_ORDER } from "@/lib/t2w/types";
@@ -112,12 +112,6 @@ function Styleguide() {
             </div>
           </section>
 
-          <p className="text-sm text-muted-foreground">
-            Zum Vergleich der früheren Entwürfe:{" "}
-            <Link to="/varianten" className="font-medium text-primary hover:underline">
-              Design-Varianten
-            </Link>
-          </p>
         </div>
       </div>
     </div>

@@ -20,10 +20,6 @@ import { Route as RechnungenRouteImport } from './routes/rechnungen'
 import { Route as StyleguideRouteImport } from './routes/styleguide'
 import { Route as VeranstaltungenRouteImport } from './routes/veranstaltungen'
 import { Route as EventsEventcodeRouteImport } from './routes/events.$eventcode'
-import { Route as VariantenIndexRouteImport } from './routes/varianten.index'
-import { Route as VariantenOpsRouteImport } from './routes/varianten.ops'
-import { Route as VariantenTimelineRouteImport } from './routes/varianten.timeline'
-import { Route as VariantenWorkspaceRouteImport } from './routes/varianten.workspace'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -80,26 +76,6 @@ const EventsEventcodeRoute = EventsEventcodeRouteImport.update({
   path: '/events/$eventcode',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VariantenIndexRoute = VariantenIndexRouteImport.update({
-  id: '/varianten/',
-  path: '/varianten/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VariantenOpsRoute = VariantenOpsRouteImport.update({
-  id: '/varianten/ops',
-  path: '/varianten/ops',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VariantenTimelineRoute = VariantenTimelineRouteImport.update({
-  id: '/varianten/timeline',
-  path: '/varianten/timeline',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VariantenWorkspaceRoute = VariantenWorkspaceRouteImport.update({
-  id: '/varianten/workspace',
-  path: '/varianten/workspace',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -113,10 +89,6 @@ export interface FileRoutesByFullPath {
   '/styleguide': typeof StyleguideRoute
   '/veranstaltungen': typeof VeranstaltungenRoute
   '/events/$eventcode': typeof EventsEventcodeRoute
-  '/varianten/ops': typeof VariantenOpsRoute
-  '/varianten/timeline': typeof VariantenTimelineRoute
-  '/varianten/workspace': typeof VariantenWorkspaceRoute
-  '/varianten/': typeof VariantenIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -130,10 +102,6 @@ export interface FileRoutesByTo {
   '/styleguide': typeof StyleguideRoute
   '/veranstaltungen': typeof VeranstaltungenRoute
   '/events/$eventcode': typeof EventsEventcodeRoute
-  '/varianten/ops': typeof VariantenOpsRoute
-  '/varianten/timeline': typeof VariantenTimelineRoute
-  '/varianten/workspace': typeof VariantenWorkspaceRoute
-  '/varianten': typeof VariantenIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -148,10 +116,6 @@ export interface FileRoutesById {
   '/styleguide': typeof StyleguideRoute
   '/veranstaltungen': typeof VeranstaltungenRoute
   '/events/$eventcode': typeof EventsEventcodeRoute
-  '/varianten/ops': typeof VariantenOpsRoute
-  '/varianten/timeline': typeof VariantenTimelineRoute
-  '/varianten/workspace': typeof VariantenWorkspaceRoute
-  '/varianten/': typeof VariantenIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,10 +131,6 @@ export interface FileRouteTypes {
     | '/styleguide'
     | '/veranstaltungen'
     | '/events/$eventcode'
-    | '/varianten/ops'
-    | '/varianten/timeline'
-    | '/varianten/workspace'
-    | '/varianten/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -184,10 +144,6 @@ export interface FileRouteTypes {
     | '/styleguide'
     | '/veranstaltungen'
     | '/events/$eventcode'
-    | '/varianten/ops'
-    | '/varianten/timeline'
-    | '/varianten/workspace'
-    | '/varianten'
   id:
     | '__root__'
     | '/'
@@ -201,10 +157,6 @@ export interface FileRouteTypes {
     | '/styleguide'
     | '/veranstaltungen'
     | '/events/$eventcode'
-    | '/varianten/ops'
-    | '/varianten/timeline'
-    | '/varianten/workspace'
-    | '/varianten/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -219,10 +171,6 @@ export interface RootRouteChildren {
   StyleguideRoute: typeof StyleguideRoute
   VeranstaltungenRoute: typeof VeranstaltungenRoute
   EventsEventcodeRoute: typeof EventsEventcodeRoute
-  VariantenOpsRoute: typeof VariantenOpsRoute
-  VariantenTimelineRoute: typeof VariantenTimelineRoute
-  VariantenWorkspaceRoute: typeof VariantenWorkspaceRoute
-  VariantenIndexRoute: typeof VariantenIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -304,34 +252,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventcodeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/varianten/': {
-      id: '/varianten/'
-      path: '/varianten'
-      fullPath: '/varianten/'
-      preLoaderRoute: typeof VariantenIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/varianten/ops': {
-      id: '/varianten/ops'
-      path: '/varianten/ops'
-      fullPath: '/varianten/ops'
-      preLoaderRoute: typeof VariantenOpsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/varianten/timeline': {
-      id: '/varianten/timeline'
-      path: '/varianten/timeline'
-      fullPath: '/varianten/timeline'
-      preLoaderRoute: typeof VariantenTimelineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/varianten/workspace': {
-      id: '/varianten/workspace'
-      path: '/varianten/workspace'
-      fullPath: '/varianten/workspace'
-      preLoaderRoute: typeof VariantenWorkspaceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -347,10 +267,6 @@ const rootRouteChildren: RootRouteChildren = {
   StyleguideRoute: StyleguideRoute,
   VeranstaltungenRoute: VeranstaltungenRoute,
   EventsEventcodeRoute: EventsEventcodeRoute,
-  VariantenOpsRoute: VariantenOpsRoute,
-  VariantenTimelineRoute: VariantenTimelineRoute,
-  VariantenWorkspaceRoute: VariantenWorkspaceRoute,
-  VariantenIndexRoute: VariantenIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

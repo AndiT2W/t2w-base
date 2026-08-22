@@ -51,10 +51,6 @@ test("renders every application route in English", async ({ page }) => {
     ["/angebote", "Offers"],
     ["/rechnungen", "Invoices"],
     ["/einstellungen", "Settings"],
-    ["/varianten", "Design variants"],
-    ["/varianten/ops", "Events in next 14 days"],
-    ["/varianten/timeline", "All active events"],
-    ["/varianten/workspace", "Event Workspace"],
     ["/gantt", "Events"],
     ["/styleguide", "Style guide"],
   ] as const;
