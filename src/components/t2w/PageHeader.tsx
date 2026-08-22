@@ -38,7 +38,7 @@ export function PageHeader({
                     {translatePageText(k.label, locale)}
                   </Link>
                 ) : (
-                <span>{translatePageText(k.label, locale)}</span>
+                  <span>{translatePageText(k.label, locale)}</span>
                 )}
                 <ChevronRight className="size-3" />
               </span>
@@ -48,7 +48,11 @@ export function PageHeader({
           <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
             {translatePageText(titel, locale)}
           </h1>
-          {beschreibung && <p className="mt-0.5 text-sm text-muted-foreground">{translatePageText(beschreibung, locale)}</p>}
+          {beschreibung && (
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {translatePageText(beschreibung, locale)}
+            </p>
+          )}
         </div>
 
         <div className="hidden items-center gap-2 md:flex">

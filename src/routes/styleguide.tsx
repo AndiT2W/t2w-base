@@ -108,10 +108,8 @@ function Styleguide() {
                 <StatusBadge key={s} status={s} />
               ))}
             </div>
-            <div className="mt-3 flex flex-wrap gap-4">
-            </div>
+            <div className="mt-3 flex flex-wrap gap-4"></div>
           </section>
-
         </div>
       </div>
     </div>

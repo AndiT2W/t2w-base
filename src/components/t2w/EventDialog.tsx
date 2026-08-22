@@ -23,11 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useT2W } from "@/lib/t2w/store";
 import { buildEventcode } from "@/lib/t2w/eventcode";
-import {
-  STATUS_ORDER,
-  STATUS_LABEL,
-  type EventStatus,
-} from "@/lib/t2w/types";
+import { STATUS_ORDER, STATUS_LABEL, type EventStatus } from "@/lib/t2w/types";
 
 export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const { events, neuesEvent } = useT2W();
@@ -116,7 +112,20 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
             <Input
               id="name"
               value={name}
-              onChange={(e) => { const value = e.target.value; setName(value); if (!eventcodeManuell && start) setEventcode(value.trim() ? buildEventcode(value.trim(), start, events.map((item) => item.eventcode)) : ""); }}
+              onChange={(e) => {
+                const value = e.target.value;
+                setName(value);
+                if (!eventcodeManuell && start)
+                  setEventcode(
+                    value.trim()
+                      ? buildEventcode(
+                          value.trim(),
+                          start,
+                          events.map((item) => item.eventcode),
+                        )
+                      : "",
+                  );
+              }}
               placeholder="z. B. Sommerfest Nordwerk 2026"
               className="mt-1.5"
             />
@@ -145,7 +154,18 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
               id="start"
               type="date"
               value={start}
-              onChange={(e) => { const value = e.target.value; setStart(value); if (!eventcodeManuell && name.trim() && value) setEventcode(buildEventcode(name.trim(), value, events.map((item) => item.eventcode))); }}
+              onChange={(e) => {
+                const value = e.target.value;
+                setStart(value);
+                if (!eventcodeManuell && name.trim() && value)
+                  setEventcode(
+                    buildEventcode(
+                      name.trim(),
+                      value,
+                      events.map((item) => item.eventcode),
+                    ),
+                  );
+              }}
               className="mt-1.5"
             />
           </div>
@@ -187,7 +207,15 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
           </div>
           <div className="sm:col-span-2 rounded-md border border-border bg-secondary px-3 py-2">
             <p className="text-xs text-muted-foreground">Eventcode-Vorschau</p>
-            <Input aria-label="Eventcode-Vorschau" value={eventcode || vorschau} onChange={(e) => { setEventcode(e.target.value); setEventcodeManuell(true); }} className="mt-1 font-mono text-sm" />
+            <Input
+              aria-label="Eventcode-Vorschau"
+              value={eventcode || vorschau}
+              onChange={(e) => {
+                setEventcode(e.target.value);
+                setEventcodeManuell(true);
+              }}
+              className="mt-1 font-mono text-sm"
+            />
           </div>
         </div>
 

@@ -2,9 +2,15 @@
 @source "../src";
 @import "tw-animate-css";
 
-.lang-en-only { display: none; }
-html[lang="en"] .lang-de-only { display: none; }
-html[lang="en"] .lang-en-only { display: inline; }
+.lang-en-only {
+  display: none;
+}
+html[lang="en"] .lang-de-only {
+  display: none;
+}
+html[lang="en"] .lang-en-only {
+  display: inline;
+}
 
 @custom-variant dark (&:is(.dark *));
 

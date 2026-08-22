@@ -177,7 +177,11 @@ function WochenGitter({
               title={feiertag ?? undefined}
             >
               <span>{d.getDate()}.</span>
-              {feiertag && <span className="ml-1 block truncate text-[10px] font-medium" title={feiertag}>{feiertag}</span>}
+              {feiertag && (
+                <span className="ml-1 block truncate text-[10px] font-medium" title={feiertag}>
+                  {feiertag}
+                </span>
+              )}
             </div>
           );
         })}
@@ -263,7 +267,9 @@ export function KalenderSeite({
       </nav>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t("nav.calendar")}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {t("nav.calendar")}
+          </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-md border border-border bg-surface p-0.5">
@@ -324,20 +330,20 @@ export function KalenderSeite({
         </div>
 
         <div className="overflow-x-auto">
-        {modus === "monat" ? (
-          Array.from({ length: wochenAnzahl }, (_, i) => (
-            <WochenGitter
-              key={i}
-              wochenStart={addDays(gitterStart, i * 7)}
-              events={sichtbareEvents}
-              monat={anker.getMonth()}
-            />
-          ))
-        ) : modus === "woche" ? (
-          <WochenGitter wochenStart={wochenStart} events={sichtbareEvents} />
-        ) : (
-          <WochenGitter wochenStart={anker} events={sichtbareEvents} tageAnzahl={1} />
-        )}
+          {modus === "monat" ? (
+            Array.from({ length: wochenAnzahl }, (_, i) => (
+              <WochenGitter
+                key={i}
+                wochenStart={addDays(gitterStart, i * 7)}
+                events={sichtbareEvents}
+                monat={anker.getMonth()}
+              />
+            ))
+          ) : modus === "woche" ? (
+            <WochenGitter wochenStart={wochenStart} events={sichtbareEvents} />
+          ) : (
+            <WochenGitter wochenStart={anker} events={sichtbareEvents} tageAnzahl={1} />
+          )}
         </div>
       </div>
     </div>

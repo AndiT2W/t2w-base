@@ -1,6 +1,15 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarClock, CheckSquare, Mail, Plus, Share2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  CalendarClock,
+  CheckSquare,
+  Mail,
+  Plus,
+  Share2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -52,7 +61,10 @@ function Uebersicht() {
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [suche, setSuche] = useState("");
-  const [sortierung, setSortierung] = useState<{ feld: "name" | "veranstalter" | "start" | "ende" | "aufgaben" | "status"; richtung: "auf" | "ab" }>({ feld: "start", richtung: "auf" });
+  const [sortierung, setSortierung] = useState<{
+    feld: "name" | "veranstalter" | "start" | "ende" | "aufgaben" | "status";
+    richtung: "auf" | "ab";
+  }>({ feld: "start", richtung: "auf" });
 
   const aktive = useMemo(() => events.filter((e) => !e.archiviert), [events]);
 
@@ -81,20 +93,54 @@ function Uebersicht() {
           : true,
       )
       .sort((a, b) => {
-        const av = sortierung.feld === "aufgaben" ? a.aufgaben.filter((x) => !x.erledigt).length : sortierung.feld === "status" ? STATUS_LABEL[a.status] : a[sortierung.feld];
-        const bv = sortierung.feld === "aufgaben" ? b.aufgaben.filter((x) => !x.erledigt).length : sortierung.feld === "status" ? STATUS_LABEL[b.status] : b[sortierung.feld];
-        const result = typeof av === "number" && typeof bv === "number" ? av - bv : String(av).localeCompare(String(bv));
+        const av =
+          sortierung.feld === "aufgaben"
+            ? a.aufgaben.filter((x) => !x.erledigt).length
+            : sortierung.feld === "status"
+              ? STATUS_LABEL[a.status]
+              : a[sortierung.feld];
+        const bv =
+          sortierung.feld === "aufgaben"
+            ? b.aufgaben.filter((x) => !x.erledigt).length
+            : sortierung.feld === "status"
+              ? STATUS_LABEL[b.status]
+              : b[sortierung.feld];
+        const result =
+          typeof av === "number" && typeof bv === "number"
+            ? av - bv
+            : String(av).localeCompare(String(bv));
         return sortierung.richtung === "auf" ? result : -result;
       });
   }, [aktive, filter, status, suche, heute, sortierung]);
 
   function sortiere(feld: typeof sortierung.feld) {
-    setSortierung((aktuell) => aktuell.feld === feld ? { feld, richtung: aktuell.richtung === "auf" ? "ab" : "auf" } : { feld, richtung: "auf" });
+    setSortierung((aktuell) =>
+      aktuell.feld === feld
+        ? { feld, richtung: aktuell.richtung === "auf" ? "ab" : "auf" }
+        : { feld, richtung: "auf" },
+    );
   }
 
   function SortHeader({ feld, children }: { feld: typeof sortierung.feld; children: ReactNode }) {
     const aktiv = sortierung.feld === feld;
-    return <button type="button" onClick={() => sortiere(feld)} className="inline-flex items-center gap-1 font-semibold hover:text-foreground"><span>{children}</span>{aktiv ? (sortierung.richtung === "auf" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />) : <ArrowUpDown className="size-3 opacity-50" />}</button>;
+    return (
+      <button
+        type="button"
+        onClick={() => sortiere(feld)}
+        className="inline-flex items-center gap-1 font-semibold hover:text-foreground"
+      >
+        <span>{children}</span>
+        {aktiv ? (
+          sortierung.richtung === "auf" ? (
+            <ArrowUp className="size-3" />
+          ) : (
+            <ArrowDown className="size-3" />
+          )
+        ) : (
+          <ArrowUpDown className="size-3 opacity-50" />
+        )}
+      </button>
+    );
   }
 
   return (
@@ -107,7 +153,16 @@ function Uebersicht() {
           onChange: setSuche,
           placeholder: "Event, Veranstalter oder Ort suchen …",
         }}
-        aktion={<EventDialog trigger={<Button><Plus className="size-4" />Event anlegen</Button>} />}
+        aktion={
+          <EventDialog
+            trigger={
+              <Button>
+                <Plus className="size-4" />
+                Event anlegen
+              </Button>
+            }
+          />
+        }
       />
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -153,11 +208,19 @@ function Uebersicht() {
             <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-2 py-1.5 font-semibold">St</th>
-                <th className="px-2 py-1.5"><SortHeader feld="name">Event</SortHeader></th>
-                <th className="px-2 py-1.5"><SortHeader feld="veranstalter">Veranstalter</SortHeader></th>
-                <th className="px-2 py-1.5"><SortHeader feld="start">Zeitraum</SortHeader></th>
+                <th className="px-2 py-1.5">
+                  <SortHeader feld="name">Event</SortHeader>
+                </th>
+                <th className="px-2 py-1.5">
+                  <SortHeader feld="veranstalter">Veranstalter</SortHeader>
+                </th>
+                <th className="px-2 py-1.5">
+                  <SortHeader feld="start">Zeitraum</SortHeader>
+                </th>
                 <th className="px-2 py-1.5 font-semibold">Tg</th>
-                <th className="px-2 py-1.5"><SortHeader feld="aufgaben">Aufg.</SortHeader></th>
+                <th className="px-2 py-1.5">
+                  <SortHeader feld="aufgaben">Aufg.</SortHeader>
+                </th>
                 <th className="px-2 py-1.5 font-semibold">
                   <span className="sr-only">Ordner: </span>
                   <span className="inline-flex items-center gap-2" title="Outlook und SharePoint">
@@ -177,7 +240,9 @@ function Uebersicht() {
                     className="cursor-pointer border-t border-border hover:bg-accent/50"
                     role="link"
                     tabIndex={0}
-                    onClick={() => navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })}
+                    onClick={() =>
+                      navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })
+                    }
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
@@ -208,11 +273,21 @@ function Uebersicht() {
                     </td>
                     <td className="px-2 py-1">
                       <span className="flex gap-1">
-                        <FolderLink icon="outlook" label="Outlook" href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null} available={Boolean(e.outlookOrdner)} />
+                        <FolderLink
+                          icon="outlook"
+                          label="Outlook"
+                          href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null}
+                          available={Boolean(e.outlookOrdner)}
+                        />
                         <FolderLink
                           icon="sharepoint"
                           label="SharePoint"
-                          href={(() => { const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start)); return e.sharepointOrdner && site ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}` : null; })()}
+                          href={(() => {
+                            const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start));
+                            return e.sharepointOrdner && site
+                              ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
+                              : null;
+                          })()}
                           available={Boolean(e.sharepointOrdner)}
                         />
                       </span>

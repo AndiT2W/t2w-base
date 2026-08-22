@@ -34,12 +34,7 @@ import { useI18n } from "@/lib/i18n";
 import { apiSyncOutlookFolder } from "@/lib/t2w/api";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr, quartal } from "@/lib/t2w/eventcode";
-import {
-  STATUS_LABEL,
-  STATUS_ORDER,
-  type EventStatus,
-  type T2WEvent,
-} from "@/lib/t2w/types";
+import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 
 export const Route = createFileRoute("/events/$eventcode")({
   head: () => ({
@@ -99,13 +94,16 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const vergangen = event.ende < heuteIso();
   const aktuellesQuartal = quartal(form.start);
   const outlookJahresordner = settings.outlookJahresordner.find((s) => s.jahr === jahr(form.start));
-  const outlookVorschlag = outlookJahresordner ? `${outlookJahresordner.url.replace(/\/$/, "")}/${aktuellesQuartal}/${event.eventcode}` : `${aktuellesQuartal}/${event.eventcode}`;
+  const outlookVorschlag = outlookJahresordner
+    ? `${outlookJahresordner.url.replace(/\/$/, "")}/${aktuellesQuartal}/${event.eventcode}`
+    : `${aktuellesQuartal}/${event.eventcode}`;
   const quartalsAbweichung =
     !!form.outlookOrdner && !form.outlookOrdner.includes(`/${aktuellesQuartal}/`);
   const jahresSite = settings.jahresSites.find((s) => s.jahr === jahr(form.start));
-  const sharepointLink = form.sharepointOrdner && jahresSite
-    ? `${jahresSite.url.replace(/\/$/, "")}/${form.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
-    : null;
+  const sharepointLink =
+    form.sharepointOrdner && jahresSite
+      ? `${jahresSite.url.replace(/\/$/, "")}/${form.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
+      : null;
 
   function set<K extends keyof T2WEvent>(key: K, wert: T2WEvent[K]) {
     setForm((p) => ({ ...p, [key]: wert }));
@@ -133,7 +131,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     } catch {
       setOutlookSyncMessage("Outlook-Ordner konnte nicht synchronisiert werden.");
       toast.error("Outlook-Ordner konnte nicht synchronisiert werden.");
-    } finally { setOutlookSyncing(false); }
+    } finally {
+      setOutlookSyncing(false);
+    }
   }
 
   return (
@@ -207,7 +207,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </div>
               <div>
                 <Label htmlFor="d-code">
-                  Eventcode <span className="text-xs font-normal text-muted-foreground">(unveränderlich)</span>
+                  Eventcode{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (unveränderlich)
+                  </span>
                 </Label>
                 <Input
                   id="d-code"
@@ -318,9 +321,38 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Link2 className="size-4" />
                   Vorschlag übernehmen
                 </Button>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><FolderLink label="Outlook" href={form.outlookWebUrl} available={Boolean(form.outlookWebUrl)}>{form.outlookOrdner}</FolderLink><Button type="button" variant="outline" size="sm" disabled={outlookSyncing || !settings.outlookMailbox} onClick={() => void outlookSynchronisieren()}>{outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}</Button>{outlookSyncMessage && <span role="status">{outlookSyncMessage}</span>}</div>
-                <p className="mt-2 text-xs text-muted-foreground">Graph-Sync: {form.outlookFolderSyncStatus === "SUCCESS" ? `erfolgreich${form.outlookFolderLastSuccessAt ? ` am ${formatDatum(form.outlookFolderLastSuccessAt.slice(0, 10))}` : ""}` : form.outlookFolderSyncStatus === "ERROR" ? `Fehler${form.outlookFolderLastError ? `: ${form.outlookFolderLastError}` : ""}` : form.outlookFolderSyncStatus === "SYNCING" ? "läuft …" : "noch nicht ausgeführt"}</p>
-                <Label htmlFor="d-outlook-url" className="mt-3 block">Outlook-Web-Link</Label>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <FolderLink
+                    label="Outlook"
+                    href={form.outlookWebUrl}
+                    available={Boolean(form.outlookWebUrl)}
+                  >
+                    {form.outlookOrdner}
+                  </FolderLink>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={outlookSyncing || !settings.outlookMailbox}
+                    onClick={() => void outlookSynchronisieren()}
+                  >
+                    {outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}
+                  </Button>
+                  {outlookSyncMessage && <span role="status">{outlookSyncMessage}</span>}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Graph-Sync:{" "}
+                  {form.outlookFolderSyncStatus === "SUCCESS"
+                    ? `erfolgreich${form.outlookFolderLastSuccessAt ? ` am ${formatDatum(form.outlookFolderLastSuccessAt.slice(0, 10))}` : ""}`
+                    : form.outlookFolderSyncStatus === "ERROR"
+                      ? `Fehler${form.outlookFolderLastError ? `: ${form.outlookFolderLastError}` : ""}`
+                      : form.outlookFolderSyncStatus === "SYNCING"
+                        ? "läuft …"
+                        : "noch nicht ausgeführt"}
+                </p>
+                <Label htmlFor="d-outlook-url" className="mt-3 block">
+                  Outlook-Web-Link
+                </Label>
                 <Input
                   id="d-outlook-url"
                   type="url"
@@ -329,7 +361,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   onChange={(e) => set("outlookWebUrl", e.target.value || null)}
                   className="mt-1.5 text-xs"
                 />
-                <p className="mt-1.5 text-xs text-muted-foreground">Öffnet den konkreten Ordner direkt in Outlook Web.</p>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Öffnet den konkreten Ordner direkt in Outlook Web.
+                </p>
               </div>
               <div>
                 <Label htmlFor="d-sp">SharePoint-Ordner</Label>
@@ -344,7 +378,15 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   Jahres-Site:{" "}
                   {jahresSite ? jahresSite.url : "in Einstellungen noch nicht hinterlegt"}
                 </p>
-                <div className="mt-2 text-xs"><FolderLink label="SharePoint" href={sharepointLink} available={Boolean(form.sharepointOrdner)}>{form.sharepointOrdner}</FolderLink></div>
+                <div className="mt-2 text-xs">
+                  <FolderLink
+                    label="SharePoint"
+                    href={sharepointLink}
+                    available={Boolean(form.sharepointOrdner)}
+                  >
+                    {form.sharepointOrdner}
+                  </FolderLink>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -29,7 +29,11 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     try {
       const x = localStorage.getItem(KEY);
       if (x) setState(JSON.parse(x));
-    } catch {} finally { setBereit(true); }
+    } catch {
+      // Ignore malformed or unavailable local storage and keep demo data.
+    } finally {
+      setBereit(true);
+    }
   }, []);
   useEffect(() => {
     if (!bereit) return;
@@ -39,7 +43,12 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       neuePerson: (input) => {
-        const person: Person = { ...input, id: `p_${Date.now()}`, kundenprofilId: null, eventRollen: [] };
+        const person: Person = {
+          ...input,
+          id: `p_${Date.now()}`,
+          kundenprofilId: null,
+          eventRollen: [],
+        };
         setState((s) => ({ ...s, personen: [...s.personen, person] }));
         return person;
       },
