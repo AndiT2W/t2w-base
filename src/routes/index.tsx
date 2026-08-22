@@ -60,6 +60,7 @@ function Uebersicht() {
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
+  const [startFilter, setStartFilter] = useState("alle");
   const [suche, setSuche] = useState("");
   const [sortierung, setSortierung] = useState<{
     feld: "name" | "veranstalter" | "start" | "ende" | "aufgaben" | "status";
@@ -67,6 +68,7 @@ function Uebersicht() {
   }>({ feld: "start", richtung: "auf" });
 
   const aktive = useMemo(() => events.filter((e) => !e.archiviert), [events]);
+  const starts = useMemo(() => [...new Set(aktive.map((event) => event.start))].sort(), [aktive]);
 
   const kpi = useMemo(() => {
     const kommend = aktive.filter((e) => e.ende >= heute && inTagen(e.start, 14, heute)).length;
@@ -78,6 +80,7 @@ function Uebersicht() {
     const q = suche.trim().toLowerCase();
     return aktive
       .filter((e) => (status === "alle" ? true : e.status === status))
+      .filter((e) => (startFilter === "alle" ? true : e.start === startFilter))
       .filter((e) => {
         if (filter === "diese-woche") return e.ende >= heute && inTagen(e.start, 14, heute);
         if (filter === "offen") return e.aufgaben.some((a) => !a.erledigt);
@@ -111,7 +114,7 @@ function Uebersicht() {
             : String(av).localeCompare(String(bv));
         return sortierung.richtung === "auf" ? result : -result;
       });
-  }, [aktive, filter, status, suche, heute, sortierung]);
+  }, [aktive, filter, status, startFilter, suche, heute, sortierung]);
 
   function sortiere(feld: typeof sortierung.feld) {
     setSortierung((aktuell) =>
@@ -201,6 +204,22 @@ function Uebersicht() {
               {s === "alle" ? "Alle Status" : STATUS_LABEL[s]}
             </button>
           ))}
+          <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Start</span>
+            <select
+              aria-label="Start filtern"
+              value={startFilter}
+              onChange={(event) => setStartFilter(event.target.value)}
+              className="rounded border border-border bg-background px-2 py-1.5 text-foreground"
+            >
+              <option value="alle">Alle Starts</option>
+              {starts.map((start) => (
+                <option key={start} value={start}>
+                  {new Intl.DateTimeFormat("de-AT").format(new Date(`${start}T00:00:00`))}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
@@ -253,6 +272,7 @@ function Uebersicht() {
                   >
                     <td className="px-2 py-1" title={STATUS_LABEL[e.status]}>
                       <StatusDot status={e.status} />
+                      <span className="sr-only">{STATUS_LABEL[e.status]}</span>
                     </td>
                     <td className="max-w-[16rem] truncate px-2 py-1 font-medium text-foreground">
                       {e.name}

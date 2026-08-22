@@ -21,28 +21,71 @@ const event = {
 
 async function mockApi(page: Page) {
   const requests: { method: string; url: string; body?: string }[] = [];
-  let settings = { outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }], jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }] };
+  let settings = {
+    outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }],
+    jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }],
+  };
   await page.route("**/api/v1/settings", async (route) => {
     const request = route.request();
-    requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
-    if (request.method() === "GET") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(settings) });
+    requests.push({
+      method: request.method(),
+      url: request.url(),
+      body: request.postData() ?? undefined,
+    });
+    if (request.method() === "GET")
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(settings),
+      });
     if (request.method() === "PATCH") {
       settings = JSON.parse(request.postData() ?? "{}");
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(settings) });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(settings),
+      });
     }
     return route.continue();
   });
   await page.route("**/api/v1/events**", async (route) => {
     const request = route.request();
-    requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
-    if (request.method() === "GET") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([event]) });
+    requests.push({
+      method: request.method(),
+      url: request.url(),
+      body: request.postData() ?? undefined,
+    });
+    if (request.method() === "GET")
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([event]),
+      });
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
-      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ ...event, id: "22222222-2222-4222-8222-222222222222", eventCode: body.eventCode, name: body.name, organizer: { name: body.organizerName } }) });
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...event,
+          id: "22222222-2222-4222-8222-222222222222",
+          eventCode: body.eventCode,
+          name: body.name,
+          organizer: { name: body.organizerName },
+        }),
+      });
     }
     if (request.method() === "PATCH") {
       const body = JSON.parse(request.postData() ?? "{}");
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...event, organizer: { name: body.organizerName }, name: body.name }) });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...event,
+          organizer: { name: body.organizerName },
+          name: body.name,
+        }),
+      });
     }
     return route.continue();
   });
@@ -61,17 +104,41 @@ test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) 
   await page.goto("/veranstaltungen");
   await expect(page.getByRole("navigation", { name: "Veranstaltungsansichten" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Liste" })).toHaveAttribute("aria-current", "page");
-  await page.getByRole("navigation", { name: "Veranstaltungsansichten" }).getByRole("link", { name: "Kalender" }).click();
+  await page
+    .getByRole("navigation", { name: "Veranstaltungsansichten" })
+    .getByRole("link", { name: "Kalender" })
+    .click();
   await expect(page).toHaveURL(/\/veranstaltungen\?ansicht=kalender(?:&q=)?$/);
   await expect(page.getByRole("heading", { name: "Veranstaltungen" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Veranstaltungsansichten" }).getByRole("link", { name: "Liste" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Veranstaltungsansichten" }).getByRole("link", { name: "Kalender" })).toHaveAttribute("aria-current", "page");
+  await expect(
+    page
+      .getByRole("navigation", { name: "Veranstaltungsansichten" })
+      .getByRole("link", { name: "Liste" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Veranstaltungsansichten" })
+      .getByRole("link", { name: "Kalender" }),
+  ).toHaveAttribute("aria-current", "page");
   await page.goto("/veranstaltungen?ansicht=gantt");
   await expect(page.getByRole("link", { name: "Gantt" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByText("Bestehendes Event")).toBeVisible();
   await expect(page.getByText(/KW \d+/).first()).toBeVisible();
   await expect(page.locator(".border-b").filter({ hasText: /2026/ }).first()).toBeVisible();
+});
+
+test("filtert die Übersicht über den Start-Dropdown und zeigt Ordner nur als Symbole", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/");
+  await expect(page.getByLabel("Start filtern")).toBeVisible();
+  await page.getByLabel("Start filtern").selectOption("2026-08-20");
+  await expect(page.getByText("Bestehendes Event")).toBeVisible();
+  await expect(page.getByText("2026-08-20")).not.toBeVisible();
+  await expect(page.getByLabel("Outlook").first()).toBeVisible();
+  await expect(page.getByLabel("SharePoint").first()).toBeVisible();
 });
 
 test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ page }) => {
@@ -92,12 +159,21 @@ test("reduziert die Navigation und verwendet das Bearbeiten-Symbol", async ({ pa
   await page.goto("/veranstaltungen");
   await expect(page.getByRole("link", { name: "Kalender", exact: true })).toHaveCount(1);
   await expect(page.getByRole("link", { name: "Design-Varianten", exact: true })).toHaveCount(0);
-  await expect(page.getByText("Zentrale Datenquelle: Event-Service", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ })).toBeVisible();
+  await expect(page.getByText("Zentrale Datenquelle: Event-Service", { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ }),
+  ).toBeVisible();
 });
 
 test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) => {
-  await page.addInitScript(() => localStorage.removeItem("t2w-crm-v1"));
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem("crm-test-initialized")) {
+      localStorage.removeItem("t2w-crm-v1");
+      sessionStorage.setItem("crm-test-initialized", "1");
+    }
+  });
   await mockApi(page);
   await page.goto("/kontakte");
   await expect(page.getByRole("heading", { name: "Kunden & Kontakte" })).toBeVisible();
@@ -122,7 +198,9 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await expect(page.getByLabel("Kundenname")).toHaveValue("Nordwerk GmbH");
 });
 
-test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Übersicht", async ({ page }) => {
+test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Übersicht", async ({
+  page,
+}) => {
   await mockApi(page);
   await page.goto("/veranstaltungen");
   const table = page.locator("table");
@@ -151,7 +229,11 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   await page.getByRole("button", { name: "Event anlegen" }).last().click();
   await expect(page).toHaveURL(/\/events\/260821_sondercode$/);
   await expect(page.getByText("Neues E2E Event")).toBeVisible();
-  expect(requests.some((request) => request.method === "POST" && request.body?.includes("E2E Veranstalter"))).toBeTruthy();
+  expect(
+    requests.some(
+      (request) => request.method === "POST" && request.body?.includes("E2E Veranstalter"),
+    ),
+  ).toBeTruthy();
 });
 
 test("speichert den Veranstalter der Detailseite über PATCH", async ({ page }) => {
@@ -160,13 +242,19 @@ test("speichert den Veranstalter der Detailseite über PATCH", async ({ page }) 
   await page.getByLabel("Veranstalter").fill("Neuer E2E Veranstalter");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
-  expect(requests.some((request) => request.method === "PATCH" && request.body?.includes("Neuer E2E Veranstalter"))).toBeTruthy();
+  expect(
+    requests.some(
+      (request) => request.method === "PATCH" && request.body?.includes("Neuer E2E Veranstalter"),
+    ),
+  ).toBeTruthy();
 });
 
 test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await expect(page.getByText("Der Eventcode ist unveränderlich.", { exact: true })).not.toBeVisible();
+  await expect(
+    page.getByText("Der Eventcode ist unveränderlich.", { exact: true }),
+  ).not.toBeVisible();
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
 });
 
@@ -194,11 +282,20 @@ test("speichert Outlook- und SharePoint-Einstellungen persistent über PATCH", a
   await page.locator('input[aria-label="Jahr"]').last().fill("2026");
   await page.locator('input[aria-label="Jahresordnername"]').fill("06_auftraege_26");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
-  expect(requests.some((request) => request.method === "PATCH" && request.url.endsWith("/api/v1/settings") && request.body?.includes("06_auftraege_26"))).toBeTruthy();
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "PATCH" &&
+        request.url.endsWith("/api/v1/settings") &&
+        request.body?.includes("06_auftraege_26"),
+    ),
+  ).toBeTruthy();
   await expect(page.getByText("Einstellungen gespeichert.")).toBeVisible();
 });
 
-test("synchronisiert ein Event mit dem konfigurierten Shared-Mailbox-Stammordner", async ({ page }) => {
+test("synchronisiert ein Event mit dem konfigurierten Shared-Mailbox-Stammordner", async ({
+  page,
+}) => {
   const requests: { method: string; url: string; body?: string }[] = [];
   const syncedEvent = {
     ...event,
@@ -211,7 +308,11 @@ test("synchronisiert ein Event mit dem konfigurierten Shared-Mailbox-Stammordner
   };
 
   await page.route("**/api/v1/settings**", async (route) => {
-    requests.push({ method: route.request().method(), url: route.request().url(), body: route.request().postData() ?? undefined });
+    requests.push({
+      method: route.request().method(),
+      url: route.request().url(),
+      body: route.request().postData() ?? undefined,
+    });
     return route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -224,24 +325,51 @@ test("synchronisiert ein Event mit dem konfigurierten Shared-Mailbox-Stammordner
     });
   });
   await page.route("**/api/v1/events**", async (route) => {
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([event]) });
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([event]),
+    });
   });
   await page.route("**/api/v1/events/260820_demo_event*", async (route) => {
     const request = route.request();
-    requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
+    requests.push({
+      method: request.method(),
+      url: request.url(),
+      body: request.postData() ?? undefined,
+    });
     if (request.method() === "GET") {
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(event) });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(event),
+      });
     }
     return route.fallback();
   });
-  await page.route("**/api/v1/events/11111111-1111-4111-8111-111111111111/outlook-folder/sync", async (route) => {
-    const request = route.request();
-    requests.push({ method: request.method(), url: request.url(), body: request.postData() ?? undefined });
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(syncedEvent) });
-  });
+  await page.route(
+    "**/api/v1/events/11111111-1111-4111-8111-111111111111/outlook-folder/sync",
+    async (route) => {
+      const request = route.request();
+      requests.push({
+        method: request.method(),
+        url: request.url(),
+        body: request.postData() ?? undefined,
+      });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(syncedEvent),
+      });
+    },
+  );
 
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Outlook-Ordner synchronisieren" }).click();
   await expect(page.getByRole("status")).toContainText("Outlook-Ordner synchronisiert.");
-  expect(requests.some((request) => request.method === "POST" && request.url.endsWith("/outlook-folder/sync"))).toBeTruthy();
+  expect(
+    requests.some(
+      (request) => request.method === "POST" && request.url.endsWith("/outlook-folder/sync"),
+    ),
+  ).toBeTruthy();
 });

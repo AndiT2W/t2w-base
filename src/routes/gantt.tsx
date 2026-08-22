@@ -87,6 +87,13 @@ export function GanttSeite({
             <option value="monat">Monat</option>
           </select>
         </div>
+        <p className="border-x border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+          Gruppierung:{" "}
+          <span className="font-medium text-foreground">
+            {zoom === "tag" ? "Tage" : zoom === "woche" ? "Wochen" : "Monate"}
+          </span>{" "}
+          · Summenzeile: aktive Veranstaltungen pro Tag
+        </p>
         <div className="overflow-x-auto rounded-b-lg border border-t-0 border-border bg-surface p-3">
           <div className="space-y-2" style={{ minWidth: `${tageBreite}rem` }}>
             <div className="grid grid-cols-[13rem_1fr] gap-3 text-[10px] text-muted-foreground">

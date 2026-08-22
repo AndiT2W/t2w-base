@@ -71,6 +71,10 @@ function KundenKontakte() {
   useEffect(() => {
     if (window.location.search.includes("neu=1")) setCreate(true);
   }, []);
+  function closeCreate() {
+    setCreate(false);
+    window.history.replaceState({}, "", "/kontakte");
+  }
   const people = useMemo(
     () =>
       crm.personen
@@ -180,7 +184,7 @@ function KundenKontakte() {
           )}
         </aside>
       )}
-      {create && <CreateDialog crm={crm} close={() => setCreate(false)} />}
+      {create && <CreateDialog crm={crm} close={closeCreate} />}
     </div>
   );
 }
