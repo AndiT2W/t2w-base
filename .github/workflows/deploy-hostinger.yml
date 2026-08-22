@@ -1,0 +1,77 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hostinger-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || 22 }}
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "${{ secrets.HOSTINGER_SSH_KEY }}" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          ssh-keyscan -p "$HOSTINGER_PORT" -H "$HOSTINGER_HOST" >> "$HOME/.ssh/known_hosts"
+
+      - name: Package current commit
+        run: git archive --format=tar.gz --output=/tmp/t2w-base-${GITHUB_SHA}.tar.gz HEAD
+
+      - name: Upload release archive
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_USER: ${{ secrets.HOSTINGER_USER || 'root' }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || 22 }}
+        run: |
+          scp -P "$HOSTINGER_PORT" /tmp/t2w-base-${GITHUB_SHA}.tar.gz \
+            "$HOSTINGER_USER@$HOSTINGER_HOST:/tmp/t2w-base-${GITHUB_SHA}.tar.gz"
+
+      - name: Extract and rebuild application
+        env:
+          HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
+          HOSTINGER_USER: ${{ secrets.HOSTINGER_USER || 'root' }}
+          HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || 22 }}
+          DEPLOY_PATH: ${{ secrets.HOSTINGER_DEPLOY_PATH || '/docker/t2w-base' }}
+        run: |
+          ssh -p "$HOSTINGER_PORT" "$HOSTINGER_USER@$HOSTINGER_HOST" \
+            "set -eu; \
+             test -f '$DEPLOY_PATH/docker-compose.hostinger.yml'; \
+             tar -xzf '/tmp/t2w-base-${GITHUB_SHA}.tar.gz' -C '$DEPLOY_PATH' --overwrite; \
+             docker compose -f '$DEPLOY_PATH/docker-compose.hostinger.yml' up -d --build app nginx; \
+             docker compose -f '$DEPLOY_PATH/docker-compose.hostinger.yml' ps; \
+             rm -f '/tmp/t2w-base-${GITHUB_SHA}.tar.gz'"
