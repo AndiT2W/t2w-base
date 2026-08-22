@@ -16,6 +16,8 @@ test("switches language, preserves event data, and persists the preference", asy
   await expect(page.getByRole("link", { name: "Offers" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Invoices" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
+  await expect(page.getByText("Confirmed", { exact: true })).toBeVisible();
+  await expect(page.getByText("All statuses", { exact: true })).toBeVisible();
   await page.waitForTimeout(1000);
   await expect(page.getByText("Demo Event")).toBeVisible();
   await page.getByRole("link", { name: "German" }).click();
