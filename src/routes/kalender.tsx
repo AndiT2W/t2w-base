@@ -155,7 +155,7 @@ function WochenGitter({
   );
   const heute = heuteIso();
   return (
-    <div className="border-b border-border last:border-b-0">
+    <div className="min-w-[56rem] border-b border-border last:border-b-0">
       <div
         className="grid"
         style={{ gridTemplateColumns: `repeat(${tageAnzahl}, minmax(0, 1fr))` }}
@@ -315,7 +315,7 @@ export function KalenderSeite({
 
         <div
           className={cn(
-            "min-w-[42rem] grid border-b border-border bg-secondary",
+            "min-w-[56rem] grid border-b border-border bg-secondary",
             modus === "tag" ? "grid-cols-1" : "grid-cols-7",
           )}
         >

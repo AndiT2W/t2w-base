@@ -87,7 +87,10 @@ export function GanttSeite({
             <option value="monat">Monat</option>
           </select>
         </div>
-        <p className="border-x border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+        <p
+          data-testid="gantt-grouping"
+          className="border-x border-border bg-surface px-3 py-2 text-xs text-muted-foreground"
+        >
           Gruppierung:{" "}
           <span className="font-medium text-foreground">
             {zoom === "tag" ? "Tage" : zoom === "woche" ? "Wochen" : "Monate"}

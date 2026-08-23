@@ -148,7 +148,13 @@ test("filtert die Übersicht über den Start-Dropdown und zeigt Ordner nur als S
 
 test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ page }) => {
   await mockApi(page);
+  await page.setViewportSize({ width: 600, height: 900 });
   await page.goto("/veranstaltungen?ansicht=kalender");
+  await expect(page.getByText("Mariä Himmelfahrt", { exact: true })).toBeVisible();
+  const calendarScroller = page.locator(".overflow-x-auto").last();
+  await expect
+    .poll(() => calendarScroller.evaluate((element) => element.scrollWidth > element.clientWidth))
+    .toBe(true);
   await page.getByRole("button", { name: "Tag" }).click();
   await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
   await expect(page.getByText("Keine Events", { exact: true })).not.toBeVisible();
@@ -158,6 +164,14 @@ test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ pa
   await ganttZoom.selectOption("monat");
   await expect(ganttZoom).toHaveValue("monat");
   await expect(page.locator(".overflow-x-auto").last()).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator(".overflow-x-auto")
+        .last()
+        .evaluate((element) => element.scrollWidth > element.clientWidth),
+    )
+    .toBe(true);
   await expect(page.locator("text=1").first()).toBeVisible();
 });
 
@@ -203,6 +217,20 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await expect(page.getByText("Nordwerk GmbH")).toBeVisible();
   await page.getByText("Nordwerk GmbH").click();
   await expect(page.getByLabel("Kundenname")).toHaveValue("Nordwerk GmbH");
+  const marionAssignment = page.getByRole("button", { name: /Marion Kessler ×/ });
+  await expect(marionAssignment).toBeVisible();
+  await marionAssignment.click();
+  await expect(marionAssignment).not.toBeVisible();
+  await page.reload();
+  await page.waitForTimeout(200);
+  await page.getByRole("button", { name: /Kunden \(/ }).click();
+  await page.getByLabel("Suche").first().fill("Nordwerk GmbH");
+  await page.getByText("Nordwerk GmbH").click();
+  await expect(page.getByRole("button", { name: /Marion Kessler ×/ })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Detail schließen" }).click();
+  await page.getByRole("link", { name: "Neu anlegen" }).click();
+  await expect(page.getByText("Zahlungsziel", { exact: true })).toHaveCount(0);
 });
 
 test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Übersicht", async ({

@@ -193,3 +193,8 @@
 # 2026-08-22
 
 - Deepened the locale rendering module: removed the global DOM `MutationObserver`, added the explicit `useI18n().text` rendering seam, migrated shared page headers and overview status/filter text, and verified all language E2E tests.
+- 2026-08-23: Issue #30 erstellt: Veranstalter im Event wird verbindlich über eine stabile Kunden-ID mit „Kunden & Kontakte“ verknüpft. Festgelegt wurden Migration bestehender Freitextwerte, Rückverknüpfung im Kundenprofil, manuelles Aufheben, getrennte Eventrollen und Browser-E2E-Tests.
+# 2026-08-23
+
+- Offene Ticket-29-Verbesserungen nachgezogen: Kalender- und Gantt-Ansichten erzwingen auf kleinen Viewports eine echte horizontale Scrollfläche; E2E-Regressionsabdeckung ergänzt für österreichische Feiertagsnamen, Scrollbarkeit, CRM-Zuordnungsaufhebung nach Reload und das entfernte Zahlungsziel.
+- Verifikation: vollständige Playwright-Suite 17/17 grün; Produktions-Build erfolgreich.
