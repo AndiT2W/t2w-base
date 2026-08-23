@@ -137,8 +137,13 @@ test("filtert die Übersicht über den Start-Dropdown und zeigt Ordner nur als S
   await page.getByLabel("Start filtern").selectOption("2026-08-20");
   await expect(page.getByText("Bestehendes Event")).toBeVisible();
   await expect(page.getByText("2026-08-20")).not.toBeVisible();
+  await page.getByLabel("Start filtern").selectOption("alle");
+  await expect(page.getByLabel("Start filtern")).toHaveValue("alle");
+  await expect(page.getByText("Bestehendes Event")).toBeVisible();
   await expect(page.getByLabel("Outlook").first()).toBeVisible();
   await expect(page.getByLabel("SharePoint").first()).toBeVisible();
+  await expect(page.getByText("Outlook-Ordner", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("SharePoint-Ordner", { exact: true })).toHaveCount(0);
 });
 
 test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ page }) => {
@@ -149,8 +154,10 @@ test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ pa
   await expect(page.getByText("Keine Events", { exact: true })).not.toBeVisible();
 
   await page.goto("/veranstaltungen?ansicht=gantt");
-  await page.locator("#gantt-zoom").selectOption("monat");
-  await expect(page.locator("#gantt-zoom")).toHaveValue("monat");
+  const ganttZoom = page.locator("#gantt-zoom").last();
+  await ganttZoom.selectOption("monat");
+  await expect(ganttZoom).toHaveValue("monat");
+  await expect(page.locator(".overflow-x-auto").last()).toBeVisible();
   await expect(page.locator("text=1").first()).toBeVisible();
 });
 
