@@ -19,6 +19,10 @@ This repository contains the Karpathy-style LLM wiki for GCW Base, the planned T
 
 Begin in [wiki/index.md](wiki/index.md).
 
+## CRM adapter
+
+The deployed CRM adapter is the default. Set `VITE_CRM_ADAPTER=local` when starting the frontend to use the persistent local demo adapter instead. The adapters share the same Person/Kunde domain interface and are selected explicitly; there is no automatic fallback between data sources.
+
 ## Current Core Documents
 
 - [Project Overview](wiki/overview.md)

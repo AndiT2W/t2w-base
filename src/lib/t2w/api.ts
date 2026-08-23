@@ -2,6 +2,7 @@ import type { Settings, T2WEvent } from "./types";
 
 type ApiEvent = {
   id: string;
+  version?: number;
   eventCode: string;
   name: string;
   status: string;
@@ -44,6 +45,7 @@ function dateOnly(value: string) {
 export function mapApiEvent(event: ApiEvent): T2WEvent {
   return {
     id: event.id,
+    version: event.version,
     eventcode: event.eventCode,
     name: event.name,
     veranstalter: event.organizer?.name ?? "—",
@@ -178,9 +180,14 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       outlookFolder: patch.outlookOrdner,
       outlookWebUrl: patch.outlookWebUrl,
       sharepointFolder: patch.sharepointOrdner,
+      version: patch.version,
     }),
   });
-  if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
+  if (!response.ok) {
+    const error = new Error("Event konnte nicht gespeichert werden") as Error & { code?: string };
+    if (response.status === 409) error.code = "EVENT_VERSION_CONFLICT";
+    throw error;
+  }
   return mapApiEvent((await response.json()) as ApiEvent);
 }
 
@@ -193,6 +200,14 @@ export async function apiSyncOutlookFolder(id: string, input?: { mailbox?: strin
   });
   if (!response.ok) throw new Error("OUTLOOK_FOLDER_SYNC_FAILED");
   return mapApiEvent((await response.json()) as ApiEvent);
+}
+
+export async function apiOutlookFolderPlan(id: string) {
+  const response = await fetch(`/api/v1/events/${id}/outlook-folder/plan`, {
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("OUTLOOK_FOLDER_PLAN_FAILED");
+  return response.json() as Promise<import("./event-workspace").OutlookFolderPlan>;
 }
 
 export async function apiContacts() {

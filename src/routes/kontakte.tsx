@@ -27,14 +27,18 @@ function Field({
 }: {
   label: string;
   value: string;
-  save: (v: string) => void;
+  save: (v: string) => void | Promise<void>;
   area?: boolean;
 }) {
   const [draft, setDraft] = useState(value);
-  const commit = () => {
+  const commit = async () => {
     if (draft !== value) {
-      save(draft.trim());
-      toast.success(`${label} gespeichert`);
+      try {
+        await save(draft.trim());
+        toast.success(`${label} gespeichert`);
+      } catch {
+        toast.error(`${label} konnte nicht gespeichert werden`);
+      }
     }
   };
   return (
@@ -47,7 +51,7 @@ function Field({
           className={input}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
+          onBlur={() => void commit()}
         />
       ) : (
         <input
@@ -55,7 +59,7 @@ function Field({
           className={input}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
+          onBlur={() => void commit()}
         />
       )}
     </label>

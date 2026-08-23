@@ -86,6 +86,7 @@ export type Message = {
 
 export type T2WEvent = {
   id: string;
+  version?: number;
   eventcode: string;
   name: string;
   veranstalter: string;

@@ -31,9 +31,9 @@ import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { useI18n } from "@/lib/i18n";
-import { apiSyncOutlookFolder } from "@/lib/t2w/api";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
-import { jahr, quartal } from "@/lib/t2w/eventcode";
+import { jahr } from "@/lib/t2w/eventcode";
+import type { OutlookFolderPlan } from "@/lib/t2w/event-workspace";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 
 export const Route = createFileRoute("/events/$eventcode")({
@@ -82,23 +82,24 @@ function EventDetail() {
 }
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
-  const { updateEvent, settings } = useT2W();
+  const { updateEvent, syncOutlookFolder, getOutlookFolderPlan, settings } = useT2W();
   const { t } = useI18n();
   const [outlookSyncing, setOutlookSyncing] = useState(false);
   const [outlookSyncMessage, setOutlookSyncMessage] = useState<string | null>(null);
   const [form, setForm] = useState(event);
   const [quartalsDialog, setQuartalsDialog] = useState(false);
+  const [outlookPlan, setOutlookPlan] = useState<OutlookFolderPlan | null>(null);
 
   useEffect(() => setForm(event), [event]);
+  useEffect(() => {
+    void getOutlookFolderPlan(event.id)
+      .then(setOutlookPlan)
+      .catch(() => setOutlookPlan(null));
+  }, [event.id, event.start, event.outlookOrdner, getOutlookFolderPlan]);
 
   const vergangen = event.ende < heuteIso();
-  const aktuellesQuartal = quartal(form.start);
-  const outlookJahresordner = settings.outlookJahresordner.find((s) => s.jahr === jahr(form.start));
-  const outlookVorschlag = outlookJahresordner
-    ? `${outlookJahresordner.url.replace(/\/$/, "")}/${aktuellesQuartal}/${event.eventcode}`
-    : `${aktuellesQuartal}/${event.eventcode}`;
-  const quartalsAbweichung =
-    !!form.outlookOrdner && !form.outlookOrdner.includes(`/${aktuellesQuartal}/`);
+  const outlookVorschlag = outlookPlan?.path ?? form.outlookOrdner ?? "";
+  const quartalsAbweichung = outlookPlan?.drifted ?? false;
   const jahresSite = settings.jahresSites.find((s) => s.jahr === jahr(form.start));
   const sharepointLink =
     form.sharepointOrdner && jahresSite
@@ -109,23 +110,27 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     setForm((p) => ({ ...p, [key]: wert }));
   }
 
-  function speichern() {
+  async function speichern() {
     if (!form.start) {
       toast.error("Das Startdatum ist verpflichtend.");
       return;
     }
-    const ende = form.ende && form.ende >= form.start ? form.ende : form.start;
-    updateEvent(event.id, { ...form, ende });
-    toast.success("Änderungen gespeichert.");
+    const result = await updateEvent(event.id, form);
+    if (result.kind === "saved") {
+      setForm(result.event);
+      toast.success("Änderungen gespeichert.");
+    } else if (result.kind === "conflict")
+      toast.error("Das Event wurde zwischenzeitlich geändert. Bitte neu laden.");
+    else toast.error("Änderungen konnten nicht gespeichert werden.");
   }
 
   async function outlookSynchronisieren() {
     setOutlookSyncing(true);
     setOutlookSyncMessage(null);
     try {
-      const synced = await apiSyncOutlookFolder(event.id);
-      updateEvent(event.id, synced);
-      setForm(synced);
+      const result = await syncOutlookFolder(event.id);
+      if (result.kind !== "synced") throw result.error;
+      setForm(result.event);
       setOutlookSyncMessage("Outlook-Ordner synchronisiert.");
       toast.success("Outlook-Ordner synchronisiert.");
     } catch {
@@ -170,7 +175,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       {quartalsAbweichung && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent px-4 py-3">
           <p className="text-sm text-accent-foreground">
-            Quartalswechsel erkannt: Der Outlook-Ordner liegt nicht in {aktuellesQuartal}.
+            Quartalswechsel erkannt: Der Outlook-Ordner liegt nicht in {outlookPlan?.quarter}.
             Vorschlag: <span className="font-mono">{outlookVorschlag}</span>. SharePoint bleibt
             unverändert.
           </p>
@@ -526,8 +531,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <AlertDialogAction
               onClick={() => {
                 set("outlookOrdner", outlookVorschlag);
-                updateEvent(event.id, { outlookOrdner: outlookVorschlag });
-                toast.success("Outlook-Verschiebung bestätigt.");
+                void updateEvent(event.id, { outlookOrdner: outlookVorschlag }).then((result) => {
+                  if (result.kind === "saved") toast.success("Outlook-Verschiebung bestätigt.");
+                  else toast.error("Outlook-Verschiebung konnte nicht gespeichert werden.");
+                });
               }}
             >
               Verschiebung bestätigen

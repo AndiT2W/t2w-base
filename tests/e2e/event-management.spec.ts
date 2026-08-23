@@ -25,6 +25,14 @@ async function mockApi(page: Page) {
     outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }],
     jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }],
   };
+  let contacts = [
+    { id: "p1", name: "Marion Kessler", firstName: "Marion", lastName: "Kessler", email: "m.kessler@nordwerk.de", phone: "+49 40", note: "", organizers: [{ organizer: { id: "c1" } }], customerProfile: null, eventRoles: [] },
+    { id: "p3", name: "Jonas Feld", firstName: "Jonas", lastName: "Feld", email: "jonas@feld.at", phone: "+43 664", note: "", organizers: [{ organizer: { id: "c1" } }, { organizer: { id: "c2" } }], customerProfile: { id: "c2" }, eventRoles: [] },
+  ];
+  let organizers = [
+    { id: "c1", name: "Nordwerk GmbH", type: "ORGANISATION", active: true, uid: "DE1", contacts: [{ contact: { id: "p1" } }, { contact: { id: "p3" } }], personId: null },
+    { id: "c2", name: "Jonas Feld", type: "PERSON", active: true, uid: "ATU1", contacts: [{ contact: { id: "p3" } }], personId: "p3" },
+  ];
   await page.route("**/api/v1/settings", async (route) => {
     const request = route.request();
     requests.push({
@@ -55,6 +63,8 @@ async function mockApi(page: Page) {
       url: request.url(),
       body: request.postData() ?? undefined,
     });
+    if (request.method() === "GET" && request.url().endsWith("/outlook-folder/plan"))
+      return route.fulfill({ json: { year: "2026", yearFolderName: "06_auftraege_26", quarter: "Q3", eventFolderName: event.eventCode, path: `06_auftraege_26/Q3/${event.eventCode}`, drifted: false } });
     if (request.method() === "GET")
       return route.fulfill({
         status: 200,
@@ -86,6 +96,46 @@ async function mockApi(page: Page) {
           name: body.name,
         }),
       });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/v1/contacts**", async (route) => {
+    const request = route.request();
+    const id = request.url().match(/\/contacts\/([^/]+)$/)?.[1];
+    if (request.method() === "GET") return route.fulfill({ json: contacts });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const created = { id: `p-created-${contacts.length + 1}`, ...body, organizers: [], customerProfile: null, eventRoles: [] };
+      contacts = [...contacts, created];
+      return route.fulfill({ status: 201, json: created });
+    }
+    if (request.method() === "PATCH" && id) {
+      contacts = contacts.map((contact) => contact.id === id ? { ...contact, ...body } : contact);
+      return route.fulfill({ json: contacts.find((contact) => contact.id === id) });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/v1/organizers**", async (route) => {
+    const request = route.request();
+    const link = request.url().match(/\/organizers\/([^/]+)\/contacts\/([^/]+)$/);
+    if (link && (request.method() === "PUT" || request.method() === "DELETE")) {
+      const [, customerId, personId] = link;
+      const adding = request.method() === "PUT";
+      organizers = organizers.map((customer) => customer.id === customerId ? { ...customer, contacts: adding ? [...customer.contacts.filter(({ contact }) => contact.id !== personId), { contact: { id: personId } }] : customer.contacts.filter(({ contact }) => contact.id !== personId) } : customer);
+      contacts = contacts.map((person) => person.id === personId ? { ...person, organizers: adding ? [...person.organizers.filter(({ organizer }) => organizer.id !== customerId), { organizer: { id: customerId } }] : person.organizers.filter(({ organizer }) => organizer.id !== customerId) } : person);
+      return route.fulfill({ status: 204 });
+    }
+    const id = request.url().match(/\/organizers\/([^/]+)$/)?.[1];
+    if (request.method() === "GET") return route.fulfill({ json: organizers });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const created = { id: `c${organizers.length + 1}`, ...body, type: body.personId ? "PERSON" : "ORGANISATION", active: true, contacts: [], personId: body.personId ?? null };
+      organizers = [...organizers, created];
+      return route.fulfill({ status: 201, json: created });
+    }
+    if (request.method() === "PATCH" && id) {
+      organizers = organizers.map((customer) => customer.id === id ? { ...customer, ...body } : customer);
+      return route.fulfill({ json: organizers.find((customer) => customer.id === id) });
     }
     return route.continue();
   });
@@ -189,12 +239,6 @@ test("reduziert die Navigation und verwendet das Bearbeiten-Symbol", async ({ pa
 });
 
 test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) => {
-  await page.addInitScript(() => {
-    if (!sessionStorage.getItem("crm-test-initialized")) {
-      localStorage.removeItem("t2w-crm-v1");
-      sessionStorage.setItem("crm-test-initialized", "1");
-    }
-  });
   await mockApi(page);
   await page.goto("/kontakte");
   await expect(page.getByRole("heading", { name: "Kunden & Kontakte" })).toBeVisible();
@@ -210,6 +254,7 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   const email = page.getByLabel("E-Mail").last();
   await email.fill("geändert@example.com");
   await email.blur();
+  await expect(page.getByText("E-Mail gespeichert")).toBeVisible();
   await page.reload();
   await page.getByLabel("Suche").first().fill("geändert@example.com");
   await expect(page.getByText("Neue Kontaktperson")).toBeVisible();

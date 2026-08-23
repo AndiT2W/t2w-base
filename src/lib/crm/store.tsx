@@ -1,149 +1,164 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { DEMO_KUNDEN, DEMO_PERSONEN } from "./demo";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { createHttpCrmAdapter, type CrmModule, type CrmState } from "./module";
 import { personName, type Kunde, type Person } from "./types";
-type Ctx = {
-  personen: Person[];
-  kunden: Kunde[];
-  neuePerson: (p: Omit<Person, "id" | "kundenprofilId" | "eventRollen">) => Person;
+
+type Ctx = CrmState & {
+  bereit: boolean;
+  fehler: string | null;
+  neuePerson: (p: Omit<Person, "id" | "kundenprofilId" | "eventRollen">) => Promise<Person>;
   neuerKunde: (
     k: Omit<Kunde, "id" | "kontaktIds" | "events" | "personId"> & { personId?: string | null },
-  ) => void;
+  ) => Promise<void>;
   personAlsKunde: (
     id: string,
     k: Omit<Kunde, "id" | "name" | "personId" | "kontaktIds" | "events" | "typ">,
-  ) => void;
-  updatePerson: (id: string, p: Partial<Person>) => void;
-  updateKunde: (id: string, p: Partial<Kunde>) => void;
-  verknuepfe: (personId: string, kundeId: string) => void;
-  loeseVerknuepfung: (personId: string, kundeId: string) => void;
+  ) => Promise<void>;
+  updatePerson: (id: string, p: Partial<Person>) => Promise<void>;
+  updateKunde: (id: string, p: Partial<Kunde>) => Promise<void>;
+  verknuepfe: (personId: string, kundeId: string) => Promise<void>;
+  loeseVerknuepfung: (personId: string, kundeId: string) => Promise<void>;
   kundenVonPerson: (p: Person) => Kunde[];
   kontakteVonKunde: (id: string) => Person[];
   findeDublette: (v: string, n: string, e: string) => Person | undefined;
 };
 const Ctx = createContext<Ctx | null>(null);
-const KEY = "t2w-crm-v1";
-export function CrmProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState({ personen: DEMO_PERSONEN, kunden: DEMO_KUNDEN });
+const initial: CrmState = { personen: [], kunden: [] };
+
+export function CrmProvider({ children, adapter }: { children: ReactNode; adapter?: CrmModule }) {
+  const [state, setState] = useState(initial);
   const [bereit, setBereit] = useState(false);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const crm = useMemo(() => adapter ?? createHttpCrmAdapter(), [adapter]);
   useEffect(() => {
-    try {
-      const x = localStorage.getItem(KEY);
-      if (x) setState(JSON.parse(x));
-    } catch {
-      // Ignore malformed or unavailable local storage and keep demo data.
-    } finally {
-      setBereit(true);
-    }
-  }, []);
-  useEffect(() => {
-    if (!bereit) return;
-    localStorage.setItem(KEY, JSON.stringify(state));
-  }, [state, bereit]);
+    void crm
+      .load()
+      .then(setState)
+      .catch(() => setFehler("Kunden und Kontakte konnten nicht geladen werden."))
+      .finally(() => setBereit(true));
+  }, [crm]);
+
+  const commit = useCallback(
+    async (operation: (current: CrmState) => Promise<CrmState>) => {
+      setFehler(null);
+      try {
+        setState(await operation(state));
+      } catch (error) {
+        setFehler("Änderung konnte nicht gespeichert werden.");
+        throw error;
+      }
+    },
+    [state],
+  );
+
   const value = useMemo<Ctx>(
     () => ({
       ...state,
-      neuePerson: (input) => {
-        const person: Person = {
-          ...input,
-          id: `p_${Date.now()}`,
-          kundenprofilId: null,
-          eventRollen: [],
-        };
-        setState((s) => ({ ...s, personen: [...s.personen, person] }));
+      bereit,
+      fehler,
+      neuePerson: async (input) => {
+        const person = await crm.createPerson(input);
+        setState((current) => ({ ...current, personen: [...current.personen, person] }));
         return person;
       },
-      neuerKunde: (k) =>
-        setState((s) => ({
-          ...s,
-          kunden: [
-            ...s.kunden,
-            {
-              ...k,
-              id: `c_${Date.now()}`,
-              personId: k.personId ?? null,
-              kontaktIds: [],
-              events: [],
-            },
-          ],
-        })),
-      personAlsKunde: (id, k) =>
-        setState((s) => {
-          const p = s.personen.find((x) => x.id === id);
-          const cid = `c_${Date.now()}`;
-          return {
-            personen: s.personen.map((x) =>
-              x.id === id ? { ...x, kundenprofilId: cid, kundenIds: [...x.kundenIds, cid] } : x,
-            ),
-            kunden: [
-              ...s.kunden,
-              {
-                ...k,
-                id: cid,
-                name: p ? personName(p) : "",
-                typ: "person",
-                personId: id,
-                kontaktIds: [id],
-                events: [],
-              },
-            ],
-          };
-        }),
-      updatePerson: (id, p) =>
-        setState((s) => ({
-          ...s,
-          personen: s.personen.map((x) => (x.id === id ? { ...x, ...p } : x)),
-        })),
-      updateKunde: (id, p) =>
-        setState((s) => ({
-          ...s,
-          kunden: s.kunden.map((x) => (x.id === id ? { ...x, ...p } : x)),
-        })),
-      verknuepfe: (pid, cid) =>
-        setState((s) => ({
-          personen: s.personen.map((p) =>
-            p.id === pid && !p.kundenIds.includes(cid)
-              ? { ...p, kundenIds: [...p.kundenIds, cid] }
-              : p,
+      neuerKunde: async (input) => {
+        const kunde = await crm.createKunde({
+          ...input,
+          personId: input.personId ?? null,
+          kontaktIds: [],
+          events: [],
+        });
+        setState((current) => ({ ...current, kunden: [...current.kunden, kunde] }));
+      },
+      personAlsKunde: async (id, input) => {
+        const person = state.personen.find((item) => item.id === id);
+        if (!person) throw new Error("PERSON_NOT_FOUND");
+        const kunde = await crm.createKunde({
+          ...input,
+          name: personName(person),
+          typ: "person",
+          personId: id,
+          kontaktIds: [],
+          events: [],
+        });
+        setState((current) => ({
+          personen: current.personen.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  kundenprofilId: kunde.id,
+                  kundenIds: [...new Set([...item.kundenIds, kunde.id])],
+                }
+              : item,
           ),
-          kunden: s.kunden.map((k) =>
-            k.id === cid && !k.kontaktIds.includes(pid)
-              ? { ...k, kontaktIds: [...k.kontaktIds, pid] }
-              : k,
+          kunden: [...current.kunden, { ...kunde, kontaktIds: [id] }],
+        }));
+      },
+      updatePerson: async (id, patch) => {
+        const person = state.personen.find((item) => item.id === id);
+        if (!person) return;
+        const saved = await crm.updatePerson(person, patch);
+        setState((current) => ({
+          ...current,
+          personen: current.personen.map((item) =>
+            item.id === id
+              ? { ...item, ...saved, kundenIds: item.kundenIds, eventRollen: item.eventRollen }
+              : item,
           ),
-        })),
-      loeseVerknuepfung: (pid, cid) =>
-        setState((s) => ({
-          personen: s.personen.map((p) =>
-            p.id === pid ? { ...p, kundenIds: p.kundenIds.filter((id) => id !== cid) } : p,
+        }));
+      },
+      updateKunde: async (id, patch) => {
+        const kunde = state.kunden.find((item) => item.id === id);
+        if (!kunde) return;
+        const saved = await crm.updateKunde(kunde, patch);
+        setState((current) => ({
+          ...current,
+          kunden: current.kunden.map((item) =>
+            item.id === id
+              ? { ...item, ...saved, kontaktIds: item.kontaktIds, events: item.events }
+              : item,
           ),
-          kunden: s.kunden.map((k) =>
-            k.id === cid ? { ...k, kontaktIds: k.kontaktIds.filter((id) => id !== pid) } : k,
-          ),
-        })),
-      kundenVonPerson: (p) => state.kunden.filter((k) => p.kundenIds.includes(k.id)),
-      kontakteVonKunde: (id) => state.personen.filter((p) => p.kundenIds.includes(id)),
-      findeDublette: (v, n, e) =>
+        }));
+      },
+      verknuepfe: (personId, kundeId) => commit((current) => crm.link(current, personId, kundeId)),
+      loeseVerknuepfung: (personId, kundeId) =>
+        commit((current) => crm.unlink(current, personId, kundeId)),
+      kundenVonPerson: (person) =>
+        state.kunden.filter((kunde) => person.kundenIds.includes(kunde.id)),
+      kontakteVonKunde: (id) => state.personen.filter((person) => person.kundenIds.includes(id)),
+      findeDublette: (vorname, nachname, email) =>
         state.personen.find(
-          (p) =>
-            p.email.toLowerCase() === e.toLowerCase() ||
-            (personName(p).toLowerCase() === `${v} ${n}`.trim().toLowerCase() && !!v && !!n),
+          (person) =>
+            person.email.toLowerCase() === email.toLowerCase() ||
+            (personName(person).toLowerCase() === `${vorname} ${nachname}`.trim().toLowerCase() &&
+              !!vorname &&
+              !!nachname),
         ),
     }),
-    [state],
+    [state, bereit, fehler, crm, commit],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 export function useCrm() {
-  const v = useContext(Ctx);
-  if (!v) throw new Error("CrmProvider fehlt");
-  return v;
+  const value = useContext(Ctx);
+  if (!value) throw new Error("CrmProvider fehlt");
+  return value;
 }
-export const passtPerson = (p: Person, q: string, k: Kunde[]) =>
-  `${personName(p)} ${p.email} ${p.telefon} ${p.funktion} ${k
-    .filter((x) => p.kundenIds.includes(x.id))
-    .map((x) => `${x.name} ${x.uid} ${x.iban}`)
+export const passtPerson = (person: Person, query: string, kunden: Kunde[]) =>
+  `${personName(person)} ${person.email} ${person.telefon} ${person.funktion} ${kunden
+    .filter((kunde) => person.kundenIds.includes(kunde.id))
+    .map((kunde) => `${kunde.name} ${kunde.uid} ${kunde.iban}`)
     .join(" ")}`
     .toLowerCase()
-    .includes(q.toLowerCase());
-export const passtKunde = (k: Kunde, q: string) =>
-  `${k.name} ${k.uid} ${k.iban} ${k.rechnungsEmail}`.toLowerCase().includes(q.toLowerCase());
+    .includes(query.toLowerCase());
+export const passtKunde = (kunde: Kunde, query: string) =>
+  `${kunde.name} ${kunde.uid} ${kunde.iban} ${kunde.rechnungsEmail}`
+    .toLowerCase()
+    .includes(query.toLowerCase());

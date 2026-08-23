@@ -19,7 +19,11 @@ import {
 } from "@/components/t2w/AppSidebar";
 import { T2WProvider } from "@/lib/t2w/store";
 import { CrmProvider } from "@/lib/crm/store";
+import { createBrowserLocalCrmAdapter } from "@/lib/crm/local-adapter";
 import { I18nProvider } from "@/lib/i18n";
+
+const crmAdapter =
+  import.meta.env.VITE_CRM_ADAPTER === "local" ? createBrowserLocalCrmAdapter() : undefined;
 
 function NotFoundComponent() {
   return (
@@ -146,7 +150,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <T2WProvider>
-          <CrmProvider>
+          <CrmProvider adapter={crmAdapter}>
             <AppShell />
             <Toaster />
           </CrmProvider>

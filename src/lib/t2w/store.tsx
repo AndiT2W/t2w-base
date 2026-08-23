@@ -9,7 +9,21 @@ import {
 } from "react";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
-import { apiCreateEvent, apiEvents, apiSettings, apiUpdateEvent, apiUpdateSettings } from "./api";
+import {
+  apiCreateEvent,
+  apiEvents,
+  apiOutlookFolderPlan,
+  apiSettings,
+  apiSyncOutlookFolder,
+  apiUpdateEvent,
+  apiUpdateSettings,
+} from "./api";
+import {
+  createEventWorkspace,
+  type OutlookFolderPlan,
+  type SaveResult,
+  type SyncResult,
+} from "./event-workspace";
 import { LoginView } from "@/components/t2w/LoginView";
 
 type State = {
@@ -35,7 +49,9 @@ type Ctx = State & {
     sportart?: string;
     notizen: string;
   }) => Promise<T2WEvent>;
-  updateEvent: (id: string, patch: Partial<T2WEvent>) => void;
+  updateEvent: (id: string, patch: Partial<T2WEvent>) => Promise<SaveResult>;
+  syncOutlookFolder: (id: string) => Promise<SyncResult>;
+  getOutlookFolderPlan: (id: string) => Promise<OutlookFolderPlan>;
   setSettings: (s: Settings) => Promise<void>;
   setSpalten: (c: ColumnKey[]) => void;
 };
@@ -53,6 +69,15 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   const [bereit, setBereit] = useState(false);
   const [ladefehler, setLadefehler] = useState<string | null>(null);
   const [angemeldet, setAngemeldet] = useState(true);
+  const workspace = useMemo(
+    () =>
+      createEventWorkspace({
+        save: apiUpdateEvent,
+        syncOutlook: apiSyncOutlookFolder,
+        outlookPlan: apiOutlookFolderPlan,
+      }),
+    [],
+  );
 
   useEffect(() => {
     void (async () => {
@@ -86,17 +111,39 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     return created;
   }, []);
 
-  const updateEvent = useCallback((id: string, patch: Partial<T2WEvent>) => {
-    setState((prev) => ({
-      ...prev,
-      events: prev.events.map((e) =>
-        e.id === id ? { ...e, ...patch, eventcode: e.eventcode } : e,
-      ),
-    }));
-    void apiUpdateEvent(id, patch).catch(() =>
-      setLadefehler("Änderungen konnten nicht dauerhaft gespeichert werden."),
-    );
-  }, []);
+  const updateEvent = useCallback(
+    async (id: string, patch: Partial<T2WEvent>) => {
+      const current = state.events.find((event) => event.id === id);
+      if (!current) return { kind: "failed", error: new Error("EVENT_NOT_FOUND") } as const;
+      const result = await workspace.save(current, patch);
+      if (result.kind === "saved")
+        setState((prev) => ({
+          ...prev,
+          events: prev.events.map((event) => (event.id === id ? result.event : event)),
+        }));
+      else
+        setLadefehler(
+          result.kind === "conflict"
+            ? "Das Event wurde zwischenzeitlich geändert."
+            : "Änderungen konnten nicht dauerhaft gespeichert werden.",
+        );
+      return result;
+    },
+    [state.events, workspace],
+  );
+
+  const syncOutlookFolder = useCallback(
+    async (id: string) => {
+      const result = await workspace.syncOutlook(id);
+      if (result.kind === "synced")
+        setState((prev) => ({
+          ...prev,
+          events: prev.events.map((event) => (event.id === id ? result.event : event)),
+        }));
+      return result;
+    },
+    [workspace],
+  );
 
   const value = useMemo<Ctx>(
     () => ({
@@ -105,13 +152,15 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       ladefehler,
       neuesEvent,
       updateEvent,
+      syncOutlookFolder,
+      getOutlookFolderPlan: workspace.outlookPlan,
       setSettings: async (s) => {
         const saved = await apiUpdateSettings(s);
         setState((p) => ({ ...p, settings: saved }));
       },
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
     }),
-    [state, bereit, ladefehler, neuesEvent, updateEvent],
+    [state, bereit, ladefehler, neuesEvent, updateEvent, syncOutlookFolder, workspace.outlookPlan],
   );
 
   if (!angemeldet)

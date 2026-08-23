@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+} from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "./prisma.service.js";
 
@@ -60,6 +71,26 @@ export class MasterDataController {
   @Patch("organizers/:id/deactivate") deactivateOrganizer(@Param("id", ParseUUIDPipe) id: string) {
     return this.prisma.organizer.update({ where: { id }, data: { active: false } });
   }
+  @Put("organizers/:organizerId/contacts/:contactId")
+  @HttpCode(204)
+  async linkContact(
+    @Param("organizerId", ParseUUIDPipe) organizerId: string,
+    @Param("contactId", ParseUUIDPipe) contactId: string,
+  ) {
+    await this.prisma.organizerContact.upsert({
+      where: { organizerId_contactId: { organizerId, contactId } },
+      create: { organizerId, contactId },
+      update: {},
+    });
+  }
+  @Delete("organizers/:organizerId/contacts/:contactId")
+  @HttpCode(204)
+  async unlinkContact(
+    @Param("organizerId", ParseUUIDPipe) organizerId: string,
+    @Param("contactId", ParseUUIDPipe) contactId: string,
+  ) {
+    await this.prisma.organizerContact.deleteMany({ where: { organizerId, contactId } });
+  }
 
   @Get("sports") sports() {
     return this.prisma.sport.findMany({ where: { active: true }, orderBy: { name: "asc" } });
@@ -78,7 +109,7 @@ export class MasterDataController {
       include: {
         organizers: { include: { organizer: true } },
         customerProfile: true,
-        eventRoles: true,
+        eventRoles: { include: { event: true } },
       },
     });
   }

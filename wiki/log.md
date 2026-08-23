@@ -1,5 +1,13 @@
 # Maintenance Log
 
+## 2026-08-23
+
+- CRM-Seam mit zwei echten Adaptern vervollständigt: Event-Service/HTTP bleibt Standard, `VITE_CRM_ADAPTER=local` aktiviert explizit einen persistenten LocalStorage-Demo-Adapter. Beide implementieren dasselbe Person/Kunde-Interface und dieselben Beziehungsinvarianten.
+- CRM-Modul auf ausschließliche Event-Service-Persistenz umgestellt; Demo-Daten und `localStorage` entfernt. Person–Kunde-Zuordnungen werden pessimistisch über `OrganizerContact` gespeichert.
+- Event-Workspace vertieft: Speichern, Versionskonflikte, Datumsnormalisierung und Outlook-Synchronisierung liefern explizite Ergebnisse hinter einem Interface.
+- Outlook-Eventordner-Modul vertieft: Jahreszuordnung, Quartalspfad, Drift-Erkennung und Synchronisierung liegen in einem Modul; Route und Controller enthalten keine eigene Ordnerpolicy mehr.
+- TDD-Abdeckung ergänzt: 9 Root-Unit-Tests, 4 Event-Service-Tests und 17 serielle Browser-E2E-Tests erfolgreich; Frontend- und Backend-Build erfolgreich.
+
 ## 2026-08-22
 
 - Issue #28 abgeschlossen: Gantt-Zoom-Test präzisiert, Kunden- und Outlook-Ansichten über stabile URL-Zustände erreichbar gemacht, Outlook-Sync mit sichtbarer Statusmeldung ergänzt und E2E-Mocks korrigiert. Verifiziert mit 13 grünen Browser-E2E-Tests und erfolgreichem Produktions-Build.
