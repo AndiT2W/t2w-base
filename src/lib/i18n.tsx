@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createLocaleRenderer, type TranslationCatalog } from "./locale-rendering";
 
 export type Locale = "de" | "en";
 
@@ -83,7 +84,7 @@ export const translations = {
   },
 } as const;
 
-const pageTextTranslations: Record<string, string> = {
+const pageTextTranslations: TranslationCatalog = {
   Eventverwaltung: "Event management",
   Module: "Modules",
   Weitere: "More",
@@ -406,15 +407,6 @@ const pageTextTranslations: Record<string, string> = {
   Passwort: "Password",
 };
 
-export function translatePageText(text: string, locale: Locale) {
-  return locale === "en" ? (pageTextTranslations[text] ?? text) : text;
-}
-
-/** Translate legacy route copy at the rendering seam while it is migrated to keyed text. */
-export function localizeText(text: string, locale: Locale) {
-  return translatePageText(text, locale);
-}
-
 type Key = keyof typeof translations.de;
 const LocaleContext = createContext<{
   locale: Locale;
@@ -464,18 +456,17 @@ export function I18nProvider({
     return () => window.removeEventListener("hashchange", applyHashLocale);
   }, []);
   const value = useMemo(
-    () => ({
-      locale,
-      setLocale,
-      t: (key: Key) => translations[locale][key] ?? translations.de[key],
-      text: (value: string) => localizeText(value, locale),
-      formatDate: (iso: string) =>
-        new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB").format(
-          new Date(`${iso}T00:00:00`),
-        ),
-      formatNumber: (n: number) =>
-        new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB").format(n),
-    }),
+    () => {
+      const renderer = createLocaleRenderer(locale, translations, pageTextTranslations);
+      return {
+        locale,
+        setLocale,
+        t: (key: Key) => renderer.translateKey(key),
+        text: renderer.translateText,
+        formatDate: renderer.formatDate,
+        formatNumber: renderer.formatNumber,
+      };
+    },
     [locale],
   );
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;

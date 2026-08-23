@@ -198,3 +198,6 @@
 
 - Offene Ticket-29-Verbesserungen nachgezogen: Kalender- und Gantt-Ansichten erzwingen auf kleinen Viewports eine echte horizontale Scrollfläche; E2E-Regressionsabdeckung ergänzt für österreichische Feiertagsnamen, Scrollbarkeit, CRM-Zuordnungsaufhebung nach Reload und das entfernte Zahlungsziel.
 - Verifikation: vollständige Playwright-Suite 17/17 grün; Produktions-Build erfolgreich.
+- Locale rendering module vertieft: Katalog-Fallback, Legacy-Textübersetzung sowie Datums-/Zahlenformatierung liegen jetzt hinter `createLocaleRenderer`; der React-Kontext delegiert nur noch an dieses Interface. Unit-Regressionsabdeckung für Schlüssel, Fallback, Legacy-Text und Formatierung ergänzt.
+- Vitest als Root-Testlauf eingerichtet (`npm test`) mit Node-Testumgebung und zentraler Konfiguration; der Locale-Rendering-Test läuft als erster Root-Unit-Test.
+- Node.js benutzerlokal auf `v22.14.0` aktualisiert; die vorherige Vite-Engine-Warnung für `v22.11.0` tritt nicht mehr auf.
