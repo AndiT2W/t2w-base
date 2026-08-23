@@ -7,7 +7,8 @@ Updated: 2026-08-23
 - The CRM module exposes one Person/Kunde domain interface with two real adapters. The deployed HTTP adapter uses the protected `/api/v1/contacts` and `/api/v1/organizers` endpoints; the local demo adapter persists the same domain records in `localStorage`.
 - The deployed HTTP adapter is the default. `VITE_CRM_ADAPTER=local` explicitly selects the local demo adapter; adapters never fall back to one another.
 - CRM mutations are pessimistic: visible state changes only after the selected adapter confirms persistence. The HTTP adapter stores Person–Kunde links in `OrganizerContact`; the local adapter maintains the same reciprocal relationship invariant.
-- The Event workspace module owns date normalization, asynchronous save outcomes, version-conflict reporting, and Outlook synchronization. Routes no longer call the transport adapter directly.
+- The Event workspace module owns the authoritative Event collection plus pessimistic creation, date normalization, asynchronous save outcomes, version-conflict reporting, Outlook planning, and synchronization. React observes its collection through the external-store seam; routes keep the compatible `useT2W()` interface and do not replace persisted Events themselves.
+- Backend Event creation and update invariants live in the Event mutation module. Organizer resolution, payout/invoice-recipient defaults, optimistic version checks, recipient replacement, and persistence execute through one transaction-oriented interface. The Nest controller is the HTTP adapter and Prisma is the production persistence adapter.
 - The Outlook Event-folder module owns the `year folder / quarter / Eventcode` plan, drift detection, mapping resolution, folder creation, and sync status persistence.
 
 ## Test seams
@@ -15,6 +16,8 @@ Updated: 2026-08-23
 - `src/lib/crm/module.ts`: shared CRM interface and deployed HTTP adapter.
 - `src/lib/crm/local-adapter.ts`: persistent local demo adapter implementing the same interface.
 - `src/lib/t2w/event-workspace.ts`: saved, conflict, failed, synced, and folder-plan outcomes.
+- `services/event-service/src/event-mutations.ts`: Event creation/update outcomes and invariants through an in-memory-testable persistence seam.
+- `services/event-service/src/prisma-event-mutation.adapter.ts`: transaction-backed production adapter.
 - `services/event-service/src/outlook/outlook.folder.service.ts`: canonical folder planning plus the existing Microsoft Graph adapter seam.
 - `tests/e2e/event-management.spec.ts`: browser workflow verifies CRM persistence after reload and Event/Outlook behavior.
 
@@ -23,6 +26,8 @@ Updated: 2026-08-23
 - [CRM module implementation](../../src/lib/crm/module.ts)
 - [Local CRM adapter](../../src/lib/crm/local-adapter.ts)
 - [Event workspace implementation](../../src/lib/t2w/event-workspace.ts)
+- [Event mutation implementation](../../services/event-service/src/event-mutations.ts)
+- [Prisma Event mutation adapter](../../services/event-service/src/prisma-event-mutation.adapter.ts)
 - [Outlook folder implementation](../../services/event-service/src/outlook/outlook.folder.service.ts)
 - [Person, Kundenprofil und Eventrollen decision](../decisions/2026-08-21-person-kundenprofil-und-eventrollen.md)
 - User conversation on 2026-08-23 first removed demo persistence, then explicitly requested restoring it behind the same domain interface as a second real adapter. Pessimistic mutations remain required.

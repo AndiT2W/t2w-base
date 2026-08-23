@@ -9,6 +9,22 @@ import { AuthGuard } from "./auth.guard.js";
 import { APP_GUARD } from "@nestjs/core";
 import { SettingsController } from "./settings.controller.js";
 import { OutlookModule } from "./outlook/outlook.module.js";
+import { EventMutationService } from "./event-mutation.service.js";
 
-@Module({ imports: [OutlookModule], controllers: [HealthController, EventsController, AuthController, MasterDataController, SettingsController], providers: [PrismaService, AuthService, { provide: APP_GUARD, useClass: AuthGuard }] })
+@Module({
+  imports: [OutlookModule],
+  controllers: [
+    HealthController,
+    EventsController,
+    AuthController,
+    MasterDataController,
+    SettingsController,
+  ],
+  providers: [
+    PrismaService,
+    AuthService,
+    EventMutationService,
+    { provide: APP_GUARD, useClass: AuthGuard },
+  ],
+})
 export class AppModule {}

@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
@@ -20,6 +21,7 @@ import {
 } from "./api";
 import {
   createEventWorkspace,
+  type CreateEventInput,
   type OutlookFolderPlan,
   type SaveResult,
   type SyncResult,
@@ -27,7 +29,6 @@ import {
 import { LoginView } from "@/components/t2w/LoginView";
 
 type State = {
-  events: T2WEvent[];
   settings: Settings;
   spalten: ColumnKey[];
 };
@@ -35,20 +36,7 @@ type State = {
 type Ctx = State & {
   bereit: boolean;
   ladefehler: string | null;
-  neuesEvent: (input: {
-    name: string;
-    eventcode?: string;
-    veranstalter: string;
-    ort: string;
-    start: string;
-    ende?: string;
-    status: T2WEvent["status"];
-    verantwortlicher?: string;
-    teilnehmer?: number;
-    teilnehmerprognose?: number | null;
-    sportart?: string;
-    notizen: string;
-  }) => Promise<T2WEvent>;
+  neuesEvent: (input: CreateEventInput) => Promise<T2WEvent>;
   updateEvent: (id: string, patch: Partial<T2WEvent>) => Promise<SaveResult>;
   syncOutlookFolder: (id: string) => Promise<SyncResult>;
   getOutlookFolderPlan: (id: string) => Promise<OutlookFolderPlan>;
@@ -59,7 +47,6 @@ type Ctx = State & {
 const StoreContext = createContext<Ctx | null>(null);
 
 const initial: State = {
-  events: [],
   settings: { outlookJahresordner: [], jahresSites: [], outlookMailbox: null },
   spalten: ALL_COLUMNS,
 };
@@ -72,18 +59,21 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   const workspace = useMemo(
     () =>
       createEventWorkspace({
+        create: apiCreateEvent,
         save: apiUpdateEvent,
         syncOutlook: apiSyncOutlookFolder,
         outlookPlan: apiOutlookFolderPlan,
       }),
     [],
   );
+  const events = useSyncExternalStore(workspace.subscribe, workspace.events, workspace.events);
 
   useEffect(() => {
     void (async () => {
       try {
         const [events, settings] = await Promise.all([apiEvents(), apiSettings()]);
-        setState((current) => ({ ...current, events, settings }));
+        workspace.load(events);
+        setState((current) => ({ ...current, settings }));
       } catch {
         setLadefehler("Die zentrale Eventquelle konnte nicht geladen werden.");
         setAngemeldet(false);
@@ -91,37 +81,17 @@ export function T2WProvider({ children }: { children: ReactNode }) {
         setBereit(true);
       }
     })();
-  }, []);
+  }, [workspace]);
 
-  const neuesEvent: Ctx["neuesEvent"] = useCallback(async (input) => {
-    const ende = input.ende && input.ende.length ? input.ende : input.start;
-    const created = await apiCreateEvent({
-      name: input.name,
-      eventcode: input.eventcode ?? "",
-      veranstalter: input.veranstalter,
-      start: input.start,
-      ende,
-      ort: input.ort,
-      verantwortlicher: input.verantwortlicher ?? "",
-      teilnehmerprognose: input.teilnehmerprognose ?? input.teilnehmer ?? 0,
-      notizen: input.notizen,
-      status: input.status,
-    });
-    setState((prev) => ({ ...prev, events: [...prev.events, created] }));
-    return created;
-  }, []);
+  const neuesEvent: Ctx["neuesEvent"] = useCallback(
+    (input) => workspace.create(input),
+    [workspace],
+  );
 
   const updateEvent = useCallback(
     async (id: string, patch: Partial<T2WEvent>) => {
-      const current = state.events.find((event) => event.id === id);
-      if (!current) return { kind: "failed", error: new Error("EVENT_NOT_FOUND") } as const;
-      const result = await workspace.save(current, patch);
-      if (result.kind === "saved")
-        setState((prev) => ({
-          ...prev,
-          events: prev.events.map((event) => (event.id === id ? result.event : event)),
-        }));
-      else
+      const result = await workspace.save(id, patch);
+      if (result.kind !== "saved")
         setLadefehler(
           result.kind === "conflict"
             ? "Das Event wurde zwischenzeitlich geändert."
@@ -129,17 +99,12 @@ export function T2WProvider({ children }: { children: ReactNode }) {
         );
       return result;
     },
-    [state.events, workspace],
+    [workspace],
   );
 
   const syncOutlookFolder = useCallback(
     async (id: string) => {
       const result = await workspace.syncOutlook(id);
-      if (result.kind === "synced")
-        setState((prev) => ({
-          ...prev,
-          events: prev.events.map((event) => (event.id === id ? result.event : event)),
-        }));
       return result;
     },
     [workspace],
@@ -148,6 +113,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(
     () => ({
       ...state,
+      events,
       bereit,
       ladefehler,
       neuesEvent,
@@ -160,7 +126,16 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       },
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
     }),
-    [state, bereit, ladefehler, neuesEvent, updateEvent, syncOutlookFolder, workspace.outlookPlan],
+    [
+      state,
+      events,
+      bereit,
+      ladefehler,
+      neuesEvent,
+      updateEvent,
+      syncOutlookFolder,
+      workspace.outlookPlan,
+    ],
   );
 
   if (!angemeldet)

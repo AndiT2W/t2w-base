@@ -14,6 +14,8 @@ import { IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min } from "cla
 import { EventStatus } from "@prisma/client";
 import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
+import { EventMutationConflict } from "./event-mutations.js";
+import { EventMutationService } from "./event-mutation.service.js";
 
 export class CreateEventDto {
   @IsOptional() @IsString() eventCode?: string;
@@ -41,6 +43,7 @@ export class EventsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outlookFolders: OutlookFolderService,
+    private readonly eventMutations: EventMutationService,
   ) {}
 
   @Post(":id/outlook-folder/sync")
@@ -89,49 +92,11 @@ export class EventsController {
   @Post()
   create(@Body() dto: CreateEventDto) {
     const start = new Date(dto.startAt);
-    return this.prisma.$transaction(async (tx) => {
-      const organizerId = dto.organizerName?.trim()
-        ? ((
-            await tx.organizer.findFirst({
-              where: { name: dto.organizerName.trim(), active: true },
-            })
-          )?.id ??
-          (
-            await tx.organizer.create({
-              data: { name: dto.organizerName.trim(), type: "ORGANISATION" },
-            })
-          ).id)
-        : dto.organizerId;
-      return tx.event.create({
-        data: {
-          eventCode:
-            dto.eventCode?.trim() ||
-            `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`,
-          name: dto.name,
-          startAt: start,
-          endAt: new Date(dto.endAt ?? dto.startAt),
-          status: dto.status ?? EventStatus.ANFRAGE,
-          organizerId,
-          payoutRecipientId: dto.payoutRecipientId ?? organizerId,
-          invoiceRecipients: {
-            create: (dto.invoiceRecipientIds?.length
-              ? dto.invoiceRecipientIds
-              : organizerId
-                ? [organizerId]
-                : []
-            ).map((organizerId) => ({ organizerId })),
-          },
-          sportId: dto.sportId,
-          location: dto.location,
-          responsible: dto.responsible,
-          participantForecast: dto.participantForecast,
-          notes: dto.notes,
-          outlookFolder: dto.outlookFolder,
-          outlookWebUrl: dto.outlookWebUrl,
-          sharepointFolder: dto.sharepointFolder,
-        },
-        include: { organizer: true, sport: true },
-      });
+    return this.eventMutations.create({
+      ...dto,
+      eventCode:
+        dto.eventCode?.trim() ||
+        `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`,
     });
   }
 
@@ -139,40 +104,10 @@ export class EventsController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body() dto: Partial<CreateEventDto> & { version?: number },
   ) {
-    const { version, organizerName, invoiceRecipientIds, ...changes } = dto;
-    return this.prisma.$transaction(async (tx) => {
-      const organizerId = organizerName?.trim()
-        ? ((await tx.organizer.findFirst({ where: { name: organizerName.trim(), active: true } }))
-            ?.id ??
-          (
-            await tx.organizer.create({
-              data: { name: organizerName.trim(), type: "ORGANISATION" },
-            })
-          ).id)
-        : organizerName === ""
-          ? null
-          : undefined;
-      const updated = await tx.event.updateMany({
-        where: { id, ...(version === undefined ? {} : { version }) },
-        data: {
-          ...changes,
-          organizerId,
-          version: { increment: 1 },
-          startAt: changes.startAt ? new Date(changes.startAt) : undefined,
-          endAt: changes.endAt ? new Date(changes.endAt) : undefined,
-        },
-      });
-      if (updated.count !== 1) throw new ConflictException("EVENT_VERSION_CONFLICT");
-      if (invoiceRecipientIds) {
-        await tx.eventInvoiceRecipient.deleteMany({ where: { eventId: id } });
-        await tx.eventInvoiceRecipient.createMany({
-          data: invoiceRecipientIds.map((organizerId) => ({ eventId: id, organizerId })),
-        });
-      }
-      return tx.event.findUniqueOrThrow({
-        where: { id },
-        include: { organizer: true, sport: true },
-      });
+    return this.eventMutations.update(id, dto).catch((error: unknown) => {
+      if (error instanceof EventMutationConflict)
+        throw new ConflictException("EVENT_VERSION_CONFLICT");
+      throw error;
     });
   }
 }
