@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -489,34 +489,96 @@ function Assign({
   save: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
   const visible = options.filter(([, name]) =>
     name.toLowerCase().includes(query.trim().toLowerCase()),
   );
+  const listId = `${label.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}-options`;
+  function selectOption(id: string) {
+    save(id);
+    setQuery("");
+    setOpen(false);
+    setActiveIndex(0);
+    inputRef.current?.focus();
+  }
+  function selectActive() {
+    const option = visible[activeIndex];
+    if (option) selectOption(option[0]);
+  }
   return (
     <div className="mt-3 space-y-2">
       <input
-        aria-label={`${label} suchen`}
+        ref={inputRef}
+        role="combobox"
+        aria-label={label}
+        aria-autocomplete="list"
+        aria-controls={open ? listId : undefined}
+        aria-expanded={open}
+        aria-activedescendant={
+          open && visible[activeIndex] ? `${listId}-${visible[activeIndex][0]}` : undefined
+        }
         className={input}
         value={query}
         placeholder={`${label} suchen …`}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      <select
-        aria-label={label}
-        defaultValue=""
-        className={input}
+        onFocus={() => setOpen(true)}
         onChange={(e) => {
-          if (e.target.value) save(e.target.value);
-          e.currentTarget.value = "";
+          setQuery(e.target.value);
+          setActiveIndex(0);
+          setOpen(true);
         }}
-      >
-        <option value="">{label} …</option>
-        {visible.map(([id, name]) => (
-          <option key={id} value={id}>
-            {name}
-          </option>
-        ))}
-      </select>
+        onKeyDown={(e) => {
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setOpen(true);
+            setActiveIndex((index) => Math.min(index + 1, Math.max(visible.length - 1, 0)));
+          } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setActiveIndex((index) => Math.max(index - 1, 0));
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            selectActive();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            setOpen(false);
+          }
+        }}
+      />
+      {open && (
+        <ul
+          id={listId}
+          role="listbox"
+          className="max-h-48 overflow-y-auto rounded border border-border bg-background p-1 shadow-sm"
+        >
+          {visible.length ? (
+            visible.map(([id, name], index) => (
+              <li
+                id={`${listId}-${id}`}
+                key={id}
+                role="option"
+                aria-selected={index === activeIndex}
+                className={`cursor-pointer rounded px-2 py-1.5 text-sm ${index === activeIndex ? "bg-accent" : ""}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setActiveIndex(index);
+                  selectOption(id);
+                }}
+              >
+                {name}
+              </li>
+            ))
+          ) : (
+            <li
+              role="option"
+              aria-disabled="true"
+              className="px-2 py-1.5 text-sm text-muted-foreground"
+            >
+              Keine Treffer
+            </li>
+          )}
+        </ul>
+      )}
     </div>
   );
 }
