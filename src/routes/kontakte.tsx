@@ -605,21 +605,16 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
     rechnungsAdresse: "",
     rechnungsEmail: "",
   });
-  const create = () => {
+  const create = async () => {
     if (mode !== "kunde" && !p.vorname && !p.nachname)
       return toast.error("Vor- oder Nachname ist erforderlich.");
     if (mode === "kunde" && !k.name) return toast.error("Kundenname ist erforderlich.");
-    if (mode === "person") crm.neuePerson({ ...p, kundenIds: [] });
-    else if (mode === "kunde") crm.neuerKunde({ typ: "firma", status: "pruefung", ...k });
+    if (mode === "person") await crm.neuePerson({ ...p, kundenIds: [] });
+    else if (mode === "kunde") await crm.neuerKunde({ typ: "firma", status: "pruefung", ...k });
     else {
       const old = crm.findeDublette(p.vorname, p.nachname, p.email);
-      if (old) crm.personAlsKunde(old.id, { status: "pruefung", ...k });
-      else {
-        const n = { ...p, kundenIds: [] };
-        crm.neuePerson(n);
-        const id = crm.findeDublette(p.vorname, p.nachname, p.email)?.id;
-        if (id) crm.personAlsKunde(id, { status: "pruefung", ...k });
-      }
+      if (old) await crm.personAlsKunde(old.id, { status: "pruefung", ...k });
+      else await crm.neuePersonAlsKunde({ ...p, kundenIds: [] }, { status: "pruefung", ...k });
     }
     toast.success("Datensatz angelegt");
     close();
@@ -685,7 +680,7 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
           <Button variant="outline" onClick={close}>
             Abbrechen
           </Button>
-          <Button onClick={create}>Speichern</Button>
+          <Button onClick={() => void create()}>Speichern</Button>
         </div>
       </div>
     </div>

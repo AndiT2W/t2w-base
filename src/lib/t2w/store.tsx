@@ -40,7 +40,7 @@ type Ctx = State & {
   updateEvent: (id: string, patch: Partial<T2WEvent>) => Promise<SaveResult>;
   syncOutlookFolder: (id: string) => Promise<SyncResult>;
   getOutlookFolderPlan: (id: string) => Promise<OutlookFolderPlan>;
-  setSettings: (s: Settings) => Promise<void>;
+  setSettings: (s: Settings) => Promise<Settings>;
   setSpalten: (c: ColumnKey[]) => void;
 };
 
@@ -110,6 +110,12 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     [workspace],
   );
 
+  const setSettings = useCallback(async (settings: Settings) => {
+    const saved = await apiUpdateSettings(settings);
+    setState((current) => ({ ...current, settings: saved }));
+    return saved;
+  }, []);
+
   const value = useMemo<Ctx>(
     () => ({
       ...state,
@@ -120,10 +126,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       updateEvent,
       syncOutlookFolder,
       getOutlookFolderPlan: workspace.outlookPlan,
-      setSettings: async (s) => {
-        const saved = await apiUpdateSettings(s);
-        setState((p) => ({ ...p, settings: saved }));
-      },
+      setSettings,
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
     }),
     [
@@ -134,6 +137,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       neuesEvent,
       updateEvent,
       syncOutlookFolder,
+      setSettings,
       workspace.outlookPlan,
     ],
   );

@@ -411,15 +411,13 @@ type Key = keyof typeof translations.de;
 const LocaleContext = createContext<{
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: Key) => string;
-  text: (value: string) => string;
+  t: (value: string) => string;
   formatDate: (iso: string) => string;
   formatNumber: (value: number) => string;
 }>({
   locale: "de",
   setLocale: () => {},
-  t: (key) => translations.de[key],
-  text: (value) => value,
+  t: (value) => translations.de[value as Key] ?? value,
   formatDate: (iso) => iso,
   formatNumber: String,
 });
@@ -455,20 +453,16 @@ export function I18nProvider({
     window.addEventListener("hashchange", applyHashLocale);
     return () => window.removeEventListener("hashchange", applyHashLocale);
   }, []);
-  const value = useMemo(
-    () => {
-      const renderer = createLocaleRenderer(locale, translations, pageTextTranslations);
-      return {
-        locale,
-        setLocale,
-        t: (key: Key) => renderer.translateKey(key),
-        text: renderer.translateText,
-        formatDate: renderer.formatDate,
-        formatNumber: renderer.formatNumber,
-      };
-    },
-    [locale],
-  );
+  const value = useMemo(() => {
+    const renderer = createLocaleRenderer(locale, translations, pageTextTranslations);
+    return {
+      locale,
+      setLocale,
+      t: renderer.translate,
+      formatDate: renderer.formatDate,
+      formatNumber: renderer.formatNumber,
+    };
+  }, [locale]);
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 

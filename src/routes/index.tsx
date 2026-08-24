@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { jahr } from "@/lib/t2w/eventcode";
 import { useI18n } from "@/lib/i18n";
+import { activeEvents } from "@/lib/t2w/event-projections";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -57,7 +58,7 @@ function inTagen(iso: string, tage: number, heute: string) {
 
 function Uebersicht() {
   const { events, settings } = useT2W();
-  const { t, text } = useI18n();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
@@ -69,7 +70,7 @@ function Uebersicht() {
     richtung: "auf" | "ab";
   }>({ feld: "start", richtung: "auf" });
 
-  const aktive = useMemo(() => events.filter((e) => !e.archiviert), [events]);
+  const aktive = useMemo(() => activeEvents(events), [events]);
   const starts = useMemo(() => [...new Set(aktive.map((event) => event.start))].sort(), [aktive]);
 
   const kpi = useMemo(() => {
@@ -187,7 +188,7 @@ function Uebersicht() {
                   : "bg-secondary text-muted-foreground hover:text-foreground",
               )}
             >
-              {text(f.label)}
+              {t(f.label)}
             </button>
           ))}
           <span className="mx-1 hidden h-5 w-px bg-border sm:block" />

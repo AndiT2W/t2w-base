@@ -5,6 +5,7 @@ import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL } from "@/lib/t2w/types";
+import { invoiceReadyEvents } from "@/lib/t2w/event-projections";
 
 export const Route = createFileRoute("/rechnungen")({
   head: () => ({
@@ -27,9 +28,7 @@ export const Route = createFileRoute("/rechnungen")({
 function Rechnungen() {
   const { events } = useT2W();
   const heute = heuteIso();
-  const faellig = events
-    .filter((e) => e.ende < heute && e.status !== "abgesagt")
-    .sort((a, b) => b.ende.localeCompare(a.ende));
+  const faellig = invoiceReadyEvents(events, heute);
 
   return (
     <div>

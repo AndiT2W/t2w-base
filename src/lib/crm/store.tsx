@@ -1,13 +1,14 @@
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { createHttpCrmAdapter, type CrmModule, type CrmState } from "./module";
+import { createCrmWorkspace } from "./workspace";
+import { createBrowserLocalCrmAdapter } from "./local-adapter";
 import { personName, type Kunde, type Person } from "./types";
 
 type Ctx = CrmState & {
@@ -21,6 +22,10 @@ type Ctx = CrmState & {
     id: string,
     k: Omit<Kunde, "id" | "name" | "personId" | "kontaktIds" | "events" | "typ">,
   ) => Promise<void>;
+  neuePersonAlsKunde: (
+    p: Omit<Person, "id" | "kundenprofilId" | "eventRollen">,
+    k: Omit<Kunde, "id" | "name" | "personId" | "kontaktIds" | "events" | "typ">,
+  ) => Promise<void>;
   updatePerson: (id: string, p: Partial<Person>) => Promise<void>;
   updateKunde: (id: string, p: Partial<Kunde>) => Promise<void>;
   verknuepfe: (personId: string, kundeId: string) => Promise<void>;
@@ -30,57 +35,37 @@ type Ctx = CrmState & {
   findeDublette: (v: string, n: string, e: string) => Person | undefined;
 };
 const Ctx = createContext<Ctx | null>(null);
-const initial: CrmState = { personen: [], kunden: [] };
 
 export function CrmProvider({ children, adapter }: { children: ReactNode; adapter?: CrmModule }) {
-  const [state, setState] = useState(initial);
-  const [bereit, setBereit] = useState(false);
-  const [fehler, setFehler] = useState<string | null>(null);
-  const crm = useMemo(() => adapter ?? createHttpCrmAdapter(), [adapter]);
-  useEffect(() => {
-    void crm
-      .load()
-      .then(setState)
-      .catch(() => setFehler("Kunden und Kontakte konnten nicht geladen werden."))
-      .finally(() => setBereit(true));
-  }, [crm]);
-
-  const commit = useCallback(
-    async (operation: (current: CrmState) => Promise<CrmState>) => {
-      setFehler(null);
-      try {
-        setState(await operation(state));
-      } catch (error) {
-        setFehler("Änderung konnte nicht gespeichert werden.");
-        throw error;
-      }
-    },
-    [state],
+  const persistence = useMemo(
+    () =>
+      adapter ??
+      (import.meta.env.VITE_CRM_ADAPTER === "local"
+        ? createBrowserLocalCrmAdapter()
+        : createHttpCrmAdapter()),
+    [adapter],
   );
-
+  const workspace = useMemo(() => createCrmWorkspace(persistence), [persistence]);
+  const state = useSyncExternalStore(workspace.subscribe, workspace.snapshot, workspace.snapshot);
+  useEffect(() => {
+    void workspace.load().catch(() => undefined);
+  }, [workspace]);
   const value = useMemo<Ctx>(
     () => ({
       ...state,
-      bereit,
-      fehler,
-      neuePerson: async (input) => {
-        const person = await crm.createPerson(input);
-        setState((current) => ({ ...current, personen: [...current.personen, person] }));
-        return person;
-      },
+      neuePerson: workspace.createPerson,
       neuerKunde: async (input) => {
-        const kunde = await crm.createKunde({
+        await workspace.createKunde({
           ...input,
           personId: input.personId ?? null,
           kontaktIds: [],
           events: [],
         });
-        setState((current) => ({ ...current, kunden: [...current.kunden, kunde] }));
       },
       personAlsKunde: async (id, input) => {
-        const person = state.personen.find((item) => item.id === id);
+        const person = workspace.snapshot().personen.find((item) => item.id === id);
         if (!person) throw new Error("PERSON_NOT_FOUND");
-        const kunde = await crm.createKunde({
+        await workspace.createKunde({
           ...input,
           name: personName(person),
           typ: "person",
@@ -88,61 +73,24 @@ export function CrmProvider({ children, adapter }: { children: ReactNode; adapte
           kontaktIds: [],
           events: [],
         });
-        setState((current) => ({
-          personen: current.personen.map((item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  kundenprofilId: kunde.id,
-                  kundenIds: [...new Set([...item.kundenIds, kunde.id])],
-                }
-              : item,
-          ),
-          kunden: [...current.kunden, { ...kunde, kontaktIds: [id] }],
-        }));
       },
-      updatePerson: async (id, patch) => {
-        const person = state.personen.find((item) => item.id === id);
-        if (!person) return;
-        const saved = await crm.updatePerson(person, patch);
-        setState((current) => ({
-          ...current,
-          personen: current.personen.map((item) =>
-            item.id === id
-              ? { ...item, ...saved, kundenIds: item.kundenIds, eventRollen: item.eventRollen }
-              : item,
-          ),
-        }));
+      neuePersonAlsKunde: async (person, kunde) => {
+        await workspace.createPersonAndKunde(person, {
+          ...kunde,
+          typ: "person",
+          kontaktIds: [],
+          events: [],
+        });
       },
-      updateKunde: async (id, patch) => {
-        const kunde = state.kunden.find((item) => item.id === id);
-        if (!kunde) return;
-        const saved = await crm.updateKunde(kunde, patch);
-        setState((current) => ({
-          ...current,
-          kunden: current.kunden.map((item) =>
-            item.id === id
-              ? { ...item, ...saved, kontaktIds: item.kontaktIds, events: item.events }
-              : item,
-          ),
-        }));
-      },
-      verknuepfe: (personId, kundeId) => commit((current) => crm.link(current, personId, kundeId)),
-      loeseVerknuepfung: (personId, kundeId) =>
-        commit((current) => crm.unlink(current, personId, kundeId)),
-      kundenVonPerson: (person) =>
-        state.kunden.filter((kunde) => person.kundenIds.includes(kunde.id)),
-      kontakteVonKunde: (id) => state.personen.filter((person) => person.kundenIds.includes(id)),
-      findeDublette: (vorname, nachname, email) =>
-        state.personen.find(
-          (person) =>
-            person.email.toLowerCase() === email.toLowerCase() ||
-            (personName(person).toLowerCase() === `${vorname} ${nachname}`.trim().toLowerCase() &&
-              !!vorname &&
-              !!nachname),
-        ),
+      updatePerson: workspace.updatePerson,
+      updateKunde: workspace.updateKunde,
+      verknuepfe: workspace.link,
+      loeseVerknuepfung: workspace.unlink,
+      kundenVonPerson: workspace.kundenVonPerson,
+      kontakteVonKunde: workspace.kontakteVonKunde,
+      findeDublette: workspace.findDuplicate,
     }),
-    [state, bereit, fehler, crm, commit],
+    [state, workspace],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

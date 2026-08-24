@@ -8,17 +8,13 @@ describe("locale rendering module", () => {
   it("renders keyed text with German fallback", () => {
     const renderer = createLocaleRenderer("en", catalogs, legacy);
 
-    expect(renderer.translateKey("greeting")).toBe("Hello");
-    expect(renderer.translateKey("missing")).toBe("missing");
+    expect(renderer.translate("greeting")).toBe("Hello");
+    expect(renderer.translate("missing")).toBe("missing");
   });
 
   it("keeps German legacy text and translates English legacy text", () => {
-    expect(createLocaleRenderer("de", catalogs, legacy).translateText("Stammdaten")).toBe(
-      "Stammdaten",
-    );
-    expect(createLocaleRenderer("en", catalogs, legacy).translateText("Stammdaten")).toBe(
-      "Basic data",
-    );
+    expect(createLocaleRenderer("de", catalogs, legacy).translate("Stammdaten")).toBe("Stammdaten");
+    expect(createLocaleRenderer("en", catalogs, legacy).translate("Stammdaten")).toBe("Basic data");
   });
 
   it("formats through the selected locale", () => {

@@ -163,6 +163,12 @@ export async function apiUpdateSettings(settings: Settings): Promise<Settings> {
   return (await response.json()) as Settings;
 }
 
+export async function apiOutlookStatus(): Promise<boolean> {
+  const response = await fetch("/api/v1/settings/outlook/status", { credentials: "include" });
+  if (!response.ok) return false;
+  return ((await response.json()) as { connected?: boolean }).connected === true;
+}
+
 export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
   const response = await fetch(`/api/v1/events/${id}`, {
     method: "PATCH",

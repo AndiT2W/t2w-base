@@ -2,7 +2,7 @@
 title: Persistente Einstellungen und Browser-Regressionstests
 type: concept
 status: active
-updated: 2026-08-20
+updated: 2026-08-23
 sources:
   - ../../services/event-service/prisma/schema.prisma
   - ../../services/event-service/src/settings.controller.ts
@@ -26,6 +26,8 @@ Gespeichert werden insbesondere:
 ## Technische Regel
 
 Der Event-Service stellt eine geschützte `GET/PATCH /api/v1/settings`-API bereit. Die Daten liegen in der PostgreSQL-Tabelle `AppSettings` und werden per Prisma-Migration angelegt. Das Frontend lädt Einstellungen asynchron und muss lokale Formularzustände nach dem Laden synchronisieren, bevor ein Speichern möglich ist.
+
+Der Settings workspace besitzt Laden, normalisierten Formularentwurf, Dirty-Zustand, Speichern und Outlook-Verbindungsstatus hinter einem Interface. Eine verspätete Serverantwort darf einen bereits bearbeiteten Entwurf nicht zurücksetzen.
 
 Ein häufiger Fehler ist ein Formular, das mit leeren Defaults initialisiert wird, während der API-Request noch läuft. Ohne Synchronisierung überschreibt der erste Speichervorgang die bereits geladenen Werte mit diesen Defaults. Deshalb gehören asynchrones Laden, Formular-Synchronisierung und Speichern in denselben Regressionstest.
 

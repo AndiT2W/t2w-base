@@ -20,7 +20,7 @@ export function PageHeader({
   aktion?: ReactNode;
 }) {
   const navigate = useNavigate();
-  const { text } = useI18n();
+  const { t } = useI18n();
   const [global, setGlobal] = useState("");
 
   return (
@@ -35,21 +35,21 @@ export function PageHeader({
               <span key={k.label} className="flex items-center gap-1">
                 {k.to ? (
                   <Link to={k.to} className="transition-colors hover:text-foreground">
-                    {text(k.label)}
+                    {t(k.label)}
                   </Link>
                 ) : (
-                  <span>{text(k.label)}</span>
+                  <span>{t(k.label)}</span>
                 )}
                 <ChevronRight className="size-3" />
               </span>
             ))}
-            <span className="font-medium text-foreground">{text(titel)}</span>
+            <span className="font-medium text-foreground">{t(titel)}</span>
           </nav>
           <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
-            {text(titel)}
+            {t(titel)}
           </h1>
           {beschreibung && (
-            <p className="mt-0.5 text-sm text-muted-foreground">{text(beschreibung)}</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">{t(beschreibung)}</p>
           )}
         </div>
 
@@ -65,7 +65,7 @@ export function PageHeader({
             <Input
               value={suche ? suche.value : global}
               onChange={(e) => (suche ? suche.onChange(e.target.value) : setGlobal(e.target.value))}
-              placeholder={text(suche?.placeholder ?? "Global suchen …")}
+              placeholder={t(suche?.placeholder ?? "Global suchen …")}
               aria-label="Suche"
               className="h-9 pl-8"
             />
@@ -86,7 +86,7 @@ export function PageHeader({
           <Input
             value={suche ? suche.value : global}
             onChange={(e) => (suche ? suche.onChange(e.target.value) : setGlobal(e.target.value))}
-            placeholder={text(suche?.placeholder ?? "Global suchen …")}
+            placeholder={t(suche?.placeholder ?? "Global suchen …")}
             aria-label="Suche"
             className="h-9 pl-8"
           />

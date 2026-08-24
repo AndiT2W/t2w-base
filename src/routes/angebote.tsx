@@ -5,6 +5,7 @@ import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum } from "@/lib/t2w/format";
 import { STATUS_LABEL } from "@/lib/t2w/types";
+import { openOfferEvents } from "@/lib/t2w/event-projections";
 
 export const Route = createFileRoute("/angebote")({
   head: () => ({
@@ -26,9 +27,7 @@ export const Route = createFileRoute("/angebote")({
 
 function Angebote() {
   const { events } = useT2W();
-  const offen = events.filter(
-    (e) => !e.archiviert && (e.status === "anfrage" || e.status === "angebot-gesendet"),
-  );
+  const offen = openOfferEvents(events);
 
   return (
     <div>

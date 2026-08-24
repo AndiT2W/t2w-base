@@ -2,7 +2,7 @@
 title: Locale rendering module
 type: concept
 status: active
-updated: 2026-08-22
+updated: 2026-08-23
 sources:
   - ../../src/lib/i18n.tsx
   - ../../src/components/t2w/PageHeader.tsx
@@ -12,8 +12,8 @@ sources:
 
 # Locale rendering module
 
-The UI uses `useI18n().t` for typed translation keys and `useI18n().text` for legacy route copy while visible routes are migrated. `text` is the explicit rendering seam; it does not mutate already-rendered DOM nodes.
+The UI uses one `useI18n().t(value)` interface for translation keys and visible route copy. Callers no longer choose between keyed and legacy rendering; catalog fallback and compatibility lookup are implementation details of `createLocaleRenderer`.
 
 The former `MutationObserver` translation pass was removed on 2026-08-22. This concentrates fallback lookup and locale selection in `src/lib/i18n.tsx`, improving locality and making the interface testable through rendered output.
 
-The migration is intentionally incremental: remaining route literals should be converted to typed keys or `text()` at their next touch. The language E2E suite is the regression guard.
+Remaining route literals can be converted to stable keys incrementally without changing the caller interface. The locale-rendering unit tests and language E2E suite are the regression guards.

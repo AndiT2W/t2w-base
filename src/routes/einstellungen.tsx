@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -9,17 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT2W } from "@/lib/t2w/store";
 import { PageHeader } from "@/components/t2w/PageHeader";
-
-function nachJahrAbsteigend<T extends { jahr: string }>(eintraege: T[]) {
-  return [...eintraege].sort((a, b) => {
-    const jahrA = Number.parseInt(a.jahr, 10);
-    const jahrB = Number.parseInt(b.jahr, 10);
-    if (Number.isNaN(jahrA) && Number.isNaN(jahrB)) return 0;
-    if (Number.isNaN(jahrA)) return 1;
-    if (Number.isNaN(jahrB)) return -1;
-    return jahrB - jahrA;
-  });
-}
+import { apiOutlookStatus } from "@/lib/t2w/api";
+import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 
 export const Route = createFileRoute("/einstellungen")({
   validateSearch: (search) => ({
@@ -47,30 +38,36 @@ function Einstellungen() {
   const { settings, setSettings } = useT2W();
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
-  const [outlookJahresordner, setOutlookJahresordner] = useState(settings.outlookJahresordner);
-  const [sites, setSites] = useState(() => nachJahrAbsteigend(settings.jahresSites));
-  const [mailbox, setMailbox] = useState(settings.outlookMailbox ?? "");
-  const [outlookStatus, setOutlookStatus] = useState<"idle" | "checking" | "success" | "error">(
-    "idle",
+  const [workspace] = useState(() =>
+    createSettingsWorkspace({ save: setSettings, checkOutlook: apiOutlookStatus }, settings),
   );
+  const { draft, connection: outlookStatus } = useSyncExternalStore(
+    workspace.subscribe,
+    workspace.snapshot,
+    workspace.snapshot,
+  );
+  const { outlookJahresordner, jahresSites: sites, outlookMailbox: mailbox } = draft;
+  const setOutlookJahresordner = (
+    next:
+      | typeof outlookJahresordner
+      | ((current: typeof outlookJahresordner) => typeof outlookJahresordner),
+  ) =>
+    workspace.update({
+      outlookJahresordner: typeof next === "function" ? next(outlookJahresordner) : next,
+    });
+  const setSites = (next: typeof sites | ((current: typeof sites) => typeof sites)) =>
+    workspace.update({ jahresSites: typeof next === "function" ? next(sites) : next });
+  const setMailbox = (next: string) => workspace.update({ outlookMailbox: next });
 
   useEffect(() => {
-    setOutlookJahresordner(settings.outlookJahresordner);
-    setSites(nachJahrAbsteigend(settings.jahresSites));
-    setMailbox(settings.outlookMailbox ?? "");
-  }, [settings]);
+    workspace.acceptLoaded(settings);
+  }, [settings, workspace]);
 
   async function speichern() {
-    const sortierteSites = nachJahrAbsteigend(sites);
-    setSites(sortierteSites);
-    try {
-      await setSettings({
-        outlookJahresordner,
-        jahresSites: sortierteSites,
-        outlookMailbox: mailbox.trim() || null,
-      });
+    const result = await workspace.save();
+    if (result.kind === "saved") {
       toast.success("Einstellungen gespeichert.");
-    } catch {
+    } else {
       toast.error("Einstellungen konnten nicht gespeichert werden.");
     }
   }
@@ -332,17 +329,7 @@ function Einstellungen() {
                     variant="outline"
                     disabled={outlookStatus === "checking" || !mailbox.trim()}
                     onClick={async () => {
-                      setOutlookStatus("checking");
-                      try {
-                        const response = await fetch("/api/v1/settings/outlook/status", {
-                          credentials: "include",
-                        });
-                        const result = (await response.json()) as { connected?: boolean };
-                        if (!response.ok || result.connected !== true) throw new Error();
-                        setOutlookStatus("success");
-                      } catch {
-                        setOutlookStatus("error");
-                      }
+                      await workspace.checkOutlook();
                     }}
                   >
                     Verbindung prüfen

@@ -6,6 +6,7 @@ import { useT2W } from "@/lib/t2w/store";
 import { formatDatum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL } from "@/lib/t2w/types";
 import { cn } from "@/lib/utils";
+import { projectedTasks } from "@/lib/t2w/event-projections";
 
 export const Route = createFileRoute("/aufgaben")({
   head: () => ({
@@ -32,15 +33,7 @@ function Aufgaben() {
   const [nurOffen, setNurOffen] = useState(true);
 
   const zeilen = useMemo(() => {
-    const q = suche.trim().toLowerCase();
-    return events
-      .filter((e) => !e.archiviert)
-      .flatMap((e) => e.aufgaben.map((a) => ({ ...a, event: e })))
-      .filter((a) => (nurOffen ? !a.erledigt : true))
-      .filter((a) =>
-        q ? [a.titel, a.verantwortlich, a.event.name].join(" ").toLowerCase().includes(q) : true,
-      )
-      .sort((a, b) => a.faellig.localeCompare(b.faellig));
+    return projectedTasks(events, { openOnly: nurOffen, query: suche });
   }, [events, nurOffen, suche]);
 
   return (

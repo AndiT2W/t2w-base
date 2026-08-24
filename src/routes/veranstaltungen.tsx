@@ -19,6 +19,7 @@ import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
 import { jahr } from "@/lib/t2w/eventcode";
+import { selectEvents, type ArchiveSelection, type EventPeriod } from "@/lib/t2w/event-projections";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -46,8 +47,8 @@ export const Route = createFileRoute("/veranstaltungen")({
   component: Veranstaltungen,
 });
 
-type Zeitraum = "alle" | "kommend" | "laufend" | "vergangen" | "monat";
-type ArchivFilter = "aktiv" | "archiv" | "alle";
+type Zeitraum = EventPeriod;
+type ArchivFilter = ArchiveSelection;
 
 function Veranstaltungen() {
   const { q, ansicht } = Route.useSearch();
@@ -60,29 +61,13 @@ function Veranstaltungen() {
   const heute = heuteIso();
 
   const gefiltert = useMemo(() => {
-    const suchbegriff = suche.trim().toLowerCase();
-    const monat = heute.slice(0, 7);
-    return events
-      .filter((e) =>
-        archiv === "alle" ? true : archiv === "archiv" ? e.archiviert : !e.archiviert,
-      )
-      .filter((e) => (status === "alle" ? true : e.status === status))
-      .filter((e) => {
-        if (zeitraum === "alle") return true;
-        if (zeitraum === "kommend") return e.start > heute;
-        if (zeitraum === "vergangen") return e.ende < heute;
-        if (zeitraum === "laufend") return e.start <= heute && e.ende >= heute;
-        return e.start.slice(0, 7) === monat || e.ende.slice(0, 7) === monat;
-      })
-      .filter((e) =>
-        suchbegriff
-          ? [e.eventcode, e.name, e.veranstalter, e.verantwortlicher, e.ort]
-              .join(" ")
-              .toLowerCase()
-              .includes(suchbegriff)
-          : true,
-      )
-      .sort((a, b) => a.start.localeCompare(b.start));
+    return selectEvents(events, {
+      query: suche,
+      status,
+      period: zeitraum,
+      archive: archiv,
+      today: heute,
+    });
   }, [events, suche, status, zeitraum, archiv, heute]);
 
   if (ansicht === "kalender") return <KalenderSeite veranstaltungsmenue />;

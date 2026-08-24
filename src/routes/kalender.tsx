@@ -6,9 +6,20 @@ import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
-import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
+import { STATUS_LABEL, STATUS_ORDER, type T2WEvent } from "@/lib/t2w/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { activeEvents, austrianHoliday } from "@/lib/t2w/event-projections";
+import {
+  addDays,
+  iso,
+  mondayOf,
+  MONATE,
+  segmenteFuerWoche,
+  STATUS_BAR,
+  WOCHENTAGE,
+  type Segment,
+} from "@/lib/t2w/kalender";
 
 export const Route = createFileRoute("/kalender")({
   head: () => ({
@@ -27,97 +38,6 @@ export const Route = createFileRoute("/kalender")({
   }),
   component: KalenderSeite,
 });
-
-const WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-const MONATE = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-];
-
-const STATUS_BAR: Record<EventStatus, string> = {
-  anfrage: "bg-status-angefragt",
-  "angebot-gesendet": "bg-status-angefragt",
-  abgesagt: "bg-status-storniert",
-  akquise: "bg-status-angefragt",
-  "datum-pruefen": "bg-status-angefragt",
-  zugesagt: "bg-status-zugesagt",
-};
-
-function iso(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function addDays(d: Date, n: number) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-function mondayOf(d: Date) {
-  const x = new Date(d);
-  const wd = (x.getDay() + 6) % 7;
-  return addDays(x, -wd);
-}
-
-type Segment = {
-  event: T2WEvent;
-  start: number;
-  span: number;
-  startsHere: boolean;
-  endsHere: boolean;
-};
-
-function segmenteFuerWoche(events: T2WEvent[], wochenStart: Date): Segment[][] {
-  const tage = Array.from({ length: 7 }, (_, i) => iso(addDays(wochenStart, i)));
-  const ersterTag = tage[0]!;
-  const letzterTag = tage[6]!;
-  const relevante = events
-    .filter((e) => e.start <= letzterTag && e.ende >= ersterTag)
-    .sort((a, b) => a.start.localeCompare(b.start) || b.ende.localeCompare(a.ende));
-
-  const zeilen: Segment[][] = [];
-  for (const e of relevante) {
-    const startIdx = Math.max(
-      0,
-      tage.findIndex((t) => t >= e.start),
-    );
-    let endIdx = 6;
-    for (let i = 6; i >= 0; i -= 1) {
-      if (tage[i]! <= e.ende) {
-        endIdx = i;
-        break;
-      }
-    }
-    const seg: Segment = {
-      event: e,
-      start: startIdx,
-      span: Math.max(1, endIdx - startIdx + 1),
-      startsHere: e.start >= ersterTag,
-      endsHere: e.ende <= letzterTag,
-    };
-    let platziert = false;
-    for (const zeile of zeilen) {
-      const kollision = zeile.some(
-        (s) => seg.start < s.start + s.span && s.start < seg.start + seg.span,
-      );
-      if (!kollision) {
-        zeile.push(seg);
-        platziert = true;
-        break;
-      }
-    }
-    if (!platziert) zeilen.push([seg]);
-  }
-  return zeilen;
-}
 
 function Balken({ seg }: { seg: Segment }) {
   const e = seg.event;
@@ -216,7 +136,7 @@ export function KalenderSeite({
   const { t } = useI18n();
   const [modus, setModus] = useState<"monat" | "woche" | "tag">("monat");
   const [anker, setAnker] = useState(() => new Date());
-  const sichtbareEvents = useMemo(() => events.filter((e) => !e.archiviert), [events]);
+  const sichtbareEvents = useMemo(() => activeEvents(events), [events]);
 
   const monatsStart = new Date(anker.getFullYear(), anker.getMonth(), 1);
   const gitterStart = mondayOf(monatsStart);
@@ -381,43 +301,5 @@ function KalenderReiter({
 }
 
 function oesterreichischerFeiertag(datum: Date) {
-  const fix = new Map([
-    ["1-1", "Neujahr"],
-    ["1-6", "Heilige Drei Könige"],
-    ["5-1", "Staatsfeiertag"],
-    ["8-15", "Mariä Himmelfahrt"],
-    ["10-26", "Nationalfeiertag"],
-    ["11-1", "Allerheiligen"],
-    ["12-8", "Mariä Empfängnis"],
-    ["12-25", "Christtag"],
-    ["12-26", "Stefanitag"],
-  ]);
-  const fixerFeiertag = fix.get(`${datum.getMonth() + 1}-${datum.getDate()}`);
-  if (fixerFeiertag) return fixerFeiertag;
-  const ostersonntag = ostersonntagFuer(datum.getFullYear());
-  const tageSeitOstern = Math.round((datum.getTime() - ostersonntag.getTime()) / 86400000);
-  return new Map([
-    [1, "Ostermontag"],
-    [39, "Christi Himmelfahrt"],
-    [50, "Pfingstmontag"],
-    [60, "Fronleichnam"],
-  ]).get(tageSeitOstern);
-}
-
-function ostersonntagFuer(jahr: number) {
-  const a = jahr % 19,
-    b = Math.floor(jahr / 100),
-    c = jahr % 100,
-    d = Math.floor(b / 4),
-    e = b % 4,
-    f = Math.floor((b + 8) / 25),
-    g = Math.floor((b - f + 1) / 3),
-    h = (19 * a + b - d - g + 15) % 30,
-    i = Math.floor(c / 4),
-    k = c % 4,
-    l = (32 + 2 * e + 2 * i - h - k) % 7,
-    m = Math.floor((a + 11 * h + 22 * l) / 451),
-    monat = Math.floor((h + l - 7 * m + 114) / 31),
-    tag = ((h + l - 7 * m + 114) % 31) + 1;
-  return new Date(Date.UTC(jahr, monat - 1, tag));
+  return austrianHoliday(datum);
 }

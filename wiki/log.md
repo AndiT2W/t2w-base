@@ -2,6 +2,7 @@
 
 ## 2026-08-23
 
+- Published GitHub issue #32 specifying a central containerized Codex gateway with a stable internal task interface, a first `mail-summary` workflow, shared ChatGPT Plus authentication, strict security limits, and regression-test requirements.
 - CRM-Seam mit zwei echten Adaptern vervollständigt: Event-Service/HTTP bleibt Standard, `VITE_CRM_ADAPTER=local` aktiviert explizit einen persistenten LocalStorage-Demo-Adapter. Beide implementieren dasselbe Person/Kunde-Interface und dieselben Beziehungsinvarianten.
 - CRM-Modul auf ausschließliche Event-Service-Persistenz umgestellt; Demo-Daten und `localStorage` entfernt. Person–Kunde-Zuordnungen werden pessimistisch über `OrganizerContact` gespeichert.
 - Event-Workspace vertieft: Speichern, Versionskonflikte, Datumsnormalisierung und Outlook-Synchronisierung liefern explizite Ergebnisse hinter einem Interface.
@@ -115,15 +116,18 @@
 - Collected backend UI inspiration references from Stripe, Supabase, Retool, and Vercel for future dashboard styling.
 - Created a new local Penpot project for an additional TIME2WIN payroll UI variant and imported `local-services/penpot/payroll-lohnuebersicht-soft-variant.png`.
 - Added the source page `wiki/sources/2026-07-01-penpot-payroll-lohnuebersicht-soft-variant.md` plus the new SVG/PNG assets for the payroll overview variant.
+
 # 2026-07-07
 
 - Added a source page for the user request about an event-centered mail analysis and knowledge service.
 - Added the concept page [concepts/event-communication-knowledge-service.md](concepts/event-communication-knowledge-service.md) to capture a proposed pipeline, data model, matching strategy, MVP slice, and risks.
+
 ## 2026-08-17
 
 - Explored an Invoice Ninja-inspired T2W Base shell with left-side navigation, top global search, and an operations-focused overview for events, tasks, invoices, and communication. Inline mockup: `t2w-invoice-ninja-layout.html` in the thread visualization workspace.
 - Discussed additional event-planning views: calendar, week, event-weekend, and Gantt/timeline. Proposed using them as synchronized projections of the same event/task data, with Gantt inside event detail and the weekend view focused on live operations.
 - Refined the planning requirement: the weekly overview must show event counts per day together with resource capacity rows, especially vehicles. A resource-calendar mockup was created with day totals, vehicle/team rows, and visible conflicts.
+
 # 2026-08-17
 
 - Concrete communication-hub UX and implementation shape added to [Event Communication Knowledge Service](concepts/event-communication-knowledge-service.md): unified event timeline, latest-facts/open-loops side rail, channel adapters, review queue, and phased delivery.
@@ -135,6 +139,7 @@
 
 - Split the lean Invoice MVP parent issue [#1](https://github.com/AndiT2W/t2w-base/issues/1) into twelve dependency-ordered tracer-bullet tickets #2–#13, all marked `ready-for-agent`.
 - The first implementation target is [#2 Billing-Grundgerüst und erster Angebotsentwurf](https://github.com/AndiT2W/t2w-base/issues/2).
+
 # 2026-08-19
 
 - Verbindliche Eventstatuswerte aus dem Wiki bestätigt: Anfrage, Angebot gesendet, Zugesagt, Abgesagt, Akquise und Datum prüfen. Die bisherige UI-Statusliste ist fachlich überholt.
@@ -174,6 +179,7 @@
 - 2026-08-20: Spezifikation für die mehrsprachige Produktgrundlage als [GitHub Issue #26](https://github.com/AndiT2W/t2w-base/issues/26) veröffentlicht und mit `enhancement` sowie `ready-for-agent` markiert.
 - 2026-08-21: Sichtbarer Sprachumschalter in der gemeinsamen Sidebar ergänzt; Deutsch/Englisch kann dort gewählt werden und die Präferenz bleibt über Sitzungen erhalten. Browser-E2E-Test für den Bedienablauf ergänzt.
 - 2026-08-21: TIME2WIN-CI umgesetzt: Markenfarben `#8DC63F`/`#05193A`, freigegebenes `time2win_logo_button.svg` als Sidebar-Icon und Favicon integriert. Ausgangs-Stylesheet als `src/styles_begin.css` archiviert; CI-Stand auf `https://base.time2win.cloud` deployed.
+
 # 2026-08-20
 
 - Implemented the first Outlook folder integration slice for issue #25: Graph adapter seam, stable event folder IDs/status fields, idempotent year/quarter/event folder provisioning, and a protected event sync endpoint.
@@ -193,15 +199,18 @@
 - 2026-08-22: ClickUp-Import-Excel geprüft. Für den Eventimport müssen Kunde, Veranstalter, Rechnungsempfänger und Auszahlungsempfänger über stabile Stammdaten-IDs bzw. eine separate Zuordnungstabelle verknüpft werden; `Rechnungsempfänger` ist im Export leer, `Auszahlungsempfänger` Freitext. Wiederholte Kopfzeilen und Zeichencodierungsfehler wurden als zusätzliche Bereinigungen festgestellt.
 - 2026-08-22: Importregel vereinbart: Ist der Rechnungsempfänger leer, wird der Auszahlungsempfänger als Rechnungsempfänger verwendet; die automatische Übernahme soll nachvollziehbar markiert werden.
 - 2026-08-22: Fehlende englische Übersetzungen für Eventstatus und Schnellfilter ergänzt; die Sprach-E2E-Tests prüfen jetzt auch „Confirmed“ und „All statuses“.
+
 ## 2026-08-22
 
 - Ticket #29 umgesetzt/weitergeführt: Dashboard zeigt Outlook-/SharePoint-Ordner in der Tabellenansicht nur noch als Symbole; Kalenderansichten erlauben horizontales Scrollen und zeigen Feiertagsnamen sichtbar an.
 - Zahlungsziel aus dem CRM-Kundenmodell, Demo-Daten, Erzeugung und UI entfernt. CRM-Zuordnungen unterstützen Suche und Aufheben.
 - Verifikation: `npm run build` erfolgreich. Repository-Lint bleibt wegen bestehender Prettier-/CRLF-Fehler in vielen Dateien rot.
+
 # 2026-08-22
 
 - Deepened the locale rendering module: removed the global DOM `MutationObserver`, added the explicit `useI18n().text` rendering seam, migrated shared page headers and overview status/filter text, and verified all language E2E tests.
 - 2026-08-23: Issue #30 erstellt: Veranstalter im Event wird verbindlich über eine stabile Kunden-ID mit „Kunden & Kontakte“ verknüpft. Festgelegt wurden Migration bestehender Freitextwerte, Rückverknüpfung im Kundenprofil, manuelles Aufheben, getrennte Eventrollen und Browser-E2E-Tests.
+
 # 2026-08-23
 
 - Offene Ticket-29-Verbesserungen nachgezogen: Kalender- und Gantt-Ansichten erzwingen auf kleinen Viewports eine echte horizontale Scrollfläche; E2E-Regressionsabdeckung ergänzt für österreichische Feiertagsnamen, Scrollbarkeit, CRM-Zuordnungsaufhebung nach Reload und das entfernte Zahlungsziel.
@@ -214,3 +223,4 @@
 - 2026-08-23: Kunden-Detaildialog auf eine zugängliche Such-Combobox umgestellt. Kontaktoptionen filtern dynamisch; Pfeiltasten, Enter und Escape sowie ARIA-Combobox-/Listbox-Zustände sind abgedeckt. Vollständige Playwright-Suite 17/17 und Produktions-Build erfolgreich.
 - 2026-08-23: Issue #30 ergänzt: Persistenzfehler bei der Neuanlage von Kontakten/Kunden für Funktion und Ort/Adresse sowie E2E-Abdeckung von Anlage, Detailansicht und Reload-Persistenz.
 - 2026-08-23: Event-Architektur weiter vertieft: Der Event workspace besitzt nun die persistierte Event-Sammlung und alle pessimistischen Create/Save/Sync-Übergänge; React beobachtet sie über einen External-Store-Seam. Backend-Eventmutationen bündeln Veranstalterauflösung, Empfängerdefaults, Versionskonflikte und Empfängerersetzung atomar hinter einem Domain-Modul mit Prisma- und In-Memory-Adaptern.
+- 2026-08-23: Vier Architektur-Deepenings umgesetzt: CRM workspace für autoritativen Zustand und kombinierte Übergänge, gemeinsame Event-Projektionen für alle Ansichten, Settings workspace mit Dirty-sicherem asynchronem Laden sowie ein einziges Locale-Rendering-Interface für Schlüssel und sichtbaren Text. Die bestehenden HTTP-/Persistenzinterfaces bleiben kompatibel.
