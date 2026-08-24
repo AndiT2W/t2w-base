@@ -94,11 +94,17 @@ jobs:
               "$event_container")
           fi
 
+          if [ -f "$event_deploy_path/.env.events" ]; then
+            event_env_file="$event_deploy_path/.env.events"
+          else
+            event_env_file="$event_deploy_path/.env"
+          fi
+
           echo "Event-Service-Verzeichnis: $event_deploy_path"
           for required_file in \
             "$deploy_path/docker-compose.hostinger.yml" \
             "$event_deploy_path/docker-compose.events.yml" \
-            "$event_deploy_path/.env.events"
+            "$event_env_file"
           do
             if [ ! -f "$required_file" ]; then
               echo "Erforderliche Deployment-Datei fehlt: $required_file"
@@ -108,14 +114,14 @@ jobs:
           tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$deploy_path" --overwrite
           tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$event_deploy_path" --overwrite
           docker compose -f "$deploy_path/docker-compose.hostinger.yml" up -d --build app nginx
-          docker compose --env-file "$event_deploy_path/.env.events" \
+          docker compose --env-file "$event_env_file" \
             -f "$event_deploy_path/docker-compose.events.yml" build event-service event-migrate
-          docker compose --env-file "$event_deploy_path/.env.events" \
+          docker compose --env-file "$event_env_file" \
             -f "$event_deploy_path/docker-compose.events.yml" run --rm event-migrate
-          docker compose --env-file "$event_deploy_path/.env.events" \
+          docker compose --env-file "$event_env_file" \
             -f "$event_deploy_path/docker-compose.events.yml" up -d event-service event-backup
           docker compose -f "$deploy_path/docker-compose.hostinger.yml" ps
-          docker compose --env-file "$event_deploy_path/.env.events" \
+          docker compose --env-file "$event_env_file" \
             -f "$event_deploy_path/docker-compose.events.yml" ps
           rm -f "/tmp/t2w-base-$commit_sha.tar.gz"
           REMOTE
