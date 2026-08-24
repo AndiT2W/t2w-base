@@ -74,17 +74,19 @@ jobs:
           HOSTINGER_USER: ${{ secrets.HOSTINGER_USER || 'root' }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || 22 }}
           DEPLOY_PATH: ${{ secrets.HOSTINGER_DEPLOY_PATH || '/docker/t2w-base' }}
+          EVENT_DEPLOY_PATH: ${{ secrets.HOSTINGER_EVENT_DEPLOY_PATH || '/docker/t2w-events' }}
         run: |
           ssh -p "$HOSTINGER_PORT" "$HOSTINGER_USER@$HOSTINGER_HOST" \
             "set -eu; \
              test -f '$DEPLOY_PATH/docker-compose.hostinger.yml'; \
-             test -f '$DEPLOY_PATH/docker-compose.events.yml'; \
-             test -f '$DEPLOY_PATH/.env.events'; \
+             test -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml'; \
+             test -f '$EVENT_DEPLOY_PATH/.env.events'; \
              tar -xzf '/tmp/t2w-base-${GITHUB_SHA}.tar.gz' -C '$DEPLOY_PATH' --overwrite; \
+             tar -xzf '/tmp/t2w-base-${GITHUB_SHA}.tar.gz' -C '$EVENT_DEPLOY_PATH' --overwrite; \
              docker compose -f '$DEPLOY_PATH/docker-compose.hostinger.yml' up -d --build app nginx; \
-             docker compose --env-file '$DEPLOY_PATH/.env.events' -f '$DEPLOY_PATH/docker-compose.events.yml' build event-service event-migrate; \
-             docker compose --env-file '$DEPLOY_PATH/.env.events' -f '$DEPLOY_PATH/docker-compose.events.yml' run --rm event-migrate; \
-             docker compose --env-file '$DEPLOY_PATH/.env.events' -f '$DEPLOY_PATH/docker-compose.events.yml' up -d event-service event-backup; \
+             docker compose --env-file '$EVENT_DEPLOY_PATH/.env.events' -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml' build event-service event-migrate; \
+             docker compose --env-file '$EVENT_DEPLOY_PATH/.env.events' -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml' run --rm event-migrate; \
+             docker compose --env-file '$EVENT_DEPLOY_PATH/.env.events' -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml' up -d event-service event-backup; \
              docker compose -f '$DEPLOY_PATH/docker-compose.hostinger.yml' ps; \
-             docker compose --env-file '$DEPLOY_PATH/.env.events' -f '$DEPLOY_PATH/docker-compose.events.yml' ps; \
+             docker compose --env-file '$EVENT_DEPLOY_PATH/.env.events' -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml' ps; \
              rm -f '/tmp/t2w-base-${GITHUB_SHA}.tar.gz'"
