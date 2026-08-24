@@ -77,16 +77,34 @@ jobs:
           EVENT_DEPLOY_PATH: ${{ secrets.HOSTINGER_EVENT_DEPLOY_PATH || '/docker/t2w-events' }}
         run: |
           ssh -p "$HOSTINGER_PORT" "$HOSTINGER_USER@$HOSTINGER_HOST" \
-            "set -eu; \
-             test -f '$DEPLOY_PATH/docker-compose.hostinger.yml'; \
-             test -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml'; \
-             test -f '$EVENT_DEPLOY_PATH/.env.events'; \
-             tar -xzf '/tmp/t2w-base-${GITHUB_SHA}.tar.gz' -C '$DEPLOY_PATH' --overwrite; \
-             tar -xzf '/tmp/t2w-base-${GITHUB_SHA}.tar.gz' -C '$EVENT_DEPLOY_PATH' --overwrite; \
-             docker compose -f '$DEPLOY_PATH/docker-compose.hostinger.yml' up -d --build app nginx; \
-             docker compose --env-file '$EVENT_DEPLOY_PATH/.env.events' -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml' build event-service event-migrate; \
-             docker compose --env-file '$EVENT_DEPLOY_PATH/.env.events' -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml' run --rm event-migrate; \
-             docker compose --env-file '$EVENT_DEPLOY_PATH/.env.events' -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml' up -d event-service event-backup; \
-             docker compose -f '$DEPLOY_PATH/docker-compose.hostinger.yml' ps; \
-             docker compose --env-file '$EVENT_DEPLOY_PATH/.env.events' -f '$EVENT_DEPLOY_PATH/docker-compose.events.yml' ps; \
-             rm -f '/tmp/t2w-base-${GITHUB_SHA}.tar.gz'"
+            bash -s -- "$DEPLOY_PATH" "$EVENT_DEPLOY_PATH" "$GITHUB_SHA" <<'REMOTE'
+          set -eu
+          deploy_path=$1
+          event_deploy_path=$2
+          commit_sha=$3
+
+          if [ ! -f "$event_deploy_path/.env.events" ]; then
+            event_container=$(docker ps -q --filter label=com.docker.compose.service=event-service | head -n 1)
+            test -n "$event_container"
+            event_deploy_path=$(docker inspect \
+              --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' \
+              "$event_container")
+          fi
+
+          test -f "$deploy_path/docker-compose.hostinger.yml"
+          test -f "$event_deploy_path/docker-compose.events.yml"
+          test -f "$event_deploy_path/.env.events"
+          tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$deploy_path" --overwrite
+          tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$event_deploy_path" --overwrite
+          docker compose -f "$deploy_path/docker-compose.hostinger.yml" up -d --build app nginx
+          docker compose --env-file "$event_deploy_path/.env.events" \
+            -f "$event_deploy_path/docker-compose.events.yml" build event-service event-migrate
+          docker compose --env-file "$event_deploy_path/.env.events" \
+            -f "$event_deploy_path/docker-compose.events.yml" run --rm event-migrate
+          docker compose --env-file "$event_deploy_path/.env.events" \
+            -f "$event_deploy_path/docker-compose.events.yml" up -d event-service event-backup
+          docker compose -f "$deploy_path/docker-compose.hostinger.yml" ps
+          docker compose --env-file "$event_deploy_path/.env.events" \
+            -f "$event_deploy_path/docker-compose.events.yml" ps
+          rm -f "/tmp/t2w-base-$commit_sha.tar.gz"
+          REMOTE
