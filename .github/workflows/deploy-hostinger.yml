@@ -117,7 +117,7 @@ jobs:
           docker compose --env-file "$event_env_file" \
             -f "$event_deploy_path/docker-compose.events.yml" build event-service event-migrate
           docker compose --env-file "$event_env_file" \
-            -f "$event_deploy_path/docker-compose.events.yml" run --rm event-migrate
+            -f "$event_deploy_path/docker-compose.events.yml" run --rm -T event-migrate </dev/null
           docker compose --env-file "$event_env_file" \
             -f "$event_deploy_path/docker-compose.events.yml" up -d event-service event-backup
           docker compose -f "$deploy_path/docker-compose.hostinger.yml" ps
