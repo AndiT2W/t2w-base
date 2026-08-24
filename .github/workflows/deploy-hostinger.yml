@@ -31,6 +31,12 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Verify event service
+        run: |
+          npm ci --prefix services/event-service
+          npm test --prefix services/event-service
+          npm run build --prefix services/event-service
+
   deploy:
     needs: verify
     runs-on: ubuntu-latest
@@ -61,7 +67,7 @@ jobs:
           scp -P "$HOSTINGER_PORT" /tmp/t2w-base-${GITHUB_SHA}.tar.gz \
             "$HOSTINGER_USER@$HOSTINGER_HOST:/tmp/t2w-base-${GITHUB_SHA}.tar.gz"
 
-      - name: Extract and rebuild application
+      - name: Extract and rebuild application and event service
         env:
           HOSTINGER_HOST: ${{ secrets.HOSTINGER_HOST }}
           HOSTINGER_USER: ${{ secrets.HOSTINGER_USER || 'root' }}
@@ -71,7 +77,13 @@ jobs:
           ssh -p "$HOSTINGER_PORT" "$HOSTINGER_USER@$HOSTINGER_HOST" \
             "set -eu; \
              test -f '$DEPLOY_PATH/docker-compose.hostinger.yml'; \
+             test -f '$DEPLOY_PATH/docker-compose.events.yml'; \
+             test -f '$DEPLOY_PATH/.env.events'; \
              tar -xzf '/tmp/t2w-base-${GITHUB_SHA}.tar.gz' -C '$DEPLOY_PATH' --overwrite; \
              docker compose -f '$DEPLOY_PATH/docker-compose.hostinger.yml' up -d --build app nginx; \
+             docker compose --env-file '$DEPLOY_PATH/.env.events' -f '$DEPLOY_PATH/docker-compose.events.yml' build event-service event-migrate; \
+             docker compose --env-file '$DEPLOY_PATH/.env.events' -f '$DEPLOY_PATH/docker-compose.events.yml' run --rm event-migrate; \
+             docker compose --env-file '$DEPLOY_PATH/.env.events' -f '$DEPLOY_PATH/docker-compose.events.yml' up -d event-service event-backup; \
              docker compose -f '$DEPLOY_PATH/docker-compose.hostinger.yml' ps; \
+             docker compose --env-file '$DEPLOY_PATH/.env.events' -f '$DEPLOY_PATH/docker-compose.events.yml' ps; \
              rm -f '/tmp/t2w-base-${GITHUB_SHA}.tar.gz'"
