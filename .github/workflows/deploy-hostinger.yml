@@ -34,6 +34,7 @@ jobs:
       - name: Verify event service
         run: |
           npm ci --prefix services/event-service
+          npm run prisma:generate --prefix services/event-service
           npm test --prefix services/event-service
           npm run build --prefix services/event-service
 
