@@ -170,6 +170,11 @@ async function mockApi(page: Page) {
   });
   await page.route("**/api/v1/organizers**", async (route) => {
     const request = route.request();
+    requests.push({
+      method: request.method(),
+      url: request.url(),
+      body: request.postData() ?? undefined,
+    });
     const link = request.url().match(/\/organizers\/([^/]+)\/contacts\/([^/]+)$/);
     if (link && (request.method() === "PUT" || request.method() === "DELETE")) {
       const [, customerId, personId] = link;
@@ -382,6 +387,29 @@ test("fügt einen per Combobox angeklickten Kontakt im Kundenprofil hinzu", asyn
   await page.getByLabel("Suche").first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
   await expect(page.getByRole("button", { name: "Marion Kessler ×" })).toBeVisible();
+});
+
+test("fügt einen per Combobox angeklickten Kunden im Kontakt hinzu", async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem("t2w-crm-v1"));
+  const requests = await mockApi(page);
+  await page.goto("/kontakte");
+  await page.getByLabel("Suche").first().fill("Marion Kessler");
+  await page.getByText("Marion Kessler").click();
+  await expect(page.getByRole("heading", { name: "Marion Kessler" })).toBeVisible();
+  const search = page.getByRole("combobox", { name: "Kunde zuordnen" });
+  await search.fill("Jonas Feld");
+  await page.getByRole("option", { name: "Jonas Feld" }).click();
+  await expect(page.getByText("Kundenzuordnung gespeichert")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Jonas Feld", exact: true })).toBeVisible();
+  expect(
+    requests.some(
+      ({ method, url }) => method === "PUT" && url.endsWith("/api/v1/organizers/c2/contacts/p1"),
+    ),
+  ).toBeTruthy();
+  await page.reload();
+  await page.getByLabel("Suche").first().fill("Marion Kessler");
+  await page.getByText("Marion Kessler").click();
+  await expect(page.getByRole("button", { name: "Jonas Feld", exact: true })).toBeVisible();
 });
 
 test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Übersicht", async ({

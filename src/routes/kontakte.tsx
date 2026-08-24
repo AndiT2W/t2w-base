@@ -490,22 +490,35 @@ function Assign({
 }: {
   label: string;
   options: string[][];
-  save: (id: string) => void;
+  save: (id: string) => Promise<void>;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const visible = options.filter(([, name]) =>
     name.toLowerCase().includes(query.trim().toLowerCase()),
   );
   const listId = `${label.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}-options`;
-  function selectOption(id: string) {
-    save(id);
-    setQuery("");
-    setOpen(false);
-    setActiveIndex(0);
-    inputRef.current?.focus();
+  async function selectOption(id: string) {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await save(id);
+      setQuery("");
+      setOpen(false);
+      setActiveIndex(0);
+      toast.success(
+        label === "Kunde zuordnen" ? "Kundenzuordnung gespeichert" : "Kontaktzuordnung gespeichert",
+      );
+      inputRef.current?.focus();
+    } catch {
+      toast.error("Zuordnung konnte nicht gespeichert werden");
+      setOpen(true);
+    } finally {
+      setSaving(false);
+    }
   }
   function selectActive() {
     const option = visible[activeIndex];
@@ -524,6 +537,7 @@ function Assign({
           open && visible[activeIndex] ? `${listId}-${visible[activeIndex][0]}` : undefined
         }
         className={input}
+        disabled={saving}
         value={query}
         placeholder={`${label} suchen …`}
         onFocus={() => setOpen(true)}
@@ -542,7 +556,7 @@ function Assign({
             setActiveIndex((index) => Math.max(index - 1, 0));
           } else if (e.key === "Enter") {
             e.preventDefault();
-            selectActive();
+            void selectActive();
           } else if (e.key === "Escape") {
             e.preventDefault();
             setOpen(false);
@@ -566,7 +580,7 @@ function Assign({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   setActiveIndex(index);
-                  selectOption(id);
+                  void selectOption(id);
                 }}
               >
                 {name}

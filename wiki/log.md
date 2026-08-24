@@ -224,3 +224,7 @@
 - 2026-08-23: Issue #30 ergänzt: Persistenzfehler bei der Neuanlage von Kontakten/Kunden für Funktion und Ort/Adresse sowie E2E-Abdeckung von Anlage, Detailansicht und Reload-Persistenz.
 - 2026-08-23: Event-Architektur weiter vertieft: Der Event workspace besitzt nun die persistierte Event-Sammlung und alle pessimistischen Create/Save/Sync-Übergänge; React beobachtet sie über einen External-Store-Seam. Backend-Eventmutationen bündeln Veranstalterauflösung, Empfängerdefaults, Versionskonflikte und Empfängerersetzung atomar hinter einem Domain-Modul mit Prisma- und In-Memory-Adaptern.
 - 2026-08-23: Vier Architektur-Deepenings umgesetzt: CRM workspace für autoritativen Zustand und kombinierte Übergänge, gemeinsame Event-Projektionen für alle Ansichten, Settings workspace mit Dirty-sicherem asynchronem Laden sowie ein einziges Locale-Rendering-Interface für Schlüssel und sichtbaren Text. Die bestehenden HTTP-/Persistenzinterfaces bleiben kompatibel.
+
+# 2026-08-24
+
+- CRM-Kundenzuordnung aus der Kontaktansicht repariert: Die Such-Combobox wartet den Persistenzrequest nun ab, verhindert doppelte Eingaben und zeigt Erfolg oder Fehler sichtbar an. Ein Browser-E2E-Test prüft den konkreten `PUT`, die sichtbare Verknüpfung und deren Persistenz nach Reload; beide Zuordnungsrichtungen sind grün.
