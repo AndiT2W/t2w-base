@@ -123,5 +123,14 @@ jobs:
           docker compose -f "$deploy_path/docker-compose.hostinger.yml" ps
           docker compose --env-file "$event_env_file" \
             -f "$event_deploy_path/docker-compose.events.yml" ps
+          event_router_containers=$(docker ps -q \
+            --filter label=traefik.http.routers.t2w-events.rule)
+          event_router_count=$(printf '%s\n' "$event_router_containers" | sed '/^$/d' | wc -l)
+          docker ps --filter label=traefik.http.routers.t2w-events.rule \
+            --format 'Event-Router-Container: {{.Names}} ({{.Image}})'
+          if [ "$event_router_count" -ne 1 ]; then
+            echo "Erwartet genau einen Event-Router-Container, gefunden: $event_router_count"
+            exit 1
+          fi
           rm -f "/tmp/t2w-base-$commit_sha.tar.gz"
           REMOTE
