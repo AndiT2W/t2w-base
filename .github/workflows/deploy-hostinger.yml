@@ -84,16 +84,27 @@ jobs:
           commit_sha=$3
 
           if [ ! -f "$event_deploy_path/.env.events" ]; then
-            event_container=$(docker ps -q --filter label=com.docker.compose.service=event-service | head -n 1)
-            test -n "$event_container"
+            event_container=$(docker ps -aq --filter label=com.docker.compose.service=event-service | head -n 1)
+            if [ -z "$event_container" ]; then
+              echo "Event-Service-Container mit Compose-Label nicht gefunden."
+              exit 1
+            fi
             event_deploy_path=$(docker inspect \
               --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' \
               "$event_container")
           fi
 
-          test -f "$deploy_path/docker-compose.hostinger.yml"
-          test -f "$event_deploy_path/docker-compose.events.yml"
-          test -f "$event_deploy_path/.env.events"
+          echo "Event-Service-Verzeichnis: $event_deploy_path"
+          for required_file in \
+            "$deploy_path/docker-compose.hostinger.yml" \
+            "$event_deploy_path/docker-compose.events.yml" \
+            "$event_deploy_path/.env.events"
+          do
+            if [ ! -f "$required_file" ]; then
+              echo "Erforderliche Deployment-Datei fehlt: $required_file"
+              exit 1
+            fi
+          done
           tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$deploy_path" --overwrite
           tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$event_deploy_path" --overwrite
           docker compose -f "$deploy_path/docker-compose.hostinger.yml" up -d --build app nginx
