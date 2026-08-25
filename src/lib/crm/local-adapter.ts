@@ -1,14 +1,14 @@
-import { DEMO_CRM_STATE } from "./demo";
 import type { CrmModule, CrmState, KundeInput, PersonInput } from "./module";
 import type { Kunde, Person } from "./types";
 
 export type CrmStorage = Pick<Storage, "getItem" | "setItem">;
 const clone = <T>(value: T): T => structuredClone(value);
+const EMPTY_CRM_STATE: CrmState = { personen: [], kunden: [] };
 
 export function createLocalCrmAdapter(
   storage: CrmStorage,
   key = "t2w-crm-v2",
-  seed: CrmState = DEMO_CRM_STATE,
+  seed: CrmState = EMPTY_CRM_STATE,
 ): CrmModule {
   const read = (): CrmState => {
     const saved = storage.getItem(key);
