@@ -543,7 +543,7 @@ test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ pa
 test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "Finanz" }).click();
+  await page.getByRole("tab", { name: "FINANZ" }).click();
   await page.getByRole("combobox", { name: "Auszahlungsempfänger" }).click();
   await page.getByRole("option", { name: "Jonas Feld" }).click();
   const recipientDetails = page.getByLabel("Stammdaten Auszahlungsempfänger");
@@ -573,7 +573,7 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
 test("zeigt Veranstalterkontakte und übernimmt sie als Eventkontakt", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "Kontakte" }).click();
+  await page.getByRole("tab", { name: "KONTAKTE" }).click();
   await expect(page.getByRole("heading", { name: "Kontakte des Veranstalters" })).toBeVisible();
   await expect(page.getByText("Marion Kessler", { exact: true })).toBeVisible();
   await page

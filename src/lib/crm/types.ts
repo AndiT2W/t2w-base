@@ -31,6 +31,7 @@ export type Kunde = {
   typ: "firma" | "person";
   name: string;
   personId: string | null;
+  primaryContactId?: string | null;
   uid: string;
   iban: string;
   bic: string;

@@ -256,13 +256,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <Tabs defaultValue="stammdaten">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="stammdaten">{t("detail.basicData")}</TabsTrigger>
+          <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
           <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
-          <TabsTrigger value="finanz">Finanz</TabsTrigger>
-          <TabsTrigger value="kontakte">{t("nav.contacts")}</TabsTrigger>
-          <TabsTrigger value="aufgaben">{t("nav.tasks")}</TabsTrigger>
-          <TabsTrigger value="dateien">{t("detail.files")}</TabsTrigger>
-          <TabsTrigger value="kommunikation">{t("detail.communication")}</TabsTrigger>
+          <TabsTrigger value="finanz">FINANZ</TabsTrigger>
+          <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
+          <TabsTrigger value="aufgaben">AUFGABEN</TabsTrigger>
+          <TabsTrigger value="dateien">DATEIEN</TabsTrigger>
+          <TabsTrigger value="kommunikation">KOMMUNIKATION</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stammdaten" className="space-y-4">

@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -22,7 +23,7 @@ export class MasterDataController {
     return this.prisma.organizer.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      include: { contacts: { include: { contact: true } }, person: true },
+      include: { contacts: { include: { contact: true } }, person: true, primaryContact: true },
     });
   }
   @Post("organizers") organizer(
@@ -30,6 +31,7 @@ export class MasterDataController {
     body: {
       name: string;
       personId?: string;
+      primaryContactId?: string;
       country?: string;
       city?: string;
       street?: string;
@@ -46,6 +48,7 @@ export class MasterDataController {
         name: body.name,
         type: body.personId ? "PERSON" : "ORGANISATION",
         personId: body.personId,
+        primaryContactId: body.primaryContactId,
         country: body.country,
         city: body.city,
         street: body.street,
@@ -64,6 +67,7 @@ export class MasterDataController {
     body: {
       name?: string;
       personId?: string | null;
+      primaryContactId?: string | null;
       country?: string;
       city?: string;
       street?: string;
@@ -79,6 +83,12 @@ export class MasterDataController {
   }
   @Patch("organizers/:id/deactivate") deactivateOrganizer(@Param("id", ParseUUIDPipe) id: string) {
     return this.prisma.organizer.update({ where: { id }, data: { active: false } });
+  }
+  @Delete("organizers/:id")
+  async deleteOrganizer(@Param("id", ParseUUIDPipe) id: string) {
+    const references = await this.prisma.organizer.findUniqueOrThrow({ where: { id }, include: { events: true, payoutEvents: true, invoiceRecipients: true, contacts: true, person: true, primaryContact: true } });
+    if (references.events.length || references.payoutEvents.length || references.invoiceRecipients.length || references.contacts.length || references.person || references.primaryContact) throw new ConflictException("ORGANIZER_REFERENCED");
+    await this.prisma.organizer.delete({ where: { id } });
   }
   @Put("organizers/:organizerId/contacts/:contactId")
   @HttpCode(204)
@@ -163,6 +173,12 @@ export class MasterDataController {
     },
   ) {
     return this.prisma.contact.update({ where: { id }, data: body });
+  }
+  @Delete("contacts/:id")
+  async deleteContact(@Param("id", ParseUUIDPipe) id: string) {
+    const references = await this.prisma.contact.findUniqueOrThrow({ where: { id }, include: { organizers: true, eventRoles: true, customerProfile: true, primaryForOrganizers: true } });
+    if (references.organizers.length || references.eventRoles.length || references.customerProfile || references.primaryForOrganizers.length) throw new ConflictException("CONTACT_REFERENCED");
+    await this.prisma.contact.delete({ where: { id } });
   }
   @Post("contacts/:id/customer-profile") customerProfile(
     @Param("id", ParseUUIDPipe) id: string,

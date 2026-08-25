@@ -454,6 +454,13 @@ function CustomerDetail({
         />
       </div>
       <section>
+        <h3 className="mb-2 font-semibold">Hauptansprechperson</h3>
+        <select aria-label="Hauptansprechperson" className={input} value={customer.primaryContactId ?? ""} onChange={(e) => void crm.updateKunde(customer.id, { primaryContactId: e.target.value || null })}>
+          <option value="">Keine Hauptansprechperson</option>
+          {contacts.map((person) => <option key={person.id} value={person.id}>{personName(person)}</option>)}
+        </select>
+      </section>
+      <section>
         <h3 className="mb-2 font-semibold">Kontakte ({contacts.length})</h3>
         {contacts.map((p) => (
           <button
