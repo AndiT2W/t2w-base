@@ -81,16 +81,15 @@ jobs:
           deploy_path=$1
           commit_sha=$2
 
-          for required_file in \
-            "$deploy_path/docker-compose.yml" \
-            "$deploy_path/.env"
-          do
-            if [ ! -f "$required_file" ]; then
-              echo "Erforderliche Deployment-Datei fehlt: $required_file"
-              exit 1
-            fi
-          done
+          if [ ! -f "$deploy_path/.env" ]; then
+            echo "Erforderliche Deployment-Datei fehlt: $deploy_path/.env"
+            exit 1
+          fi
           tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$deploy_path" --overwrite
+          if [ ! -f "$deploy_path/docker-compose.yml" ]; then
+            echo "docker-compose.yml fehlt im Release-Archiv"
+            exit 1
+          fi
           docker compose -f "$deploy_path/docker-compose.yml" up -d --build app nginx event-db event-service event-backup
           docker compose -f "$deploy_path/docker-compose.yml" --profile migrate run --rm -T event-migrate </dev/null
           docker compose -f "$deploy_path/docker-compose.yml" ps
