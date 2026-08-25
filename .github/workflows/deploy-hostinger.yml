@@ -91,6 +91,7 @@ jobs:
             exit 1
           fi
           docker compose -f "$deploy_path/docker-compose.yml" up -d --build app nginx event-db event-service event-backup
+          docker compose -f "$deploy_path/docker-compose.yml" --profile migrate build event-migrate
           docker compose -f "$deploy_path/docker-compose.yml" --profile migrate run --rm -T event-migrate </dev/null
           docker compose -f "$deploy_path/docker-compose.yml" ps
           event_router_containers=$(docker ps -q \
