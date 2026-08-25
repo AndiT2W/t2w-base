@@ -472,6 +472,27 @@ test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) 
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
 });
 
+test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/kontakte");
+  await page.getByRole("link", { name: "Neu anlegen" }).click();
+  await page.getByLabel("Vorname").fill("Eva");
+  await page.getByLabel("Nachname").fill("Persistenz");
+  await page.getByLabel("Funktion").fill("Projektleitung");
+  await page.getByLabel("Ort").fill("Graz");
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await expect(page.getByText("Datensatz angelegt")).toBeVisible();
+  await page.getByLabel("Suche").first().fill("Eva Persistenz");
+  await page.getByText("Eva Persistenz").click();
+  await expect(page.getByLabel("Funktion").last()).toHaveValue("Projektleitung");
+  await expect(page.getByLabel("Ort").last()).toHaveValue("Graz");
+  await page.reload();
+  await page.getByLabel("Suche").first().fill("Eva Persistenz");
+  await page.getByText("Eva Persistenz").click();
+  await expect(page.getByLabel("Funktion").last()).toHaveValue("Projektleitung");
+  await expect(page.getByLabel("Ort").last()).toHaveValue("Graz");
+});
+
 test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");

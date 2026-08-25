@@ -122,6 +122,8 @@ export class MasterDataController {
       email?: string;
       phone?: string;
       note?: string;
+      function?: string;
+      location?: string;
     },
   ) {
     return this.prisma.contact.create({ data: body });
@@ -136,6 +138,8 @@ export class MasterDataController {
       email?: string;
       phone?: string;
       note?: string;
+      function?: string;
+      location?: string;
       archived?: boolean;
     },
   ) {

@@ -236,3 +236,6 @@
 # 2026-08-25
 
 - Expanded the persistent Event workspace for ticket #20: event roles, tasks, file references, and manual activities now have Event-Service persistence models and detail-page actions. TIME2WIN link state is surfaced separately from the local participant forecast. Evidence: `services/event-service/prisma/migrations/0007_event_workspace/migration.sql`, `src/routes/events.$eventcode.tsx`.
+# 2026-08-25
+
+- Fixed ticket #30: contact function and location were collected in the UI but omitted by the HTTP CRM mapping and database model. They now persist via `Contact.function` and `Contact.location`; the customer creation form also exposes its billing address. A browser E2E test covers create, detail display, and reload persistence.

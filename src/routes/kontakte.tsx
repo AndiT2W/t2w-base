@@ -617,6 +617,7 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
     iban: "",
     bank: "",
     rechnungsAdresse: "",
+    rechnungsAdresse: "",
     rechnungsEmail: "",
   });
   const create = async () => {
@@ -686,6 +687,7 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
               {f(k, setK, "uid", "UID")}
               {f(k, setK, "iban", "IBAN")}
               {f(k, setK, "bank", "Bank")}
+              {f(k, setK, "rechnungsAdresse", "Rechnungsadresse")}
               {f(k, setK, "rechnungsEmail", "Rechnungs-E-Mail")}
             </>
           )}

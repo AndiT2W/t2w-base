@@ -6,6 +6,7 @@ Updated: 2026-08-25
 
 - The CRM module exposes one Person/Kunde domain interface with two real adapters. The deployed HTTP adapter uses the protected `/api/v1/contacts` and `/api/v1/organizers` endpoints; the local demo adapter persists the same domain records in `localStorage`.
 - The deployed HTTP adapter is the default. `VITE_CRM_ADAPTER=local` explicitly selects the local demo adapter; adapters never fall back to one another.
+- Contact records persist `function` and `location` through the HTTP adapter and Event-Service; customer billing addresses use the existing `Organizer.address` field.
 - CRM mutations are pessimistic: visible state changes only after the selected adapter confirms persistence. The HTTP adapter stores Person–Kunde links in `OrganizerContact`; the local adapter maintains the same reciprocal relationship invariant.
 - The CRM workspace owns the authoritative Person/Kunde state and combined Person-plus-Kundenprofil transitions. `useCrm()` remains a compatibility interface; routes no longer coordinate multi-step mutations through stale React snapshots.
 - The Event workspace module owns the authoritative Event collection plus pessimistic creation, date normalization, asynchronous save outcomes, version-conflict reporting, Outlook planning, and synchronization. React observes its collection through the external-store seam; routes keep the compatible `useT2W()` interface and do not replace persisted Events themselves.

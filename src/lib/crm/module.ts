@@ -22,6 +22,8 @@ type ApiPerson = {
   email?: string | null;
   phone?: string | null;
   note?: string | null;
+  function?: string | null;
+  location?: string | null;
   organizers?: { organizer: { id: string } }[];
   customerProfile?: { id: string } | null;
   eventRoles?: { role: string; event?: { eventCode: string; name: string } }[];
@@ -54,8 +56,8 @@ function mapPerson(value: ApiPerson): Person {
     nachname: value.lastName ?? split.at(-1) ?? "",
     email: value.email ?? "",
     telefon: value.phone ?? "",
-    funktion: "",
-    ort: "",
+    funktion: value.function ?? "",
+    ort: value.location ?? "",
     notiz: value.note ?? "",
     kundenprofilId: value.customerProfile?.id ?? null,
     kundenIds: value.organizers?.map(({ organizer }) => organizer.id) ?? [],
@@ -142,6 +144,8 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             email: input.email,
             phone: input.telefon,
             note: input.notiz,
+            function: input.funktion,
+            location: input.ort,
           }),
         }),
       );
@@ -176,6 +180,8 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             email: next.email,
             phone: next.telefon,
             note: next.notiz,
+            function: next.funktion,
+            location: next.ort,
           }),
         }),
       );

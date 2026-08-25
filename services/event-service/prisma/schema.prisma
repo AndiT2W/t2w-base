@@ -77,6 +77,8 @@ model Contact {
   firstName   String?
   lastName    String?
   note        String?
+  function    String?
+  location    String?
   archived    Boolean             @default(false)
   syncSource  String?
   externalId  String?
