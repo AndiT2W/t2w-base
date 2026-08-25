@@ -33,6 +33,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [veranstalter, setVeranstalter] = useState("");
+  const [veranstalterId, setVeranstalterId] = useState<string | undefined>();
   const [ort, setOrt] = useState("");
   const [start, setStart] = useState("");
   const [eventcode, setEventcode] = useState("");
@@ -53,6 +54,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   function reset() {
     setName("");
     setVeranstalter("");
+    setVeranstalterId(undefined);
     setOrt("");
     setStart("");
     setEventcode("");
@@ -79,6 +81,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
       name: name.trim(),
       eventcode: eventcode.trim() || vorschau,
       veranstalter: veranstalter.trim() || "—",
+      veranstalterId,
       ort: ort.trim() || "—",
       start,
       ende,
@@ -134,19 +137,14 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
           </div>
           <div>
             <Label htmlFor="veranstalter">Veranstalter</Label>
-            <Input
-              id="veranstalter"
-              value={veranstalter}
-              onChange={(e) => setVeranstalter(e.target.value)}
-              className="mt-1.5"
-            />
             <Select
+              value={veranstalterId}
               onValueChange={(id) => {
                 const kunde = kunden.find((item) => item.id === id);
-                if (kunde) setVeranstalter(kunde.name);
+                if (kunde) { setVeranstalterId(kunde.id); setVeranstalter(kunde.name); }
               }}
             >
-              <SelectTrigger aria-label="Veranstalter aus Stammdaten" className="mt-2">
+              <SelectTrigger aria-label="Veranstalter aus Stammdaten" className="mt-1.5">
                 <SelectValue placeholder="Aus Stammdaten auswählen" />
               </SelectTrigger>
               <SelectContent>

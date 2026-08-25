@@ -26,7 +26,6 @@ export class CreateEventDto {
   @IsOptional() @IsDateString() endAt?: string;
   @IsOptional() @IsEnum(EventStatus) status?: EventStatus;
   @IsOptional() @IsString() organizerId?: string;
-  @IsOptional() @IsString() organizerName?: string;
   @IsOptional() @IsString() sportId?: string;
   @IsOptional() @IsString() location?: string;
   @IsOptional() @IsString() responsible?: string;
@@ -144,6 +143,21 @@ export class EventsController {
       create: { eventId, contactId, role: body.role?.trim() || "Kontakt" },
       update: {},
       include: { contact: true },
+    });
+  }
+
+  @Patch(":id/contacts/:contactId/:role")
+  async updateContactRole(
+    @Param("id", ParseUUIDPipe) eventId: string,
+    @Param("contactId", ParseUUIDPipe) contactId: string,
+    @Param("role") role: string,
+    @Body() body: { role?: string },
+  ) {
+    const nextRole = body.role?.trim() || "Kontakt";
+    await this.prisma.eventContact.deleteMany({ where: { eventId, contactId, role } });
+    return this.prisma.eventContact.upsert({
+      where: { eventId_contactId_role: { eventId, contactId, role: nextRole } },
+      create: { eventId, contactId, role: nextRole }, update: {}, include: { contact: true },
     });
   }
 

@@ -441,7 +441,8 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   await openButton.click();
   await expect(page.getByText("Neues Event anlegen", { exact: true })).toBeVisible();
   await page.getByLabel(/Eventname/).fill("Neues E2E Event");
-  await page.getByLabel("Veranstalter").fill("E2E Veranstalter");
+  await page.getByLabel("Veranstalter aus Stammdaten").click();
+  await page.getByRole("option", { name: "Jonas Feld" }).click();
   await page.getByLabel(/Startdatum/).fill("2026-08-21");
   const code = page.getByLabel("Eventcode-Vorschau");
   await expect(code).toHaveValue("260821_neues_e2e_event");
@@ -451,20 +452,25 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   await expect(page.getByText("Neues E2E Event")).toBeVisible();
   expect(
     requests.some(
-      (request) => request.method === "POST" && request.body?.includes("E2E Veranstalter"),
+      (request) => request.method === "POST" && request.body?.includes('"organizerId":"c2"'),
     ),
   ).toBeTruthy();
 });
 
-test("speichert den Veranstalter der Detailseite über PATCH", async ({ page }) => {
+test("speichert den Veranstalter der Detailseite über seine Stammdaten-ID", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await page.getByLabel("Veranstalter").fill("Neuer E2E Veranstalter");
+  await page.getByLabel("Veranstalter aus Stammdaten").click();
+  await page.getByRole("option", { name: "Jonas Feld" }).click();
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
     requests.some(
-      (request) => request.method === "PATCH" && request.body?.includes("Neuer E2E Veranstalter"),
+      (request) =>
+        request.method === "PATCH" &&
+        request.body?.includes('"organizerId":"c2"') &&
+        request.body.includes('"payoutRecipientId":"c2"') &&
+        request.body.includes('"invoiceRecipientIds":["c2"]'),
     ),
   ).toBeTruthy();
 });

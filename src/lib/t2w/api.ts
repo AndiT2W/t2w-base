@@ -107,6 +107,7 @@ async function eventAction<T>(url: string, method: "POST" | "PATCH" | "DELETE", 
 }
 export const apiAddEventContact = (eventId: string, contactId: string, role: string) => eventAction(`/api/v1/events/${eventId}/contacts/${contactId}`, "POST", { role });
 export const apiRemoveEventContact = (eventId: string, contactId: string, role: string) => eventAction<void>(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "DELETE");
+export const apiUpdateEventContactRole = (eventId: string, contactId: string, role: string, nextRole: string) => eventAction(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "PATCH", { role: nextRole });
 export const apiCreateEventTask = (eventId: string, body: { title: string; dueAt?: string; responsible?: string }) => eventAction(`/api/v1/events/${eventId}/tasks`, "POST", body);
 export const apiUpdateEventTask = (eventId: string, taskId: string, body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) => eventAction(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", body);
 export const apiCreateEventFile = (eventId: string, body: { name: string; url?: string; size?: string }) => eventAction(`/api/v1/events/${eventId}/files`, "POST", body);
@@ -162,7 +163,7 @@ export async function apiCreateEvent(input: {
     body: JSON.stringify({
       name: input.name,
       eventCode: input.eventcode,
-      organizerName: input.veranstalter,
+      organizerId: input.veranstalterId,
       startAt: input.start,
       endAt: input.ende,
       location: input.ort,
@@ -212,7 +213,6 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       responsible: patch.verantwortlicher,
       participantForecast: patch.teilnehmerwerte?.prognose ?? patch.teilnehmer,
       notes: patch.notizen,
-      organizerName: patch.veranstalter,
       organizerId: patch.veranstalterId,
       sportId: patch.sportartId,
       status: patch.status === "anfrage" ? "ANFRAGE" : patch.status === "angebot-gesendet" ? "ANGEBOT_GESENDET" : patch.status === "datum-pruefen" ? "DATUM_PRUEFEN" : patch.status === "akquise" ? "AKQUISE" : patch.status === "abgesagt" ? "ABGESAGT" : "ZUGESAGT",

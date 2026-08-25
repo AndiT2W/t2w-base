@@ -273,3 +273,7 @@
 # 2026-08-25
 
 - Event invoice recipients use a searchable multi-select dropdown and display the same read-only customer master data for every selected recipient.
+
+# 2026-08-25
+
+- Event organizer references now cross the event creation and update seam by stable organizer ID, never by the display name selected from CRM. Changing an Event's organizer resets payout and invoice defaults to that same ID.

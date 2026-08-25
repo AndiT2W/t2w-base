@@ -32,7 +32,7 @@ import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { useCrm } from "@/lib/crm/store";
-import { apiAddEventContact, apiCreateEventActivity, apiCreateEventFile, apiCreateEventTask, apiRemoveEventContact, apiUpdateEventTask } from "@/lib/t2w/api";
+import { apiAddEventContact, apiCreateEventActivity, apiCreateEventFile, apiCreateEventTask, apiRemoveEventContact, apiUpdateEventContactRole, apiUpdateEventTask } from "@/lib/t2w/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
@@ -44,7 +44,7 @@ function RecipientMasterData({ recipient }: { recipient: Kunde }) {
   const address = [recipient.strasse, [recipient.plz, recipient.ort].filter(Boolean).join(" "), recipient.land]
     .filter(Boolean)
     .join(", ");
-  return <dl className="grid gap-x-5 gap-y-2 rounded-md border border-border bg-muted/30 p-3 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">Name</dt><dd>{recipient.name}</dd></div><div><dt className="text-xs text-muted-foreground">Adresse</dt><dd>{address || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">UID</dt><dd>{recipient.uid || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">IBAN</dt><dd>{recipient.iban || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">BIC</dt><dd>{recipient.bic || "—"}</dd></div></dl>;
+  return <dl className="grid gap-x-5 gap-y-2 rounded-md border border-border bg-muted/30 p-3 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">Name</dt><dd><a className="text-primary hover:underline" href={`/kontakte?kunde=${encodeURIComponent(recipient.id)}`}>{recipient.name}</a></dd></div><div><dt className="text-xs text-muted-foreground">Adresse</dt><dd>{address || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">UID</dt><dd>{recipient.uid || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">IBAN</dt><dd>{recipient.iban || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">BIC</dt><dd>{recipient.bic || "—"}</dd></div></dl>;
 }
 
 export const Route = createFileRoute("/events/$eventcode")({
@@ -141,7 +141,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       toast.error("Das Startdatum ist verpflichtend.");
       return;
     }
-    const result = await updateEvent(event.id, form);
+    const organizerChanged = form.veranstalterId !== event.veranstalterId;
+    const nextForm = organizerChanged && form.veranstalterId
+      ? { ...form, auszahlungsempfaengerId: form.veranstalterId, rechnungsempfaengerIds: [form.veranstalterId] }
+      : form;
+    const result = await updateEvent(event.id, nextForm);
     if (result.kind === "saved") {
       setForm(result.event);
       toast.success("Änderungen gespeichert.");
@@ -181,6 +185,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     if (!contactId) return;
     await addEventContact(contactId, contactRole);
     setContactId(""); toast.success("Kontaktrolle gespeichert.");
+  }
+  async function updateContactRole(contact: T2WEvent["kontakte"][number], role: string) {
+    const nextRole = role.trim() || "Kontakt";
+    if (nextRole === contact.rolle) return;
+    await apiUpdateEventContactRole(event.id, contact.id, contact.rolle, nextRole);
+    set("kontakte", form.kontakte.map((item) => item === contact ? { ...item, rolle: nextRole } : item));
+    toast.success("Eventrolle gespeichert.");
   }
   async function addTask() {
     if (!newTask.trim()) return;
@@ -286,8 +297,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </div>
               <div>
                 <Label htmlFor="d-ver">Veranstalter</Label>
-                <Input id="d-ver" value={form.veranstalter} onChange={(e) => set("veranstalter", e.target.value)} className="mt-1.5" />
-                <Select onValueChange={(id) => { const customer = kunden.find((item) => item.id === id); if (customer) { set("veranstalterId", customer.id); set("veranstalter", customer.name); } }}><SelectTrigger className="mt-2"><SelectValue placeholder="Kunde aus Stammdaten auswählen" /></SelectTrigger><SelectContent>{kunden.map((customer) => <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>)}</SelectContent></Select>
+                <Select value={form.veranstalterId} onValueChange={(id) => { const customer = kunden.find((item) => item.id === id); if (customer) { set("veranstalterId", customer.id); set("veranstalter", customer.name); } }}><SelectTrigger aria-label="Veranstalter aus Stammdaten" className="mt-1.5"><SelectValue placeholder="Kunde aus Stammdaten auswählen" /></SelectTrigger><SelectContent>{kunden.map((customer) => <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>)}</SelectContent></Select>
               </div>
               <div>
                 <Label htmlFor="d-start">Startdatum *</Label>
@@ -480,7 +490,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               {form.kontakte.map((k) => (
                 <div key={k.id} className="rounded-md border border-border p-3">
                   <p className="font-medium text-foreground">{k.name}</p>
-                  <p className="text-sm text-muted-foreground">{k.rolle}</p>
+                  <div className="mt-1 flex gap-2"><Input aria-label={`Eventrolle für ${k.name}`} defaultValue={k.rolle} className="h-8 max-w-48" onBlur={(e) => void updateContactRole(k, e.target.value)} /><Button variant="ghost" size="sm" onClick={(e) => void updateContactRole(k, (e.currentTarget.previousElementSibling as HTMLInputElement).value)}>Rolle speichern</Button></div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {k.email} · {k.telefon}
                   </p>

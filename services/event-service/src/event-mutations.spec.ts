@@ -8,19 +8,10 @@ import {
 
 function adapter(): EventMutationAdapter & { events: Map<string, Record<string, unknown>> } {
   const events = new Map<string, Record<string, unknown>>();
-  const organizers = new Map<string, { id: string; name: string }>();
   return {
     events,
     async transaction(work) {
       return work(this);
-    },
-    async resolveOrganizer(name, id) {
-      if (!name) return id;
-      const existing = [...organizers.values()].find((organizer) => organizer.name === name);
-      if (existing) return existing.id;
-      const created = { id: `o${organizers.size + 1}`, name };
-      organizers.set(created.id, created);
-      return created.id;
     },
     async createEvent(data) {
       const created = { id: "e1", version: 1, ...data };
@@ -50,7 +41,7 @@ describe("Event mutation module", () => {
     const created = await mutations.create({
       name: "Race",
       startAt: "2026-08-23",
-      organizerName: "Club",
+      organizerId: "o1",
     });
 
     expect(created).toMatchObject({
@@ -60,6 +51,15 @@ describe("Event mutation module", () => {
       payoutRecipientId: "o1",
       invoiceRecipientIds: ["o1"],
     });
+  });
+
+  it("uses an organizer ID without resolving a similarly named organizer", async () => {
+    const persistence = adapter();
+    const mutations = new EventMutations(persistence);
+
+    const created = await mutations.create({ name: "Race", startAt: "2026-08-23", organizerId: "o-master" });
+
+    expect(created).toMatchObject({ organizerId: "o-master", payoutRecipientId: "o-master", invoiceRecipientIds: ["o-master"] });
   });
 
   it("rejects a stale version before replacing invoice recipients", async () => {

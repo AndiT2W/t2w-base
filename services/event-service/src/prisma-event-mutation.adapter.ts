@@ -12,15 +12,8 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
     return this.prisma.$transaction((tx) => work(new PrismaEventMutationAdapter(tx)));
   }
 
-  async resolveOrganizer(name?: string, id?: string) {
-    if (!name) return id;
-    const existing = await this.prisma.organizer.findFirst({ where: { name, active: true } });
-    if (existing) return existing.id;
-    return (await this.prisma.organizer.create({ data: { name, type: "ORGANISATION" } })).id;
-  }
-
   async createEvent(data: EventMutationRecord) {
-    const { invoiceRecipientIds, organizerName: _organizerName, ...eventData } = data;
+    const { invoiceRecipientIds, ...eventData } = data;
     const created = await this.prisma.event.create({
       data: eventData as Prisma.EventUncheckedCreateInput,
     });

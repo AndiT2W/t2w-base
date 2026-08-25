@@ -90,7 +90,9 @@ function KundenKontakte() {
   const [create, setCreate] = useState(false);
   useEffect(() => {
     if (window.location.search.includes("neu=1")) setCreate(true);
-  }, []);
+    const kundeId = new URLSearchParams(window.location.search).get("kunde");
+    if (kundeId && crm.kunden.some((kunde) => kunde.id === kundeId)) setSel({ art: "kunde", id: kundeId });
+  }, [crm.kunden]);
   function closeCreate() {
     setCreate(false);
     window.history.replaceState({}, "", "/kontakte");
