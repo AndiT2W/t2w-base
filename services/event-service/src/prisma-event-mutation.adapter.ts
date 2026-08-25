@@ -56,7 +56,7 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
   getEvent(id: string) {
     return this.prisma.event.findUnique({
       where: { id },
-      include: { organizer: true, sport: true },
+      include: { organizer: true, sport: true, payoutRecipient: true, invoiceRecipients: { include: { organizer: true } } },
     }) as Promise<EventMutationRecord | undefined>;
   }
 }

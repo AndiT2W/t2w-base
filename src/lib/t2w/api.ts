@@ -35,6 +35,8 @@ type ApiEvent = {
   tasks?: { id: string; title: string; dueAt: string | null; responsible: string | null; completed: boolean }[];
   files?: { id: string; name: string; size: string | null; updatedAt: string }[];
   activities?: { id: string; channel: string; subject: string; author: string | null; body: string | null; occurredAt: string }[];
+  payoutRecipient?: { id: string; name: string } | null;
+  invoiceRecipients?: { organizer: { id: string; name: string } }[];
 };
 
 const statusFromApi: Record<string, T2WEvent["status"]> = {
@@ -88,6 +90,8 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     time2winSyncStatus: event.time2winSyncStatus,
     time2winLastSuccessAt: event.time2winLastSuccessAt ?? null,
     time2winLastError: event.time2winLastError ?? null,
+    auszahlungsempfaengerId: event.payoutRecipient?.id ?? event.organizer?.id ?? null,
+    rechnungsempfaengerIds: event.invoiceRecipients?.map((recipient) => recipient.organizer.id) ?? (event.organizer?.id ? [event.organizer.id] : []),
     kontakte: (event.contacts ?? []).map(({ role, contact }) => ({ id: contact.id, name: contact.name, rolle: role, email: contact.email ?? "", telefon: contact.phone ?? "" })),
     aufgaben: (event.tasks ?? []).map((task) => ({ id: task.id, titel: task.title, faellig: task.dueAt ? dateOnly(task.dueAt) : "", verantwortlich: task.responsible ?? "", erledigt: task.completed })),
     dateien: (event.files ?? []).map((file) => ({ id: file.id, name: file.name, groesse: file.size ?? "", aktualisiert: dateOnly(file.updatedAt) })),
@@ -214,6 +218,8 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       status: patch.status === "anfrage" ? "ANFRAGE" : patch.status === "angebot-gesendet" ? "ANGEBOT_GESENDET" : patch.status === "datum-pruefen" ? "DATUM_PRUEFEN" : patch.status === "akquise" ? "AKQUISE" : patch.status === "abgesagt" ? "ABGESAGT" : "ZUGESAGT",
       archived: patch.archiviert,
       t2wEventId: patch.t2wEventId,
+      payoutRecipientId: patch.auszahlungsempfaengerId,
+      invoiceRecipientIds: patch.rechnungsempfaengerIds,
       outlookFolder: patch.outlookOrdner,
       outlookWebUrl: patch.outlookWebUrl,
       sharepointFolder: patch.sharepointOrdner,

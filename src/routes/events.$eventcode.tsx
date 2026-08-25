@@ -220,6 +220,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         <TabsList className="flex-wrap">
           <TabsTrigger value="stammdaten">{t("detail.basicData")}</TabsTrigger>
           <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
+          <TabsTrigger value="finanz">Finanz</TabsTrigger>
           <TabsTrigger value="kontakte">{t("nav.contacts")}</TabsTrigger>
           <TabsTrigger value="aufgaben">{t("nav.tasks")}</TabsTrigger>
           <TabsTrigger value="dateien">{t("detail.files")}</TabsTrigger>
@@ -427,6 +428,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         </TabsContent>
 
         <TabsContent value="time2win"><Card><CardHeader><CardTitle className="text-base">TIME2WIN</CardTitle><CardDescription>Lokale Prognose bleibt vom synchronisierten Teilnehmerstand getrennt.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="d-t2w">Event Id</Label><Input id="d-t2w" type="number" value={form.t2wEventId ?? ""} onChange={(e) => set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div><div className="text-sm"><p>Gemeldete TN: <strong>{form.teilnehmerwerte?.aktuell ?? "—"}</strong></p><p>Letzter Sync: {form.time2winLastSuccessAt ? formatDatum(form.time2winLastSuccessAt.slice(0, 10)) : "—"}</p><p>Status: {form.time2winSyncStatus ?? "NEVER"}</p>{form.time2winLastError && <p className="text-destructive">{form.time2winLastError}</p>}</div></CardContent></Card></TabsContent>
+
+        <TabsContent value="finanz"><Card><CardHeader><CardTitle className="text-base">Finanz</CardTitle><CardDescription>Standardmäßig ist der Veranstalter als Auszahlungs- und Rechnungsempfänger hinterlegt.</CardDescription></CardHeader><CardContent className="space-y-5"><div><Label>Auszahlungsempfänger</Label><Select value={form.auszahlungsempfaengerId ?? event.veranstalterId ?? undefined} onValueChange={(id) => set("auszahlungsempfaengerId", id)}><SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5"><SelectValue placeholder="Veranstalter" /></SelectTrigger><SelectContent>{kunden.map((kunde) => <SelectItem key={kunde.id} value={kunde.id}>{kunde.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Rechnungsempfänger</Label><p className="mt-1 text-xs text-muted-foreground">Mehrere Empfänger möglich.</p><div className="mt-2 space-y-2">{kunden.map((kunde) => { const checked = (form.rechnungsempfaengerIds ?? (event.veranstalterId ? [event.veranstalterId] : [])).includes(kunde.id); return <label key={kunde.id} className="flex items-center gap-2 text-sm"><Checkbox checked={checked} onCheckedChange={(value) => set("rechnungsempfaengerIds", value ? [...new Set([...(form.rechnungsempfaengerIds ?? (event.veranstalterId ? [event.veranstalterId] : [])), kunde.id])] : (form.rechnungsempfaengerIds ?? []).filter((id) => id !== kunde.id))} />{kunde.name}</label>; })}</div></div></CardContent></Card></TabsContent>
 
         <TabsContent value="kontakte">
           <Card>

@@ -13,7 +13,7 @@ const event = {
   participantCurrent: null,
   notes: "",
   archived: false,
-  organizer: { name: "Alter Veranstalter" },
+  organizer: { id: "c1", name: "Alter Veranstalter" },
   sport: null,
   outlookFolder: null,
   sharepointFolder: null,
@@ -526,6 +526,25 @@ test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ pa
   await expect(page.getByLabel("Event Id")).toBeVisible();
   await expect(page.getByText("Gemeldete TN:")).toBeVisible();
   await expect(page.getByText("Status: NEVER")).toBeVisible();
+});
+
+test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", async ({ page }) => {
+  const requests = await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "Finanz" }).click();
+  await page.getByLabel("Auszahlungsempfänger").click();
+  await page.getByRole("option", { name: "Jonas Feld" }).click();
+  await page.getByText("Jonas Feld", { exact: true }).last().click();
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "PATCH" &&
+        request.body?.includes('"payoutRecipientId":"c2"') &&
+        request.body.includes('"invoiceRecipientIds":["c1","c2"]'),
+    ),
+  ).toBeTruthy();
 });
 
 test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page }) => {

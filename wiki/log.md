@@ -253,3 +253,7 @@
 # 2026-08-25
 
 - Replaced the customer billing-address field with structured customer fields: country, city, street, postal code, and email. The Event-Service migration retains legacy address data in the existing column and seeds the new street/email fields from legacy values where empty.
+
+# 2026-08-25
+
+- Added the Event detail workspace's Finanz tab. It persists one payout recipient and multiple invoice recipients through the existing Event-Service relationships; the selected organizer remains the default for both. Browser coverage verifies the visible controls and submitted recipient IDs.

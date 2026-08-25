@@ -100,6 +100,8 @@ export type T2WEvent = {
   time2winSyncStatus?: string;
   time2winLastSuccessAt?: string | null;
   time2winLastError?: string | null;
+  auszahlungsempfaengerId?: string | null;
+  rechnungsempfaengerIds?: string[];
   ort: string;
   start: string; // yyyy-mm-dd
   ende: string; // yyyy-mm-dd
