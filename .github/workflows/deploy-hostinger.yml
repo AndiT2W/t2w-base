@@ -74,37 +74,16 @@ jobs:
           HOSTINGER_USER: ${{ secrets.HOSTINGER_USER || 'root' }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || 22 }}
           DEPLOY_PATH: ${{ secrets.HOSTINGER_DEPLOY_PATH || '/docker/t2w-base' }}
-          EVENT_DEPLOY_PATH: ${{ secrets.HOSTINGER_EVENT_DEPLOY_PATH || '/docker/t2w-events' }}
         run: |
           ssh -p "$HOSTINGER_PORT" "$HOSTINGER_USER@$HOSTINGER_HOST" \
-            bash -s -- "$DEPLOY_PATH" "$EVENT_DEPLOY_PATH" "$GITHUB_SHA" <<'REMOTE'
+            bash -s -- "$DEPLOY_PATH" "$GITHUB_SHA" <<'REMOTE'
           set -eu
           deploy_path=$1
-          event_deploy_path=$2
-          commit_sha=$3
+          commit_sha=$2
 
-          if [ ! -f "$event_deploy_path/.env.events" ]; then
-            event_container=$(docker ps -aq --filter label=com.docker.compose.service=event-service | head -n 1)
-            if [ -z "$event_container" ]; then
-              echo "Event-Service-Container mit Compose-Label nicht gefunden."
-              exit 1
-            fi
-            event_deploy_path=$(docker inspect \
-              --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' \
-              "$event_container")
-          fi
-
-          if [ -f "$event_deploy_path/.env.events" ]; then
-            event_env_file="$event_deploy_path/.env.events"
-          else
-            event_env_file="$event_deploy_path/.env"
-          fi
-
-          echo "Event-Service-Verzeichnis: $event_deploy_path"
           for required_file in \
-            "$deploy_path/docker-compose.hostinger.yml" \
-            "$event_deploy_path/docker-compose.events.yml" \
-            "$event_env_file"
+            "$deploy_path/docker-compose.yml" \
+            "$deploy_path/.env"
           do
             if [ ! -f "$required_file" ]; then
               echo "Erforderliche Deployment-Datei fehlt: $required_file"
@@ -112,17 +91,9 @@ jobs:
             fi
           done
           tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$deploy_path" --overwrite
-          tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$event_deploy_path" --overwrite
-          docker compose -f "$deploy_path/docker-compose.hostinger.yml" up -d --build app nginx
-          docker compose --env-file "$event_env_file" \
-            -f "$event_deploy_path/docker-compose.events.yml" build event-service event-migrate
-          docker compose --env-file "$event_env_file" \
-            -f "$event_deploy_path/docker-compose.events.yml" run --rm -T event-migrate </dev/null
-          docker compose --env-file "$event_env_file" \
-            -f "$event_deploy_path/docker-compose.events.yml" up -d event-service event-backup
-          docker compose -f "$deploy_path/docker-compose.hostinger.yml" ps
-          docker compose --env-file "$event_env_file" \
-            -f "$event_deploy_path/docker-compose.events.yml" ps
+          docker compose -f "$deploy_path/docker-compose.yml" up -d --build app nginx event-db event-service event-backup
+          docker compose -f "$deploy_path/docker-compose.yml" --profile migrate run --rm -T event-migrate </dev/null
+          docker compose -f "$deploy_path/docker-compose.yml" ps
           event_router_containers=$(docker ps -q \
             --filter label=traefik.http.routers.t2w-events.rule)
           event_router_count=$(printf '%s\n' "$event_router_containers" | sed '/^$/d' | wc -l)

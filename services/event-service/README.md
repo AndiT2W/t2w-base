@@ -6,14 +6,12 @@ Netzwerk angesprochen.
 
 ## Lokal starten
 
-1. `.env.events.example` nach `.env.events` kopieren und ein starkes
-   Datenbankpasswort setzen.
-2. `services/event-service/.env.example` nach
-   `services/event-service/.env` kopieren und `DATABASE_URL` anpassen.
-3. `docker compose --env-file .env.events -f docker-compose.events.yml up -d --build`.
+1. `.env.example` nach `.env` kopieren und ein starkes Datenbankpasswort
+   setzen.
+2. Den gemeinsamen Stack mit `docker compose up -d --build` starten.
 
-Die Migrationen werden mit `npm run prisma:migrate` innerhalb des Service-
-Containers ausgeführt. Swagger ist unter `/docs`, Health unter `/health` und
+Die Migrationen werden mit `docker compose --profile migrate run --rm
+event-migrate` ausgeführt. Swagger ist unter `/docs`, Health unter `/health` und
 Readiness unter `/ready` verfügbar.
 
 Der erste Admin wird ausschließlich über `SEED_ADMIN_EMAIL` und

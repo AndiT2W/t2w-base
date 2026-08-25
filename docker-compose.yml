@@ -1,4 +1,27 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.hostinger
+    restart: unless-stopped
+    networks: [internal]
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on: [app]
+    volumes:
+      - ./nginx/hostinger.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [internal, traefik_proxy]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_proxy
+      - traefik.http.routers.t2w-base.entrypoints=websecure
+      - traefik.http.routers.t2w-base.rule=Host(`base.time2win.cloud`)
+      - traefik.http.routers.t2w-base.tls=true
+      - traefik.http.routers.t2w-base.tls.certresolver=letsencrypt
+      - traefik.http.services.t2w-base.loadbalancer.server.port=80
+
   event-db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -35,7 +58,7 @@ services:
 
   event-migrate:
     build: ./services/event-service
-    profiles: ["migrate"]
+    profiles: [migrate]
     environment:
       DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
     depends_on:
@@ -45,7 +68,7 @@ services:
 
   event-seed:
     build: ./services/event-service
-    profiles: ["seed"]
+    profiles: [seed]
     environment:
       DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:?SEED_ADMIN_EMAIL is required}
@@ -73,6 +96,8 @@ volumes:
   event_db_backups:
 
 networks:
+  internal:
+    driver: bridge
   event_internal:
   traefik_proxy:
     external: true
