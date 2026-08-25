@@ -1,5 +1,10 @@
 # Maintenance Log
 
+## 2026-08-25
+
+- Issue #20 aktualisiert: Die Eventdetailseite wird nicht mehr als Neubau beschrieben, sondern als Ausbau der bereits persistenten Event-Workspace-UI. Vorhandene Stammdaten-, Outlook-/SharePoint-, Tab- und Mehrsprachigkeitsfunktionen sind dokumentiert; offen bleiben insbesondere TIME2WIN-Reiter, Rollenverwaltung, mutierbare Aufgaben/Aktivitäten sowie Browser-E2E-Abdeckung.
+- Die Billing-Tickets #2, #3 und #14 wurden bewusst zurückgestellt und mit dem GitHub-Label `deferred` aus der aktuellen Umsetzungspriorität genommen. Sie bleiben für eine spätere Billing-/Angebotsphase offen.
+
 ## 2026-08-23
 
 - Published GitHub issue #32 specifying a central containerized Codex gateway with a stable internal task interface, a first `mail-summary` workflow, shared ChatGPT Plus authentication, strict security limits, and regression-test requirements.
