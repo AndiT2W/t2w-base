@@ -271,7 +271,7 @@ function Table({ h, children }: { h: string[]; children: ReactNode }) {
             ))}
           </tr>
         </thead>
-        <tbody>{children}</tbody>
+        <tbody className="[&_td]:px-2 [&_td]:py-1">{children}</tbody>
       </table>
     </div>
   );
