@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -37,6 +38,14 @@ import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
 import type { OutlookFolderPlan } from "@/lib/t2w/event-workspace";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
+import type { Kunde } from "@/lib/crm/types";
+
+function RecipientMasterData({ recipient }: { recipient: Kunde }) {
+  const address = [recipient.strasse, [recipient.plz, recipient.ort].filter(Boolean).join(" "), recipient.land]
+    .filter(Boolean)
+    .join(", ");
+  return <dl className="grid gap-x-5 gap-y-2 rounded-md border border-border bg-muted/30 p-3 text-sm sm:grid-cols-2"><div><dt className="text-xs text-muted-foreground">Name</dt><dd>{recipient.name}</dd></div><div><dt className="text-xs text-muted-foreground">Adresse</dt><dd>{address || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">UID</dt><dd>{recipient.uid || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">IBAN</dt><dd>{recipient.iban || "—"}</dd></div><div><dt className="text-xs text-muted-foreground">BIC</dt><dd>{recipient.bic || "—"}</dd></div></dl>;
+}
 
 export const Route = createFileRoute("/events/$eventcode")({
   head: () => ({
@@ -85,7 +94,7 @@ function EventDetail() {
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
   const { updateEvent, syncOutlookFolder, getOutlookFolderPlan, settings } = useT2W();
-  const { personen, kunden } = useCrm();
+  const { personen, kunden, kontakteVonKunde } = useCrm();
   const { t } = useI18n();
   const [outlookSyncing, setOutlookSyncing] = useState(false);
   const [outlookSyncMessage, setOutlookSyncMessage] = useState<string | null>(null);
@@ -94,6 +103,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [outlookPlan, setOutlookPlan] = useState<OutlookFolderPlan | null>(null);
   const [contactId, setContactId] = useState("");
   const [contactRole, setContactRole] = useState("Kontakt");
+  const [invoiceRecipientSearch, setInvoiceRecipientSearch] = useState("");
   const [newTask, setNewTask] = useState("");
   const [newFile, setNewFile] = useState("");
   const [newActivity, setNewActivity] = useState("");
@@ -113,6 +123,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     form.sharepointOrdner && jahresSite
       ? `${jahresSite.url.replace(/\/$/, "")}/${form.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
       : null;
+  const veranstalterKontakte = event.veranstalterId ? kontakteVonKunde(event.veranstalterId) : [];
+  const auszahlungsempfaengerId = form.auszahlungsempfaengerId ?? event.veranstalterId;
+  const auszahlungsempfaenger = kunden.find((kunde) => kunde.id === auszahlungsempfaengerId);
+  const rechnungsempfaengerIds = form.rechnungsempfaengerIds ?? (event.veranstalterId ? [event.veranstalterId] : []);
+  const rechnungsempfaenger = kunden.filter((kunde) => rechnungsempfaengerIds.includes(kunde.id));
+  const sichtbareRechnungsempfaenger = kunden.filter((kunde) =>
+    kunde.name.toLocaleLowerCase("de").includes(invoiceRecipientSearch.trim().toLocaleLowerCase("de")),
+  );
 
   function set<K extends keyof T2WEvent>(key: K, wert: T2WEvent[K]) {
     setForm((p) => ({ ...p, [key]: wert }));
@@ -148,11 +166,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       setOutlookSyncing(false);
     }
   }
-  async function addContact() {
-    const person = personen.find((item) => item.id === contactId);
+  function toggleRechnungsempfaenger(id: string) {
+    set("rechnungsempfaengerIds", rechnungsempfaengerIds.includes(id)
+      ? rechnungsempfaengerIds.filter((recipientId) => recipientId !== id)
+      : [...rechnungsempfaengerIds, id]);
+  }
+  async function addEventContact(personId: string, role: string) {
+    const person = personen.find((item) => item.id === personId);
     if (!person) return;
-    await apiAddEventContact(event.id, contactId, contactRole);
-    set("kontakte", [...form.kontakte, { id: person.id, name: `${person.vorname} ${person.nachname}`.trim(), rolle: contactRole, email: person.email, telefon: person.telefon }]);
+    await apiAddEventContact(event.id, personId, role);
+    set("kontakte", [...form.kontakte, { id: person.id, name: `${person.vorname} ${person.nachname}`.trim(), rolle: role, email: person.email, telefon: person.telefonBeruflich || person.telefonPrivat }]);
+  }
+  async function addContact() {
+    if (!contactId) return;
+    await addEventContact(contactId, contactRole);
     setContactId(""); toast.success("Kontaktrolle gespeichert.");
   }
   async function addTask() {
@@ -429,15 +456,24 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
         <TabsContent value="time2win"><Card><CardHeader><CardTitle className="text-base">TIME2WIN</CardTitle><CardDescription>Lokale Prognose bleibt vom synchronisierten Teilnehmerstand getrennt.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="d-t2w">Event Id</Label><Input id="d-t2w" type="number" value={form.t2wEventId ?? ""} onChange={(e) => set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div><div className="text-sm"><p>Gemeldete TN: <strong>{form.teilnehmerwerte?.aktuell ?? "—"}</strong></p><p>Letzter Sync: {form.time2winLastSuccessAt ? formatDatum(form.time2winLastSuccessAt.slice(0, 10)) : "—"}</p><p>Status: {form.time2winSyncStatus ?? "NEVER"}</p>{form.time2winLastError && <p className="text-destructive">{form.time2winLastError}</p>}</div></CardContent></Card></TabsContent>
 
-        <TabsContent value="finanz"><Card><CardHeader><CardTitle className="text-base">Finanz</CardTitle><CardDescription>Standardmäßig ist der Veranstalter als Auszahlungs- und Rechnungsempfänger hinterlegt.</CardDescription></CardHeader><CardContent className="space-y-5"><div><Label>Auszahlungsempfänger</Label><Select value={form.auszahlungsempfaengerId ?? event.veranstalterId ?? undefined} onValueChange={(id) => set("auszahlungsempfaengerId", id)}><SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5"><SelectValue placeholder="Veranstalter" /></SelectTrigger><SelectContent>{kunden.map((kunde) => <SelectItem key={kunde.id} value={kunde.id}>{kunde.name}</SelectItem>)}</SelectContent></Select></div><div><Label>Rechnungsempfänger</Label><p className="mt-1 text-xs text-muted-foreground">Mehrere Empfänger möglich.</p><div className="mt-2 space-y-2">{kunden.map((kunde) => { const checked = (form.rechnungsempfaengerIds ?? (event.veranstalterId ? [event.veranstalterId] : [])).includes(kunde.id); return <label key={kunde.id} className="flex items-center gap-2 text-sm"><Checkbox checked={checked} onCheckedChange={(value) => set("rechnungsempfaengerIds", value ? [...new Set([...(form.rechnungsempfaengerIds ?? (event.veranstalterId ? [event.veranstalterId] : [])), kunde.id])] : (form.rechnungsempfaengerIds ?? []).filter((id) => id !== kunde.id))} />{kunde.name}</label>; })}</div></div></CardContent></Card></TabsContent>
+        <TabsContent value="finanz"><Card><CardHeader><CardTitle className="text-base">Finanz</CardTitle><CardDescription>Standardmäßig ist der Veranstalter als Auszahlungs- und Rechnungsempfänger hinterlegt.</CardDescription></CardHeader><CardContent className="space-y-5"><div><Label>Auszahlungsempfänger</Label><Select value={auszahlungsempfaengerId ?? undefined} onValueChange={(id) => set("auszahlungsempfaengerId", id)}><SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5"><SelectValue placeholder="Veranstalter" /></SelectTrigger><SelectContent>{kunden.map((kunde) => <SelectItem key={kunde.id} value={kunde.id}>{kunde.name}</SelectItem>)}</SelectContent></Select>{auszahlungsempfaenger && <div aria-label="Stammdaten Auszahlungsempfänger" className="mt-3"><RecipientMasterData recipient={auszahlungsempfaenger} /></div>}</div><div><Label>Rechnungsempfänger</Label><p className="mt-1 text-xs text-muted-foreground">Mehrere Empfänger möglich.</p><Popover><PopoverTrigger asChild><Button aria-label="Rechnungsempfänger auswählen" variant="outline" className="mt-2 w-full justify-start font-normal">{rechnungsempfaenger.length ? rechnungsempfaenger.map((kunde) => kunde.name).join(", ") : "Rechnungsempfänger auswählen"}</Button></PopoverTrigger><PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2"><Input aria-label="Rechnungsempfänger suchen" placeholder="Rechnungsempfänger suchen …" value={invoiceRecipientSearch} onChange={(e) => setInvoiceRecipientSearch(e.target.value)} /><div className="mt-2 max-h-56 space-y-1 overflow-y-auto">{sichtbareRechnungsempfaenger.length ? sichtbareRechnungsempfaenger.map((kunde) => <label key={kunde.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"><Checkbox checked={rechnungsempfaengerIds.includes(kunde.id)} onCheckedChange={() => toggleRechnungsempfaenger(kunde.id)} />{kunde.name}</label>) : <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>}</div></PopoverContent></Popover>{rechnungsempfaenger.length > 0 && <div aria-label="Stammdaten Rechnungsempfänger" className="mt-3 space-y-3">{rechnungsempfaenger.map((kunde) => <RecipientMasterData key={kunde.id} recipient={kunde} />)}</div>}</div></CardContent></Card></TabsContent>
 
         <TabsContent value="kontakte">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("nav.contacts")}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2"><Select value={contactId} onValueChange={setContactId}><SelectTrigger className="w-56"><SelectValue placeholder="Kontakt auswählen" /></SelectTrigger><SelectContent>{personen.filter((person) => !form.kontakte.some((item) => item.id === person.id)).map((person) => <SelectItem key={person.id} value={person.id}>{person.vorname} {person.nachname}</SelectItem>)}</SelectContent></Select><Input aria-label="Eventrolle" value={contactRole} onChange={(e) => setContactRole(e.target.value)} className="w-36"/><Button onClick={() => void addContact()} disabled={!contactId}>Hinzufügen</Button></div>
+            <CardContent className="space-y-5">
+              <section>
+                <h3 className="font-medium text-foreground">Kontakte des Veranstalters</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Stammdatenkontakte des ausgewählten Veranstalters.</p>
+                {!event.veranstalterId ? <p className="mt-3 text-sm text-muted-foreground">Kein Veranstalter ausgewählt.</p> : veranstalterKontakte.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">Für diesen Veranstalter sind keine Kontakte hinterlegt.</p> : <div className="mt-3 space-y-2">{veranstalterKontakte.map((person) => { const alreadyAdded = form.kontakte.some((item) => item.id === person.id); return <div key={person.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"><div><p className="font-medium text-foreground">{person.vorname} {person.nachname}</p><p className="text-sm text-muted-foreground">{person.email} · {person.telefonBeruflich || person.telefonPrivat || "—"}</p></div><Button variant="outline" size="sm" onClick={() => void addEventContact(person.id, "Kontakt").then(() => toast.success("Als Eventkontakt übernommen."))} disabled={alreadyAdded}>{alreadyAdded ? "Bereits Eventkontakt" : "Als Eventkontakt übernehmen"}</Button></div>; })}</div>}
+              </section>
+              <section className="border-t border-border pt-5">
+                <h3 className="font-medium text-foreground">Eventkontakte & Rollen</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Explizit für dieses Event zugeordnete Kontakte.</p>
+                <div className="mt-3 flex flex-wrap gap-2"><Select value={contactId} onValueChange={setContactId}><SelectTrigger className="w-56" aria-label="Kontakt auswählen"><SelectValue placeholder="Kontakt auswählen" /></SelectTrigger><SelectContent>{personen.filter((person) => !form.kontakte.some((item) => item.id === person.id)).map((person) => <SelectItem key={person.id} value={person.id}>{person.vorname} {person.nachname}</SelectItem>)}</SelectContent></Select><Input aria-label="Eventrolle" value={contactRole} onChange={(e) => setContactRole(e.target.value)} className="w-36"/><Button onClick={() => void addContact()} disabled={!contactId}>Hinzufügen</Button></div>
+              </section>
               {form.kontakte.length === 0 && (
                 <p className="text-sm text-muted-foreground">Noch keine Kontakte hinterlegt.</p>
               )}

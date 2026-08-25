@@ -67,6 +67,12 @@ async function mockApi(page: Page) {
       type: "PERSON",
       active: true,
       uid: "ATU1",
+      iban: "AT611904300234573201",
+      bic: "BKAUATWW",
+      street: "Hauptstraße 4",
+      postalCode: "1010",
+      city: "Wien",
+      country: "Österreich",
       contacts: [{ contact: { id: "p3" } }],
       personId: "p3",
     },
@@ -532,9 +538,20 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
   const requests = await mockApi(page);
   await page.goto("/events/260820_demo_event");
   await page.getByRole("tab", { name: "Finanz" }).click();
-  await page.getByLabel("Auszahlungsempfänger").click();
+  await page.getByRole("combobox", { name: "Auszahlungsempfänger" }).click();
   await page.getByRole("option", { name: "Jonas Feld" }).click();
+  const recipientDetails = page.getByLabel("Stammdaten Auszahlungsempfänger");
+  await expect(recipientDetails).toContainText("Jonas Feld");
+  await expect(recipientDetails).toContainText("Hauptstraße 4, 1010 Wien, Österreich");
+  await expect(recipientDetails).toContainText("AT611904300234573201");
+  await expect(recipientDetails).toContainText("BKAUATWW");
+  await page.getByRole("button", { name: "Rechnungsempfänger auswählen" }).click();
+  await page.getByLabel("Rechnungsempfänger suchen").fill("Jonas");
   await page.getByText("Jonas Feld", { exact: true }).last().click();
+  const invoiceDetails = page.getByLabel("Stammdaten Rechnungsempfänger");
+  await expect(invoiceDetails).toContainText("Nordwerk GmbH");
+  await expect(invoiceDetails).toContainText("Jonas Feld");
+  await expect(invoiceDetails).toContainText("BKAUATWW");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -545,6 +562,47 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
         request.body.includes('"invoiceRecipientIds":["c1","c2"]'),
     ),
   ).toBeTruthy();
+});
+
+test("zeigt Veranstalterkontakte und übernimmt sie als Eventkontakt", async ({ page }) => {
+  const requests = await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "Kontakte" }).click();
+  await expect(page.getByRole("heading", { name: "Kontakte des Veranstalters" })).toBeVisible();
+  await expect(page.getByText("Marion Kessler", { exact: true })).toBeVisible();
+  await page
+    .getByText("Marion Kessler", { exact: true })
+    .locator("xpath=../..")
+    .getByRole("button", { name: "Als Eventkontakt übernehmen" })
+    .click();
+  await expect(page.getByRole("button", { name: "Bereits Eventkontakt" })).toBeVisible();
+  await expect(page.getByText("Marion Kessler", { exact: true })).toHaveCount(2);
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "POST" &&
+        request.url.includes(`/api/v1/events/${event.id}/contacts/p1`) &&
+        request.body?.includes('"role":"Kontakt"'),
+    ),
+  ).toBeTruthy();
+});
+
+test("prüft Mail- und Telefonnummern im Kontakt-Detailformular", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/kontakte");
+  await page.getByText("Marion Kessler", { exact: true }).click();
+  const email = page.getByLabel("E-Mail");
+  await email.fill("keine-mail");
+  await email.blur();
+  await expect(page.getByRole("alert")).toHaveText("Bitte eine gültige Mail-Adresse angeben.");
+  await expect(email).toHaveAttribute("aria-invalid", "true");
+  const phone = page.getByLabel("Telefon privat");
+  await phone.fill("nicht-erlaubt");
+  await phone.blur();
+  await expect(phone.locator("xpath=..").getByRole("alert")).toHaveText(
+    "Bitte eine gültige Telefonnummer angeben.",
+  );
+  await expect(phone).toHaveAttribute("aria-invalid", "true");
 });
 
 test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page }) => {

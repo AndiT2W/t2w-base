@@ -33,6 +33,7 @@ export type Kunde = {
   personId: string | null;
   uid: string;
   iban: string;
+  bic: string;
   bank: string;
   land: string;
   ort: string;

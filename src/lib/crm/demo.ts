@@ -24,6 +24,7 @@ export const DEMO_CRM_STATE: CrmState = {
       personId: null,
       uid: "ATU12345678",
       iban: "AT611904300234573201",
+      bic: "DEMOATWW",
       bank: "Demo Bank",
       land: "Österreich",
       ort: "Wien",

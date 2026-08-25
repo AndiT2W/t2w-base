@@ -22,6 +22,7 @@ const kunde = {
   personId: "p1",
   uid: "",
   iban: "",
+  bic: "",
   bank: "",
   land: "",
   ort: "",

@@ -42,6 +42,7 @@ type ApiKunde = {
   personId?: string | null;
   uid?: string | null;
   iban?: string | null;
+  bic?: string | null;
   bankName?: string | null;
   country?: string | null;
   city?: string | null;
@@ -97,6 +98,7 @@ function mapKunde(value: ApiKunde): Kunde {
     personId: value.personId ?? null,
     uid: value.uid ?? "",
     iban: value.iban ?? "",
+    bic: value.bic ?? "",
     bank: value.bankName ?? "",
     land: value.country ?? "",
     ort: value.city ?? "",
@@ -185,6 +187,7 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             postalCode: input.plz,
             uid: input.uid,
             iban: input.iban,
+            bic: input.bic,
             bankName: input.bank,
             email: input.email,
           }),
@@ -229,6 +232,7 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             postalCode: next.plz,
             uid: next.uid,
             iban: next.iban,
+            bic: next.bic,
             bankName: next.bank,
             email: next.email,
             active: next.status !== "inaktiv",

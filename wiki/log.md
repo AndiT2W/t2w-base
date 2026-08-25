@@ -257,3 +257,19 @@
 # 2026-08-25
 
 - Added the Event detail workspace's Finanz tab. It persists one payout recipient and multiple invoice recipients through the existing Event-Service relationships; the selected organizer remains the default for both. Browser coverage verifies the visible controls and submitted recipient IDs.
+
+# 2026-08-25
+
+- The Event detail contact tab now distinguishes the organizer's CRM contacts from explicit event contacts and roles. Organizer contacts can be adopted individually as an event contact without changing their CRM association.
+
+# 2026-08-25
+
+- Contact and customer detail forms now validate optional mail addresses and contact private/work phone numbers before their inline persistence, showing accessible field errors and preserving invalid drafts for correction.
+
+# 2026-08-25
+
+- The selected Event payout recipient now displays read-only customer master data (name, structured address, UID, IBAN, BIC). BIC is mapped and persisted through the CRM client model and editable in customer master data.
+
+# 2026-08-25
+
+- Event invoice recipients use a searchable multi-select dropdown and display the same read-only customer master data for every selected recipient.

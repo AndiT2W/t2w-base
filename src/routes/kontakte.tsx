@@ -11,6 +11,8 @@ export const Route = createFileRoute("/kontakte")({ component: KundenKontakte })
 type Auswahl = { art: "person" | "kunde"; id: string } | null;
 type Modus = "person" | "kunde" | "beides";
 const input = "w-full rounded border border-input bg-background px-2 py-1.5 text-sm";
+const validEmail = (value: string) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const validPhone = (value: string) => !value || /^[+0-9() .\/-]+$/.test(value);
 const Chip = ({ children, good = false }: { children: ReactNode; good?: boolean }) => (
   <span
     className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] ${good ? "border-status-zugesagt/40 bg-status-zugesagt/15" : "border-border bg-secondary text-muted-foreground"}`}
@@ -24,17 +26,28 @@ function Field({
   value,
   save,
   area = false,
+  validate,
 }: {
   label: string;
   value: string;
   save: (v: string) => void | Promise<void>;
   area?: boolean;
+  validate?: (value: string) => string | null;
 }) {
   const [draft, setDraft] = useState(value);
+  const [error, setError] = useState<string | null>(null);
   const commit = async () => {
     if (draft !== value) {
+      const next = draft.trim();
+      const validationError = validate?.(next);
+      if (validationError) {
+        setError(validationError);
+        toast.error(validationError);
+        return;
+      }
       try {
-        await save(draft.trim());
+        await save(next);
+        setError(null);
         toast.success(`${label} gespeichert`);
       } catch {
         toast.error(`${label} konnte nicht gespeichert werden`);
@@ -50,18 +63,21 @@ function Field({
           rows={3}
           className={input}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => { setDraft(e.target.value); setError(null); }}
           onBlur={() => void commit()}
+          aria-invalid={!!error}
         />
       ) : (
         <input
           aria-label={label}
           className={input}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => { setDraft(e.target.value); setError(null); }}
           onBlur={() => void commit()}
+          aria-invalid={!!error}
         />
       )}
+      {error && <span role="alert" className="text-destructive">{error}</span>}
     </label>
   );
 }
@@ -318,13 +334,15 @@ function PersonDetail({
           label="E-Mail"
           value={person.email}
           save={(v) => crm.updatePerson(person.id, { email: v })}
+          validate={(value) => validEmail(value) ? null : "Bitte eine gültige Mail-Adresse angeben."}
         />
         <Field
           label="Telefon privat"
           value={person.telefonPrivat}
           save={(v) => crm.updatePerson(person.id, { telefonPrivat: v })}
+          validate={(value) => validPhone(value) ? null : "Bitte eine gültige Telefonnummer angeben."}
         />
-        <Field label="Telefon beruflich" value={person.telefonBeruflich} save={(v) => crm.updatePerson(person.id, { telefonBeruflich: v })} />
+        <Field label="Telefon beruflich" value={person.telefonBeruflich} save={(v) => crm.updatePerson(person.id, { telefonBeruflich: v })} validate={(value) => validPhone(value) ? null : "Bitte eine gültige Telefonnummer angeben."} />
         <Field
           label="Ort"
           value={person.ort}
@@ -413,6 +431,7 @@ function CustomerDetail({
           label="Mail"
           value={customer.email}
           save={(v) => crm.updateKunde(customer.id, { email: v })}
+          validate={(value) => validEmail(value) ? null : "Bitte eine gültige Mail-Adresse angeben."}
         />
         <div className="sm:col-span-2">
           <Field label="Straße" value={customer.strasse} save={(v) => crm.updateKunde(customer.id, { strasse: v })} />
@@ -425,6 +444,7 @@ function CustomerDetail({
           value={customer.iban}
           save={(v) => crm.updateKunde(customer.id, { iban: v })}
         />
+        <Field label="BIC" value={customer.bic} save={(v) => crm.updateKunde(customer.id, { bic: v })} />
         <Field
           label="Bank"
           value={customer.bank}
@@ -620,6 +640,7 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
     name: "",
     uid: "",
     iban: "",
+    bic: "",
     bank: "",
     land: "",
     ort: "",
@@ -701,6 +722,7 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
               {f(k, setK, "name", "Kundenname")}
               {f(k, setK, "uid", "UID")}
               {f(k, setK, "iban", "IBAN")}
+              {f(k, setK, "bic", "BIC")}
               {f(k, setK, "bank", "Bank")}
               {f(k, setK, "strasse", "Straße")}
               {f(k, setK, "plz", "PLZ")}
