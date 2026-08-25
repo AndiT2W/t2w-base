@@ -233,3 +233,6 @@
 # 2026-08-24
 
 - CRM-Kundenzuordnung aus der Kontaktansicht repariert: Die Such-Combobox wartet den Persistenzrequest nun ab, verhindert doppelte Eingaben und zeigt Erfolg oder Fehler sichtbar an. Ein Browser-E2E-Test prüft den konkreten `PUT`, die sichtbare Verknüpfung und deren Persistenz nach Reload; beide Zuordnungsrichtungen sind grün.
+# 2026-08-25
+
+- Expanded the persistent Event workspace for ticket #20: event roles, tasks, file references, and manual activities now have Event-Service persistence models and detail-page actions. TIME2WIN link state is surfaced separately from the local participant forecast. Evidence: `services/event-service/prisma/migrations/0007_event_workspace/migration.sql`, `src/routes/events.$eventcode.tsx`.

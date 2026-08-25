@@ -30,6 +30,8 @@ import {
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
+import { useCrm } from "@/lib/crm/store";
+import { apiAddEventContact, apiCreateEventActivity, apiCreateEventFile, apiCreateEventTask, apiRemoveEventContact, apiUpdateEventTask } from "@/lib/t2w/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
@@ -83,12 +85,18 @@ function EventDetail() {
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
   const { updateEvent, syncOutlookFolder, getOutlookFolderPlan, settings } = useT2W();
+  const { personen, kunden } = useCrm();
   const { t } = useI18n();
   const [outlookSyncing, setOutlookSyncing] = useState(false);
   const [outlookSyncMessage, setOutlookSyncMessage] = useState<string | null>(null);
   const [form, setForm] = useState(event);
   const [quartalsDialog, setQuartalsDialog] = useState(false);
   const [outlookPlan, setOutlookPlan] = useState<OutlookFolderPlan | null>(null);
+  const [contactId, setContactId] = useState("");
+  const [contactRole, setContactRole] = useState("Kontakt");
+  const [newTask, setNewTask] = useState("");
+  const [newFile, setNewFile] = useState("");
+  const [newActivity, setNewActivity] = useState("");
 
   useEffect(() => setForm(event), [event]);
   useEffect(() => {
@@ -140,6 +148,28 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       setOutlookSyncing(false);
     }
   }
+  async function addContact() {
+    const person = personen.find((item) => item.id === contactId);
+    if (!person) return;
+    await apiAddEventContact(event.id, contactId, contactRole);
+    set("kontakte", [...form.kontakte, { id: person.id, name: `${person.vorname} ${person.nachname}`.trim(), rolle: contactRole, email: person.email, telefon: person.telefon }]);
+    setContactId(""); toast.success("Kontaktrolle gespeichert.");
+  }
+  async function addTask() {
+    if (!newTask.trim()) return;
+    const task = await apiCreateEventTask(event.id, { title: newTask });
+    set("aufgaben", [...form.aufgaben, { id: task.id, titel: task.title, faellig: "", verantwortlich: "", erledigt: false }]); setNewTask(""); toast.success("Aufgabe angelegt.");
+  }
+  async function addFile() {
+    if (!newFile.trim()) return;
+    const file = await apiCreateEventFile(event.id, { name: newFile });
+    set("dateien", [...form.dateien, { id: file.id, name: file.name, groesse: file.size ?? "", aktualisiert: file.updatedAt.slice(0, 10) }]); setNewFile(""); toast.success("Dateiverknüpfung gespeichert.");
+  }
+  async function addActivity() {
+    if (!newActivity.trim()) return;
+    const activity = await apiCreateEventActivity(event.id, { channel: "Notiz", subject: newActivity });
+    set("kommunikation", [...form.kommunikation, { id: activity.id, kanal: "Notiz", betreff: activity.subject, datum: activity.occurredAt.slice(0, 10), autor: activity.author ?? "", text: activity.body ?? "" }]); setNewActivity(""); toast.success("Aktivität angelegt.");
+  }
 
   return (
     <div className="space-y-5">
@@ -189,6 +219,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       <Tabs defaultValue="stammdaten">
         <TabsList className="flex-wrap">
           <TabsTrigger value="stammdaten">{t("detail.basicData")}</TabsTrigger>
+          <TabsTrigger value="time2win">TIME2WIN-Verknüpfung</TabsTrigger>
           <TabsTrigger value="kontakte">{t("nav.contacts")}</TabsTrigger>
           <TabsTrigger value="aufgaben">{t("nav.tasks")}</TabsTrigger>
           <TabsTrigger value="dateien">{t("detail.files")}</TabsTrigger>
@@ -227,12 +258,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </div>
               <div>
                 <Label htmlFor="d-ver">Veranstalter</Label>
-                <Input
-                  id="d-ver"
-                  value={form.veranstalter}
-                  onChange={(e) => set("veranstalter", e.target.value)}
-                  className="mt-1.5"
-                />
+                <Input id="d-ver" value={form.veranstalter} onChange={(e) => set("veranstalter", e.target.value)} className="mt-1.5" />
+                <Select onValueChange={(id) => { const customer = kunden.find((item) => item.id === id); if (customer) { set("veranstalterId", customer.id); set("veranstalter", customer.name); } }}><SelectTrigger className="mt-2"><SelectValue placeholder="Kunde aus Stammdaten auswählen" /></SelectTrigger><SelectContent>{kunden.map((customer) => <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>)}</SelectContent></Select>
               </div>
               <div>
                 <Label htmlFor="d-start">Startdatum *</Label>
@@ -263,6 +290,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   className="mt-1.5"
                 />
               </div>
+              <div><Label htmlFor="d-resp">Hauptverantwortlich</Label><Input id="d-resp" value={form.verantwortlicher} onChange={(e) => set("verantwortlicher", e.target.value)} className="mt-1.5" /></div>
+              <div><Label htmlFor="d-forecast">Teilnehmerprognose</Label><Input id="d-forecast" type="number" min="0" value={form.teilnehmerwerte?.prognose ?? form.teilnehmer} onChange={(e) => set("teilnehmerwerte", { ...(form.teilnehmerwerte ?? { aktuell: null, aktuellQuelle: null, aktuellSynchronisiertAm: null }), prognose: e.target.value === "" ? null : Number(e.target.value) })} className="mt-1.5" /></div>
               <div>
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => set("status", v as EventStatus)}>
@@ -397,12 +426,15 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </Card>
         </TabsContent>
 
+        <TabsContent value="time2win"><Card><CardHeader><CardTitle className="text-base">TIME2WIN-Verknüpfung</CardTitle><CardDescription>Lokale Prognose bleibt vom synchronisierten Teilnehmerstand getrennt.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="d-t2w">t2w_event_id</Label><Input id="d-t2w" type="number" value={form.t2wEventId ?? ""} onChange={(e) => set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div><div className="text-sm"><p>Gemeldete TN: <strong>{form.teilnehmerwerte?.aktuell ?? "—"}</strong></p><p>Letzter Sync: {form.time2winLastSuccessAt ? formatDatum(form.time2winLastSuccessAt.slice(0, 10)) : "—"}</p><p>Status: {form.time2winSyncStatus ?? "NEVER"}</p>{form.time2winLastError && <p className="text-destructive">{form.time2winLastError}</p>}</div></CardContent></Card></TabsContent>
+
         <TabsContent value="kontakte">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("nav.contacts")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2"><Select value={contactId} onValueChange={setContactId}><SelectTrigger className="w-56"><SelectValue placeholder="Kontakt auswählen" /></SelectTrigger><SelectContent>{personen.filter((person) => !form.kontakte.some((item) => item.id === person.id)).map((person) => <SelectItem key={person.id} value={person.id}>{person.vorname} {person.nachname}</SelectItem>)}</SelectContent></Select><Input aria-label="Eventrolle" value={contactRole} onChange={(e) => setContactRole(e.target.value)} className="w-36"/><Button onClick={() => void addContact()} disabled={!contactId}>Hinzufügen</Button></div>
               {form.kontakte.length === 0 && (
                 <p className="text-sm text-muted-foreground">Noch keine Kontakte hinterlegt.</p>
               )}
@@ -413,6 +445,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <p className="mt-1 text-sm text-muted-foreground">
                     {k.email} · {k.telefon}
                   </p>
+                  <Button variant="ghost" size="sm" onClick={() => void apiRemoveEventContact(event.id, k.id, k.rolle).then(() => set("kontakte", form.kontakte.filter((item) => item !== k)))}>Entfernen</Button>
                 </div>
               ))}
             </CardContent>
@@ -425,6 +458,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <CardTitle className="text-base">{t("nav.tasks")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              <div className="flex gap-2"><Input aria-label="Neue Aufgabe" value={newTask} onChange={(e) => setNewTask(e.target.value)} /><Button onClick={() => void addTask()}>Aufgabe anlegen</Button></div>
               {form.aufgaben.length === 0 && (
                 <p className="text-sm text-muted-foreground">Noch keine Aufgaben angelegt.</p>
               )}
@@ -436,9 +470,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Checkbox
                     checked={a.erledigt}
                     onCheckedChange={(v) =>
-                      set(
-                        "aufgaben",
-                        form.aufgaben.map((x) => (x.id === a.id ? { ...x, erledigt: !!v } : x)),
+                      void apiUpdateEventTask(event.id, a.id, { completed: !!v }).then(() =>
+                        set("aufgaben", form.aufgaben.map((x) => (x.id === a.id ? { ...x, erledigt: !!v } : x))),
                       )
                     }
                   />
@@ -469,6 +502,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <CardDescription>Ansicht des verknüpften SharePoint-Ordners.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
+              <div className="flex gap-2"><Input aria-label="Dateiverknüpfung" value={newFile} onChange={(e) => setNewFile(e.target.value)} placeholder="Dateiname oder SharePoint-Link"/><Button onClick={() => void addFile()}>Verknüpfen</Button></div>
               {form.dateien.length === 0 && (
                 <p className="text-sm text-muted-foreground">Keine Dateien verknüpft.</p>
               )}
@@ -493,6 +527,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <CardTitle className="text-base">Kommunikation</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="flex gap-2"><Input aria-label="Neue Aktivität" value={newActivity} onChange={(e) => setNewActivity(e.target.value)} placeholder="Betreff der Notiz"/><Button onClick={() => void addActivity()}>Aktivität anlegen</Button></div>
               {form.kommunikation.length === 0 && (
                 <p className="text-sm text-muted-foreground">Noch keine Einträge.</p>
               )}

@@ -152,8 +152,46 @@ model Event {
   updatedBy             User?       @relation("EventUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   contacts              EventContact[]
   invoiceRecipients     EventInvoiceRecipient[]
+  tasks                 EventTask[]
+  files                 EventFile[]
+  activities            EventActivity[]
   @@index([status, archived])
   @@index([startAt, endAt])
+}
+
+model EventTask {
+  id          String   @id @default(uuid()) @db.Uuid
+  eventId     String   @db.Uuid
+  title       String
+  dueAt       DateTime?
+  responsible String?
+  completed   Boolean  @default(false)
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EventFile {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @db.Uuid
+  name      String
+  url       String?
+  size      String?
+  updatedAt DateTime @updatedAt
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model EventActivity {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @db.Uuid
+  channel   String
+  subject   String
+  author    String?
+  body      String?
+  occurredAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model EventInvoiceRecipient {

@@ -25,8 +25,16 @@ type ApiEvent = {
   outlookFolderLastError?: string | null;
   sharepointFolder: string | null;
   archived: boolean;
-  organizer?: { name: string } | null;
-  sport?: { name: string } | null;
+  organizer?: { id: string; name: string } | null;
+  sport?: { id: string; name: string } | null;
+  t2wEventId?: number | null;
+  time2winSyncStatus?: string;
+  time2winLastSuccessAt?: string | null;
+  time2winLastError?: string | null;
+  contacts?: { role: string; contact: { id: string; name: string; email: string | null; phone: string | null } }[];
+  tasks?: { id: string; title: string; dueAt: string | null; responsible: string | null; completed: boolean }[];
+  files?: { id: string; name: string; size: string | null; updatedAt: string }[];
+  activities?: { id: string; channel: string; subject: string; author: string | null; body: string | null; occurredAt: string }[];
 };
 
 const statusFromApi: Record<string, T2WEvent["status"]> = {
@@ -49,6 +57,8 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     eventcode: event.eventCode,
     name: event.name,
     veranstalter: event.organizer?.name ?? "—",
+    veranstalterId: event.organizer?.id,
+    sportartId: event.sport?.id,
     ort: event.location ?? "",
     start: dateOnly(event.startAt),
     ende: dateOnly(event.endAt),
@@ -74,13 +84,29 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     outlookFolderLastSuccessAt: event.outlookFolderLastSuccessAt,
     outlookFolderLastError: event.outlookFolderLastError,
     sharepointOrdner: event.sharepointFolder,
-    kontakte: [],
-    aufgaben: [],
-    dateien: [],
-    kommunikation: [],
+    t2wEventId: event.t2wEventId ?? null,
+    time2winSyncStatus: event.time2winSyncStatus,
+    time2winLastSuccessAt: event.time2winLastSuccessAt ?? null,
+    time2winLastError: event.time2winLastError ?? null,
+    kontakte: (event.contacts ?? []).map(({ role, contact }) => ({ id: contact.id, name: contact.name, rolle: role, email: contact.email ?? "", telefon: contact.phone ?? "" })),
+    aufgaben: (event.tasks ?? []).map((task) => ({ id: task.id, titel: task.title, faellig: task.dueAt ? dateOnly(task.dueAt) : "", verantwortlich: task.responsible ?? "", erledigt: task.completed })),
+    dateien: (event.files ?? []).map((file) => ({ id: file.id, name: file.name, groesse: file.size ?? "", aktualisiert: dateOnly(file.updatedAt) })),
+    kommunikation: (event.activities ?? []).map((activity) => ({ id: activity.id, kanal: activity.channel as "E-Mail" | "Telefon" | "Notiz", betreff: activity.subject, datum: dateOnly(activity.occurredAt), autor: activity.author ?? "", text: activity.body ?? "" })),
     sportart: event.sport?.name ?? "",
   };
 }
+
+async function eventAction<T>(url: string, method: "POST" | "PATCH" | "DELETE", body?: unknown): Promise<T> {
+  const response = await fetch(url, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (!response.ok) throw new Error("Event-Arbeitsfläche konnte nicht gespeichert werden");
+  return response.status === 204 ? (undefined as T) : (await response.json()) as T;
+}
+export const apiAddEventContact = (eventId: string, contactId: string, role: string) => eventAction(`/api/v1/events/${eventId}/contacts/${contactId}`, "POST", { role });
+export const apiRemoveEventContact = (eventId: string, contactId: string, role: string) => eventAction<void>(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "DELETE");
+export const apiCreateEventTask = (eventId: string, body: { title: string; dueAt?: string; responsible?: string }) => eventAction(`/api/v1/events/${eventId}/tasks`, "POST", body);
+export const apiUpdateEventTask = (eventId: string, taskId: string, body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) => eventAction(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", body);
+export const apiCreateEventFile = (eventId: string, body: { name: string; url?: string; size?: string }) => eventAction(`/api/v1/events/${eventId}/files`, "POST", body);
+export const apiCreateEventActivity = (eventId: string, body: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }) => eventAction(`/api/v1/events/${eventId}/activities`, "POST", body);
 
 export async function apiLogin(email: string, password: string) {
   const response = await fetch("/api/v1/auth/login", {
@@ -180,9 +206,14 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       endAt: patch.ende,
       location: patch.ort,
       responsible: patch.verantwortlicher,
-      participantForecast: patch.teilnehmer,
+      participantForecast: patch.teilnehmerwerte?.prognose ?? patch.teilnehmer,
       notes: patch.notizen,
       organizerName: patch.veranstalter,
+      organizerId: patch.veranstalterId,
+      sportId: patch.sportartId,
+      status: patch.status === "anfrage" ? "ANFRAGE" : patch.status === "angebot-gesendet" ? "ANGEBOT_GESENDET" : patch.status === "datum-pruefen" ? "DATUM_PRUEFEN" : patch.status === "akquise" ? "AKQUISE" : patch.status === "abgesagt" ? "ABGESAGT" : "ZUGESAGT",
+      archived: patch.archiviert,
+      t2wEventId: patch.t2wEventId,
       outlookFolder: patch.outlookOrdner,
       outlookWebUrl: patch.outlookWebUrl,
       sharepointFolder: patch.sharepointOrdner,

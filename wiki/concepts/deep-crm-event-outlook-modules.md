@@ -1,6 +1,6 @@
 # Deep CRM, Event Workspace, and Outlook Modules
 
-Updated: 2026-08-23
+Updated: 2026-08-25
 
 ## Current architecture
 
@@ -12,6 +12,7 @@ Updated: 2026-08-23
 - The Event projection module owns active/archive/time/status/sort rules and task projections used by overview, Event list, offers, invoices, tasks, calendar, and Gantt. Routes consume projections instead of maintaining competing interpretations.
 - Backend Event creation and update invariants live in the Event mutation module. Organizer resolution, payout/invoice-recipient defaults, optimistic version checks, recipient replacement, and persistence execute through one transaction-oriented interface. The Nest controller is the HTTP adapter and Prisma is the production persistence adapter.
 - The Outlook Event-folder module owns the `year folder / quarter / Eventcode` plan, drift detection, mapping resolution, folder creation, and sync status persistence.
+- The event workspace persists event-contact roles, tasks, file/SharePoint references, and manual activities as explicit Event-Service resources. The event detail route uses those resource endpoints; they are not browser-only collections.
 
 ## Test seams
 
@@ -23,6 +24,7 @@ Updated: 2026-08-23
 - `services/event-service/src/event-mutations.ts`: Event creation/update outcomes and invariants through an in-memory-testable persistence seam.
 - `services/event-service/src/prisma-event-mutation.adapter.ts`: transaction-backed production adapter.
 - `services/event-service/src/outlook/outlook.folder.service.ts`: canonical folder planning plus the existing Microsoft Graph adapter seam.
+- `services/event-service/src/events.controller.ts`: event-workspace subresource endpoints for roles, tasks, files, and manual activities.
 - `tests/e2e/event-management.spec.ts`: browser workflow verifies CRM persistence after reload and Event/Outlook behavior.
 
 ## Evidence

@@ -472,6 +472,15 @@ test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) 
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
 });
 
+test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "TIME2WIN-Verknüpfung" }).click();
+  await expect(page.getByLabel("t2w_event_id")).toBeVisible();
+  await expect(page.getByText("Gemeldete TN:")).toBeVisible();
+  await expect(page.getByText("Status: NEVER")).toBeVisible();
+});
+
 test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
