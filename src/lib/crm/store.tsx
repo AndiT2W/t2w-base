@@ -100,13 +100,13 @@ export function useCrm() {
   return value;
 }
 export const passtPerson = (person: Person, query: string, kunden: Kunde[]) =>
-  `${personName(person)} ${person.email} ${person.telefon} ${person.funktion} ${kunden
+  `${personName(person)} ${person.email} ${person.telefonPrivat} ${person.telefonBeruflich} ${person.funktion} ${person.ort} ${kunden
     .filter((kunde) => person.kundenIds.includes(kunde.id))
     .map((kunde) => `${kunde.name} ${kunde.uid} ${kunde.iban}`)
     .join(" ")}`
     .toLowerCase()
     .includes(query.toLowerCase());
 export const passtKunde = (kunde: Kunde, query: string) =>
-  `${kunde.name} ${kunde.uid} ${kunde.iban} ${kunde.rechnungsEmail}`
+  `${kunde.name} ${kunde.uid} ${kunde.iban} ${kunde.email} ${kunde.ort} ${kunde.plz}`
     .toLowerCase()
     .includes(query.toLowerCase());

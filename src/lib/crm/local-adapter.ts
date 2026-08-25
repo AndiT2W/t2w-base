@@ -17,7 +17,15 @@ export function createLocalCrmAdapter(
       storage.setItem(key, JSON.stringify(initial));
       return initial;
     }
-    return JSON.parse(saved) as CrmState;
+    const state = JSON.parse(saved) as CrmState;
+    const normalized = {
+      ...state,
+      kunden: state.kunden.map((kunde) =>
+        (kunde.status as string) === "pruefung" ? { ...kunde, status: "aktiv" as const } : kunde,
+      ),
+    };
+    if (JSON.stringify(normalized) !== saved) storage.setItem(key, JSON.stringify(normalized));
+    return normalized;
   };
   const write = (state: CrmState) => {
     storage.setItem(key, JSON.stringify(state));

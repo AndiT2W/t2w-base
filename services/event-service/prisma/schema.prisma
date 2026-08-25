@@ -54,12 +54,15 @@ model Organizer {
   active       Boolean     @default(true)
   billingInfo  String?
   payoutInfo   String?
-  address      String?
+  country      String?
+  city         String?
+  street       String?
+  postalCode   String?
   uid          String?
   iban         String?
   bic          String?
   bankName     String?
-  invoiceEmail String?
+  email        String?
   personId     String?     @unique @db.Uuid
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -86,6 +89,12 @@ model Contact {
   lastSyncedAt DateTime?
   email       String?
   phone       String?
+  privatePhone String?
+  workPhone   String?
+  country     String?
+  city        String?
+  street      String?
+  postalCode  String?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   organizers  OrganizerContact[]

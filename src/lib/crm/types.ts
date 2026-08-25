@@ -4,10 +4,9 @@ export const EVENTROLLE_LABEL: Record<EventRolle, string> = {
   finanzen: "Finanzen",
   timing: "Timing",
 };
-export type KundenStatus = "aktiv" | "pruefung" | "inaktiv";
+export type KundenStatus = "aktiv" | "inaktiv";
 export const KUNDENSTATUS_LABEL: Record<KundenStatus, string> = {
   aktiv: "Aktiv",
-  pruefung: "In Prüfung",
   inaktiv: "Inaktiv",
 };
 export type Person = {
@@ -15,9 +14,13 @@ export type Person = {
   vorname: string;
   nachname: string;
   email: string;
-  telefon: string;
+  telefonPrivat: string;
+  telefonBeruflich: string;
   funktion: string;
   ort: string;
+  land: string;
+  strasse: string;
+  plz: string;
   notiz: string;
   kundenprofilId: string | null;
   kundenIds: string[];
@@ -31,8 +34,11 @@ export type Kunde = {
   uid: string;
   iban: string;
   bank: string;
-  rechnungsAdresse: string;
-  rechnungsEmail: string;
+  land: string;
+  ort: string;
+  strasse: string;
+  plz: string;
+  email: string;
   status: KundenStatus;
   kontaktIds: string[];
   events: {

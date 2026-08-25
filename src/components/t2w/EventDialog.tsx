@@ -22,11 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useT2W } from "@/lib/t2w/store";
+import { useCrm } from "@/lib/crm/store";
 import { buildEventcode } from "@/lib/t2w/eventcode";
 import { STATUS_ORDER, STATUS_LABEL, type EventStatus } from "@/lib/t2w/types";
 
 export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const { events, neuesEvent } = useT2W();
+  const { kunden } = useCrm();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -138,6 +140,23 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
               onChange={(e) => setVeranstalter(e.target.value)}
               className="mt-1.5"
             />
+            <Select
+              onValueChange={(id) => {
+                const kunde = kunden.find((item) => item.id === id);
+                if (kunde) setVeranstalter(kunde.name);
+              }}
+            >
+              <SelectTrigger aria-label="Veranstalter aus Stammdaten" className="mt-2">
+                <SelectValue placeholder="Aus Stammdaten auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {kunden.map((kunde) => (
+                  <SelectItem key={kunde.id} value={kunde.id}>
+                    {kunde.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="ort">Ort</Label>

@@ -247,3 +247,9 @@
 - Login-Ansicht wurde durch HTTP-500-Antworten der geschützten Startabfragen ausgelöst, nicht durch ungültige Zugangsdaten.
 - Ursache: Der Deployment-Workflow aktualisierte `event-service`, baute aber den profilbasierten `event-migrate`-Container nicht neu. Dadurch fehlten die Migrationen `0007_event_workspace` und `0008_contact_function_location` in PostgreSQL.
 - Die beiden ausstehenden Migrationen wurden in Produktion eingespielt; der Workflow baut `event-migrate` nun vor dem Migrationslauf. Evidenz: [Deploy-Workflow](../.github/workflows/deploy-hostinger.yml), [Migration 0007](../services/event-service/prisma/migrations/0007_event_workspace/migration.sql), [Migration 0008](../services/event-service/prisma/migrations/0008_contact_function_location/migration.sql).
+# 2026-08-25
+
+- Removed the obsolete CRM customer status `In Prüfung`. The domain permits only active or inactive customers, new customer profiles start active, and legacy local-demo records with the old value are normalized to active on load.
+# 2026-08-25
+
+- Replaced the customer billing-address field with structured customer fields: country, city, street, postal code, and email. The Event-Service migration retains legacy address data in the existing column and seeds the new street/email fields from legacy values where empty.

@@ -522,8 +522,8 @@ test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async (
 test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "TIME2WIN-Verknüpfung" }).click();
-  await expect(page.getByLabel("t2w_event_id")).toBeVisible();
+  await page.getByRole("tab", { name: "TIME2WIN" }).click();
+  await expect(page.getByLabel("Event Id")).toBeVisible();
   await expect(page.getByText("Gemeldete TN:")).toBeVisible();
   await expect(page.getByText("Status: NEVER")).toBeVisible();
 });

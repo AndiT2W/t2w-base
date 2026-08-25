@@ -219,7 +219,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       <Tabs defaultValue="stammdaten">
         <TabsList className="flex-wrap">
           <TabsTrigger value="stammdaten">{t("detail.basicData")}</TabsTrigger>
-          <TabsTrigger value="time2win">TIME2WIN-Verknüpfung</TabsTrigger>
+          <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
           <TabsTrigger value="kontakte">{t("nav.contacts")}</TabsTrigger>
           <TabsTrigger value="aufgaben">{t("nav.tasks")}</TabsTrigger>
           <TabsTrigger value="dateien">{t("detail.files")}</TabsTrigger>
@@ -426,7 +426,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="time2win"><Card><CardHeader><CardTitle className="text-base">TIME2WIN-Verknüpfung</CardTitle><CardDescription>Lokale Prognose bleibt vom synchronisierten Teilnehmerstand getrennt.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="d-t2w">t2w_event_id</Label><Input id="d-t2w" type="number" value={form.t2wEventId ?? ""} onChange={(e) => set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div><div className="text-sm"><p>Gemeldete TN: <strong>{form.teilnehmerwerte?.aktuell ?? "—"}</strong></p><p>Letzter Sync: {form.time2winLastSuccessAt ? formatDatum(form.time2winLastSuccessAt.slice(0, 10)) : "—"}</p><p>Status: {form.time2winSyncStatus ?? "NEVER"}</p>{form.time2winLastError && <p className="text-destructive">{form.time2winLastError}</p>}</div></CardContent></Card></TabsContent>
+        <TabsContent value="time2win"><Card><CardHeader><CardTitle className="text-base">TIME2WIN</CardTitle><CardDescription>Lokale Prognose bleibt vom synchronisierten Teilnehmerstand getrennt.</CardDescription></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="d-t2w">Event Id</Label><Input id="d-t2w" type="number" value={form.t2wEventId ?? ""} onChange={(e) => set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div><div className="text-sm"><p>Gemeldete TN: <strong>{form.teilnehmerwerte?.aktuell ?? "—"}</strong></p><p>Letzter Sync: {form.time2winLastSuccessAt ? formatDatum(form.time2winLastSuccessAt.slice(0, 10)) : "—"}</p><p>Status: {form.time2winSyncStatus ?? "NEVER"}</p>{form.time2winLastError && <p className="text-destructive">{form.time2winLastError}</p>}</div></CardContent></Card></TabsContent>
 
         <TabsContent value="kontakte">
           <Card>

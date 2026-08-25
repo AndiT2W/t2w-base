@@ -30,12 +30,15 @@ export class MasterDataController {
     body: {
       name: string;
       personId?: string;
-      address?: string;
+      country?: string;
+      city?: string;
+      street?: string;
+      postalCode?: string;
       uid?: string;
       iban?: string;
       bic?: string;
       bankName?: string;
-      invoiceEmail?: string;
+      email?: string;
     },
   ) {
     return this.prisma.organizer.create({
@@ -43,12 +46,15 @@ export class MasterDataController {
         name: body.name,
         type: body.personId ? "PERSON" : "ORGANISATION",
         personId: body.personId,
-        address: body.address,
+        country: body.country,
+        city: body.city,
+        street: body.street,
+        postalCode: body.postalCode,
         uid: body.uid,
         iban: body.iban,
         bic: body.bic,
         bankName: body.bankName,
-        invoiceEmail: body.invoiceEmail,
+        email: body.email,
       },
     });
   }
@@ -58,12 +64,15 @@ export class MasterDataController {
     body: {
       name?: string;
       personId?: string | null;
-      address?: string;
+      country?: string;
+      city?: string;
+      street?: string;
+      postalCode?: string;
       uid?: string;
       iban?: string;
       bic?: string;
       bankName?: string;
-      invoiceEmail?: string;
+      email?: string;
     },
   ) {
     return this.prisma.organizer.update({ where: { id }, data: body });
@@ -120,7 +129,12 @@ export class MasterDataController {
       firstName?: string;
       lastName?: string;
       email?: string;
-      phone?: string;
+      privatePhone?: string;
+      workPhone?: string;
+      country?: string;
+      city?: string;
+      street?: string;
+      postalCode?: string;
       note?: string;
       function?: string;
       location?: string;
@@ -136,7 +150,12 @@ export class MasterDataController {
       firstName?: string;
       lastName?: string;
       email?: string;
-      phone?: string;
+      privatePhone?: string;
+      workPhone?: string;
+      country?: string;
+      city?: string;
+      street?: string;
+      postalCode?: string;
       note?: string;
       function?: string;
       location?: string;
@@ -149,12 +168,15 @@ export class MasterDataController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body()
     body: {
-      address?: string;
+      country?: string;
+      city?: string;
+      street?: string;
+      postalCode?: string;
       uid?: string;
       iban?: string;
       bic?: string;
       bankName?: string;
-      invoiceEmail?: string;
+      email?: string;
     },
   ) {
     return this.prisma.$transaction(async (tx) => {

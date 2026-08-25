@@ -35,12 +35,15 @@ export type Contact = {
 export type Customer = {
   id: string;
   name: string;
-  adresse?: string | null;
+  land?: string | null;
+  ort?: string | null;
+  strasse?: string | null;
+  plz?: string | null;
   uid?: string | null;
   iban?: string | null;
   bic?: string | null;
   bankname?: string | null;
-  rechnungsEmail?: string | null;
+  email?: string | null;
   personId?: string | null;
 };
 

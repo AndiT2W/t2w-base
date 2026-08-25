@@ -274,12 +274,15 @@ export async function apiCreateContact(input: {
 }
 export async function apiCreateCustomer(input: {
   name: string;
-  address?: string;
+  country?: string;
+  city?: string;
+  street?: string;
+  postalCode?: string;
   uid?: string;
   iban?: string;
   bic?: string;
   bankName?: string;
-  invoiceEmail?: string;
+  email?: string;
   personId?: string;
 }) {
   const response = await fetch("/api/v1/organizers", {

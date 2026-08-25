@@ -212,7 +212,7 @@ function PeopleTable({
           <td>{personName(p)}</td>
           <td>{p.funktion || "–"}</td>
           <td>{p.email || "–"}</td>
-          <td>{p.telefon || "–"}</td>
+          <td>{p.telefonBeruflich || p.telefonPrivat || "–"}</td>
           <td>{p.kundenIds.length}</td>
           <td>{p.eventRollen.length}</td>
           <td>{p.kundenprofilId ? <Chip good>ja</Chip> : <Chip>nein</Chip>}</td>
@@ -320,15 +320,19 @@ function PersonDetail({
           save={(v) => crm.updatePerson(person.id, { email: v })}
         />
         <Field
-          label="Telefon"
-          value={person.telefon}
-          save={(v) => crm.updatePerson(person.id, { telefon: v })}
+          label="Telefon privat"
+          value={person.telefonPrivat}
+          save={(v) => crm.updatePerson(person.id, { telefonPrivat: v })}
         />
+        <Field label="Telefon beruflich" value={person.telefonBeruflich} save={(v) => crm.updatePerson(person.id, { telefonBeruflich: v })} />
         <Field
           label="Ort"
           value={person.ort}
           save={(v) => crm.updatePerson(person.id, { ort: v })}
         />
+        <Field label="Straße" value={person.strasse} save={(v) => crm.updatePerson(person.id, { strasse: v })} />
+        <Field label="PLZ" value={person.plz} save={(v) => crm.updatePerson(person.id, { plz: v })} />
+        <Field label="Land" value={person.land} save={(v) => crm.updatePerson(person.id, { land: v })} />
         <div className="sm:col-span-2">
           <Field
             label="Notiz"
@@ -397,7 +401,6 @@ function CustomerDetail({
             }
           >
             <option value="aktiv">Aktiv</option>
-            <option value="pruefung">In Prüfung</option>
             <option value="inaktiv">Inaktiv</option>
           </select>
         </label>
@@ -407,17 +410,15 @@ function CustomerDetail({
           save={(v) => crm.updateKunde(customer.id, { uid: v })}
         />
         <Field
-          label="Rechnungs-E-Mail"
-          value={customer.rechnungsEmail}
-          save={(v) => crm.updateKunde(customer.id, { rechnungsEmail: v })}
+          label="Mail"
+          value={customer.email}
+          save={(v) => crm.updateKunde(customer.id, { email: v })}
         />
         <div className="sm:col-span-2">
-          <Field
-            label="Rechnungsadresse"
-            area
-            value={customer.rechnungsAdresse}
-            save={(v) => crm.updateKunde(customer.id, { rechnungsAdresse: v })}
-          />
+          <Field label="Straße" value={customer.strasse} save={(v) => crm.updateKunde(customer.id, { strasse: v })} />
+          <Field label="PLZ" value={customer.plz} save={(v) => crm.updateKunde(customer.id, { plz: v })} />
+          <Field label="Ort" value={customer.ort} save={(v) => crm.updateKunde(customer.id, { ort: v })} />
+          <Field label="Land" value={customer.land} save={(v) => crm.updateKunde(customer.id, { land: v })} />
         </div>
         <Field
           label="IBAN"
@@ -606,9 +607,13 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
     vorname: "",
     nachname: "",
     email: "",
-    telefon: "",
+    telefonPrivat: "",
+    telefonBeruflich: "",
     funktion: "",
     ort: "",
+    land: "",
+    strasse: "",
+    plz: "",
     notiz: "",
   });
   const [k, setK] = useState({
@@ -616,20 +621,26 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
     uid: "",
     iban: "",
     bank: "",
-    rechnungsAdresse: "",
-    rechnungsAdresse: "",
-    rechnungsEmail: "",
+    land: "",
+    ort: "",
+    strasse: "",
+    plz: "",
+    email: "",
   });
   const create = async () => {
     if (mode !== "kunde" && !p.vorname && !p.nachname)
       return toast.error("Vor- oder Nachname ist erforderlich.");
     if (mode === "kunde" && !k.name) return toast.error("Kundenname ist erforderlich.");
+    const email = mode === "kunde" ? k.email : p.email;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("Bitte eine gültige Mail-Adresse angeben.");
+    if (mode !== "kunde" && [p.telefonPrivat, p.telefonBeruflich].some((phone) => phone && !/^[+0-9() .\/-]+$/.test(phone)))
+      return toast.error("Bitte gültige Telefonnummern angeben.");
     if (mode === "person") await crm.neuePerson({ ...p, kundenIds: [] });
-    else if (mode === "kunde") await crm.neuerKunde({ typ: "firma", status: "pruefung", ...k });
+    else if (mode === "kunde") await crm.neuerKunde({ typ: "firma", status: "aktiv", ...k });
     else {
       const old = crm.findeDublette(p.vorname, p.nachname, p.email);
-      if (old) await crm.personAlsKunde(old.id, { status: "pruefung", ...k });
-      else await crm.neuePersonAlsKunde({ ...p, kundenIds: [] }, { status: "pruefung", ...k });
+      if (old) await crm.personAlsKunde(old.id, { status: "aktiv", ...k });
+      else await crm.neuePersonAlsKunde({ ...p, kundenIds: [] }, { status: "aktiv", ...k });
     }
     toast.success("Datensatz angelegt");
     close();
@@ -676,9 +687,13 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
               {f(p, setP, "vorname", "Vorname")}
               {f(p, setP, "nachname", "Nachname")}
               {f(p, setP, "email", "E-Mail")}
-              {f(p, setP, "telefon", "Telefon")}
+              {f(p, setP, "telefonPrivat", "Telefon privat")}
+              {f(p, setP, "telefonBeruflich", "Telefon beruflich")}
               {f(p, setP, "funktion", "Funktion")}
               {f(p, setP, "ort", "Ort")}
+              {f(p, setP, "strasse", "Straße")}
+              {f(p, setP, "plz", "PLZ")}
+              {f(p, setP, "land", "Land")}
             </>
           )}
           {mode !== "person" && (
@@ -687,8 +702,11 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
               {f(k, setK, "uid", "UID")}
               {f(k, setK, "iban", "IBAN")}
               {f(k, setK, "bank", "Bank")}
-              {f(k, setK, "rechnungsAdresse", "Rechnungsadresse")}
-              {f(k, setK, "rechnungsEmail", "Rechnungs-E-Mail")}
+              {f(k, setK, "strasse", "Straße")}
+              {f(k, setK, "plz", "PLZ")}
+              {f(k, setK, "ort", "Ort")}
+              {f(k, setK, "land", "Land")}
+              {f(k, setK, "email", "Mail")}
             </>
           )}
         </div>

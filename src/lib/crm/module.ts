@@ -21,6 +21,12 @@ type ApiPerson = {
   lastName?: string | null;
   email?: string | null;
   phone?: string | null;
+  privatePhone?: string | null;
+  workPhone?: string | null;
+  country?: string | null;
+  city?: string | null;
+  street?: string | null;
+  postalCode?: string | null;
   note?: string | null;
   function?: string | null;
   location?: string | null;
@@ -37,8 +43,11 @@ type ApiKunde = {
   uid?: string | null;
   iban?: string | null;
   bankName?: string | null;
-  address?: string | null;
-  invoiceEmail?: string | null;
+  country?: string | null;
+  city?: string | null;
+  street?: string | null;
+  postalCode?: string | null;
+  email?: string | null;
   contacts?: { contact: { id: string } }[];
 };
 
@@ -55,9 +64,13 @@ function mapPerson(value: ApiPerson): Person {
     vorname: value.firstName ?? split.slice(0, -1).join(" "),
     nachname: value.lastName ?? split.at(-1) ?? "",
     email: value.email ?? "",
-    telefon: value.phone ?? "",
+    telefonPrivat: value.privatePhone ?? value.phone ?? "",
+    telefonBeruflich: value.workPhone ?? "",
     funktion: value.function ?? "",
-    ort: value.location ?? "",
+    ort: value.city ?? value.location ?? "",
+    land: value.country ?? "",
+    strasse: value.street ?? "",
+    plz: value.postalCode ?? "",
     notiz: value.note ?? "",
     kundenprofilId: value.customerProfile?.id ?? null,
     kundenIds: value.organizers?.map(({ organizer }) => organizer.id) ?? [],
@@ -85,8 +98,11 @@ function mapKunde(value: ApiKunde): Kunde {
     uid: value.uid ?? "",
     iban: value.iban ?? "",
     bank: value.bankName ?? "",
-    rechnungsAdresse: value.address ?? "",
-    rechnungsEmail: value.invoiceEmail ?? "",
+    land: value.country ?? "",
+    ort: value.city ?? "",
+    strasse: value.street ?? "",
+    plz: value.postalCode ?? "",
+    email: value.email ?? "",
     status: value.active === false ? "inaktiv" : "aktiv",
     kontaktIds: value.contacts?.map(({ contact }) => contact.id) ?? [],
     events: [],
@@ -142,7 +158,12 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             firstName: input.vorname,
             lastName: input.nachname,
             email: input.email,
-            phone: input.telefon,
+            privatePhone: input.telefonPrivat,
+            workPhone: input.telefonBeruflich,
+            country: input.land,
+            city: input.ort,
+            street: input.strasse,
+            postalCode: input.plz,
             note: input.notiz,
             function: input.funktion,
             location: input.ort,
@@ -158,11 +179,14 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
           body: JSON.stringify({
             name: input.name,
             personId: input.personId,
-            address: input.rechnungsAdresse,
+            country: input.land,
+            city: input.ort,
+            street: input.strasse,
+            postalCode: input.plz,
             uid: input.uid,
             iban: input.iban,
             bankName: input.bank,
-            invoiceEmail: input.rechnungsEmail,
+            email: input.email,
           }),
         }),
       );
@@ -178,7 +202,12 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             firstName: next.vorname,
             lastName: next.nachname,
             email: next.email,
-            phone: next.telefon,
+            privatePhone: next.telefonPrivat,
+            workPhone: next.telefonBeruflich,
+            country: next.land,
+            city: next.ort,
+            street: next.strasse,
+            postalCode: next.plz,
             note: next.notiz,
             function: next.funktion,
             location: next.ort,
@@ -194,11 +223,14 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
           headers,
           body: JSON.stringify({
             name: next.name,
-            address: next.rechnungsAdresse,
+            country: next.land,
+            city: next.ort,
+            street: next.strasse,
+            postalCode: next.plz,
             uid: next.uid,
             iban: next.iban,
             bankName: next.bank,
-            invoiceEmail: next.rechnungsEmail,
+            email: next.email,
             active: next.status !== "inaktiv",
           }),
         }),
