@@ -484,6 +484,29 @@ test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) 
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
 });
 
+test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
+  const requests = await mockApi(page);
+  await page.goto("/kontakte");
+  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByText("Nordwerk GmbH", { exact: true }).click();
+  await page.getByLabel("Hauptansprechperson").selectOption("p1");
+
+  await expect
+    .poll(() =>
+      requests.some(
+        ({ method, url, body }) =>
+          method === "PATCH" &&
+          url.endsWith("/api/v1/organizers/c1") &&
+          JSON.parse(body ?? "{}").primaryContactId === "p1",
+      ),
+    )
+    .toBeTruthy();
+  await page.reload();
+  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByText("Nordwerk GmbH", { exact: true }).click();
+  await expect(page.getByLabel("Hauptansprechperson")).toHaveValue("p1");
+});
+
 test("sortiert Kunden und Kontakte über die Tabellenüberschriften", async ({ page }) => {
   await mockApi(page);
   await page.goto("/kontakte");

@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { ColumnPicker, SortHeader, useStoredColumns } from "@/components/t2w/TableFeatures";
 import { Button } from "@/components/ui/button";
 import { useCrm, passtKunde, passtPerson } from "@/lib/crm/store";
 import { KUNDENSTATUS_LABEL, personName, type Kunde, type Person } from "@/lib/crm/types";
@@ -22,6 +23,16 @@ const CUSTOMER_COLUMNS = [
   "Status",
 ] as const;
 type CustomerColumn = (typeof CUSTOMER_COLUMNS)[number];
+const PEOPLE_COLUMNS = [
+  "Name",
+  "Funktion",
+  "E-Mail",
+  "Telefon",
+  "Kunden",
+  "Eventrollen",
+  "Kundenprofil",
+] as const;
+type PeopleColumn = (typeof PEOPLE_COLUMNS)[number];
 const input = "w-full rounded border border-input bg-background px-2 py-1.5 text-sm";
 const validEmail = (value: string) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const validPhone = (value: string) => !value || /^[+0-9() ./-]+$/.test(value);
@@ -243,6 +254,10 @@ function PeopleTable({
   open: () => void;
 }) {
   const [sort, setSort] = useState<TableSort>({ key: "Name", direction: "asc" });
+  const { visibleColumns, toggleColumn } = useStoredColumns<PeopleColumn>(
+    "t2w-contact-table-columns",
+    PEOPLE_COLUMNS,
+  );
   const sortedPeople = sortRows(
     people,
     sort,
@@ -258,27 +273,38 @@ function PeopleTable({
       })[sort.key],
   );
   return people.length ? (
-    <Table
-      h={["Name", "Funktion", "E-Mail", "Telefon", "Kunden", "Eventrollen", "Kundenprofil"]}
-      sort={sort}
-      onSort={setSort}
-    >
-      {sortedPeople.map((p) => (
-        <tr
-          key={p.id}
-          onClick={() => select(p.id)}
-          className="cursor-pointer border-t border-border hover:bg-accent/50"
-        >
-          <td>{personName(p)}</td>
-          <td>{p.funktion || "–"}</td>
-          <td>{p.email || "–"}</td>
-          <td>{p.telefonBeruflich || p.telefonPrivat || "–"}</td>
-          <td>{p.kundenIds.length}</td>
-          <td>{p.eventRollen.length}</td>
-          <td>{p.kundenprofilId ? <Chip good>ja</Chip> : <Chip>nein</Chip>}</td>
-        </tr>
-      ))}
-    </Table>
+    <>
+      <ColumnPicker
+        columns={PEOPLE_COLUMNS}
+        visibleColumns={visibleColumns}
+        toggleColumn={toggleColumn}
+      />
+      <Table
+        h={PEOPLE_COLUMNS.filter((column) => visibleColumns.includes(column))}
+        sort={sort}
+        onSort={setSort}
+      >
+        {sortedPeople.map((p) => (
+          <tr
+            key={p.id}
+            onClick={() => select(p.id)}
+            className="cursor-pointer border-t border-border hover:bg-accent/50"
+          >
+            {visibleColumns.includes("Name") && <td>{personName(p)}</td>}
+            {visibleColumns.includes("Funktion") && <td>{p.funktion || "–"}</td>}
+            {visibleColumns.includes("E-Mail") && <td>{p.email || "–"}</td>}
+            {visibleColumns.includes("Telefon") && (
+              <td>{p.telefonBeruflich || p.telefonPrivat || "–"}</td>
+            )}
+            {visibleColumns.includes("Kunden") && <td>{p.kundenIds.length}</td>}
+            {visibleColumns.includes("Eventrollen") && <td>{p.eventRollen.length}</td>}
+            {visibleColumns.includes("Kundenprofil") && (
+              <td>{p.kundenprofilId ? <Chip good>ja</Chip> : <Chip>nein</Chip>}</td>
+            )}
+          </tr>
+        ))}
+      </Table>
+    </>
   ) : (
     <Empty text="Keine Kontakte gefunden." open={open} label="Person anlegen" />
   );
@@ -293,33 +319,10 @@ function CustomerTable({
   open: () => void;
 }) {
   const [sort, setSort] = useState<TableSort>({ key: "Kunde", direction: "asc" });
-  const [visibleColumns, setVisibleColumns] = useState<CustomerColumn[]>([...CUSTOMER_COLUMNS]);
-  const [columnPickerOpen, setColumnPickerOpen] = useState(false);
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CUSTOMER_COLUMN_STORAGE_KEY);
-      if (!stored) return;
-      const parsed: unknown = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        const columns = parsed.filter(
-          (column): column is CustomerColumn =>
-            typeof column === "string" && CUSTOMER_COLUMNS.includes(column as CustomerColumn),
-        );
-        if (columns.length) setVisibleColumns(columns);
-      }
-    } catch {
-      localStorage.removeItem(CUSTOMER_COLUMN_STORAGE_KEY);
-    }
-  }, []);
-  const toggleColumn = (column: CustomerColumn) => {
-    setVisibleColumns((current) => {
-      const next = current.includes(column)
-        ? current.filter((item) => item !== column)
-        : CUSTOMER_COLUMNS.filter((item) => current.includes(item) || item === column);
-      localStorage.setItem(CUSTOMER_COLUMN_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  };
+  const { visibleColumns, toggleColumn } = useStoredColumns<CustomerColumn>(
+    CUSTOMER_COLUMN_STORAGE_KEY,
+    CUSTOMER_COLUMNS,
+  );
   const sortedCustomers = sortRows(
     customers,
     sort,
@@ -337,34 +340,11 @@ function CustomerTable({
   );
   return customers.length ? (
     <>
-      <div className="relative mb-2 flex justify-end">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          aria-expanded={columnPickerOpen}
-          onClick={() => setColumnPickerOpen((open) => !open)}
-        >
-          Spalten auswählen
-        </Button>
-        {columnPickerOpen && (
-          <div className="absolute top-9 z-10 w-48 rounded border border-border bg-background p-2 shadow-md">
-            {CUSTOMER_COLUMNS.map((column) => (
-              <label
-                key={column}
-                className="flex cursor-pointer items-center gap-2 px-1 py-1 text-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.includes(column)}
-                  onChange={() => toggleColumn(column)}
-                />
-                {column}
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
+      <ColumnPicker
+        columns={CUSTOMER_COLUMNS}
+        visibleColumns={visibleColumns}
+        toggleColumn={toggleColumn}
+      />
       <Table
         h={CUSTOMER_COLUMNS.filter((column) => visibleColumns.includes(column))}
         sort={sort}
@@ -430,22 +410,17 @@ function Table({
           <tr>
             {h.map((x) => (
               <th key={x} className="px-2 py-1.5">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 font-semibold hover:text-foreground"
-                  onClick={() =>
+                <SortHeader
+                  label={x}
+                  active={sort.key === x}
+                  direction={sort.direction}
+                  onSort={() =>
                     onSort({
                       key: x,
                       direction: sort.key === x && sort.direction === "asc" ? "desc" : "asc",
                     })
                   }
-                  aria-label={`${x} sortieren`}
-                >
-                  {x}
-                  {sort.key === x && (
-                    <span aria-hidden="true">{sort.direction === "asc" ? "↑" : "↓"}</span>
-                  )}
-                </button>
+                />
               </th>
             ))}
           </tr>

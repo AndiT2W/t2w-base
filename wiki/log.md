@@ -285,3 +285,11 @@
 # 2026-08-25
 
 - Added the customer email to the CRM customer table. Users can choose the visible customer-table columns, with the selection stored in browser local storage.
+
+# 2026-08-25
+
+- Standardized the tables in the overview, event list, contacts, and customers around shared column-selection and sortable-header controls. Each view persists its visible columns independently in the browser.
+
+# 2026-08-25
+
+- Fixed persistence of a customer's primary contact: the CRM client now includes `primaryContactId` in organizer update requests. Browser coverage verifies the value after reload.

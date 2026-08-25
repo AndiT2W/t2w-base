@@ -22,6 +22,7 @@ import { FolderLink } from "@/components/t2w/FolderLink";
 import { jahr } from "@/lib/t2w/eventcode";
 import { useI18n } from "@/lib/i18n";
 import { activeEvents } from "@/lib/t2w/event-projections";
+import { ColumnPicker, SortHeader, useStoredColumns } from "@/components/t2w/TableFeatures";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,6 +43,16 @@ export const Route = createFileRoute("/")({
 });
 
 type Schnellfilter = "alle" | "diese-woche" | "offen" | "ohne-ordner";
+const OVERVIEW_COLUMNS = [
+  "Status",
+  "Event",
+  "Veranstalter",
+  "Zeitraum",
+  "Tage",
+  "Aufgaben",
+  "Ordner",
+] as const;
+type OverviewColumn = (typeof OVERVIEW_COLUMNS)[number];
 
 const SCHNELLFILTER: { key: Schnellfilter; label: string }[] = [
   { key: "alle", label: "Alle aktiven" },
@@ -66,9 +77,13 @@ function Uebersicht() {
   const [startFilter, setStartFilter] = useState("alle");
   const [suche, setSuche] = useState("");
   const [sortierung, setSortierung] = useState<{
-    feld: "name" | "veranstalter" | "start" | "ende" | "aufgaben" | "status";
+    feld: "name" | "veranstalter" | "start" | "ende" | "tage" | "aufgaben" | "status";
     richtung: "auf" | "ab";
   }>({ feld: "start", richtung: "auf" });
+  const { visibleColumns, toggleColumn } = useStoredColumns<OverviewColumn>(
+    "t2w-overview-table-columns",
+    OVERVIEW_COLUMNS,
+  );
 
   const aktive = useMemo(() => activeEvents(events), [events]);
   const starts = useMemo(() => [...new Set(aktive.map((event) => event.start))].sort(), [aktive]);
@@ -102,15 +117,19 @@ function Uebersicht() {
         const av =
           sortierung.feld === "aufgaben"
             ? a.aufgaben.filter((x) => !x.erledigt).length
-            : sortierung.feld === "status"
-              ? STATUS_LABEL[a.status]
-              : a[sortierung.feld];
+            : sortierung.feld === "tage"
+              ? tageZwischen(a.start, a.ende)
+              : sortierung.feld === "status"
+                ? STATUS_LABEL[a.status]
+                : a[sortierung.feld];
         const bv =
           sortierung.feld === "aufgaben"
             ? b.aufgaben.filter((x) => !x.erledigt).length
-            : sortierung.feld === "status"
-              ? STATUS_LABEL[b.status]
-              : b[sortierung.feld];
+            : sortierung.feld === "tage"
+              ? tageZwischen(b.start, b.ende)
+              : sortierung.feld === "status"
+                ? STATUS_LABEL[b.status]
+                : b[sortierung.feld];
         const result =
           typeof av === "number" && typeof bv === "number"
             ? av - bv
@@ -127,7 +146,13 @@ function Uebersicht() {
     );
   }
 
-  function SortHeader({ feld, children }: { feld: typeof sortierung.feld; children: ReactNode }) {
+  function OverviewSortHeader({
+    feld,
+    children,
+  }: {
+    feld: typeof sortierung.feld;
+    children: ReactNode;
+  }) {
     const aktiv = sortierung.feld === feld;
     return (
       <button
@@ -226,30 +251,65 @@ function Uebersicht() {
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+          <ColumnPicker
+            columns={OVERVIEW_COLUMNS}
+            visibleColumns={visibleColumns}
+            toggleColumn={toggleColumn}
+          />
           <table className="w-full min-w-[54rem] border-collapse text-xs">
             <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-2 py-1.5 font-semibold">St</th>
-                <th className="px-2 py-1.5">
-                  <SortHeader feld="name">Event</SortHeader>
-                </th>
-                <th className="px-2 py-1.5">
-                  <SortHeader feld="veranstalter">Veranstalter</SortHeader>
-                </th>
-                <th className="px-2 py-1.5">
-                  <SortHeader feld="start">Zeitraum</SortHeader>
-                </th>
-                <th className="px-2 py-1.5 font-semibold">Tg</th>
-                <th className="px-2 py-1.5">
-                  <SortHeader feld="aufgaben">Aufg.</SortHeader>
-                </th>
-                <th className="px-2 py-1.5 font-semibold">
-                  <span className="sr-only">Ordner: </span>
-                  <span className="inline-flex items-center gap-2" title="Outlook und SharePoint">
-                    <Mail className="size-3.5" aria-label="Outlook" />
-                    <Share2 className="size-3.5" aria-label="SharePoint" />
-                  </span>
-                </th>
+                {visibleColumns.includes("Status") && (
+                  <th className="px-2 py-1.5">
+                    <SortHeader
+                      label="Status"
+                      active={sortierung.feld === "status"}
+                      direction={sortierung.richtung === "auf" ? "asc" : "desc"}
+                      onSort={() => sortiere("status")}
+                    />
+                  </th>
+                )}
+                {visibleColumns.includes("Event") && (
+                  <th className="px-2 py-1.5">
+                    <OverviewSortHeader feld="name">Event</OverviewSortHeader>
+                  </th>
+                )}
+                {visibleColumns.includes("Veranstalter") && (
+                  <th className="px-2 py-1.5">
+                    <OverviewSortHeader feld="veranstalter">Veranstalter</OverviewSortHeader>
+                  </th>
+                )}
+                {visibleColumns.includes("Zeitraum") && (
+                  <th className="px-2 py-1.5">
+                    <OverviewSortHeader feld="start">Zeitraum</OverviewSortHeader>
+                  </th>
+                )}
+                {visibleColumns.includes("Tage") && (
+                  <th className="px-2 py-1.5">
+                    <SortHeader
+                      label="Tage"
+                      active={sortierung.feld === "tage"}
+                      direction={sortierung.richtung === "auf" ? "asc" : "desc"}
+                      onSort={() => sortiere("tage")}
+                    >
+                      Tage
+                    </SortHeader>
+                  </th>
+                )}
+                {visibleColumns.includes("Aufgaben") && (
+                  <th className="px-2 py-1.5">
+                    <OverviewSortHeader feld="aufgaben">Aufg.</OverviewSortHeader>
+                  </th>
+                )}
+                {visibleColumns.includes("Ordner") && (
+                  <th className="px-2 py-1.5 font-semibold">
+                    <span className="sr-only">Ordner: </span>
+                    <span className="inline-flex items-center gap-2" title="Outlook und SharePoint">
+                      <Mail className="size-3.5" aria-label="Outlook" />
+                      <Share2 className="size-3.5" aria-label="SharePoint" />
+                    </span>
+                  </th>
+                )}
                 <th className="px-2 py-1.5 text-right font-semibold">Aktion</th>
               </tr>
             </thead>
@@ -273,51 +333,67 @@ function Uebersicht() {
                     }}
                     aria-label={`${e.name} öffnen`}
                   >
-                    <td
-                      className="px-2 py-1"
-                      title={t(`status.${e.status}` as Parameters<typeof t>[0])}
-                    >
-                      <StatusDot status={e.status} />
-                      <span className="sr-only">{STATUS_LABEL[e.status]}</span>
-                    </td>
-                    <td className="max-w-[16rem] truncate px-2 py-1 font-medium text-foreground">
-                      {e.name}
-                    </td>
-                    <td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td>
-                    <td className="whitespace-nowrap px-2 py-1">
-                      {formatZeitraum(e.start, e.ende)}
-                    </td>
-                    <td className="px-2 py-1 tabular-nums">{tageZwischen(e.start, e.ende)}</td>
-                    <td className="px-2 py-1 tabular-nums">
-                      {offen > 0 ? (
-                        <span className="rounded bg-secondary px-1.5 py-0.5 font-medium text-foreground">
-                          {offen}
+                    {visibleColumns.includes("Status") && (
+                      <td
+                        className="px-2 py-1"
+                        title={t(`status.${e.status}` as Parameters<typeof t>[0])}
+                      >
+                        <StatusDot status={e.status} />
+                        <span className="sr-only">{STATUS_LABEL[e.status]}</span>
+                      </td>
+                    )}
+                    {visibleColumns.includes("Event") && (
+                      <td className="max-w-[16rem] truncate px-2 py-1 font-medium text-foreground">
+                        {e.name}
+                      </td>
+                    )}
+                    {visibleColumns.includes("Veranstalter") && (
+                      <td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td>
+                    )}
+                    {visibleColumns.includes("Zeitraum") && (
+                      <td className="whitespace-nowrap px-2 py-1">
+                        {formatZeitraum(e.start, e.ende)}
+                      </td>
+                    )}
+                    {visibleColumns.includes("Tage") && (
+                      <td className="px-2 py-1 tabular-nums">{tageZwischen(e.start, e.ende)}</td>
+                    )}
+                    {visibleColumns.includes("Aufgaben") && (
+                      <td className="px-2 py-1 tabular-nums">
+                        {offen > 0 ? (
+                          <span className="rounded bg-secondary px-1.5 py-0.5 font-medium text-foreground">
+                            {offen}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">–</span>
+                        )}
+                      </td>
+                    )}
+                    {visibleColumns.includes("Ordner") && (
+                      <td className="px-2 py-1">
+                        <span className="flex gap-1">
+                          <FolderLink
+                            icon="outlook"
+                            label="Outlook"
+                            href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null}
+                            available={Boolean(e.outlookOrdner)}
+                          />
+                          <FolderLink
+                            icon="sharepoint"
+                            label="SharePoint"
+                            href={(() => {
+                              const site = settings.jahresSites.find(
+                                (s) => s.jahr === jahr(e.start),
+                              );
+                              return e.sharepointOrdner && site
+                                ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
+                                : null;
+                            })()}
+                            available={Boolean(e.sharepointOrdner)}
+                          />
                         </span>
-                      ) : (
-                        <span className="text-muted-foreground">–</span>
-                      )}
-                    </td>
-                    <td className="px-2 py-1">
-                      <span className="flex gap-1">
-                        <FolderLink
-                          icon="outlook"
-                          label="Outlook"
-                          href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null}
-                          available={Boolean(e.outlookOrdner)}
-                        />
-                        <FolderLink
-                          icon="sharepoint"
-                          label="SharePoint"
-                          href={(() => {
-                            const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start));
-                            return e.sharepointOrdner && site
-                              ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
-                              : null;
-                          })()}
-                          available={Boolean(e.sharepointOrdner)}
-                        />
-                      </span>
-                    </td>
+                      </td>
+                    )}
                     <td className="whitespace-nowrap px-2 py-1 text-right">
                       <Link
                         to="/events/$eventcode"

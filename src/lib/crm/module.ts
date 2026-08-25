@@ -230,6 +230,7 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
           headers,
           body: JSON.stringify({
             name: next.name,
+            primaryContactId: next.primaryContactId,
             country: next.land,
             city: next.ort,
             street: next.strasse,
