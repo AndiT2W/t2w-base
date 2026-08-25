@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, GanttChartSquare, List } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -22,6 +22,8 @@ export function GanttSeite({
 }: { veranstaltungsmenue?: boolean } = {}) {
   const { events } = useT2W();
   const [zoom, setZoom] = useState<"tag" | "woche" | "monat">("tag");
+  const [sichtbarerZeitraum, setSichtbarerZeitraum] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
   const heute = heuteIso();
   const sichtbar = activeEvents(events).sort((a, b) => a.start.localeCompare(b.start));
   const min = Math.min(
@@ -32,9 +34,11 @@ export function GanttSeite({
     ...sichtbar.map((event) => Date.parse(`${event.ende}T00:00:00`)),
     min + 30 * 86400000,
   );
-  const breite = Math.max(max - min, 30 * 86400000);
+  const achsenStart = min - 90 * 86400000;
+  const achsenEnde = max + 90 * 86400000;
+  const breite = Math.max(achsenEnde - achsenStart, 30 * 86400000);
   const tage = Array.from({ length: Math.floor(breite / 86400000) + 1 }, (_, index) => {
-    const datum = new Date(min + index * 86400000);
+    const datum = new Date(achsenStart + index * 86400000);
     const feiertag = austrianHoliday(datum);
     return {
       datum,
@@ -100,8 +104,19 @@ export function GanttSeite({
             {zoom === "tag" ? "Tage" : zoom === "woche" ? "Wochen" : "Monate"}
           </span>{" "}
           · Summenzeile: aktive Veranstaltungen pro Tag
+          {sichtbarerZeitraum && <> · Sichtbar: {sichtbarerZeitraum}</>}
         </p>
-        <div className="overflow-x-auto rounded-b-lg border border-t-0 border-border bg-surface p-3">
+        <div
+          ref={scrollRef}
+          data-testid="gantt-scroll-area"
+          className="overflow-x-auto overscroll-x-contain rounded-b-lg border border-t-0 border-border bg-surface p-3"
+          onScroll={(event) => {
+            const node = event.currentTarget;
+            const ratio = node.scrollWidth > node.clientWidth ? node.scrollLeft / (node.scrollWidth - node.clientWidth) : 0;
+            const day = tage[Math.min(tage.length - 1, Math.max(0, Math.round(ratio * (tage.length - 1))))];
+            if (day) setSichtbarerZeitraum(day.datum.toLocaleDateString("de-AT", { month: "long", year: "numeric" }));
+          }}
+        >
           <div className="space-y-2" style={{ minWidth: `${tageBreite}rem` }}>
             <div className="grid grid-cols-[13rem_1fr] gap-3 text-[10px] text-muted-foreground">
               <div />
@@ -162,7 +177,7 @@ export function GanttSeite({
               </div>
             </div>
             {sichtbar.map((event) => {
-              const left = ((Date.parse(`${event.start}T00:00:00`) - min) / breite) * 100;
+              const left = ((Date.parse(`${event.start}T00:00:00`) - achsenStart) / breite) * 100;
               const width = Math.max(
                 ((Date.parse(`${event.ende}T00:00:00`) -
                   Date.parse(`${event.start}T00:00:00`) +

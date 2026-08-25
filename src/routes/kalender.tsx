@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, ChevronLeft, ChevronRight, GanttChartSquare, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -136,6 +136,8 @@ export function KalenderSeite({
   const { t } = useI18n();
   const [modus, setModus] = useState<"monat" | "woche" | "tag">("monat");
   const [anker, setAnker] = useState(() => new Date());
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const navigatingScroll = useRef(false);
   const sichtbareEvents = useMemo(() => activeEvents(events), [events]);
 
   const monatsStart = new Date(anker.getFullYear(), anker.getMonth(), 1);
@@ -150,6 +152,15 @@ export function KalenderSeite({
       else if (modus === "woche") d.setDate(d.getDate() + richtung * 7);
       else d.setDate(d.getDate() + richtung);
       return d;
+    });
+  }
+  function scrollNavigieren(richtung: number) {
+    if (navigatingScroll.current) return;
+    navigatingScroll.current = true;
+    blaettern(richtung);
+    requestAnimationFrame(() => {
+      if (scrollRef.current) scrollRef.current.scrollLeft = richtung > 0 ? 1 : 0;
+      navigatingScroll.current = false;
     });
   }
 
@@ -234,36 +245,27 @@ export function KalenderSeite({
         </div>
 
         <div
-          className={cn(
-            "min-w-[56rem] grid border-b border-border bg-secondary",
-            modus === "tag" ? "grid-cols-1" : "grid-cols-7",
-          )}
+          ref={scrollRef}
+          data-testid="calendar-scroll-area"
+          className="overflow-x-auto overscroll-x-contain"
+          onWheel={(event) => {
+            const delta = Math.abs(event.deltaX) > 18 ? event.deltaX : event.shiftKey ? event.deltaY : 0;
+            if (Math.abs(delta) > 18) {
+              event.preventDefault();
+              scrollNavigieren(delta > 0 ? 1 : -1);
+            }
+          }}
+          onScroll={(event) => {
+            const node = event.currentTarget;
+            if (node.scrollLeft >= node.scrollWidth - node.clientWidth - 2) scrollNavigieren(1);
+          }}
         >
-          {(modus === "tag" ? [WOCHENTAGE[(anker.getDay() + 6) % 7]] : WOCHENTAGE).map((t) => (
-            <div
-              key={t}
-              className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-            >
-              {t}
+          <div className="min-w-[56rem]">
+            <div className={cn("grid border-b border-border bg-secondary", modus === "tag" ? "grid-cols-1" : "grid-cols-7")}>
+              {(modus === "tag" ? [WOCHENTAGE[(anker.getDay() + 6) % 7]] : WOCHENTAGE).map((t) => <div key={t} className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t}</div>)}
             </div>
-          ))}
-        </div>
-
-        <div className="overflow-x-auto">
-          {modus === "monat" ? (
-            Array.from({ length: wochenAnzahl }, (_, i) => (
-              <WochenGitter
-                key={i}
-                wochenStart={addDays(gitterStart, i * 7)}
-                events={sichtbareEvents}
-                monat={anker.getMonth()}
-              />
-            ))
-          ) : modus === "woche" ? (
-            <WochenGitter wochenStart={wochenStart} events={sichtbareEvents} />
-          ) : (
-            <WochenGitter wochenStart={anker} events={sichtbareEvents} tageAnzahl={1} />
-          )}
+            {modus === "monat" ? Array.from({ length: wochenAnzahl }, (_, i) => <WochenGitter key={i} wochenStart={addDays(gitterStart, i * 7)} events={sichtbareEvents} monat={anker.getMonth()} />) : modus === "woche" ? <WochenGitter wochenStart={wochenStart} events={sichtbareEvents} /> : <WochenGitter wochenStart={anker} events={sichtbareEvents} tageAnzahl={1} />}
+          </div>
         </div>
       </div>
     </div>

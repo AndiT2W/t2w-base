@@ -131,11 +131,11 @@ function AppShell() {
     <SidebarShellProvider>
       <div className="min-h-screen bg-background lg:pl-60">
         <AppSidebar />
-        <div className="flex items-center gap-3 px-4 py-3 lg:hidden">
+        <div className="sticky top-0 z-50 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
           <SidebarMobileTrigger />
           <span className="text-sm font-semibold tracking-tight text-foreground">TIME2WIN</span>
         </div>
-        <main className="mx-auto max-w-[1600px] px-4 pb-10 sm:px-6">
+        <main className="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden px-4 pb-10 sm:px-6">
           <Outlet />
         </main>
       </div>

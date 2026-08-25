@@ -472,6 +472,32 @@ test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) 
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
 });
 
+test("navigiert mobil durch Kalender und Gantt ohne verlorenes Hauptmenü", async ({ page }) => {
+  await mockApi(page);
+  await page.setViewportSize({ width: 375, height: 700 });
+  await page.goto("/kalender");
+  const heading = page.getByRole("heading", { name: "Kalender" });
+  await expect(heading).toBeVisible();
+  const calendar = page.getByTestId("calendar-scroll-area");
+  await expect
+    .poll(() => calendar.evaluate((element) => element.scrollWidth > element.clientWidth))
+    .toBe(true);
+  await expect(page.getByLabel("Navigation öffnen")).toBeVisible();
+  await page.goto("/gantt");
+  const gantt = page.getByTestId("gantt-scroll-area");
+  await gantt.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth / 2;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  await expect
+    .poll(() => gantt.evaluate((element) => element.scrollWidth > element.clientWidth))
+    .toBe(true);
+  await expect(page.getByLabel("Navigation öffnen")).toBeVisible();
+  expect(await page.locator("body").evaluate((body) => body.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
 test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async ({ page }) => {
   await mockApi(page);
   await page.goto("/kontakte");

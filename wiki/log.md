@@ -239,6 +239,9 @@
 # 2026-08-25
 
 - Fixed ticket #30: contact function and location were collected in the UI but omitted by the HTTP CRM mapping and database model. They now persist via `Contact.function` and `Contact.location`; the customer creation form also exposes its billing address. A browser E2E test covers create, detail display, and reload persistence.
+# 2026-08-25
+
+- Implemented ticket #31 mobile time-navigation foundation: calendar and Gantt own bounded horizontal scroll regions, the Gantt axis includes a 90-day buffer before and after event data, and the mobile navigation trigger is sticky. Browser coverage verifies mobile scroll regions, trigger visibility, and no page-level horizontal overflow.
 # 2026-08-25 – Produktionsmigrationen zuverlässig ausführen
 
 - Login-Ansicht wurde durch HTTP-500-Antworten der geschützten Startabfragen ausgelöst, nicht durch ungültige Zugangsdaten.
