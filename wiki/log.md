@@ -277,3 +277,11 @@
 # 2026-08-25
 
 - Event organizer references now cross the event creation and update seam by stable organizer ID, never by the display name selected from CRM. Changing an Event's organizer resets payout and invoice defaults to that same ID.
+
+# 2026-08-25
+
+- Removed the unused legacy organizer free-text fields `billingInfo` and `payoutInfo` from the Event-Service schema with a migration. The CRM customer table no longer exposes the internal organizer type and both CRM tables support ascending/descending sorting through their headers.
+
+# 2026-08-25
+
+- Added the customer email to the CRM customer table. Users can choose the visible customer-table columns, with the selection stored in browser local storage.

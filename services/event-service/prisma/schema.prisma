@@ -52,8 +52,6 @@ model Organizer {
   name         String
   type         OrganizerType
   active       Boolean     @default(true)
-  billingInfo  String?
-  payoutInfo   String?
   country      String?
   city         String?
   street       String?

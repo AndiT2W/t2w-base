@@ -10,9 +10,21 @@ import { KUNDENSTATUS_LABEL, personName, type Kunde, type Person } from "@/lib/c
 export const Route = createFileRoute("/kontakte")({ component: KundenKontakte });
 type Auswahl = { art: "person" | "kunde"; id: string } | null;
 type Modus = "person" | "kunde" | "beides";
+const CUSTOMER_COLUMN_STORAGE_KEY = "t2w-customer-table-columns";
+const CUSTOMER_COLUMNS = [
+  "Kunde",
+  "ID",
+  "E-Mail",
+  "UID",
+  "IBAN",
+  "Kontakte",
+  "Events",
+  "Status",
+] as const;
+type CustomerColumn = (typeof CUSTOMER_COLUMNS)[number];
 const input = "w-full rounded border border-input bg-background px-2 py-1.5 text-sm";
 const validEmail = (value: string) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-const validPhone = (value: string) => !value || /^[+0-9() .\/-]+$/.test(value);
+const validPhone = (value: string) => !value || /^[+0-9() ./-]+$/.test(value);
 const Chip = ({ children, good = false }: { children: ReactNode; good?: boolean }) => (
   <span
     className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] ${good ? "border-status-zugesagt/40 bg-status-zugesagt/15" : "border-border bg-secondary text-muted-foreground"}`}
@@ -63,7 +75,10 @@ function Field({
           rows={3}
           className={input}
           value={draft}
-          onChange={(e) => { setDraft(e.target.value); setError(null); }}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setError(null);
+          }}
           onBlur={() => void commit()}
           aria-invalid={!!error}
         />
@@ -72,12 +87,19 @@ function Field({
           aria-label={label}
           className={input}
           value={draft}
-          onChange={(e) => { setDraft(e.target.value); setError(null); }}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setError(null);
+          }}
           onBlur={() => void commit()}
           aria-invalid={!!error}
         />
       )}
-      {error && <span role="alert" className="text-destructive">{error}</span>}
+      {error && (
+        <span role="alert" className="text-destructive">
+          {error}
+        </span>
+      )}
     </label>
   );
 }
@@ -91,7 +113,8 @@ function KundenKontakte() {
   useEffect(() => {
     if (window.location.search.includes("neu=1")) setCreate(true);
     const kundeId = new URLSearchParams(window.location.search).get("kunde");
-    if (kundeId && crm.kunden.some((kunde) => kunde.id === kundeId)) setSel({ art: "kunde", id: kundeId });
+    if (kundeId && crm.kunden.some((kunde) => kunde.id === kundeId))
+      setSel({ art: "kunde", id: kundeId });
   }, [crm.kunden]);
   function closeCreate() {
     setCreate(false);
@@ -219,9 +242,28 @@ function PeopleTable({
   select: (id: string) => void;
   open: () => void;
 }) {
+  const [sort, setSort] = useState<TableSort>({ key: "Name", direction: "asc" });
+  const sortedPeople = sortRows(
+    people,
+    sort,
+    (person) =>
+      ({
+        Name: personName(person),
+        Funktion: person.funktion,
+        "E-Mail": person.email,
+        Telefon: person.telefonBeruflich || person.telefonPrivat,
+        Kunden: person.kundenIds.length,
+        Eventrollen: person.eventRollen.length,
+        Kundenprofil: person.kundenprofilId ? "ja" : "nein",
+      })[sort.key],
+  );
   return people.length ? (
-    <Table h={["Name", "Funktion", "E-Mail", "Telefon", "Kunden", "Eventrollen", "Kundenprofil"]}>
-      {people.map((p) => (
+    <Table
+      h={["Name", "Funktion", "E-Mail", "Telefon", "Kunden", "Eventrollen", "Kundenprofil"]}
+      sort={sort}
+      onSort={setSort}
+    >
+      {sortedPeople.map((p) => (
         <tr
           key={p.id}
           onClick={() => select(p.id)}
@@ -250,33 +292,137 @@ function CustomerTable({
   select: (id: string) => void;
   open: () => void;
 }) {
+  const [sort, setSort] = useState<TableSort>({ key: "Kunde", direction: "asc" });
+  const [visibleColumns, setVisibleColumns] = useState<CustomerColumn[]>([...CUSTOMER_COLUMNS]);
+  const [columnPickerOpen, setColumnPickerOpen] = useState(false);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CUSTOMER_COLUMN_STORAGE_KEY);
+      if (!stored) return;
+      const parsed: unknown = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        const columns = parsed.filter(
+          (column): column is CustomerColumn =>
+            typeof column === "string" && CUSTOMER_COLUMNS.includes(column as CustomerColumn),
+        );
+        if (columns.length) setVisibleColumns(columns);
+      }
+    } catch {
+      localStorage.removeItem(CUSTOMER_COLUMN_STORAGE_KEY);
+    }
+  }, []);
+  const toggleColumn = (column: CustomerColumn) => {
+    setVisibleColumns((current) => {
+      const next = current.includes(column)
+        ? current.filter((item) => item !== column)
+        : CUSTOMER_COLUMNS.filter((item) => current.includes(item) || item === column);
+      localStorage.setItem(CUSTOMER_COLUMN_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+  const sortedCustomers = sortRows(
+    customers,
+    sort,
+    (customer) =>
+      ({
+        Kunde: customer.name,
+        ID: customer.id,
+        "E-Mail": customer.email,
+        UID: customer.uid,
+        IBAN: customer.iban,
+        Kontakte: customer.kontaktIds.length,
+        Events: customer.events.length,
+        Status: KUNDENSTATUS_LABEL[customer.status],
+      })[sort.key],
+  );
   return customers.length ? (
-    <Table h={["Kunde", "Typ", "UID", "IBAN", "Kontakte", "Events", "Status"]}>
-      {customers.map((k) => (
-        <tr
-          key={k.id}
-          onClick={() => select(k.id)}
-          className="cursor-pointer border-t border-border hover:bg-accent/50"
+    <>
+      <div className="relative mb-2 flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-expanded={columnPickerOpen}
+          onClick={() => setColumnPickerOpen((open) => !open)}
         >
-          <td>{k.name}</td>
-          <td>
-            <Chip>{k.typ === "firma" ? "Firma" : "Einzelperson"}</Chip>
-          </td>
-          <td>{k.uid || "–"}</td>
-          <td>{k.iban || "–"}</td>
-          <td>{k.kontaktIds.length}</td>
-          <td>{k.events.length}</td>
-          <td>
-            <Chip good={k.status === "aktiv"}>{KUNDENSTATUS_LABEL[k.status]}</Chip>
-          </td>
-        </tr>
-      ))}
-    </Table>
+          Spalten auswählen
+        </Button>
+        {columnPickerOpen && (
+          <div className="absolute top-9 z-10 w-48 rounded border border-border bg-background p-2 shadow-md">
+            {CUSTOMER_COLUMNS.map((column) => (
+              <label
+                key={column}
+                className="flex cursor-pointer items-center gap-2 px-1 py-1 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={visibleColumns.includes(column)}
+                  onChange={() => toggleColumn(column)}
+                />
+                {column}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+      <Table
+        h={CUSTOMER_COLUMNS.filter((column) => visibleColumns.includes(column))}
+        sort={sort}
+        onSort={setSort}
+      >
+        {sortedCustomers.map((k) => (
+          <tr
+            key={k.id}
+            onClick={() => select(k.id)}
+            className="cursor-pointer border-t border-border hover:bg-accent/50"
+          >
+            {visibleColumns.includes("Kunde") && <td>{k.name}</td>}
+            {visibleColumns.includes("ID") && (
+              <td className="font-mono text-[11px] text-muted-foreground">{k.id}</td>
+            )}
+            {visibleColumns.includes("E-Mail") && <td>{k.email || "–"}</td>}
+            {visibleColumns.includes("UID") && <td>{k.uid || "–"}</td>}
+            {visibleColumns.includes("IBAN") && <td>{k.iban || "–"}</td>}
+            {visibleColumns.includes("Kontakte") && <td>{k.kontaktIds.length}</td>}
+            {visibleColumns.includes("Events") && <td>{k.events.length}</td>}
+            {visibleColumns.includes("Status") && (
+              <td>
+                <Chip good={k.status === "aktiv"}>{KUNDENSTATUS_LABEL[k.status]}</Chip>
+              </td>
+            )}
+          </tr>
+        ))}
+      </Table>
+    </>
   ) : (
     <Empty text="Keine Kunden gefunden." open={open} label="Kunde anlegen" />
   );
 }
-function Table({ h, children }: { h: string[]; children: ReactNode }) {
+type TableSort = { key: string; direction: "asc" | "desc" };
+
+function sortRows<T>(rows: T[], sort: TableSort, value: (row: T) => string | number | undefined) {
+  return [...rows].sort((a, b) => {
+    const left = value(a) ?? "";
+    const right = value(b) ?? "";
+    const comparison =
+      typeof left === "number" && typeof right === "number"
+        ? left - right
+        : String(left).localeCompare(String(right), "de", { numeric: true });
+    return sort.direction === "asc" ? comparison : -comparison;
+  });
+}
+
+function Table({
+  h,
+  children,
+  sort,
+  onSort,
+}: {
+  h: string[];
+  children: ReactNode;
+  sort: TableSort;
+  onSort: (sort: TableSort) => void;
+}) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full min-w-[54rem] text-xs">
@@ -284,7 +430,22 @@ function Table({ h, children }: { h: string[]; children: ReactNode }) {
           <tr>
             {h.map((x) => (
               <th key={x} className="px-2 py-1.5">
-                {x}
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 font-semibold hover:text-foreground"
+                  onClick={() =>
+                    onSort({
+                      key: x,
+                      direction: sort.key === x && sort.direction === "asc" ? "desc" : "asc",
+                    })
+                  }
+                  aria-label={`${x} sortieren`}
+                >
+                  {x}
+                  {sort.key === x && (
+                    <span aria-hidden="true">{sort.direction === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </button>
               </th>
             ))}
           </tr>
@@ -336,23 +497,46 @@ function PersonDetail({
           label="E-Mail"
           value={person.email}
           save={(v) => crm.updatePerson(person.id, { email: v })}
-          validate={(value) => validEmail(value) ? null : "Bitte eine gültige Mail-Adresse angeben."}
+          validate={(value) =>
+            validEmail(value) ? null : "Bitte eine gültige Mail-Adresse angeben."
+          }
         />
         <Field
           label="Telefon privat"
           value={person.telefonPrivat}
           save={(v) => crm.updatePerson(person.id, { telefonPrivat: v })}
-          validate={(value) => validPhone(value) ? null : "Bitte eine gültige Telefonnummer angeben."}
+          validate={(value) =>
+            validPhone(value) ? null : "Bitte eine gültige Telefonnummer angeben."
+          }
         />
-        <Field label="Telefon beruflich" value={person.telefonBeruflich} save={(v) => crm.updatePerson(person.id, { telefonBeruflich: v })} validate={(value) => validPhone(value) ? null : "Bitte eine gültige Telefonnummer angeben."} />
+        <Field
+          label="Telefon beruflich"
+          value={person.telefonBeruflich}
+          save={(v) => crm.updatePerson(person.id, { telefonBeruflich: v })}
+          validate={(value) =>
+            validPhone(value) ? null : "Bitte eine gültige Telefonnummer angeben."
+          }
+        />
         <Field
           label="Ort"
           value={person.ort}
           save={(v) => crm.updatePerson(person.id, { ort: v })}
         />
-        <Field label="Straße" value={person.strasse} save={(v) => crm.updatePerson(person.id, { strasse: v })} />
-        <Field label="PLZ" value={person.plz} save={(v) => crm.updatePerson(person.id, { plz: v })} />
-        <Field label="Land" value={person.land} save={(v) => crm.updatePerson(person.id, { land: v })} />
+        <Field
+          label="Straße"
+          value={person.strasse}
+          save={(v) => crm.updatePerson(person.id, { strasse: v })}
+        />
+        <Field
+          label="PLZ"
+          value={person.plz}
+          save={(v) => crm.updatePerson(person.id, { plz: v })}
+        />
+        <Field
+          label="Land"
+          value={person.land}
+          save={(v) => crm.updatePerson(person.id, { land: v })}
+        />
         <div className="sm:col-span-2">
           <Field
             label="Notiz"
@@ -433,20 +617,42 @@ function CustomerDetail({
           label="Mail"
           value={customer.email}
           save={(v) => crm.updateKunde(customer.id, { email: v })}
-          validate={(value) => validEmail(value) ? null : "Bitte eine gültige Mail-Adresse angeben."}
+          validate={(value) =>
+            validEmail(value) ? null : "Bitte eine gültige Mail-Adresse angeben."
+          }
         />
         <div className="sm:col-span-2">
-          <Field label="Straße" value={customer.strasse} save={(v) => crm.updateKunde(customer.id, { strasse: v })} />
-          <Field label="PLZ" value={customer.plz} save={(v) => crm.updateKunde(customer.id, { plz: v })} />
-          <Field label="Ort" value={customer.ort} save={(v) => crm.updateKunde(customer.id, { ort: v })} />
-          <Field label="Land" value={customer.land} save={(v) => crm.updateKunde(customer.id, { land: v })} />
+          <Field
+            label="Straße"
+            value={customer.strasse}
+            save={(v) => crm.updateKunde(customer.id, { strasse: v })}
+          />
+          <Field
+            label="PLZ"
+            value={customer.plz}
+            save={(v) => crm.updateKunde(customer.id, { plz: v })}
+          />
+          <Field
+            label="Ort"
+            value={customer.ort}
+            save={(v) => crm.updateKunde(customer.id, { ort: v })}
+          />
+          <Field
+            label="Land"
+            value={customer.land}
+            save={(v) => crm.updateKunde(customer.id, { land: v })}
+          />
         </div>
         <Field
           label="IBAN"
           value={customer.iban}
           save={(v) => crm.updateKunde(customer.id, { iban: v })}
         />
-        <Field label="BIC" value={customer.bic} save={(v) => crm.updateKunde(customer.id, { bic: v })} />
+        <Field
+          label="BIC"
+          value={customer.bic}
+          save={(v) => crm.updateKunde(customer.id, { bic: v })}
+        />
         <Field
           label="Bank"
           value={customer.bank}
@@ -455,9 +661,20 @@ function CustomerDetail({
       </div>
       <section>
         <h3 className="mb-2 font-semibold">Hauptansprechperson</h3>
-        <select aria-label="Hauptansprechperson" className={input} value={customer.primaryContactId ?? ""} onChange={(e) => void crm.updateKunde(customer.id, { primaryContactId: e.target.value || null })}>
+        <select
+          aria-label="Hauptansprechperson"
+          className={input}
+          value={customer.primaryContactId ?? ""}
+          onChange={(e) =>
+            void crm.updateKunde(customer.id, { primaryContactId: e.target.value || null })
+          }
+        >
           <option value="">Keine Hauptansprechperson</option>
-          {contacts.map((person) => <option key={person.id} value={person.id}>{personName(person)}</option>)}
+          {contacts.map((person) => (
+            <option key={person.id} value={person.id}>
+              {personName(person)}
+            </option>
+          ))}
         </select>
       </section>
       <section>
@@ -662,8 +879,12 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
       return toast.error("Vor- oder Nachname ist erforderlich.");
     if (mode === "kunde" && !k.name) return toast.error("Kundenname ist erforderlich.");
     const email = mode === "kunde" ? k.email : p.email;
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("Bitte eine gültige Mail-Adresse angeben.");
-    if (mode !== "kunde" && [p.telefonPrivat, p.telefonBeruflich].some((phone) => phone && !/^[+0-9() .\/-]+$/.test(phone)))
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return toast.error("Bitte eine gültige Mail-Adresse angeben.");
+    if (
+      mode !== "kunde" &&
+      [p.telefonPrivat, p.telefonBeruflich].some((phone) => phone && !/^[+0-9() ./-]+$/.test(phone))
+    )
       return toast.error("Bitte gültige Telefonnummern angeben.");
     if (mode === "person") await crm.neuePerson({ ...p, kundenIds: [] });
     else if (mode === "kunde") await crm.neuerKunde({ typ: "firma", status: "aktiv", ...k });

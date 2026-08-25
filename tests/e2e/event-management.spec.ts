@@ -484,6 +484,41 @@ test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) 
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
 });
 
+test("sortiert Kunden und Kontakte über die Tabellenüberschriften", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/kontakte");
+
+  const contactRows = page.locator("tbody tr");
+  await expect(contactRows.first()).toContainText("Jonas Feld");
+  await page.getByRole("button", { name: "E-Mail sortieren" }).click();
+  await page.getByRole("button", { name: "E-Mail sortieren" }).click();
+  await expect(contactRows.first()).toContainText("Marion Kessler");
+
+  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  const customerRows = page.locator("tbody tr");
+  await expect(customerRows.first()).toContainText("Jonas Feld");
+  await page.getByRole("button", { name: "UID sortieren" }).click();
+  await page.getByRole("button", { name: "UID sortieren" }).click();
+  await expect(customerRows.first()).toContainText("Nordwerk GmbH");
+});
+
+test("speichert die gewählte Kunden-Tabellenspalten im Browser", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/kontakte");
+  await page.evaluate(() => localStorage.removeItem("t2w-customer-table-columns"));
+  await page.reload();
+  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await expect(page.getByRole("button", { name: "E-Mail sortieren" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Spalten auswählen" }).click();
+  await page.getByRole("checkbox", { name: "E-Mail" }).click();
+  await expect(page.getByRole("button", { name: "E-Mail sortieren" })).toHaveCount(0);
+
+  await page.reload();
+  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await expect(page.getByRole("button", { name: "E-Mail sortieren" })).toHaveCount(0);
+});
+
 test("navigiert mobil durch Kalender und Gantt ohne verlorenes Hauptmenü", async ({ page }) => {
   await mockApi(page);
   await page.setViewportSize({ width: 375, height: 700 });
