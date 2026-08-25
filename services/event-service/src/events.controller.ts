@@ -153,12 +153,7 @@ export class EventsController {
     @Param("role") role: string,
     @Body() body: { role?: string },
   ) {
-    const nextRole = body.role?.trim() || "Kontakt";
-    await this.prisma.eventContact.deleteMany({ where: { eventId, contactId, role } });
-    return this.prisma.eventContact.upsert({
-      where: { eventId_contactId_role: { eventId, contactId, role: nextRole } },
-      create: { eventId, contactId, role: nextRole }, update: {}, include: { contact: true },
-    });
+    return this.eventMutations.changeContactRole(eventId, contactId, role, body.role ?? "Kontakt");
   }
 
   @Delete(":id/contacts/:contactId/:role")

@@ -24,4 +24,7 @@ export class EventMutationService {
   update(id: string, input: UpdateEventMutation) {
     return this.mutations.update(id, input);
   }
+  changeContactRole(eventId: string, contactId: string, role: string, nextRole: string) {
+    return this.mutations.changeContactRole(eventId, contactId, role, nextRole);
+  }
 }

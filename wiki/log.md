@@ -292,4 +292,8 @@
 
 # 2026-08-25
 
+- Implemented the architecture deepening slice: pure table preference/sorting behavior with regression tests, CRM workspace intent aliases for contact association operations, and atomic event contact-role mutation behind the event mutation adapter. Root and event-service test suites pass; production build succeeds. Existing repository-wide lint still reports unrelated baseline formatting errors.
+
+# 2026-08-25
+
 - Fixed persistence of a customer's primary contact: the CRM client now includes `primaryContactId` in organizer update requests. Browser coverage verifies the value after reload.

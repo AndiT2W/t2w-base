@@ -52,4 +52,12 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
       include: { organizer: true, sport: true, payoutRecipient: true, invoiceRecipients: { include: { organizer: true } } },
     }) as Promise<EventMutationRecord | undefined>;
   }
+
+  async replaceContactRole(eventId: string, contactId: string, role: string, nextRole: string) {
+    await this.prisma.eventContact.deleteMany({ where: { eventId, contactId, role } });
+    await this.prisma.eventContact.upsert({
+      where: { eventId_contactId_role: { eventId, contactId, role: nextRole } },
+      create: { eventId, contactId, role: nextRole }, update: {},
+    });
+  }
 }

@@ -33,6 +33,7 @@ export interface EventMutationAdapter {
   ): Promise<boolean>;
   replaceInvoiceRecipients(id: string, organizerIds: string[]): Promise<void>;
   getEvent(id: string): Promise<EventMutationRecord | undefined>;
+  replaceContactRole?(eventId: string, contactId: string, role: string, nextRole: string): Promise<void>;
 }
 
 export class EventMutationConflict extends Error {
@@ -79,6 +80,16 @@ export class EventMutations {
       if (!updated) throw new EventMutationConflict();
       if (invoiceRecipientIds) await adapter.replaceInvoiceRecipients(id, invoiceRecipientIds);
       const event = await adapter.getEvent(id);
+      if (!event) throw new EventMutationConflict();
+      return event;
+    });
+  }
+
+  changeContactRole(eventId: string, contactId: string, role: string, nextRole: string) {
+    return this.persistence.transaction(async (adapter) => {
+      if (!adapter.replaceContactRole) throw new Error("CONTACT_ROLE_ADAPTER_UNAVAILABLE");
+      await adapter.replaceContactRole(eventId, contactId, role, nextRole.trim() || "Kontakt");
+      const event = await adapter.getEvent(eventId);
       if (!event) throw new EventMutationConflict();
       return event;
     });

@@ -137,7 +137,13 @@ export function createCrmWorkspace(adapter: CrmModule) {
     link(personId: string, kundeId: string) {
       return mutate(() => adapter.link(state, personId, kundeId));
     },
+    attachContact(personId: string, kundeId: string) {
+      return mutate(() => adapter.link(state, personId, kundeId));
+    },
     unlink(personId: string, kundeId: string) {
+      return mutate(() => adapter.unlink(state, personId, kundeId));
+    },
+    removeCustomerAssociation(personId: string, kundeId: string) {
       return mutate(() => adapter.unlink(state, personId, kundeId));
     },
     kundenVonPerson(person: Person) {

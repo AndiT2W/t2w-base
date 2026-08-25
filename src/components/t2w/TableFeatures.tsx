@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { recoverVisibleColumns } from "./table-model";
 
 export type SortDirection = "asc" | "desc";
 
@@ -13,9 +14,7 @@ export function useStoredColumns<T extends string>(storageKey: string, columns: 
       if (!stored) return;
       const parsed: unknown = JSON.parse(stored);
       if (!Array.isArray(parsed)) return;
-      const next = parsed.filter(
-        (column): column is T => typeof column === "string" && columns.includes(column as T),
-      );
+      const next = recoverVisibleColumns(parsed, columns);
       if (next.length) setVisibleColumns(next);
     } catch {
       localStorage.removeItem(storageKey);

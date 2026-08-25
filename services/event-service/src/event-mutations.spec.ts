@@ -30,6 +30,9 @@ function adapter(): EventMutationAdapter & { events: Map<string, Record<string, 
     async getEvent(id) {
       return events.get(id);
     },
+    async replaceContactRole(id, contactId, role, nextRole) {
+      events.set(id, { ...events.get(id), contactId, previousRole: role, role: nextRole });
+    },
   };
 }
 
@@ -71,5 +74,12 @@ describe("Event mutation module", () => {
       mutations.update("e1", { version: 1, invoiceRecipientIds: ["o2"] }),
     ).rejects.toBeInstanceOf(EventMutationConflict);
     expect(persistence.events.get("e1")?.invoiceRecipientIds).toEqual(["o1"]);
+  });
+
+  it("changes a contact role atomically through the event mutation module", async () => {
+    const persistence = adapter();
+    persistence.events.set("e1", { id: "e1", version: 1 });
+    const event = await new EventMutations(persistence).changeContactRole("e1", "p1", "Kontakt", "  Finanzen ");
+    expect(event).toMatchObject({ contactId: "p1", previousRole: "Kontakt", role: "Finanzen" });
   });
 });
