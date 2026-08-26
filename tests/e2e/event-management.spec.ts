@@ -237,6 +237,11 @@ async function mockApi(page: Page) {
     }
     return route.continue();
   });
+  await page.route("**/api/v1/sports", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET") return route.fulfill({ json: [{ id: "s1", name: "Triathlon" }, { id: "s2", name: "Laufen" }] });
+    return route.continue();
+  });
   return requests;
 }
 
@@ -442,8 +447,10 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   await openButton.click();
   await expect(page.getByText("Neues Event anlegen", { exact: true })).toBeVisible();
   await page.getByLabel(/Eventname/).fill("Neues E2E Event");
-  await page.getByLabel("Veranstalter aus Stammdaten").click();
-  await page.getByRole("option", { name: "Jonas Feld" }).click();
+  await page.getByLabel("Veranstalter aus Stammdaten").fill("Jonas");
+  await page.getByRole("button", { name: "Jonas Feld", exact: true }).click();
+  await page.getByLabel("Sportart").click();
+  await page.getByRole("option", { name: "Triathlon" }).click();
   await page.getByLabel(/Startdatum/).fill("2026-08-21");
   const code = page.getByLabel("Eventcode-Vorschau");
   await expect(code).toHaveValue("260821_neues_e2e_event");
@@ -456,6 +463,54 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
       (request) => request.method === "POST" && request.body?.includes('"organizerId":"c2"'),
     ),
   ).toBeTruthy();
+});
+
+test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Event an", async ({ page }) => {
+  const requests = await mockApi(page);
+  await page.goto("/veranstaltungen");
+  await page
+    .getByRole("navigation", { name: "Veranstaltungsansichten" })
+    .getByRole("link", { name: "Kalender" })
+    .click();
+  await expect(page).toHaveURL(/\/veranstaltungen\?ansicht=kalender(?:&q=)?$/);
+  await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
+  await expect(page.getByText("Bestehendes Event", { exact: true })).toBeVisible();
+  const trigger = page.getByRole("button", { name: "Event anlegen", exact: true }).first();
+  await trigger.click();
+
+  // Radix rendert den Inhalt in einem Portal, daher wird über seinen Titel
+  // auf die tatsächliche, sichtbare Modal-Instanz synchronisiert.
+  await expect(page.getByText("Neues Event anlegen", { exact: true })).toBeVisible();
+  await page.getByLabel(/Eventname/).fill("Kalender Event");
+  await page.getByLabel("Veranstalter aus Stammdaten").fill("Jonas");
+  await expect(page.getByRole("button", { name: "Jonas Feld", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Jonas Feld", exact: true }).click();
+  await page.getByLabel("Sportart").click();
+  await page.getByRole("option", { name: "Laufen" }).click();
+  await page.getByLabel(/Startdatum/).fill("2026-08-21");
+  await page.getByRole("button", { name: "Event anlegen", exact: true }).last().click();
+  await expect(page).toHaveURL(/\/events\/260821_kalender_event$/);
+  expect(
+    requests.some(({ method, url, body }) => {
+      if (method !== "POST" || !url.endsWith("/api/v1/events")) return false;
+      const payload = JSON.parse(body ?? "{}");
+      return payload.organizerId === "c2" && payload.sportId === "s2";
+    }),
+  ).toBeTruthy();
+});
+
+test("validiert Veranstalter und Sportart im Anlage-Modal", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Event anlegen", exact: true }).first().click();
+  await page.getByLabel(/Eventname/).fill("Pflichtfeldtest");
+  await page.getByLabel(/Startdatum/).fill("2026-08-22");
+  await page.getByRole("button", { name: "Event anlegen" }).last().click();
+  await expect(page.getByText("Bitte einen Veranstalter auswählen.")).toBeVisible();
+  await page.getByLabel("Veranstalter aus Stammdaten").fill("Nordwerk");
+  await page.getByRole("button", { name: "Nordwerk GmbH", exact: true }).click();
+  await page.getByRole("button", { name: "Event anlegen" }).last().click();
+  await expect(page.getByText("Bitte eine Sportart auswählen.")).toBeVisible();
 });
 
 test("speichert den Veranstalter der Detailseite über seine Stammdaten-ID", async ({ page }) => {

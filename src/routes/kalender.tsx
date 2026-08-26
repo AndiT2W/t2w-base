@@ -179,6 +179,11 @@ export function KalenderSeite({
           krumen={[{ label: "TIME2WIN", to: "/" }]}
           titel="Veranstaltungen"
           beschreibung={`${sichtbareEvents.length} aktive Events`}
+          aktion={
+            <EventDialog
+              trigger={<Button><Plus className="size-4" />Event anlegen</Button>}
+            />
+          }
         />
       )}
       <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
@@ -204,7 +209,9 @@ export function KalenderSeite({
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <EventDialog trigger={<Button><Plus className="size-4" />Event anlegen</Button>} />
+          {!veranstaltungsmenue && (
+            <EventDialog trigger={<Button><Plus className="size-4" />Event anlegen</Button>} />
+          )}
           <div className="flex rounded-md border border-border bg-surface p-0.5">
             {(["monat", "woche", "tag"] as const).map((m) => (
               <button
