@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, ChevronLeft, ChevronRight, GanttChartSquare, List } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, GanttChartSquare, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot } from "@/components/t2w/StatusBadge";
@@ -9,6 +9,7 @@ import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type T2WEvent } from "@/lib/t2w/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { EventDialog } from "@/components/t2w/EventDialog";
 import { activeEvents, austrianHoliday } from "@/lib/t2w/event-projections";
 import {
   addDays,
@@ -203,6 +204,7 @@ export function KalenderSeite({
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <EventDialog trigger={<Button><Plus className="size-4" />Event anlegen</Button>} />
           <div className="flex rounded-md border border-border bg-surface p-0.5">
             {(["monat", "woche", "tag"] as const).map((m) => (
               <button

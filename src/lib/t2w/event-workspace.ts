@@ -5,6 +5,7 @@ export type CreateEventInput = {
   eventcode?: string;
   veranstalter: string;
   veranstalterId?: string;
+  sportartId?: string;
   ort: string;
   start: string;
   ende?: string;
@@ -20,6 +21,7 @@ type PersistedCreateEventInput = {
   eventcode: string;
   veranstalter: string;
   veranstalterId?: string;
+  sportartId?: string;
   ort: string;
   start: string;
   ende: string;
@@ -75,6 +77,7 @@ export function createEventWorkspace(transport: Transport) {
         eventcode: input.eventcode ?? "",
         veranstalter: input.veranstalter,
         veranstalterId: input.veranstalterId,
+        sportartId: input.sportartId,
         ort: input.ort,
         start: input.start,
         ende: input.ende?.length ? input.ende : input.start,

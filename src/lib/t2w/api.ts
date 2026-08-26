@@ -143,6 +143,8 @@ export async function apiCreateEvent(input: {
   teilnehmerprognose: number;
   notizen: string;
   status: string;
+  veranstalterId?: string;
+  sportartId?: string;
 }) {
   const status =
     input.status === "anfrage"
@@ -164,6 +166,7 @@ export async function apiCreateEvent(input: {
       name: input.name,
       eventCode: input.eventcode,
       organizerId: input.veranstalterId,
+      sportId: input.sportartId,
       startAt: input.start,
       endAt: input.ende,
       location: input.ort,
@@ -175,6 +178,13 @@ export async function apiCreateEvent(input: {
   });
   if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
   return mapApiEvent((await response.json()) as ApiEvent);
+}
+
+export type ApiSport = { id: string; name: string };
+export async function apiSports(): Promise<ApiSport[]> {
+  const response = await fetch("/api/v1/sports", { credentials: "include" });
+  if (!response.ok) throw new Error("Sportarten konnten nicht geladen werden");
+  return (await response.json()) as ApiSport[];
 }
 
 export async function apiSettings(): Promise<Settings> {
