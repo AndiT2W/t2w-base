@@ -12,6 +12,8 @@ export interface CrmModule {
   createKunde(input: KundeInput): Promise<Kunde>;
   updatePerson(person: Person, patch: Partial<Person>): Promise<Person>;
   updateKunde(kunde: Kunde, patch: Partial<Kunde>): Promise<Kunde>;
+  deletePerson(person: Person): Promise<void>;
+  deleteKunde(kunde: Kunde): Promise<void>;
 }
 
 type ApiPerson = {
@@ -51,6 +53,7 @@ type ApiKunde = {
   postalCode?: string | null;
   email?: string | null;
   contacts?: { contact: { id: string } }[];
+  events?: { eventCode: string; name: string }[];
 };
 
 async function json<T>(request: Request, url: string, init?: RequestInit): Promise<T> {
@@ -109,7 +112,12 @@ function mapKunde(value: ApiKunde): Kunde {
     email: value.email ?? "",
     status: value.active === false ? "inaktiv" : "aktiv",
     kontaktIds: value.contacts?.map(({ contact }) => contact.id) ?? [],
-    events: [],
+    events:
+      value.events?.map((event) => ({
+        eventcode: event.eventCode,
+        eventName: event.name,
+        funktion: "veranstalter" as const,
+      })) ?? [],
   };
 }
 
@@ -244,6 +252,12 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
           }),
         }),
       );
+    },
+    async deletePerson(person: Person) {
+      await json(request, `/api/v1/contacts/${person.id}`, { method: "DELETE" });
+    },
+    async deleteKunde(kunde: Kunde) {
+      await json(request, `/api/v1/organizers/${kunde.id}`, { method: "DELETE" });
     },
   };
 }

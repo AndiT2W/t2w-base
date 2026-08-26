@@ -134,6 +134,26 @@ export function createCrmWorkspace(adapter: CrmModule) {
         fail("Änderung konnte nicht gespeichert werden.", cause);
       }
     },
+    async deletePerson(id: string) {
+      const person = state.personen.find((item) => item.id === id);
+      if (!person) return;
+      try {
+        await adapter.deletePerson(person);
+        replace({ ...state, personen: state.personen.filter((item) => item.id !== id) });
+      } catch (cause) {
+        fail("Kontakt ist noch referenziert und kann nicht gelöscht werden.", cause);
+      }
+    },
+    async deleteKunde(id: string) {
+      const kunde = state.kunden.find((item) => item.id === id);
+      if (!kunde) return;
+      try {
+        await adapter.deleteKunde(kunde);
+        replace({ ...state, kunden: state.kunden.filter((item) => item.id !== id) });
+      } catch (cause) {
+        fail("Kunde ist noch referenziert und kann nicht gelöscht werden.", cause);
+      }
+    },
     link(personId: string, kundeId: string) {
       return mutate(() => adapter.link(state, personId, kundeId));
     },

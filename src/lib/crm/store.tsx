@@ -28,6 +28,8 @@ type Ctx = CrmState & {
   ) => Promise<void>;
   updatePerson: (id: string, p: Partial<Person>) => Promise<void>;
   updateKunde: (id: string, p: Partial<Kunde>) => Promise<void>;
+  deletePerson: (id: string) => Promise<void>;
+  deleteKunde: (id: string) => Promise<void>;
   verknuepfe: (personId: string, kundeId: string) => Promise<void>;
   loeseVerknuepfung: (personId: string, kundeId: string) => Promise<void>;
   kundenVonPerson: (p: Person) => Kunde[];
@@ -84,6 +86,8 @@ export function CrmProvider({ children, adapter }: { children: ReactNode; adapte
       },
       updatePerson: workspace.updatePerson,
       updateKunde: workspace.updateKunde,
+      deletePerson: workspace.deletePerson,
+      deleteKunde: workspace.deleteKunde,
       verknuepfe: workspace.link,
       loeseVerknuepfung: workspace.unlink,
       kundenVonPerson: workspace.kundenVonPerson,

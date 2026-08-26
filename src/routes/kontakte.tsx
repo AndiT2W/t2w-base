@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { ColumnPicker, SortHeader, useStoredColumns } from "@/components/t2w/TableFeatures";
@@ -211,7 +211,12 @@ function KundenKontakte() {
           <h2 className="mb-5 text-xl font-semibold">{p ? personName(p) : k?.name}</h2>
           {p ? (
             <>
-              <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
+              <PersonDetail
+                person={p}
+                crm={crm}
+                go={(id) => setSel({ art: "kunde", id })}
+                close={() => setSel(null)}
+              />
               <AssociationRemover
                 label="Kundenzuordnung entfernen"
                 items={crm.kundenVonPerson(p).map((x) => [x.id, x.name])}
@@ -220,7 +225,12 @@ function KundenKontakte() {
             </>
           ) : (
             <>
-              <CustomerDetail customer={k!} crm={crm} go={(id) => setSel({ art: "person", id })} />
+              <CustomerDetail
+                customer={k!}
+                crm={crm}
+                go={(id) => setSel({ art: "person", id })}
+                close={() => setSel(null)}
+              />
               <AssociationRemover
                 label="Kontaktzuordnung entfernen"
                 items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)])}
@@ -442,14 +452,23 @@ function PersonDetail({
   person,
   crm,
   go,
+  close,
 }: {
   person: Person;
   crm: ReturnType<typeof useCrm>;
   go: (id: string) => void;
+  close: () => void;
 }) {
   const assigned = crm.kundenVonPerson(person);
   return (
     <div className="space-y-5">
+      <DeleteAction
+        label="Kontakt löschen"
+        onDelete={async () => {
+          await crm.deletePerson(person.id);
+          close();
+        }}
+      />
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label="Vorname"
@@ -553,14 +572,23 @@ function CustomerDetail({
   customer,
   crm,
   go,
+  close,
 }: {
   customer: Kunde;
   crm: ReturnType<typeof useCrm>;
   go: (id: string) => void;
+  close: () => void;
 }) {
   const contacts = crm.kontakteVonKunde(customer.id);
   return (
     <div className="space-y-5">
+      <DeleteAction
+        label="Kunde löschen"
+        onDelete={async () => {
+          await crm.deleteKunde(customer.id);
+          close();
+        }}
+      />
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label="Kundenname"
@@ -669,6 +697,54 @@ function CustomerDetail({
           save={(id) => crm.verknuepfe(id, customer.id)}
         />
       </section>
+      <section>
+        <h3 className="mb-2 font-semibold">Events ({customer.events.length})</h3>
+        {customer.events.length ? (
+          <div className="space-y-2">
+            {customer.events.map((event) => (
+              <a
+                key={event.eventcode}
+                href={`/events/${event.eventcode}`}
+                className="block rounded border border-border p-2 text-sm hover:bg-accent/50"
+              >
+                <span className="font-medium">{event.eventName}</span>
+                <span className="ml-2 font-mono text-xs text-muted-foreground">
+                  {event.eventcode}
+                </span>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Keine Events zugeordnet.</p>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function DeleteAction({ label, onDelete }: { label: string; onDelete: () => Promise<void> }) {
+  async function remove() {
+    if (!window.confirm(`${label} wirklich aus den Stammdaten löschen?`)) return;
+    try {
+      await onDelete();
+      toast.success("Datensatz gelöscht");
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message.includes("referenziert") || error.message.includes("409"))
+      ) {
+        toast.warning("Löschen nicht möglich: Der Datensatz wird noch verwendet.");
+      } else {
+        toast.error("Datensatz konnte nicht gelöscht werden.");
+      }
+    }
+  }
+  return (
+    <div className="flex justify-end border-b border-border pb-3">
+      <Button type="button" variant="outline" size="sm" onClick={() => void remove()}>
+        <Trash2 className="mr-1.5 size-4" />
+        {label}
+      </Button>
     </div>
   );
 }

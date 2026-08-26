@@ -108,6 +108,23 @@ export function createLocalCrmAdapter(
       write({ ...state, kunden: state.kunden.map((item) => (item.id === kunde.id ? next : item)) });
       return clone(next);
     },
+    async deletePerson(person) {
+      const state = read();
+      if (person.kundenIds.length || person.eventRollen.length || person.kundenprofilId)
+        throw new Error("CRM_REFERENCED");
+      write({ ...state, personen: state.personen.filter((item) => item.id !== person.id) });
+    },
+    async deleteKunde(kunde) {
+      const state = read();
+      if (
+        kunde.kontaktIds.length ||
+        kunde.events.length ||
+        kunde.personId ||
+        kunde.primaryContactId
+      )
+        throw new Error("CRM_REFERENCED");
+      write({ ...state, kunden: state.kunden.filter((item) => item.id !== kunde.id) });
+    },
   };
 }
 

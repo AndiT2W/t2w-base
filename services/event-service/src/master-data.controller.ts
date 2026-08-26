@@ -23,7 +23,12 @@ export class MasterDataController {
     return this.prisma.organizer.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      include: { contacts: { include: { contact: true } }, person: true, primaryContact: true },
+      include: {
+        contacts: { include: { contact: true } },
+        events: { select: { eventCode: true, name: true } },
+        person: true,
+        primaryContact: true,
+      },
     });
   }
   @Post("organizers") organizer(
@@ -86,8 +91,26 @@ export class MasterDataController {
   }
   @Delete("organizers/:id")
   async deleteOrganizer(@Param("id", ParseUUIDPipe) id: string) {
-    const references = await this.prisma.organizer.findUniqueOrThrow({ where: { id }, include: { events: true, payoutEvents: true, invoiceRecipients: true, contacts: true, person: true, primaryContact: true } });
-    if (references.events.length || references.payoutEvents.length || references.invoiceRecipients.length || references.contacts.length || references.person || references.primaryContact) throw new ConflictException("ORGANIZER_REFERENCED");
+    const references = await this.prisma.organizer.findUniqueOrThrow({
+      where: { id },
+      include: {
+        events: true,
+        payoutEvents: true,
+        invoiceRecipients: true,
+        contacts: true,
+        person: true,
+        primaryContact: true,
+      },
+    });
+    if (
+      references.events.length ||
+      references.payoutEvents.length ||
+      references.invoiceRecipients.length ||
+      references.contacts.length ||
+      references.person ||
+      references.primaryContact
+    )
+      throw new ConflictException("ORGANIZER_REFERENCED");
     await this.prisma.organizer.delete({ where: { id } });
   }
   @Put("organizers/:organizerId/contacts/:contactId")
@@ -176,8 +199,22 @@ export class MasterDataController {
   }
   @Delete("contacts/:id")
   async deleteContact(@Param("id", ParseUUIDPipe) id: string) {
-    const references = await this.prisma.contact.findUniqueOrThrow({ where: { id }, include: { organizers: true, eventRoles: true, customerProfile: true, primaryForOrganizers: true } });
-    if (references.organizers.length || references.eventRoles.length || references.customerProfile || references.primaryForOrganizers.length) throw new ConflictException("CONTACT_REFERENCED");
+    const references = await this.prisma.contact.findUniqueOrThrow({
+      where: { id },
+      include: {
+        organizers: true,
+        eventRoles: true,
+        customerProfile: true,
+        primaryForOrganizers: true,
+      },
+    });
+    if (
+      references.organizers.length ||
+      references.eventRoles.length ||
+      references.customerProfile ||
+      references.primaryForOrganizers.length
+    )
+      throw new ConflictException("CONTACT_REFERENCED");
     await this.prisma.contact.delete({ where: { id } });
   }
   @Post("contacts/:id/customer-profile") customerProfile(

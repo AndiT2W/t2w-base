@@ -59,6 +59,7 @@ async function mockApi(page: Page) {
       active: true,
       uid: "DE1",
       contacts: [{ contact: { id: "p1" } }, { contact: { id: "p3" } }],
+      events: [{ eventCode: "260820_demo_event", name: "Bestehendes Event" }],
       personId: null,
     },
     {

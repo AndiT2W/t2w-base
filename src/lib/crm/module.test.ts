@@ -22,6 +22,7 @@ const customerResponse = {
   active: true,
   uid: "ATU1",
   contacts: [{ contact: { id: "p1" } }],
+  events: [{ eventCode: "260820_demo_event", name: "Demo Event" }],
   personId: null,
 };
 
@@ -44,7 +45,15 @@ describe("CRM module", () => {
       }),
     ]);
     expect(state.kunden).toEqual([
-      expect.objectContaining({ id: "c1", name: "Nordwerk", kontaktIds: ["p1"], status: "aktiv" }),
+      expect.objectContaining({
+        id: "c1",
+        name: "Nordwerk",
+        kontaktIds: ["p1"],
+        status: "aktiv",
+        events: [
+          { eventcode: "260820_demo_event", eventName: "Demo Event", funktion: "veranstalter" },
+        ],
+      }),
     ]);
   });
 
