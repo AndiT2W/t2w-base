@@ -94,7 +94,7 @@ function EventDetail() {
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
   const { updateEvent, syncOutlookFolder, getOutlookFolderPlan, settings } = useT2W();
-  const { personen, kunden, kontakteVonKunde } = useCrm();
+  const { personen, kunden, kontakteVonKunde, neuLaden } = useCrm();
   const { t } = useI18n();
   const [outlookSyncing, setOutlookSyncing] = useState(false);
   const [outlookSyncMessage, setOutlookSyncMessage] = useState<string | null>(null);
@@ -148,6 +148,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     const result = await updateEvent(event.id, nextForm);
     if (result.kind === "saved") {
       setForm(result.event);
+      await neuLaden();
       toast.success("Änderungen gespeichert.");
     } else if (result.kind === "conflict")
       toast.error("Das Event wurde zwischenzeitlich geändert. Bitte neu laden.");

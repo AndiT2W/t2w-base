@@ -14,6 +14,7 @@ import { personName, type Kunde, type Person } from "./types";
 type Ctx = CrmState & {
   bereit: boolean;
   fehler: string | null;
+  neuLaden: () => Promise<void>;
   neuePerson: (p: Omit<Person, "id" | "kundenprofilId" | "eventRollen">) => Promise<Person>;
   neuerKunde: (
     k: Omit<Kunde, "id" | "kontaktIds" | "events" | "personId"> & { personId?: string | null },
@@ -55,6 +56,9 @@ export function CrmProvider({ children, adapter }: { children: ReactNode; adapte
   const value = useMemo<Ctx>(
     () => ({
       ...state,
+      neuLaden: async () => {
+        await workspace.load();
+      },
       neuePerson: workspace.createPerson,
       neuerKunde: async (input) => {
         await workspace.createKunde({

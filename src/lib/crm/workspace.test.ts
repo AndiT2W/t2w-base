@@ -35,6 +35,21 @@ const kunde = {
 };
 
 describe("CRM workspace", () => {
+  it("reloads customer references after an event relationship changes", async () => {
+    const initial = { personen: [], kunden: [{ ...kunde, events: [{ eventcode: "event-1", eventName: "Event", funktion: "veranstalter" as const }] }] };
+    const current = { personen: [], kunden: [{ ...kunde, events: [] }] };
+    const adapter = {
+      load: vi.fn().mockResolvedValueOnce(initial).mockResolvedValueOnce(current),
+    } as unknown as CrmModule;
+    const workspace = createCrmWorkspace(adapter);
+
+    await workspace.load();
+    await workspace.load();
+
+    expect(workspace.snapshot().kunden[0].events).toEqual([]);
+    expect(adapter.load).toHaveBeenCalledTimes(2);
+  });
+
   it("creates a Person and Kundenprofil as one workspace transition without stale lookup", async () => {
     const adapter = {
       load: vi.fn().mockResolvedValue({ personen: [], kunden: [] }),
