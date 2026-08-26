@@ -381,7 +381,9 @@ function Uebersicht() {
                       <Link
                         to="/events/$eventcode"
                         params={{ eventcode: e.eventcode }}
-                        className="font-medium text-primary hover:underline"
+                        className="inline-flex rounded p-1 text-primary hover:bg-accent"
+                        title={`Event bearbeiten: ${e.name}`}
+                        aria-label={`Event bearbeiten: ${e.name}`}
                       >
                         <Pencil className="size-4" aria-hidden="true" />
                         <span className="sr-only">Event bearbeiten: </span>
