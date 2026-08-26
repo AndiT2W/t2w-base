@@ -92,6 +92,7 @@ export class MasterDataController {
     return this.prisma.organizer.update({ where: { id }, data: { active: false } });
   }
   @Delete("organizers/:id")
+  @HttpCode(204)
   async deleteOrganizer(@Param("id", ParseUUIDPipe) id: string) {
     const references = await this.prisma.organizer.findUniqueOrThrow({
       where: { id },
@@ -200,6 +201,7 @@ export class MasterDataController {
     return this.prisma.contact.update({ where: { id }, data: body });
   }
   @Delete("contacts/:id")
+  @HttpCode(204)
   async deleteContact(@Param("id", ParseUUIDPipe) id: string) {
     const references = await this.prisma.contact.findUniqueOrThrow({
       where: { id },
