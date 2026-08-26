@@ -297,3 +297,7 @@
 # 2026-08-25
 
 - Fixed persistence of a customer's primary contact: the CRM client now includes `primaryContactId` in organizer update requests. Browser coverage verifies the value after reload.
+
+# 2026-08-26
+
+- Implemented UI ticket #33: overview status dropdown and legend, simplified CRM customer columns and filters, icon-only folder links, editable action wording, and Gantt today-centering with a sticky event column. Updated affected browser assertions; unit tests pass.

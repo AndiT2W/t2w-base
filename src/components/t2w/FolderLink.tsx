@@ -1,7 +1,5 @@
-import { Copy, ExternalLink, FolderX, Mail, Share2 } from "lucide-react";
+import { FolderX, Mail, Share2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 
 export function FolderLink({
   label,
@@ -17,11 +15,6 @@ export function FolderLink({
   icon?: "outlook" | "sharepoint";
 }) {
   const ServiceIcon = icon === "outlook" ? Mail : icon === "sharepoint" ? Share2 : FolderX;
-  async function kopieren() {
-    if (!href) return;
-    await navigator.clipboard.writeText(href);
-    toast.success(`${label}-Link kopiert.`);
-  }
   if (!available || !href)
     return (
       <span
@@ -42,23 +35,11 @@ export function FolderLink({
         target="_blank"
         rel="noreferrer"
         className="inline-flex min-w-0 items-center gap-1 truncate text-primary hover:underline"
-        title={href}
+        title={`${label} öffnen`}
       >
         <ServiceIcon className="size-4 shrink-0" />
-        <span className="truncate">{children}</span>
-        <ExternalLink className="size-3 shrink-0" />
+        <span className="sr-only">{label} öffnen</span>
       </a>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-6 shrink-0"
-        title={`${label}-Link kopieren`}
-        aria-label={`${label}-Link kopieren`}
-        onClick={kopieren}
-      >
-        <Copy className="size-3" />
-      </Button>
     </span>
   );
 }

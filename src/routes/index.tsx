@@ -74,7 +74,6 @@ function Uebersicht() {
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
-  const [startFilter, setStartFilter] = useState("alle");
   const [suche, setSuche] = useState("");
   const [sortierung, setSortierung] = useState<{
     feld: "name" | "veranstalter" | "start" | "ende" | "tage" | "aufgaben" | "status";
@@ -86,7 +85,6 @@ function Uebersicht() {
   );
 
   const aktive = useMemo(() => activeEvents(events), [events]);
-  const starts = useMemo(() => [...new Set(aktive.map((event) => event.start))].sort(), [aktive]);
 
   const kpi = useMemo(() => {
     const kommend = aktive.filter((e) => e.ende >= heute && inTagen(e.start, 14, heute)).length;
@@ -98,7 +96,6 @@ function Uebersicht() {
     const q = suche.trim().toLowerCase();
     return aktive
       .filter((e) => (status === "alle" ? true : e.status === status))
-      .filter((e) => (startFilter === "alle" ? true : e.start === startFilter))
       .filter((e) => {
         if (filter === "diese-woche") return e.ende >= heute && inTagen(e.start, 14, heute);
         if (filter === "offen") return e.aufgaben.some((a) => !a.erledigt);
@@ -136,7 +133,7 @@ function Uebersicht() {
             : String(av).localeCompare(String(bv));
         return sortierung.richtung === "auf" ? result : -result;
       });
-  }, [aktive, filter, status, startFilter, suche, heute, sortierung]);
+  }, [aktive, filter, status, suche, heute, sortierung]);
 
   function sortiere(feld: typeof sortierung.feld) {
     setSortierung((aktuell) =>
@@ -217,33 +214,18 @@ function Uebersicht() {
             </button>
           ))}
           <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-          {(["alle", ...STATUS_ORDER] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatus(s)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                status === s
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {s !== "alle" && <StatusDot status={s} />}
-              {s === "alle" ? t("status.all") : t(`status.${s}` as Parameters<typeof t>[0])}
-            </button>
-          ))}
           <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Start</span>
+            <span>Status</span>
             <select
-              aria-label="Start filtern"
-              value={startFilter}
-              onChange={(event) => setStartFilter(event.target.value)}
+              aria-label="Status filtern"
+              value={status}
+              onChange={(event) => setStatus(event.target.value as EventStatus | "alle")}
               className="rounded border border-border bg-background px-2 py-1.5 text-foreground"
             >
-              <option value="alle">Alle Starts</option>
-              {starts.map((start) => (
-                <option key={start} value={start}>
-                  {new Intl.DateTimeFormat("de-AT").format(new Date(`${start}T00:00:00`))}
+              <option value="alle">{t("status.all")}</option>
+              {STATUS_ORDER.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABEL[s]}
                 </option>
               ))}
             </select>
@@ -400,7 +382,8 @@ function Uebersicht() {
                         params={{ eventcode: e.eventcode }}
                         className="font-medium text-primary hover:underline"
                       >
-                        Öffnen
+                        <span className="sr-only">Event bearbeiten: </span>
+                        Bearbeiten
                       </Link>
                     </td>
                   </tr>
@@ -415,6 +398,17 @@ function Uebersicht() {
               )}
             </tbody>
           </table>
+        </div>
+        <div
+          aria-label="Statuslegende"
+          className="flex flex-wrap gap-3 text-xs text-muted-foreground"
+        >
+          {STATUS_ORDER.map((s) => (
+            <span key={s} className="inline-flex items-center gap-1.5">
+              <StatusDot status={s} />
+              {STATUS_LABEL[s]}
+            </span>
+          ))}
         </div>
 
         <p className="text-xs text-muted-foreground">

@@ -275,18 +275,18 @@ test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) 
   await expect(page.locator(".border-b").filter({ hasText: /2026/ }).first()).toBeVisible();
 });
 
-test("filtert die Übersicht über den Start-Dropdown und zeigt Ordner nur als Symbole", async ({
+test("filtert die Übersicht über den Status-Dropdown und zeigt Ordner nur als Symbole", async ({
   page,
 }) => {
   await mockApi(page);
   await page.goto("/");
-  await expect(page.getByLabel("Start filtern")).toBeVisible();
-  await page.getByLabel("Start filtern").selectOption("2026-08-20");
+  await expect(page.getByLabel("Status filtern")).toBeVisible();
+  await page.getByLabel("Status filtern").selectOption("zugesagt");
   await expect(page.getByText("Bestehendes Event")).toBeVisible();
-  await expect(page.getByText("2026-08-20")).not.toBeVisible();
-  await page.getByLabel("Start filtern").selectOption("alle");
-  await expect(page.getByLabel("Start filtern")).toHaveValue("alle");
+  await page.getByLabel("Status filtern").selectOption("alle");
+  await expect(page.getByLabel("Status filtern")).toHaveValue("alle");
   await expect(page.getByText("Bestehendes Event")).toBeVisible();
+  await expect(page.getByLabel("Statuslegende")).toBeVisible();
   await expect(page.getByLabel("Outlook").first()).toBeVisible();
   await expect(page.getByLabel("SharePoint").first()).toBeVisible();
   await expect(page.getByText("Outlook-Ordner", { exact: true })).toHaveCount(0);
@@ -342,7 +342,7 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await page.getByRole("link", { name: "Neu anlegen" }).click();
   await page.getByLabel("Vorname").fill("Neue");
   await page.getByLabel("Nachname").fill("Kontaktperson");
-  await page.getByLabel("E-Mail").fill("neu@example.com");
+  await page.getByRole("textbox", { name: "E-Mail" }).fill("neu@example.com");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await page.waitForTimeout(100);
   await page.getByLabel("Suche").first().fill("Kontaktperson");
@@ -427,7 +427,7 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(table).toBeVisible();
   await expect(table.locator("thead th")).toHaveCount(8);
   await expect(table.locator("thead")).toContainText("St");
-  await expect(table.locator("thead")).toContainText("Aufg.");
+  await expect(table.locator("thead")).toContainText("Aufgaben");
   await expect(table.locator("[title='Outlook und SharePoint']")).toBeVisible();
   await expect(page.getByText("Bestehendes Event")).toBeVisible();
 });
@@ -489,7 +489,7 @@ test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
   await page.goto("/kontakte");
   await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
   await page.getByText("Nordwerk GmbH", { exact: true }).click();
-  await page.getByLabel("Hauptansprechperson").selectOption("p1");
+  await page.getByRole("combobox", { name: "Hauptansprechperson" }).selectOption("p1");
 
   await expect
     .poll(() =>
@@ -574,7 +574,7 @@ test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async (
   await page.getByRole("link", { name: "Neu anlegen" }).click();
   await page.getByLabel("Vorname").fill("Eva");
   await page.getByLabel("Nachname").fill("Persistenz");
-  await page.getByLabel("Funktion").fill("Projektleitung");
+  await page.getByRole("textbox", { name: "Funktion" }).fill("Projektleitung");
   await page.getByLabel("Ort").fill("Graz");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByText("Datensatz angelegt")).toBeVisible();
@@ -655,7 +655,7 @@ test("prüft Mail- und Telefonnummern im Kontakt-Detailformular", async ({ page 
   await mockApi(page);
   await page.goto("/kontakte");
   await page.getByText("Marion Kessler", { exact: true }).click();
-  const email = page.getByLabel("E-Mail");
+  const email = page.getByRole("textbox", { name: "E-Mail" });
   await email.fill("keine-mail");
   await email.blur();
   await expect(page.getByRole("alert")).toHaveText("Bitte eine gültige Mail-Adresse angeben.");

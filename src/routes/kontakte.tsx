@@ -14,7 +14,7 @@ type Modus = "person" | "kunde" | "beides";
 const CUSTOMER_COLUMN_STORAGE_KEY = "t2w-customer-table-columns";
 const CUSTOMER_COLUMNS = [
   "Kunde",
-  "ID",
+  "Hauptansprechperson",
   "E-Mail",
   "UID",
   "IBAN",
@@ -118,7 +118,6 @@ function KundenKontakte() {
   const crm = useCrm();
   const [tab, setTab] = useState<"kontakte" | "kunden">("kontakte");
   const [q, setQ] = useState("");
-  const [only, setOnly] = useState(false);
   const [sel, setSel] = useState<Auswahl>(null);
   const [create, setCreate] = useState(false);
   useEffect(() => {
@@ -135,17 +134,13 @@ function KundenKontakte() {
     () =>
       crm.personen
         .filter((p) => passtPerson(p, q, crm.kunden))
-        .filter((p) => !only || !!p.kundenprofilId)
         .sort((a, b) => personName(a).localeCompare(personName(b), "de")),
-    [crm.personen, crm.kunden, q, only],
+    [crm.personen, crm.kunden, q],
   );
   const customers = useMemo(
     () =>
-      crm.kunden
-        .filter((k) => passtKunde(k, q))
-        .filter((k) => !only || k.status === "aktiv")
-        .sort((a, b) => a.name.localeCompare(b.name, "de")),
-    [crm.kunden, q, only],
+      crm.kunden.filter((k) => passtKunde(k, q)).sort((a, b) => a.name.localeCompare(b.name, "de")),
+    [crm.kunden, q],
   );
   const p = sel?.art === "person" ? crm.personen.find((x) => x.id === sel.id) : undefined;
   const k = sel?.art === "kunde" ? crm.kunden.find((x) => x.id === sel.id) : undefined;
@@ -170,7 +165,6 @@ function KundenKontakte() {
             <button
               onClick={() => {
                 setTab("kontakte");
-                setOnly(false);
               }}
               className={`rounded px-3 py-1.5 text-sm ${tab === "kontakte" ? "bg-accent font-medium" : ""}`}
             >
@@ -179,17 +173,12 @@ function KundenKontakte() {
             <button
               onClick={() => {
                 setTab("kunden");
-                setOnly(false);
               }}
               className={`rounded px-3 py-1.5 text-sm ${tab === "kunden" ? "bg-accent font-medium" : ""}`}
             >
               Kunden ({customers.length})
             </button>
           </div>
-          <label className="text-xs text-muted-foreground">
-            <input type="checkbox" checked={only} onChange={(e) => setOnly(e.target.checked)} />{" "}
-            {tab === "kontakte" ? "nur mit Kundenprofil" : "nur aktive Kunden"}
-          </label>
         </div>
         {tab === "kontakte" ? (
           <PeopleTable
@@ -200,6 +189,7 @@ function KundenKontakte() {
         ) : (
           <CustomerTable
             customers={customers}
+            people={crm.personen}
             select={(id) => setSel({ art: "kunde", id })}
             open={() => setCreate(true)}
           />
@@ -311,10 +301,12 @@ function PeopleTable({
 }
 function CustomerTable({
   customers,
+  people,
   select,
   open,
 }: {
   customers: Kunde[];
+  people: Person[];
   select: (id: string) => void;
   open: () => void;
 }) {
@@ -329,7 +321,9 @@ function CustomerTable({
     (customer) =>
       ({
         Kunde: customer.name,
-        ID: customer.id,
+        Hauptansprechperson: customer.primaryContactId
+          ? personName(people.find((p) => p.id === customer.primaryContactId) ?? ({} as Person))
+          : "",
         "E-Mail": customer.email,
         UID: customer.uid,
         IBAN: customer.iban,
@@ -357,8 +351,12 @@ function CustomerTable({
             className="cursor-pointer border-t border-border hover:bg-accent/50"
           >
             {visibleColumns.includes("Kunde") && <td>{k.name}</td>}
-            {visibleColumns.includes("ID") && (
-              <td className="font-mono text-[11px] text-muted-foreground">{k.id}</td>
+            {visibleColumns.includes("Hauptansprechperson") && (
+              <td>
+                {k.primaryContactId
+                  ? personName(people.find((p) => p.id === k.primaryContactId) ?? ({} as Person))
+                  : "–"}
+              </td>
             )}
             {visibleColumns.includes("E-Mail") && <td>{k.email || "–"}</td>}
             {visibleColumns.includes("UID") && <td>{k.uid || "–"}</td>}

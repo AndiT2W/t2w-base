@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, GanttChartSquare, List } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -22,7 +22,6 @@ export function GanttSeite({
 }: { veranstaltungsmenue?: boolean } = {}) {
   const { events } = useT2W();
   const [zoom, setZoom] = useState<"tag" | "woche" | "monat">("tag");
-  const [sichtbarerZeitraum, setSichtbarerZeitraum] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const heute = heuteIso();
   const sichtbar = activeEvents(events).sort((a, b) => a.start.localeCompare(b.start));
@@ -55,6 +54,14 @@ export function GanttSeite({
     tag.datum.toLocaleDateString("de-AT", { month: "long", year: "numeric" }),
   );
   const wochen = groupConsecutive(tage, (tag) => `KW ${isoWeek(tag.datum)}`);
+  const todayIndex = tage.findIndex((tag) => tag.iso === heute);
+
+  useEffect(() => {
+    if (todayIndex < 0 || !scrollRef.current) return;
+    const ratio = todayIndex / Math.max(1, tage.length - 1);
+    scrollRef.current.scrollLeft =
+      ratio * (scrollRef.current.scrollWidth - scrollRef.current.clientWidth);
+  }, [todayIndex, tage.length]);
 
   return (
     <div>
@@ -95,31 +102,16 @@ export function GanttSeite({
             <option value="monat">Monat</option>
           </select>
         </div>
-        <p
-          data-testid="gantt-grouping"
-          className="border-x border-border bg-surface px-3 py-2 text-xs text-muted-foreground"
-        >
-          Gruppierung:{" "}
-          <span className="font-medium text-foreground">
-            {zoom === "tag" ? "Tage" : zoom === "woche" ? "Wochen" : "Monate"}
-          </span>{" "}
-          · Summenzeile: aktive Veranstaltungen pro Tag
-          {sichtbarerZeitraum && <> · Sichtbar: {sichtbarerZeitraum}</>}
-        </p>
         <div
           ref={scrollRef}
           data-testid="gantt-scroll-area"
           className="overflow-x-auto overscroll-x-contain rounded-b-lg border border-t-0 border-border bg-surface p-3"
-          onScroll={(event) => {
-            const node = event.currentTarget;
-            const ratio = node.scrollWidth > node.clientWidth ? node.scrollLeft / (node.scrollWidth - node.clientWidth) : 0;
-            const day = tage[Math.min(tage.length - 1, Math.max(0, Math.round(ratio * (tage.length - 1))))];
-            if (day) setSichtbarerZeitraum(day.datum.toLocaleDateString("de-AT", { month: "long", year: "numeric" }));
-          }}
         >
           <div className="space-y-2" style={{ minWidth: `${tageBreite}rem` }}>
             <div className="grid grid-cols-[13rem_1fr] gap-3 text-[10px] text-muted-foreground">
-              <div />
+              <div className="sticky left-0 z-10 bg-surface font-semibold text-foreground">
+                Events-Gesamt
+              </div>
               <div className="overflow-hidden">
                 <div
                   className="grid border-b border-border bg-secondary/50"
@@ -194,7 +186,7 @@ export function GanttSeite({
                   <Link
                     to="/events/$eventcode"
                     params={{ eventcode: event.eventcode }}
-                    className="truncate font-medium hover:text-primary"
+                    className="sticky left-0 z-10 truncate bg-surface font-medium hover:text-primary"
                   >
                     {event.name}
                   </Link>
