@@ -23,6 +23,7 @@ const customerResponse = {
   uid: "ATU1",
   contacts: [{ contact: { id: "p1" } }],
   events: [{ eventCode: "260820_demo_event", name: "Demo Event" }],
+  payoutEvents: [{ eventCode: "260821_payout", name: "Payout Event" }],
   personId: null,
 };
 
@@ -52,6 +53,7 @@ describe("CRM module", () => {
         status: "aktiv",
         events: [
           { eventcode: "260820_demo_event", eventName: "Demo Event", funktion: "veranstalter" },
+          { eventcode: "260821_payout", eventName: "Payout Event", funktion: "auszahlung" },
         ],
       }),
     ]);

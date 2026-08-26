@@ -54,6 +54,8 @@ type ApiKunde = {
   email?: string | null;
   contacts?: { contact: { id: string } }[];
   events?: { eventCode: string; name: string }[];
+  payoutEvents?: { eventCode: string; name: string }[];
+  invoiceRecipients?: { event: { eventCode: string; name: string } }[];
 };
 
 async function json<T>(request: Request, url: string, init?: RequestInit): Promise<T> {
@@ -112,12 +114,14 @@ function mapKunde(value: ApiKunde): Kunde {
     email: value.email ?? "",
     status: value.active === false ? "inaktiv" : "aktiv",
     kontaktIds: value.contacts?.map(({ contact }) => contact.id) ?? [],
-    events:
-      value.events?.map((event) => ({
-        eventcode: event.eventCode,
-        eventName: event.name,
-        funktion: "veranstalter" as const,
-      })) ?? [],
+    events: [
+      ...(value.events ?? []).map((event) => ({ ...event, funktion: "veranstalter" as const })),
+      ...(value.payoutEvents ?? []).map((event) => ({ ...event, funktion: "auszahlung" as const })),
+      ...(value.invoiceRecipients ?? []).map(({ event }) => ({
+        ...event,
+        funktion: "rechnung" as const,
+      })),
+    ].map(({ eventCode, name, funktion }) => ({ eventcode: eventCode, eventName: name, funktion })),
   };
 }
 

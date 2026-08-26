@@ -211,12 +211,7 @@ function KundenKontakte() {
           <h2 className="mb-5 text-xl font-semibold">{p ? personName(p) : k?.name}</h2>
           {p ? (
             <>
-              <PersonDetail
-                person={p}
-                crm={crm}
-                go={(id) => setSel({ art: "kunde", id })}
-                close={() => setSel(null)}
-              />
+              <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
               <AssociationRemover
                 label="Kundenzuordnung entfernen"
                 items={crm.kundenVonPerson(p).map((x) => [x.id, x.name])}
@@ -225,12 +220,7 @@ function KundenKontakte() {
             </>
           ) : (
             <>
-              <CustomerDetail
-                customer={k!}
-                crm={crm}
-                go={(id) => setSel({ art: "person", id })}
-                close={() => setSel(null)}
-              />
+              <CustomerDetail customer={k!} crm={crm} go={(id) => setSel({ art: "person", id })} />
               <AssociationRemover
                 label="Kontaktzuordnung entfernen"
                 items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)])}
@@ -238,6 +228,16 @@ function KundenKontakte() {
               />
             </>
           )}
+          <div className="mt-8 border-t border-border pt-4">
+            <DeleteAction
+              label={p ? "Kontakt löschen" : "Kunde löschen"}
+              onDelete={async () => {
+                if (p) await crm.deletePerson(p.id);
+                else await crm.deleteKunde(k!.id);
+                setSel(null);
+              }}
+            />
+          </div>
         </aside>
       )}
       {create && <CreateDialog crm={crm} close={closeCreate} />}
@@ -457,18 +457,10 @@ function PersonDetail({
   person: Person;
   crm: ReturnType<typeof useCrm>;
   go: (id: string) => void;
-  close: () => void;
 }) {
   const assigned = crm.kundenVonPerson(person);
   return (
     <div className="space-y-5">
-      <DeleteAction
-        label="Kontakt löschen"
-        onDelete={async () => {
-          await crm.deletePerson(person.id);
-          close();
-        }}
-      />
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label="Vorname"
@@ -577,18 +569,10 @@ function CustomerDetail({
   customer: Kunde;
   crm: ReturnType<typeof useCrm>;
   go: (id: string) => void;
-  close: () => void;
 }) {
   const contacts = crm.kontakteVonKunde(customer.id);
   return (
     <div className="space-y-5">
-      <DeleteAction
-        label="Kunde löschen"
-        onDelete={async () => {
-          await crm.deleteKunde(customer.id);
-          close();
-        }}
-      />
       <div className="grid gap-3 sm:grid-cols-2">
         <Field
           label="Kundenname"
@@ -703,13 +687,22 @@ function CustomerDetail({
           <div className="space-y-2">
             {customer.events.map((event) => (
               <a
-                key={event.eventcode}
+                key={`${event.eventcode}-${event.funktion}`}
                 href={`/events/${event.eventcode}`}
                 className="block rounded border border-border p-2 text-sm hover:bg-accent/50"
               >
                 <span className="font-medium">{event.eventName}</span>
                 <span className="ml-2 font-mono text-xs text-muted-foreground">
                   {event.eventcode}
+                </span>
+                <span className="ml-2 text-xs text-muted-foreground">
+                  (
+                  {event.funktion === "veranstalter"
+                    ? "Veranstalter"
+                    : event.funktion === "auszahlung"
+                      ? "Auszahlungsempfänger"
+                      : "Rechnungsempfänger"}
+                  )
                 </span>
               </a>
             ))}
@@ -740,9 +733,15 @@ function DeleteAction({ label, onDelete }: { label: string; onDelete: () => Prom
     }
   }
   return (
-    <div className="flex justify-end border-b border-border pb-3">
-      <Button type="button" variant="outline" size="sm" onClick={() => void remove()}>
-        <Trash2 className="mr-1.5 size-4" />
+    <div className="flex justify-end">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+        onClick={() => void remove()}
+      >
+        <Trash2 className="mr-1.5 size-4 text-destructive" />
         {label}
       </Button>
     </div>

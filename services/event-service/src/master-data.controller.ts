@@ -26,6 +26,8 @@ export class MasterDataController {
       include: {
         contacts: { include: { contact: true } },
         events: { select: { eventCode: true, name: true } },
+        payoutEvents: { select: { eventCode: true, name: true } },
+        invoiceRecipients: { include: { event: { select: { eventCode: true, name: true } } } },
         person: true,
         primaryContact: true,
       },
