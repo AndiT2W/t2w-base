@@ -368,7 +368,7 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await expect(page.getByRole("option", { name: "Marion Kessler" })).toBeVisible();
   await contactSearch.press("ArrowDown");
   await contactSearch.press("Enter");
-  await expect(page.getByText("Marion Kessler", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Marion Kessler", exact: true })).toBeVisible();
   await contactSearch.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
   await page.getByRole("button", { name: "Detail schließen" }).click();
@@ -504,7 +504,7 @@ test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
   await page.reload();
   await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
   await page.getByText("Nordwerk GmbH", { exact: true }).click();
-  await expect(page.getByLabel("Hauptansprechperson")).toHaveValue("p1");
+  await expect(page.getByRole("combobox", { name: "Hauptansprechperson" })).toHaveValue("p1");
 });
 
 test("sortiert Kunden und Kontakte über die Tabellenüberschriften", async ({ page }) => {
@@ -575,7 +575,7 @@ test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async (
   await page.getByLabel("Vorname").fill("Eva");
   await page.getByLabel("Nachname").fill("Persistenz");
   await page.getByRole("textbox", { name: "Funktion" }).fill("Projektleitung");
-  await page.getByLabel("Ort").fill("Graz");
+  await page.getByRole("textbox", { name: "Ort" }).fill("Graz");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByText("Datensatz angelegt")).toBeVisible();
   await page.getByLabel("Suche").first().fill("Eva Persistenz");

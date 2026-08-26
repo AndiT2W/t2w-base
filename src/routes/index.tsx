@@ -7,6 +7,7 @@ import {
   CalendarClock,
   CheckSquare,
   Mail,
+  Pencil,
   Plus,
   Share2,
 } from "lucide-react";
@@ -225,7 +226,7 @@ function Uebersicht() {
               <option value="alle">{t("status.all")}</option>
               {STATUS_ORDER.map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
+                  {t(`status.${s}` as Parameters<typeof t>[0])}
                 </option>
               ))}
             </select>
@@ -382,8 +383,8 @@ function Uebersicht() {
                         params={{ eventcode: e.eventcode }}
                         className="font-medium text-primary hover:underline"
                       >
+                        <Pencil className="size-4" aria-hidden="true" />
                         <span className="sr-only">Event bearbeiten: </span>
-                        Bearbeiten
                       </Link>
                     </td>
                   </tr>
@@ -406,7 +407,7 @@ function Uebersicht() {
           {STATUS_ORDER.map((s) => (
             <span key={s} className="inline-flex items-center gap-1.5">
               <StatusDot status={s} />
-              {STATUS_LABEL[s]}
+              {t(`status.${s}` as Parameters<typeof t>[0])}
             </span>
           ))}
         </div>

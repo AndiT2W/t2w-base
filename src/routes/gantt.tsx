@@ -109,9 +109,7 @@ export function GanttSeite({
         >
           <div className="space-y-2" style={{ minWidth: `${tageBreite}rem` }}>
             <div className="grid grid-cols-[13rem_1fr] gap-3 text-[10px] text-muted-foreground">
-              <div className="sticky left-0 z-10 bg-surface font-semibold text-foreground">
-                Events-Gesamt
-              </div>
+              <div className="sticky left-0 z-10 bg-surface" />
               <div className="overflow-hidden">
                 <div
                   className="grid border-b border-border bg-secondary/50"
@@ -155,17 +153,20 @@ export function GanttSeite({
                     </div>
                   ))}
                 </div>
-                <div
-                  className="grid border-t border-border bg-secondary/30 text-center text-[10px] font-semibold tabular-nums text-muted-foreground"
-                  style={{ gridTemplateColumns: `repeat(${tage.length}, minmax(2.5rem, 1fr))` }}
-                >
-                  {tage.map((tag) => (
-                    <div key={`count-${tag.iso}`} className="border-r border-border px-1 py-1">
-                      {sichtbar.filter((event) => event.start <= tag.iso && event.ende >= tag.iso)
-                        .length || "–"}
-                    </div>
-                  ))}
-                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-[13rem_1fr] gap-3 items-center text-[10px] font-semibold tabular-nums text-muted-foreground">
+              <div className="sticky left-0 z-10 bg-surface text-foreground">Events-Gesamt</div>
+              <div
+                className="grid border-y border-border bg-secondary/30 text-center"
+                style={{ gridTemplateColumns: `repeat(${tage.length}, minmax(2.5rem, 1fr))` }}
+              >
+                {tage.map((tag) => (
+                  <div key={`count-${tag.iso}`} className="border-r border-border px-1 py-1">
+                    {sichtbar.filter((event) => event.start <= tag.iso && event.ende >= tag.iso)
+                      .length || "–"}
+                  </div>
+                ))}
               </div>
             </div>
             {sichtbar.map((event) => {
