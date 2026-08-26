@@ -494,16 +494,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               {form.kontakte.length === 0 && (
                 <p className="text-sm text-muted-foreground">Noch keine Kontakte hinterlegt.</p>
               )}
-              {form.kontakte.map((k) => (
-                <div key={k.id} className="rounded-md border border-border p-3">
-                  <p className="font-medium text-foreground">{k.name}</p>
-                  <div className="mt-1 flex gap-2"><Input aria-label={`Eventrolle für ${k.name}`} defaultValue={k.rolle} className="h-8 max-w-48" onBlur={(e) => void updateContactRole(k, e.target.value)} /><Button variant="ghost" size="sm" onClick={(e) => void updateContactRole(k, (e.currentTarget.previousElementSibling as HTMLInputElement).value)}>Rolle speichern</Button></div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {k.email} · {k.telefon}
-                  </p>
-                  <Button variant="ghost" size="sm" onClick={() => void apiRemoveEventContact(event.id, k.id, k.rolle).then(() => set("kontakte", form.kontakte.filter((item) => item !== k)))}>Entfernen</Button>
-                </div>
-              ))}
+              {form.kontakte.length > 0 && <div className="overflow-x-auto rounded-md border border-border"><table className="w-full text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Kontakt</th><th className="px-3 py-2 font-medium">Rolle</th><th className="px-3 py-2 font-medium">E-Mail</th><th className="px-3 py-2 font-medium">Telefon</th><th className="px-3 py-2"><span className="sr-only">Aktion</span></th></tr></thead><tbody className="divide-y divide-border">{form.kontakte.map((k) => <tr key={k.id}><td className="whitespace-nowrap px-3 py-2 font-medium text-foreground">{k.name}</td><td className="min-w-48 px-3 py-2"><Input aria-label={`Eventrolle für ${k.name}`} defaultValue={k.rolle} className="h-8" onBlur={(e) => void updateContactRole(k, e.target.value)} /></td><td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{k.email || "—"}</td><td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{k.telefon || "—"}</td><td className="px-3 py-2 text-right"><Button variant="ghost" size="sm" onClick={() => void apiRemoveEventContact(event.id, k.id, k.rolle).then(() => set("kontakte", form.kontakte.filter((item) => item !== k)))}>Entfernen</Button></td></tr>)}</tbody></table></div>}
             </CardContent>
           </Card>
         </TabsContent>
