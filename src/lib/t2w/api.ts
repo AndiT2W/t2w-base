@@ -190,6 +190,42 @@ export async function apiSports(): Promise<ApiSport[]> {
   if (!response.ok) throw new Error("Sportarten konnten nicht geladen werden");
   return (await response.json()) as ApiSport[];
 }
+export async function apiManageSports(): Promise<(ApiSport & { active: boolean })[]> {
+  const response = await fetch("/api/v1/sports?includeInactive=true", { credentials: "include" });
+  if (!response.ok) throw new Error("Sportarten konnten nicht geladen werden");
+  return (await response.json()) as (ApiSport & { active: boolean })[];
+}
+export async function apiCreateSport(name: string) {
+  const response = await fetch("/api/v1/sports", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  if (!response.ok) throw new Error("Sportart konnte nicht angelegt werden");
+  return response.json() as Promise<ApiSport & { active: boolean }>;
+}
+export async function apiUpdateSport(id: string, patch: { name?: string; active?: boolean }) {
+  const response = await fetch(`/api/v1/sports/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+  if (!response.ok) throw new Error("Sportart konnte nicht gespeichert werden");
+  return response.json() as Promise<ApiSport & { active: boolean }>;
+}
+export type ApiEventRole = { id: string; name: string; active: boolean };
+export async function apiEventRoles(): Promise<ApiEventRole[]> {
+  const response = await fetch("/api/v1/event-roles", { credentials: "include" });
+  if (!response.ok) throw new Error("Eventrollen konnten nicht geladen werden");
+  return response.json() as Promise<ApiEventRole[]>;
+}
+export async function apiManageEventRoles(): Promise<ApiEventRole[]> {
+  const response = await fetch("/api/v1/event-roles?includeInactive=true", { credentials: "include" });
+  if (!response.ok) throw new Error("Eventrollen konnten nicht geladen werden");
+  return response.json() as Promise<ApiEventRole[]>;
+}
+export async function apiCreateEventRole(name: string) {
+  const response = await fetch("/api/v1/event-roles", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  if (!response.ok) throw new Error("Eventrolle konnte nicht angelegt werden");
+  return response.json() as Promise<ApiEventRole>;
+}
+export async function apiUpdateEventRole(id: string, patch: { name?: string; active?: boolean }) {
+  const response = await fetch(`/api/v1/event-roles/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+  if (!response.ok) throw new Error("Eventrolle konnte nicht gespeichert werden");
+  return response.json() as Promise<ApiEventRole>;
+}
 
 export async function apiSettings(): Promise<Settings> {
   const response = await fetch("/api/v1/settings", { credentials: "include" });

@@ -308,3 +308,7 @@
 - Deepened the Event workspace and Event mutation modules: Event contact, task, file, and activity commands now cross intent-level module interfaces, return refreshed Event state, and enforce Event version conflicts. HTTP and Prisma remain adapters behind those seams; regression tests cover refreshed snapshots and stale detail commands.
 
 - Deepened table preferences behind a browser-storage adapter and an in-memory test adapter. Preference persistence now uses an explicit format that preserves deliberately hidden columns while still recovering legacy preferences. CRM relationship adapters now return refreshed snapshots, and the CRM workspace owns state replacement through one relationship intent per direction.
+
+- Added the Settings **Auswahllisten** tab. It centrally manages the Event sport selection: Sportarten can be created, renamed, activated, or deactivated; Event forms continue to receive only active values. The tab is the extension point for future selection lists.
+
+- Added persisted Event role options to **Auswahllisten**, seeded with `Anmeldung` and `Finanz`. Active options are available when assigning an Event contact; roles can be added, renamed, activated, or deactivated without rewriting existing Event relationships.

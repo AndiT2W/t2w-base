@@ -32,6 +32,7 @@ import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { useCrm } from "@/lib/crm/store";
+import { apiEventRoles } from "@/lib/t2w/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
@@ -102,6 +103,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [outlookPlan, setOutlookPlan] = useState<OutlookFolderPlan | null>(null);
   const [contactId, setContactId] = useState("");
   const [contactRole, setContactRole] = useState("Kontakt");
+  const [eventRoles, setEventRoles] = useState<string[]>([]);
   const [contactSearch, setContactSearch] = useState("");
   const [invoiceRecipientSearch, setInvoiceRecipientSearch] = useState("");
   const [newTask, setNewTask] = useState("");
@@ -114,6 +116,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       .then(setOutlookPlan)
       .catch(() => setOutlookPlan(null));
   }, [event.id, event.start, event.outlookOrdner, getOutlookFolderPlan]);
+  useEffect(() => { void apiEventRoles().then((roles) => setEventRoles(roles.map((role) => role.name))).catch(() => setEventRoles([])); }, []);
 
   const vergangen = event.ende < heuteIso();
   const outlookVorschlag = outlookPlan?.path ?? form.outlookOrdner ?? "";
@@ -493,7 +496,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <section className="border-t border-border pt-5">
                 <h3 className="font-medium text-foreground">Eventkontakte & Rollen</h3>
                 <p className="mt-1 text-sm text-muted-foreground">Explizit für dieses Event zugeordnete Kontakte.</p>
-                <div className="mt-3 flex flex-wrap gap-2"><Popover><PopoverTrigger asChild><Button variant="outline" className="w-56 justify-start font-normal" aria-label="Kontakt auswählen">{contactId ? (() => { const person = personen.find((item) => item.id === contactId); return person ? `${person.vorname} ${person.nachname}` : "Kontakt auswählen"; })() : "Kontakt auswählen"}</Button></PopoverTrigger><PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2"><Input aria-label="Kontakt suchen" placeholder="Kontakt suchen …" value={contactSearch} onChange={(e) => setContactSearch(e.target.value)} /><div className="mt-2 max-h-56 space-y-1 overflow-y-auto">{sichtbareKontakte.length ? sichtbareKontakte.map((person) => <button type="button" key={person.id} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent" onClick={() => { setContactId(person.id); setContactSearch(""); }}>{person.vorname} {person.nachname}<span className="ml-2 text-muted-foreground">{person.email}</span></button>) : <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>}</div></PopoverContent></Popover><Input aria-label="Eventrolle" value={contactRole} onChange={(e) => setContactRole(e.target.value)} className="w-36"/><Button onClick={() => void addContact()} disabled={!contactId}>Hinzufügen</Button></div>
+                <div className="mt-3 flex flex-wrap gap-2"><Popover><PopoverTrigger asChild><Button variant="outline" className="w-56 justify-start font-normal" aria-label="Kontakt auswählen">{contactId ? (() => { const person = personen.find((item) => item.id === contactId); return person ? `${person.vorname} ${person.nachname}` : "Kontakt auswählen"; })() : "Kontakt auswählen"}</Button></PopoverTrigger><PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2"><Input aria-label="Kontakt suchen" placeholder="Kontakt suchen …" value={contactSearch} onChange={(e) => setContactSearch(e.target.value)} /><div className="mt-2 max-h-56 space-y-1 overflow-y-auto">{sichtbareKontakte.length ? sichtbareKontakte.map((person) => <button type="button" key={person.id} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent" onClick={() => { setContactId(person.id); setContactSearch(""); }}>{person.vorname} {person.nachname}<span className="ml-2 text-muted-foreground">{person.email}</span></button>) : <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>}</div></PopoverContent></Popover><Select value={contactRole} onValueChange={setContactRole}><SelectTrigger aria-label="Eventrolle" className="w-36"><SelectValue /></SelectTrigger><SelectContent>{[...new Set([contactRole, "Kontakt", ...eventRoles])].map((role) => <SelectItem key={role} value={role}>{role}</SelectItem>)}</SelectContent></Select><Button onClick={() => void addContact()} disabled={!contactId}>Hinzufügen</Button></div>
               </section>
               {form.kontakte.length === 0 && (
                 <p className="text-sm text-muted-foreground">Noch keine Kontakte hinterlegt.</p>

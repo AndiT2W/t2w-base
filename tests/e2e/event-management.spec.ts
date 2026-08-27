@@ -78,6 +78,8 @@ async function mockApi(page: Page) {
       personId: "p3",
     },
   ];
+  let sports = [{ id: "s1", name: "Triathlon", active: true }, { id: "s2", name: "Laufen", active: true }];
+  let eventRoles = [{ id: "r1", name: "Anmeldung", active: true }, { id: "r2", name: "Finanz", active: true }];
   await page.route("**/api/v1/settings", async (route) => {
     const request = route.request();
     requests.push({
@@ -237,13 +239,70 @@ async function mockApi(page: Page) {
     }
     return route.continue();
   });
-  await page.route("**/api/v1/sports", async (route) => {
+  await page.route("**/api/v1/sports**", async (route) => {
     const request = route.request();
-    if (request.method() === "GET") return route.fulfill({ json: [{ id: "s1", name: "Triathlon" }, { id: "s2", name: "Laufen" }] });
+    if (request.method() === "GET") return route.fulfill({ json: request.url().includes("includeInactive=true") ? sports : sports.filter((sport) => sport.active) });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const sport = { id: `s${sports.length + 1}`, name: body.name, active: true };
+      sports = [...sports, sport];
+      return route.fulfill({ status: 201, json: sport });
+    }
+    const id = request.url().match(/\/sports\/([^/?]+)/)?.[1];
+    if (request.method() === "PATCH" && id) {
+      sports = sports.map((sport) => sport.id === id ? { ...sport, ...body } : sport);
+      return route.fulfill({ json: sports.find((sport) => sport.id === id) });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/v1/event-roles**", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET") return route.fulfill({ json: request.url().includes("includeInactive=true") ? eventRoles : eventRoles.filter((role) => role.active) });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const role = { id: `r${eventRoles.length + 1}`, name: body.name, active: true };
+      eventRoles = [...eventRoles, role];
+      return route.fulfill({ status: 201, json: role });
+    }
+    const id = request.url().match(/\/event-roles\/([^/?]+)/)?.[1];
+    if (request.method() === "PATCH" && id) {
+      eventRoles = eventRoles.map((role) => role.id === id ? { ...role, ...body } : role);
+      return route.fulfill({ json: eventRoles.find((role) => role.id === id) });
+    }
     return route.continue();
   });
   return requests;
 }
+
+test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/einstellungen?tab=auswahllisten");
+  await expect(page.getByRole("tab", { name: "Auswahllisten" })).toBeVisible();
+  await expect(page.getByLabel("Sportart Triathlon")).toBeVisible();
+  await page.getByLabel("Neue Sportart").fill("Radfahren");
+  await page.getByRole("button", { name: "Hinzufügen" }).click();
+  await expect(page.getByText("Sportart angelegt.")).toBeVisible();
+  await expect(page.getByLabel("Sportart Radfahren")).toBeVisible();
+  await page.getByRole("button", { name: "Deaktivieren" }).first().click();
+  await expect(page.getByRole("button", { name: "Aktivieren" }).first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Sportart Radfahren")).toBeVisible();
+});
+
+test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/einstellungen?tab=auswahllisten");
+  await expect(page.getByLabel("Eventrolle Anmeldung")).toBeVisible();
+  await expect(page.getByLabel("Eventrolle Finanz")).toBeVisible();
+  await page.getByLabel("Neue Eventrolle").fill("Presse");
+  await page.getByRole("button", { name: "Hinzufügen" }).last().click();
+  await expect(page.getByLabel("Eventrolle Presse")).toBeVisible();
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "KONTAKTE" }).click();
+  await page.getByLabel("Eventrolle").click();
+  await expect(page.getByRole("option", { name: "Anmeldung" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Finanz" })).toBeVisible();
+});
 
 test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) => {
   await mockApi(page);

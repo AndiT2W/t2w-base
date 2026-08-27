@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "./prisma.service.js";
@@ -137,14 +138,39 @@ export class MasterDataController {
     await this.prisma.organizerContact.deleteMany({ where: { organizerId, contactId } });
   }
 
-  @Get("sports") sports() {
-    return this.prisma.sport.findMany({ where: { active: true }, orderBy: { name: "asc" } });
+  @Get("sports") sports(@Query("includeInactive") includeInactive?: string) {
+    return this.prisma.sport.findMany({
+      where: includeInactive === "true" ? {} : { active: true },
+      orderBy: { name: "asc" },
+    });
   }
   @Post("sports") sport(@Body() body: { name: string }) {
     return this.prisma.sport.create({ data: { name: body.name } });
   }
+  @Patch("sports/:id") updateSport(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; active?: boolean },
+  ) {
+    return this.prisma.sport.update({ where: { id }, data: body });
+  }
   @Patch("sports/:id/deactivate") deactivateSport(@Param("id", ParseUUIDPipe) id: string) {
     return this.prisma.sport.update({ where: { id }, data: { active: false } });
+  }
+
+  @Get("event-roles") eventRoles(@Query("includeInactive") includeInactive?: string) {
+    return this.prisma.eventRoleOption.findMany({
+      where: includeInactive === "true" ? {} : { active: true },
+      orderBy: { name: "asc" },
+    });
+  }
+  @Post("event-roles") eventRole(@Body() body: { name: string }) {
+    return this.prisma.eventRoleOption.create({ data: { name: body.name } });
+  }
+  @Patch("event-roles/:id") updateEventRole(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; active?: boolean },
+  ) {
+    return this.prisma.eventRoleOption.update({ where: { id }, data: body });
   }
 
   @Get("contacts") contacts() {
