@@ -6,8 +6,8 @@ export type PersonInput = Omit<Person, "id" | "kundenprofilId" | "eventRollen">;
 export type KundeInput = Omit<Kunde, "id" | "kontaktIds" | "events">;
 export interface CrmModule {
   load(): Promise<CrmState>;
-  link(state: CrmState, personId: string, kundeId: string): Promise<CrmState>;
-  unlink(state: CrmState, personId: string, kundeId: string): Promise<CrmState>;
+  link(personId: string, kundeId: string): Promise<CrmState>;
+  unlink(personId: string, kundeId: string): Promise<CrmState>;
   createPerson(input: PersonInput): Promise<Person>;
   createKunde(input: KundeInput): Promise<Kunde>;
   updatePerson(person: Person, patch: Partial<Person>): Promise<Person>;
@@ -136,33 +136,15 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
       ]);
       return { personen: personen.map(mapPerson), kunden: kunden.map(mapKunde) };
     },
-    async link(state: CrmState, personId: string, kundeId: string): Promise<CrmState> {
+    async link(personId: string, kundeId: string): Promise<CrmState> {
       await json(request, `/api/v1/organizers/${kundeId}/contacts/${personId}`, { method: "PUT" });
-      return {
-        personen: state.personen.map((p) =>
-          p.id === personId && !p.kundenIds.includes(kundeId)
-            ? { ...p, kundenIds: [...p.kundenIds, kundeId] }
-            : p,
-        ),
-        kunden: state.kunden.map((k) =>
-          k.id === kundeId && !k.kontaktIds.includes(personId)
-            ? { ...k, kontaktIds: [...k.kontaktIds, personId] }
-            : k,
-        ),
-      };
+      return this.load();
     },
-    async unlink(state: CrmState, personId: string, kundeId: string): Promise<CrmState> {
+    async unlink(personId: string, kundeId: string): Promise<CrmState> {
       await json(request, `/api/v1/organizers/${kundeId}/contacts/${personId}`, {
         method: "DELETE",
       });
-      return {
-        personen: state.personen.map((p) =>
-          p.id === personId ? { ...p, kundenIds: p.kundenIds.filter((id) => id !== kundeId) } : p,
-        ),
-        kunden: state.kunden.map((k) =>
-          k.id === kundeId ? { ...k, kontaktIds: k.kontaktIds.filter((id) => id !== personId) } : k,
-        ),
-      };
+      return this.load();
     },
     async createPerson(input: PersonInput): Promise<Person> {
       return mapPerson(

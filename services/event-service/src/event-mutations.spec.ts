@@ -27,12 +27,24 @@ function adapter(): EventMutationAdapter & { events: Map<string, Record<string, 
     async replaceInvoiceRecipients(id, organizerIds) {
       events.set(id, { ...events.get(id), invoiceRecipientIds: organizerIds });
     },
+    async touchEvent(id, version) {
+      const current = events.get(id);
+      if (!current || (version !== undefined && current.version !== version)) return false;
+      events.set(id, { ...current, version: Number(current.version) + 1 });
+      return true;
+    },
     async getEvent(id) {
       return events.get(id);
     },
     async replaceContactRole(id, contactId, role, nextRole) {
       events.set(id, { ...events.get(id), contactId, previousRole: role, role: nextRole });
     },
+    async addContact(id, contactId, role) { events.set(id, { ...events.get(id), contactId, role }); },
+    async removeContact(id, contactId, role) { events.set(id, { ...events.get(id), removedContactId: contactId, removedRole: role }); },
+    async createTask(id, input) { events.set(id, { ...events.get(id), task: input }); },
+    async updateTask(id, taskId, input) { events.set(id, { ...events.get(id), taskId, task: input }); },
+    async createFile(id, input) { events.set(id, { ...events.get(id), file: input }); },
+    async createActivity(id, input) { events.set(id, { ...events.get(id), activity: input }); },
   };
 }
 
@@ -81,5 +93,14 @@ describe("Event mutation module", () => {
     persistence.events.set("e1", { id: "e1", version: 1 });
     const event = await new EventMutations(persistence).changeContactRole("e1", "p1", "Kontakt", "  Finanzen ");
     expect(event).toMatchObject({ contactId: "p1", previousRole: "Kontakt", role: "Finanzen" });
+  });
+
+  it("returns the refreshed Event and rejects a stale detail command", async () => {
+    const persistence = adapter();
+    persistence.events.set("e1", { id: "e1", version: 2 });
+    const mutations = new EventMutations(persistence);
+
+    await expect(mutations.createTask("e1", { title: "Briefing" }, 1)).rejects.toBeInstanceOf(EventMutationConflict);
+    await expect(mutations.createTask("e1", { title: "Briefing" }, 2)).resolves.toMatchObject({ version: 3, task: { title: "Briefing" } });
   });
 });

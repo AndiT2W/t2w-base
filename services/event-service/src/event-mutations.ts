@@ -33,7 +33,14 @@ export interface EventMutationAdapter {
   ): Promise<boolean>;
   replaceInvoiceRecipients(id: string, organizerIds: string[]): Promise<void>;
   getEvent(id: string): Promise<EventMutationRecord | undefined>;
+  touchEvent(id: string, version: number | undefined): Promise<boolean>;
+  addContact(eventId: string, contactId: string, role: string): Promise<void>;
+  removeContact(eventId: string, contactId: string, role: string): Promise<void>;
   replaceContactRole?(eventId: string, contactId: string, role: string, nextRole: string): Promise<void>;
+  createTask(eventId: string, input: { title: string; dueAt?: string; responsible?: string }): Promise<void>;
+  updateTask(eventId: string, taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }): Promise<void>;
+  createFile(eventId: string, input: { name: string; url?: string; size?: string }): Promise<void>;
+  createActivity(eventId: string, input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }): Promise<void>;
 }
 
 export class EventMutationConflict extends Error {
@@ -86,10 +93,42 @@ export class EventMutations {
   }
 
   changeContactRole(eventId: string, contactId: string, role: string, nextRole: string) {
-    return this.persistence.transaction(async (adapter) => {
+    return this.mutate(eventId, undefined, async (adapter) => {
       if (!adapter.replaceContactRole) throw new Error("CONTACT_ROLE_ADAPTER_UNAVAILABLE");
       await adapter.replaceContactRole(eventId, contactId, role, nextRole.trim() || "Kontakt");
-      const event = await adapter.getEvent(eventId);
+    });
+  }
+
+  addContact(eventId: string, contactId: string, role: string, version: number) {
+    return this.mutate(eventId, version, (adapter) => adapter.addContact(eventId, contactId, role.trim() || "Kontakt"));
+  }
+  removeContact(eventId: string, contactId: string, role: string, version: number) {
+    return this.mutate(eventId, version, (adapter) => adapter.removeContact(eventId, contactId, role));
+  }
+  updateContactRole(eventId: string, contactId: string, role: string, nextRole: string, version: number) {
+    return this.mutate(eventId, version, async (adapter) => {
+      if (!adapter.replaceContactRole) throw new Error("CONTACT_ROLE_ADAPTER_UNAVAILABLE");
+      await adapter.replaceContactRole(eventId, contactId, role, nextRole.trim() || "Kontakt");
+    });
+  }
+  createTask(eventId: string, input: { title: string; dueAt?: string; responsible?: string }, version: number) {
+    return this.mutate(eventId, version, (adapter) => adapter.createTask(eventId, input));
+  }
+  updateTask(eventId: string, taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }, version: number) {
+    return this.mutate(eventId, version, (adapter) => adapter.updateTask(eventId, taskId, input));
+  }
+  createFile(eventId: string, input: { name: string; url?: string; size?: string }, version: number) {
+    return this.mutate(eventId, version, (adapter) => adapter.createFile(eventId, input));
+  }
+  createActivity(eventId: string, input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }, version: number) {
+    return this.mutate(eventId, version, (adapter) => adapter.createActivity(eventId, input));
+  }
+
+  private mutate(id: string, version: number | undefined, work: (adapter: EventMutationAdapter) => Promise<void>) {
+    return this.persistence.transaction(async (adapter) => {
+      if (!(await adapter.touchEvent(id, version))) throw new EventMutationConflict();
+      await work(adapter);
+      const event = await adapter.getEvent(id);
       if (!event) throw new EventMutationConflict();
       return event;
     });

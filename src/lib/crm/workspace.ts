@@ -155,16 +155,10 @@ export function createCrmWorkspace(adapter: CrmModule) {
       }
     },
     link(personId: string, kundeId: string) {
-      return mutate(() => adapter.link(state, personId, kundeId));
-    },
-    attachContact(personId: string, kundeId: string) {
-      return mutate(() => adapter.link(state, personId, kundeId));
+      return mutate(() => adapter.link(personId, kundeId));
     },
     unlink(personId: string, kundeId: string) {
-      return mutate(() => adapter.unlink(state, personId, kundeId));
-    },
-    removeCustomerAssociation(personId: string, kundeId: string) {
-      return mutate(() => adapter.unlink(state, personId, kundeId));
+      return mutate(() => adapter.unlink(personId, kundeId));
     },
     kundenVonPerson(person: Person) {
       return state.kunden.filter((kunde) => person.kundenIds.includes(kunde.id));

@@ -110,4 +110,18 @@ describe("Event workspace", () => {
     };
     await expect(createEventWorkspace(transport).outlookPlan("e1")).resolves.toEqual(plan);
   });
+
+  it("publishes a refreshed Event snapshot after a detail command", async () => {
+    const refreshed = { ...event, version: 4, aufgaben: [{ id: "t1", titel: "Briefing" }] } as T2WEvent;
+    const transport = {
+      create: vi.fn(), save: vi.fn(), syncOutlook: vi.fn(), outlookPlan: vi.fn(),
+      createTask: vi.fn().mockResolvedValue(refreshed),
+    };
+    const workspace = createEventWorkspace(transport);
+    workspace.load([event]);
+
+    await expect(workspace.createTask("e1", { title: "Briefing" })).resolves.toEqual({ kind: "saved", event: refreshed });
+    expect(transport.createTask).toHaveBeenCalledWith("e1", { title: "Briefing" }, 3);
+    expect(workspace.events()).toEqual([refreshed]);
+  });
 });

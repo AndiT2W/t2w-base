@@ -2,6 +2,7 @@
 
 ## 2026-08-25
 
+- Issue #15 aktualisiert: Die zentrale Eventverwaltung, persistente Event-Service-Datenquelle, Event-Workspace-Grundfunktionen sowie Outlook-/SharePoint- und CRM-Anbindungen sind als erledigt bzw. vorhanden dokumentiert. Offen bleiben der dedizierte TIME2WIN-Reiter mit API-Daten, Teilnehmer-Synchronisierung, Rollenverwaltung sowie mutierbare Aufgaben/Aktivitäten und deren Browser-E2E-Abdeckung.
 - Issue #20 aktualisiert: Die Eventdetailseite wird nicht mehr als Neubau beschrieben, sondern als Ausbau der bereits persistenten Event-Workspace-UI. Vorhandene Stammdaten-, Outlook-/SharePoint-, Tab- und Mehrsprachigkeitsfunktionen sind dokumentiert; offen bleiben insbesondere TIME2WIN-Reiter, Rollenverwaltung, mutierbare Aufgaben/Aktivitäten sowie Browser-E2E-Abdeckung.
 - Die Billing-Tickets #2, #3 und #14 wurden bewusst zurückgestellt und mit dem GitHub-Label `deferred` aus der aktuellen Umsetzungspriorität genommen. Sie bleiben für eine spätere Billing-/Angebotsphase offen.
 
@@ -301,3 +302,9 @@
 # 2026-08-26
 
 - Implemented UI ticket #33: overview status dropdown and legend, simplified CRM customer columns and filters, icon-only folder links, editable action wording, and Gantt today-centering with a sticky event column. Updated affected browser assertions; unit tests pass.
+
+# 2026-08-27
+
+- Deepened the Event workspace and Event mutation modules: Event contact, task, file, and activity commands now cross intent-level module interfaces, return refreshed Event state, and enforce Event version conflicts. HTTP and Prisma remain adapters behind those seams; regression tests cover refreshed snapshots and stale detail commands.
+
+- Deepened table preferences behind a browser-storage adapter and an in-memory test adapter. Preference persistence now uses an explicit format that preserves deliberately hidden columns while still recovering legacy preferences. CRM relationship adapters now return refreshed snapshots, and the CRM workspace owns state replacement through one relationship intent per direction.

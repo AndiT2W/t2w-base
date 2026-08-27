@@ -64,7 +64,11 @@ describe("CRM module", () => {
     const pending = new Promise<Response>((resolve) => {
       release = () => resolve(new Response(null, { status: 204 }));
     });
-    const request = vi.fn().mockReturnValue(pending);
+    const request = vi
+      .fn()
+      .mockReturnValueOnce(pending)
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ ...personResponse, organizers: [{ organizer: { id: "c1" } }] }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([customerResponse]), { status: 200 }));
     const crm = createHttpCrmAdapter(request);
     const state = {
       personen: [
@@ -104,7 +108,7 @@ describe("CRM module", () => {
       ],
     };
 
-    const linking = crm.link(state, "p1", "c1");
+    const linking = crm.link("p1", "c1");
     expect(state.personen[0].kundenIds).toEqual([]);
     release();
 
@@ -127,7 +131,7 @@ describe("CRM module", () => {
     const seed = { personen: [statePerson()], kunden: [stateKunde()] };
     const local = createLocalCrmAdapter(storage, "crm-test", seed);
 
-    const linked = await local.link(await local.load(), "p1", "c1");
+    const linked = await local.link("p1", "c1");
     expect(linked.personen[0].kundenIds).toEqual(["c1"]);
     expect(linked.kunden[0].kontaktIds).toEqual(["p1"]);
 

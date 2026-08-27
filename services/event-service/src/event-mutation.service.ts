@@ -24,7 +24,11 @@ export class EventMutationService {
   update(id: string, input: UpdateEventMutation) {
     return this.mutations.update(id, input);
   }
-  changeContactRole(eventId: string, contactId: string, role: string, nextRole: string) {
-    return this.mutations.changeContactRole(eventId, contactId, role, nextRole);
-  }
+  addContact(eventId: string, contactId: string, role: string, version: number) { return this.mutations.addContact(eventId, contactId, role, version); }
+  removeContact(eventId: string, contactId: string, role: string, version: number) { return this.mutations.removeContact(eventId, contactId, role, version); }
+  changeContactRole(eventId: string, contactId: string, role: string, nextRole: string, version: number) { return this.mutations.updateContactRole(eventId, contactId, role, nextRole, version); }
+  createTask(eventId: string, input: { title: string; dueAt?: string; responsible?: string }, version: number) { return this.mutations.createTask(eventId, input, version); }
+  updateTask(eventId: string, taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }, version: number) { return this.mutations.updateTask(eventId, taskId, input, version); }
+  createFile(eventId: string, input: { name: string; url?: string; size?: string }, version: number) { return this.mutations.createFile(eventId, input, version); }
+  createActivity(eventId: string, input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }, version: number) { return this.mutations.createActivity(eventId, input, version); }
 }

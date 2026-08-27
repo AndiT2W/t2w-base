@@ -32,7 +32,6 @@ import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { useCrm } from "@/lib/crm/store";
-import { apiAddEventContact, apiCreateEventActivity, apiCreateEventFile, apiCreateEventTask, apiRemoveEventContact, apiUpdateEventContactRole, apiUpdateEventTask } from "@/lib/t2w/api";
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
@@ -93,7 +92,7 @@ function EventDetail() {
 }
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
-  const { updateEvent, syncOutlookFolder, getOutlookFolderPlan, settings } = useT2W();
+  const { updateEvent, syncOutlookFolder, getOutlookFolderPlan, settings, addEventContact: persistContact, removeEventContact, updateEventContactRole: persistContactRole, createEventTask, updateEventTask, createEventFile, createEventActivity } = useT2W();
   const { personen, kunden, kontakteVonKunde, neuLaden } = useCrm();
   const { t } = useI18n();
   const [outlookSyncing, setOutlookSyncing] = useState(false);
@@ -185,8 +184,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   async function addEventContact(personId: string, role: string) {
     const person = personen.find((item) => item.id === personId);
     if (!person) return;
-    await apiAddEventContact(event.id, personId, role);
-    set("kontakte", [...form.kontakte, { id: person.id, name: `${person.vorname} ${person.nachname}`.trim(), rolle: role, email: person.email, telefon: person.telefonBeruflich || person.telefonPrivat }]);
+    const result = await persistContact(event.id, personId, role);
+    if (result.kind !== "saved") throw new Error("EVENT_CONTACT_SAVE_FAILED");
+    setForm(result.event);
   }
   async function addContact() {
     if (!contactId) return;
@@ -196,24 +196,28 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   async function updateContactRole(contact: T2WEvent["kontakte"][number], role: string) {
     const nextRole = role.trim() || "Kontakt";
     if (nextRole === contact.rolle) return;
-    await apiUpdateEventContactRole(event.id, contact.id, contact.rolle, nextRole);
-    set("kontakte", form.kontakte.map((item) => item === contact ? { ...item, rolle: nextRole } : item));
+    const result = await persistContactRole(event.id, contact.id, contact.rolle, nextRole);
+    if (result.kind !== "saved") throw new Error("EVENT_CONTACT_SAVE_FAILED");
+    setForm(result.event);
     toast.success("Eventrolle gespeichert.");
   }
   async function addTask() {
     if (!newTask.trim()) return;
-    const task = await apiCreateEventTask(event.id, { title: newTask });
-    set("aufgaben", [...form.aufgaben, { id: task.id, titel: task.title, faellig: "", verantwortlich: "", erledigt: false }]); setNewTask(""); toast.success("Aufgabe angelegt.");
+    const result = await createEventTask(event.id, { title: newTask });
+    if (result.kind !== "saved") throw new Error("EVENT_TASK_SAVE_FAILED");
+    setForm(result.event); setNewTask(""); toast.success("Aufgabe angelegt.");
   }
   async function addFile() {
     if (!newFile.trim()) return;
-    const file = await apiCreateEventFile(event.id, { name: newFile });
-    set("dateien", [...form.dateien, { id: file.id, name: file.name, groesse: file.size ?? "", aktualisiert: file.updatedAt.slice(0, 10) }]); setNewFile(""); toast.success("Dateiverknüpfung gespeichert.");
+    const result = await createEventFile(event.id, { name: newFile });
+    if (result.kind !== "saved") throw new Error("EVENT_FILE_SAVE_FAILED");
+    setForm(result.event); setNewFile(""); toast.success("Dateiverknüpfung gespeichert.");
   }
   async function addActivity() {
     if (!newActivity.trim()) return;
-    const activity = await apiCreateEventActivity(event.id, { channel: "Notiz", subject: newActivity });
-    set("kommunikation", [...form.kommunikation, { id: activity.id, kanal: "Notiz", betreff: activity.subject, datum: activity.occurredAt.slice(0, 10), autor: activity.author ?? "", text: activity.body ?? "" }]); setNewActivity(""); toast.success("Aktivität angelegt.");
+    const result = await createEventActivity(event.id, { channel: "Notiz", subject: newActivity });
+    if (result.kind !== "saved") throw new Error("EVENT_ACTIVITY_SAVE_FAILED");
+    setForm(result.event); setNewActivity(""); toast.success("Aktivität angelegt.");
   }
 
   return (
@@ -494,7 +498,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               {form.kontakte.length === 0 && (
                 <p className="text-sm text-muted-foreground">Noch keine Kontakte hinterlegt.</p>
               )}
-              {form.kontakte.length > 0 && <div className="overflow-x-auto rounded-md border border-border"><table className="w-full text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Kontakt</th><th className="px-3 py-2 font-medium">Rolle</th><th className="px-3 py-2 font-medium">E-Mail</th><th className="px-3 py-2 font-medium">Telefon</th><th className="px-3 py-2"><span className="sr-only">Aktion</span></th></tr></thead><tbody className="divide-y divide-border">{form.kontakte.map((k) => <tr key={k.id}><td className="whitespace-nowrap px-3 py-2 font-medium text-foreground">{k.name}</td><td className="min-w-48 px-3 py-2"><Input aria-label={`Eventrolle für ${k.name}`} defaultValue={k.rolle} className="h-8" onBlur={(e) => void updateContactRole(k, e.target.value)} /></td><td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{k.email || "—"}</td><td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{k.telefon || "—"}</td><td className="px-3 py-2 text-right"><Button variant="ghost" size="sm" onClick={() => void apiRemoveEventContact(event.id, k.id, k.rolle).then(() => set("kontakte", form.kontakte.filter((item) => item !== k)))}>Entfernen</Button></td></tr>)}</tbody></table></div>}
+              {form.kontakte.length > 0 && <div className="overflow-x-auto rounded-md border border-border"><table className="w-full text-sm"><thead className="bg-muted/50 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Kontakt</th><th className="px-3 py-2 font-medium">Rolle</th><th className="px-3 py-2 font-medium">E-Mail</th><th className="px-3 py-2 font-medium">Telefon</th><th className="px-3 py-2"><span className="sr-only">Aktion</span></th></tr></thead><tbody className="divide-y divide-border">{form.kontakte.map((k) => <tr key={k.id}><td className="whitespace-nowrap px-3 py-2 font-medium text-foreground">{k.name}</td><td className="min-w-48 px-3 py-2"><Input aria-label={`Eventrolle für ${k.name}`} defaultValue={k.rolle} className="h-8" onBlur={(e) => void updateContactRole(k, e.target.value)} /></td><td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{k.email || "—"}</td><td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{k.telefon || "—"}</td><td className="px-3 py-2 text-right"><Button variant="ghost" size="sm" onClick={() => void removeEventContact(event.id, k.id, k.rolle).then((result) => { if (result.kind === "saved") setForm(result.event); else toast.error("Kontaktrolle konnte nicht entfernt werden."); })}>Entfernen</Button></td></tr>)}</tbody></table></div>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -517,9 +521,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Checkbox
                     checked={a.erledigt}
                     onCheckedChange={(v) =>
-                      void apiUpdateEventTask(event.id, a.id, { completed: !!v }).then(() =>
-                        set("aufgaben", form.aufgaben.map((x) => (x.id === a.id ? { ...x, erledigt: !!v } : x))),
-                      )
+                      void updateEventTask(event.id, a.id, { completed: !!v }).then((result) => {
+                        if (result.kind === "saved") setForm(result.event);
+                        else toast.error("Aufgabe konnte nicht gespeichert werden.");
+                      })
                     }
                   />
                   <div className="min-w-0 flex-1">

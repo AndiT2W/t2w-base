@@ -102,16 +102,20 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
 
 async function eventAction<T>(url: string, method: "POST" | "PATCH" | "DELETE", body?: unknown): Promise<T> {
   const response = await fetch(url, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  if (!response.ok) throw new Error("Event-Arbeitsfläche konnte nicht gespeichert werden");
+  if (!response.ok) {
+    const error = new Error("Event-Arbeitsfläche konnte nicht gespeichert werden") as Error & { code?: string };
+    if (response.status === 409) error.code = "EVENT_VERSION_CONFLICT";
+    throw error;
+  }
   return response.status === 204 ? (undefined as T) : (await response.json()) as T;
 }
-export const apiAddEventContact = (eventId: string, contactId: string, role: string) => eventAction(`/api/v1/events/${eventId}/contacts/${contactId}`, "POST", { role });
-export const apiRemoveEventContact = (eventId: string, contactId: string, role: string) => eventAction<void>(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "DELETE");
-export const apiUpdateEventContactRole = (eventId: string, contactId: string, role: string, nextRole: string) => eventAction(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "PATCH", { role: nextRole });
-export const apiCreateEventTask = (eventId: string, body: { title: string; dueAt?: string; responsible?: string }) => eventAction(`/api/v1/events/${eventId}/tasks`, "POST", body);
-export const apiUpdateEventTask = (eventId: string, taskId: string, body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) => eventAction(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", body);
-export const apiCreateEventFile = (eventId: string, body: { name: string; url?: string; size?: string }) => eventAction(`/api/v1/events/${eventId}/files`, "POST", body);
-export const apiCreateEventActivity = (eventId: string, body: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }) => eventAction(`/api/v1/events/${eventId}/activities`, "POST", body);
+export const apiAddEventContact = (eventId: string, contactId: string, role: string, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/contacts/${contactId}`, "POST", { role, version }).then(mapApiEvent);
+export const apiRemoveEventContact = (eventId: string, contactId: string, role: string, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "DELETE", { version }).then(mapApiEvent);
+export const apiUpdateEventContactRole = (eventId: string, contactId: string, role: string, nextRole: string, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "PATCH", { role: nextRole, version }).then(mapApiEvent);
+export const apiCreateEventTask = (eventId: string, body: { title: string; dueAt?: string; responsible?: string }, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks`, "POST", { ...body, version }).then(mapApiEvent);
+export const apiUpdateEventTask = (eventId: string, taskId: string, body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", { ...body, version }).then(mapApiEvent);
+export const apiCreateEventFile = (eventId: string, body: { name: string; url?: string; size?: string }, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/files`, "POST", { ...body, version }).then(mapApiEvent);
+export const apiCreateEventActivity = (eventId: string, body: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/activities`, "POST", { ...body, version }).then(mapApiEvent);
 
 export async function apiLogin(email: string, password: string) {
   const response = await fetch("/api/v1/auth/login", {

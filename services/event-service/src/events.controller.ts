@@ -136,14 +136,9 @@ export class EventsController {
   async addContact(
     @Param("id", ParseUUIDPipe) eventId: string,
     @Param("contactId", ParseUUIDPipe) contactId: string,
-    @Body() body: { role?: string },
+    @Body() body: { role?: string; version: number },
   ) {
-    return this.prisma.eventContact.upsert({
-      where: { eventId_contactId_role: { eventId, contactId, role: body.role?.trim() || "Kontakt" } },
-      create: { eventId, contactId, role: body.role?.trim() || "Kontakt" },
-      update: {},
-      include: { contact: true },
-    });
+    return this.mutate(() => this.eventMutations.addContact(eventId, contactId, body.role ?? "Kontakt", body.version));
   }
 
   @Patch(":id/contacts/:contactId/:role")
@@ -151,31 +146,36 @@ export class EventsController {
     @Param("id", ParseUUIDPipe) eventId: string,
     @Param("contactId", ParseUUIDPipe) contactId: string,
     @Param("role") role: string,
-    @Body() body: { role?: string },
+    @Body() body: { role?: string; version: number },
   ) {
-    return this.eventMutations.changeContactRole(eventId, contactId, role, body.role ?? "Kontakt");
+    return this.mutate(() => this.eventMutations.changeContactRole(eventId, contactId, role, body.role ?? "Kontakt", body.version));
   }
 
   @Delete(":id/contacts/:contactId/:role")
-  @HttpCode(204)
   async removeContact(
     @Param("id", ParseUUIDPipe) eventId: string,
     @Param("contactId", ParseUUIDPipe) contactId: string,
-    @Param("role") role: string,
+    @Param("role") role: string, @Body() body: { version: number },
   ) {
-    await this.prisma.eventContact.deleteMany({ where: { eventId, contactId, role } });
+    return this.mutate(() => this.eventMutations.removeContact(eventId, contactId, role, body.version));
   }
 
-  @Post(":id/tasks") createTask(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { title: string; dueAt?: string; responsible?: string }) {
-    return this.prisma.eventTask.create({ data: { eventId, title: body.title, dueAt: body.dueAt ? new Date(body.dueAt) : null, responsible: body.responsible } });
+  @Post(":id/tasks") createTask(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { title: string; dueAt?: string; responsible?: string; version: number }) {
+    const { version, ...input } = body;
+    return this.mutate(() => this.eventMutations.createTask(eventId, input, version));
   }
-  @Patch(":id/tasks/:taskId") updateTask(@Param("taskId", ParseUUIDPipe) id: string, @Body() body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) {
-    return this.prisma.eventTask.update({ where: { id }, data: { ...body, ...(body.dueAt === undefined ? {} : { dueAt: body.dueAt ? new Date(body.dueAt) : null }) } });
+  @Patch(":id/tasks/:taskId") updateTask(@Param("id", ParseUUIDPipe) eventId: string, @Param("taskId", ParseUUIDPipe) taskId: string, @Body() body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean; version: number }) {
+    const { version, ...input } = body;
+    return this.mutate(() => this.eventMutations.updateTask(eventId, taskId, input, version));
   }
-  @Post(":id/files") createFile(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { name: string; url?: string; size?: string }) {
-    return this.prisma.eventFile.create({ data: { eventId, ...body } });
+  @Post(":id/files") createFile(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { name: string; url?: string; size?: string; version: number }) {
+    const { version, ...input } = body;
+    return this.mutate(() => this.eventMutations.createFile(eventId, input, version));
   }
-  @Post(":id/activities") createActivity(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }) {
-    return this.prisma.eventActivity.create({ data: { eventId, channel: body.channel, subject: body.subject, author: body.author, body: body.body, occurredAt: body.occurredAt ? new Date(body.occurredAt) : undefined } });
+  @Post(":id/activities") createActivity(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string; version: number }) {
+    const { version, ...input } = body;
+    return this.mutate(() => this.eventMutations.createActivity(eventId, input, version));
   }
+
+  private mutate(work: () => Promise<unknown>) { return work().catch((error: unknown) => { if (error instanceof EventMutationConflict) throw new ConflictException("EVENT_VERSION_CONFLICT"); throw error; }); }
 }

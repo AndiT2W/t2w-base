@@ -1,32 +1,26 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { recoverVisibleColumns } from "./table-model";
+import { createTablePreferences, type TablePreferenceAdapter } from "./table-model";
 
 export type SortDirection = "asc" | "desc";
+
+const browserTablePreferenceAdapter: TablePreferenceAdapter = {
+  read: (key) => localStorage.getItem(key),
+  write: (key, value) => localStorage.setItem(key, value),
+  clear: (key) => localStorage.removeItem(key),
+};
 
 export function useStoredColumns<T extends string>(storageKey: string, columns: readonly T[]) {
   const [visibleColumns, setVisibleColumns] = useState<T[]>([...columns]);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (!stored) return;
-      const parsed: unknown = JSON.parse(stored);
-      if (!Array.isArray(parsed)) return;
-      const next = recoverVisibleColumns(parsed, columns);
-      if (next.length) setVisibleColumns(next);
-    } catch {
-      localStorage.removeItem(storageKey);
-    }
+    setVisibleColumns(createTablePreferences(browserTablePreferenceAdapter, storageKey, columns).load());
   }, [columns, storageKey]);
 
   function toggleColumn(column: T) {
     setVisibleColumns((current) => {
-      const next = current.includes(column)
-        ? current.filter((item) => item !== column)
-        : columns.filter((item) => current.includes(item) || item === column);
-      localStorage.setItem(storageKey, JSON.stringify(next));
+      const next = createTablePreferences(browserTablePreferenceAdapter, storageKey, columns).toggle(current, column);
       return next;
     });
   }

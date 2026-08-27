@@ -46,10 +46,18 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
     }
   }
 
+  async touchEvent(id: string, version: number | undefined) {
+    const updated = await this.prisma.event.updateMany({
+      where: { id, ...(version === undefined ? {} : { version }) },
+      data: { version: { increment: 1 } },
+    });
+    return updated.count === 1;
+  }
+
   getEvent(id: string) {
     return this.prisma.event.findUnique({
       where: { id },
-      include: { organizer: true, sport: true, payoutRecipient: true, invoiceRecipients: { include: { organizer: true } } },
+      include: { organizer: true, sport: true, contacts: { include: { contact: true } }, payoutRecipient: true, invoiceRecipients: { include: { organizer: true } }, tasks: true, files: true, activities: true },
     }) as Promise<EventMutationRecord | undefined>;
   }
 
@@ -59,5 +67,24 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
       where: { eventId_contactId_role: { eventId, contactId, role: nextRole } },
       create: { eventId, contactId, role: nextRole }, update: {},
     });
+  }
+
+  async addContact(eventId: string, contactId: string, role: string) {
+    await this.prisma.eventContact.upsert({ where: { eventId_contactId_role: { eventId, contactId, role } }, create: { eventId, contactId, role }, update: {} });
+  }
+  async removeContact(eventId: string, contactId: string, role: string) {
+    await this.prisma.eventContact.deleteMany({ where: { eventId, contactId, role } });
+  }
+  async createTask(eventId: string, input: { title: string; dueAt?: string; responsible?: string }) {
+    await this.prisma.eventTask.create({ data: { eventId, title: input.title, dueAt: input.dueAt ? new Date(input.dueAt) : null, responsible: input.responsible } });
+  }
+  async updateTask(eventId: string, taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) {
+    await this.prisma.eventTask.updateMany({ where: { id: taskId, eventId }, data: { ...input, ...(input.dueAt === undefined ? {} : { dueAt: input.dueAt ? new Date(input.dueAt) : null }) } });
+  }
+  async createFile(eventId: string, input: { name: string; url?: string; size?: string }) {
+    await this.prisma.eventFile.create({ data: { eventId, ...input } });
+  }
+  async createActivity(eventId: string, input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }) {
+    await this.prisma.eventActivity.create({ data: { eventId, channel: input.channel, subject: input.subject, author: input.author, body: input.body, occurredAt: input.occurredAt ? new Date(input.occurredAt) : undefined } });
   }
 }
