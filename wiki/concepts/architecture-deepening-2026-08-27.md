@@ -2,6 +2,7 @@
 
 ## Entscheidungen
 
+- Frameworkfreie CRM-, Event- und Auswahllisten-Module werden im npm-Workspace-Paket `@t2w/domain` geteilt. Frontend und Event-Service behalten ihre Framework- und Persistenzadapter außerhalb dieses Pakets.
 - Die Event-Bearbeitung wird durch eine zusammenhängende Editing Session gekapselt. Sie besitzt Draft, Veranstalter-abhängige Rechnungs- und Auszahlungsdefaults, Validierung sowie die Übernahme frisch gespeicherter Server-Snapshots.
 - Zentral gepflegte, aktivierbare Domainwerte heißen **Auswahllisten**. Sportarten und Eventrollen nutzen denselben Workspace mit HTTP-Adapter.
 - Wiederverwendbares Tabellenverhalten besitzt Spaltensichtbarkeit, Sortierung und stabile Zeilenreihenfolge. Fachliche Filter bleiben gemäß [ADR-0001](../decisions/adr-0001-separate-crm-and-event-bounded-contexts.md) im jeweiligen Event- oder CRM-Workspace.
@@ -9,6 +10,8 @@
 
 ## Evidenz
 
+- [`packages/domain`](../../packages/domain)
+- [`services/event-service/src/crm-command.adapter.ts`](../../services/event-service/src/crm-command.adapter.ts)
 - [`src/lib/t2w/event-workspace.ts`](../../src/lib/t2w/event-workspace.ts)
 - [`src/lib/t2w/selection-list-workspace.ts`](../../src/lib/t2w/selection-list-workspace.ts)
 - [`src/components/t2w/table-model.ts`](../../src/components/t2w/table-model.ts)

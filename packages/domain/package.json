@@ -1,0 +1,29 @@
+{
+  "name": "@t2w/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./crm": {
+      "types": "./dist/crm.d.ts",
+      "import": "./dist/crm.js"
+    },
+    "./event": {
+      "types": "./dist/event.d.ts",
+      "import": "./dist/event.js"
+    },
+    "./selection-lists": {
+      "types": "./dist/selection-lists.d.ts",
+      "import": "./dist/selection-lists.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.7"
+  }
+}

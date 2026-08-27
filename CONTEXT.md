@@ -18,6 +18,7 @@ A selection list is a centrally managed set of domain-named values offered as ch
 
 ## Architectural vocabulary
 
+- Framework-free domain behavior shared by browser and backend lives in the `@t2w/domain` workspace package. React, HTTP, local persistence, Nest, and Prisma remain adapters at seams.
 - A workspace module presents a small intent-level interface and returns refreshed domain state.
 - HTTP, local persistence, database, and browser storage are adapters behind seams.
 - Tests cross the module interface; persistence and storage adapters are replaceable in tests.

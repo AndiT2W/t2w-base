@@ -35,7 +35,9 @@ services:
     networks: [event_internal]
 
   event-service:
-    build: ./services/event-service
+    build:
+      context: .
+      dockerfile: services/event-service/Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
@@ -57,7 +59,9 @@ services:
       - traefik.http.services.t2w-events.loadbalancer.server.port=3000
 
   event-migrate:
-    build: ./services/event-service
+    build:
+      context: .
+      dockerfile: services/event-service/Dockerfile
     profiles: [migrate]
     environment:
       DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}
@@ -67,7 +71,9 @@ services:
     networks: [event_internal]
 
   event-seed:
-    build: ./services/event-service
+    build:
+      context: .
+      dockerfile: services/event-service/Dockerfile
     profiles: [seed]
     environment:
       DATABASE_URL: postgresql://${EVENT_DB_USER:-t2w_events}:${EVENT_DB_PASSWORD}@event-db:5432/${EVENT_DB_NAME:-t2w_events}

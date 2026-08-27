@@ -1,19 +1,26 @@
 {
   "name": "tanstack_start_ts",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
   "sideEffects": false,
   "type": "module",
   "scripts": {
+    "build:domain": "npm run build --workspace @t2w/domain",
+    "build:event-service": "npm run prisma:generate --workspace t2w-event-service && npm run build --workspace t2w-event-service",
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "npm run build:domain && vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vitest run",
+    "test": "npm run build:domain && vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@t2w/domain": "0.1.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

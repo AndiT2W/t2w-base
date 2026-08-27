@@ -1,20 +1,16 @@
-import { personName, type Kunde, type Person } from "./types";
+import {
+  personName,
+  type CrmAdapter,
+  type CrmState,
+  type Kunde,
+  type KundeInput,
+  type Person,
+  type PersonInput,
+} from "@t2w/domain/crm";
 
-export type CrmState = { personen: Person[]; kunden: Kunde[] };
 type Request = typeof fetch;
-export type PersonInput = Omit<Person, "id" | "kundenprofilId" | "eventRollen">;
-export type KundeInput = Omit<Kunde, "id" | "kontaktIds" | "events">;
-export interface CrmModule {
-  load(): Promise<CrmState>;
-  link(personId: string, kundeId: string): Promise<CrmState>;
-  unlink(personId: string, kundeId: string): Promise<CrmState>;
-  createPerson(input: PersonInput): Promise<Person>;
-  createKunde(input: KundeInput): Promise<Kunde>;
-  updatePerson(person: Person, patch: Partial<Person>): Promise<Person>;
-  updateKunde(kunde: Kunde, patch: Partial<Kunde>): Promise<Kunde>;
-  deletePerson(person: Person): Promise<void>;
-  deleteKunde(kunde: Kunde): Promise<void>;
-}
+export type CrmModule = CrmAdapter;
+export type { CrmState, KundeInput, PersonInput } from "@t2w/domain/crm";
 
 type ApiPerson = {
   id: string;

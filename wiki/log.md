@@ -2,6 +2,7 @@
 
 ## 2026-08-27
 
+- Architekturvertiefung begonnen: Repository auf npm Workspaces umgestellt und `@t2w/domain` als gemeinsam gebautes, frameworkfreies Domain-Paket eingeführt. CRM-Zustandsübergänge sowie Lösch-/Referenzregeln liegen dort; React, HTTP, Nest, LocalStorage und Prisma bleiben Adapter. CI und Event-Service-Docker-Build nutzen den kanonischen Root-Lockfile.
 - Outlook-Ordnersynchronisierung speichert wieder den vollständigen lesbaren Pfad `Jahresordner/Quartal/Eventcode` statt nur des Anzeigenamens des Event-Unterordners. Eine Backend-Regression sichert die Persistierung des kanonischen Pfads.
 - Outlook-Ordnernavigation verwendet nun eine mailbox-spezifische Outlook-Web-URL (`/mail/{Mailbox}/{Ordner-ID}`), nicht mehr den nicht auflösbaren generischen `deeplink/folder`-Fallback.
 
@@ -321,3 +322,5 @@
 - Placed Event start and end dates side by side in the Event creation dialog; browser coverage guards that shared row layout.
 
 - Implemented architecture recommendations 1-4: cohesive Event editing sessions, a shared selection-list workspace, centralized table behavior, and direct-first Outlook/SharePoint folder navigation. Added focused unit regressions and verified all 31 Event browser workflows.
+
+- Captured follow-up UI feedback in [GitHub issue #34](https://github.com/AndiT2W/t2w-base/issues/34): roles of existing Event contacts should be editable via the centrally managed role dropdown rather than free text. The issue is intentionally an extensible collection point for further Event-detail UI improvements.

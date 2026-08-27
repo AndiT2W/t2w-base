@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -14,11 +15,23 @@ import {
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "./prisma.service.js";
+import { CrmCommands, type CrmCommandResult } from "@t2w/domain/crm";
+import { PrismaCrmCommandAdapter, type CustomerProfileInput } from "./crm-command.adapter.js";
 
 @ApiTags("master-data")
 @Controller("api/v1")
 export class MasterDataController {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly crm: CrmCommands<CustomerProfileInput, unknown>;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.crm = new CrmCommands(new PrismaCrmCommandAdapter(prisma));
+  }
+
+  private unwrap(result: CrmCommandResult<unknown>) {
+    if (result.kind === "saved") return result.value;
+    if (result.reason === "NOT_FOUND") throw new NotFoundException(result.reason);
+    throw new ConflictException(result.reason);
+  }
 
   @Get("organizers") organizers() {
     return this.prisma.organizer.findMany({
@@ -95,27 +108,7 @@ export class MasterDataController {
   @Delete("organizers/:id")
   @HttpCode(204)
   async deleteOrganizer(@Param("id", ParseUUIDPipe) id: string) {
-    const references = await this.prisma.organizer.findUniqueOrThrow({
-      where: { id },
-      include: {
-        events: true,
-        payoutEvents: true,
-        invoiceRecipients: true,
-        contacts: true,
-        person: true,
-        primaryContact: true,
-      },
-    });
-    if (
-      references.events.length ||
-      references.payoutEvents.length ||
-      references.invoiceRecipients.length ||
-      references.contacts.length ||
-      references.person ||
-      references.primaryContact
-    )
-      throw new ConflictException("ORGANIZER_REFERENCED");
-    await this.prisma.organizer.delete({ where: { id } });
+    this.unwrap(await this.crm.deleteOrganizer(id));
   }
   @Put("organizers/:organizerId/contacts/:contactId")
   @HttpCode(204)
@@ -123,11 +116,7 @@ export class MasterDataController {
     @Param("organizerId", ParseUUIDPipe) organizerId: string,
     @Param("contactId", ParseUUIDPipe) contactId: string,
   ) {
-    await this.prisma.organizerContact.upsert({
-      where: { organizerId_contactId: { organizerId, contactId } },
-      create: { organizerId, contactId },
-      update: {},
-    });
+    this.unwrap(await this.crm.linkContact(organizerId, contactId));
   }
   @Delete("organizers/:organizerId/contacts/:contactId")
   @HttpCode(204)
@@ -135,7 +124,7 @@ export class MasterDataController {
     @Param("organizerId", ParseUUIDPipe) organizerId: string,
     @Param("contactId", ParseUUIDPipe) contactId: string,
   ) {
-    await this.prisma.organizerContact.deleteMany({ where: { organizerId, contactId } });
+    this.unwrap(await this.crm.unlinkContact(organizerId, contactId));
   }
 
   @Get("sports") sports(@Query("includeInactive") includeInactive?: string) {
@@ -229,47 +218,13 @@ export class MasterDataController {
   @Delete("contacts/:id")
   @HttpCode(204)
   async deleteContact(@Param("id", ParseUUIDPipe) id: string) {
-    const references = await this.prisma.contact.findUniqueOrThrow({
-      where: { id },
-      include: {
-        organizers: true,
-        eventRoles: true,
-        customerProfile: true,
-        primaryForOrganizers: true,
-      },
-    });
-    if (
-      references.organizers.length ||
-      references.eventRoles.length ||
-      references.customerProfile ||
-      references.primaryForOrganizers.length
-    )
-      throw new ConflictException("CONTACT_REFERENCED");
-    await this.prisma.contact.delete({ where: { id } });
+    this.unwrap(await this.crm.deleteContact(id));
   }
   @Post("contacts/:id/customer-profile") customerProfile(
     @Param("id", ParseUUIDPipe) id: string,
     @Body()
-    body: {
-      country?: string;
-      city?: string;
-      street?: string;
-      postalCode?: string;
-      uid?: string;
-      iban?: string;
-      bic?: string;
-      bankName?: string;
-      email?: string;
-    },
+    body: CustomerProfileInput,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      const person = await tx.contact.findUniqueOrThrow({ where: { id } });
-      return tx.organizer.upsert({
-        where: { personId: id },
-        create: { name: person.name, type: "PERSON", personId: id, ...body },
-        update: body,
-        include: { person: true },
-      });
-    });
+    return this.crm.upsertCustomerProfile(id, body).then((result) => this.unwrap(result));
   }
 }
