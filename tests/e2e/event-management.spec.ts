@@ -505,6 +505,11 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   await expect(openButton).toBeVisible();
   await openButton.click();
   await expect(page.getByText("Neues Event anlegen", { exact: true })).toBeVisible();
+  const startDate = page.getByLabel(/Startdatum/);
+  const endDate = page.getByLabel(/Enddatum/);
+  await expect(startDate).toBeVisible();
+  await expect(endDate).toBeVisible();
+  expect(Math.abs(((await startDate.boundingBox())?.y ?? 0) - ((await endDate.boundingBox())?.y ?? 0))).toBeLessThan(1);
   await page.getByLabel(/Eventname/).fill("Neues E2E Event");
   await page.getByLabel("Veranstalter aus Stammdaten").fill("Jonas");
   await page.getByRole("button", { name: "Jonas Feld", exact: true }).click();

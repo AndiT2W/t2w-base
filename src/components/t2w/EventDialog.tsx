@@ -155,15 +155,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
             <Select value={sportartId} onValueChange={setSportartId}><SelectTrigger aria-label="Sportart" className="mt-1.5"><SelectValue placeholder="Sportart auswählen" /></SelectTrigger><SelectContent>{sportarten.map((sport) => <SelectItem key={sport.id} value={sport.id}>{sport.name}</SelectItem>)}</SelectContent></Select>
           </div>
           <div>
-            <Label htmlFor="ort">Ort</Label>
-            <Input
-              id="ort"
-              value={ort}
-              onChange={(e) => setOrt(e.target.value)}
-              className="mt-1.5"
-            />
-          </div>
-          <div>
             <Label htmlFor="start">Startdatum *</Label>
             <Input
               id="start"
@@ -194,6 +185,15 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
               className="mt-1.5"
             />
             <p className="mt-1 text-xs text-muted-foreground">Leer = entspricht dem Startdatum.</p>
+          </div>
+          <div>
+            <Label htmlFor="ort">Ort</Label>
+            <Input
+              id="ort"
+              value={ort}
+              onChange={(e) => setOrt(e.target.value)}
+              className="mt-1.5"
+            />
           </div>
           <div>
             <Label>Status</Label>

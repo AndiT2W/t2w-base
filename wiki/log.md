@@ -312,3 +312,5 @@
 - Added the Settings **Auswahllisten** tab. It centrally manages the Event sport selection: Sportarten can be created, renamed, activated, or deactivated; Event forms continue to receive only active values. The tab is the extension point for future selection lists.
 
 - Added persisted Event role options to **Auswahllisten**, seeded with `Anmeldung` and `Finanz`. Active options are available when assigning an Event contact; roles can be added, renamed, activated, or deactivated without rewriting existing Event relationships.
+
+- Placed Event start and end dates side by side in the Event creation dialog; browser coverage guards that shared row layout.
