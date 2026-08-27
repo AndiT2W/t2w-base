@@ -80,6 +80,8 @@ describe("OutlookFolderService", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           outlookFolder: "06_auftraege_26/Q2/260612_sommerfest",
+          outlookWebUrl:
+            "https://outlook.office.com/mail/shared%40example.com/inbox%2F06_auftraege_26%2FQ2%2F260612_sommerfest",
         }),
       }),
     );

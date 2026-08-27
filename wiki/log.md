@@ -3,6 +3,7 @@
 ## 2026-08-27
 
 - Outlook-Ordnersynchronisierung speichert wieder den vollständigen lesbaren Pfad `Jahresordner/Quartal/Eventcode` statt nur des Anzeigenamens des Event-Unterordners. Eine Backend-Regression sichert die Persistierung des kanonischen Pfads.
+- Outlook-Ordnernavigation verwendet nun eine mailbox-spezifische Outlook-Web-URL (`/mail/{Mailbox}/{Ordner-ID}`), nicht mehr den nicht auflösbaren generischen `deeplink/folder`-Fallback.
 
 ## 2026-08-25
 

@@ -101,9 +101,7 @@ export class OutlookFolderService {
           outlookQuarterFolderId: quarterFolder.id,
           outlookFolderId: eventFolder.id,
           outlookFolder: plan.path,
-          outlookWebUrl:
-            eventFolder.webUrl ??
-            `https://outlook.office.com/mail/deeplink/folder/${encodeURIComponent(eventFolder.id)}`,
+          outlookWebUrl: `https://outlook.office.com/mail/${encodeURIComponent(mailbox)}/${encodeURIComponent(eventFolder.id)}`,
           outlookFolderSyncStatus: "SUCCESS",
           outlookFolderLastSuccessAt: new Date(),
           outlookFolderLastError: null,
