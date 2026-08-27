@@ -327,3 +327,5 @@
 - Captured follow-up UI feedback in [GitHub issue #34](https://github.com/AndiT2W/t2w-base/issues/34): roles of existing Event contacts should be editable via the centrally managed role dropdown rather than free text. The issue is intentionally an extensible collection point for further Event-detail UI improvements.
 
 - Moved the shared sport and Event-role lifecycle into the framework-free `@t2w/domain/selection-lists` module. Prisma and browser HTTP mocks are now adapters around that lifecycle; the reusable mutable browser adapter keeps selection-list workflows covered end to end.
+
+- Removed the pass-through Nest Event mutation service. `EventMutations` is now injected directly through a Prisma-backed provider, owns fallback Event-code generation, and remains the single tested command boundary for versioned Event changes.

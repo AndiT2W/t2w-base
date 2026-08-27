@@ -77,6 +77,15 @@ describe("Event mutation module", () => {
     expect(created).toMatchObject({ organizerId: "o-master", payoutRecipientId: "o-master", invoiceRecipientIds: ["o-master"] });
   });
 
+  it("owns the date-based fallback Event code", async () => {
+    const persistence = adapter();
+    const created = await new EventMutations(persistence, (startAt) =>
+      `${startAt.slice(2, 10).replaceAll("-", "")}_event_fixed`,
+    ).create({ name: "Race", startAt: "2027-01-15" });
+
+    expect(created.eventCode).toBe("270115_event_fixed");
+  });
+
   it("rejects a stale version before replacing invoice recipients", async () => {
     const persistence = adapter();
     persistence.events.set("e1", { id: "e1", version: 2, invoiceRecipientIds: ["o1"] });
@@ -91,8 +100,19 @@ describe("Event mutation module", () => {
   it("changes a contact role atomically through the event mutation module", async () => {
     const persistence = adapter();
     persistence.events.set("e1", { id: "e1", version: 1 });
-    const event = await new EventMutations(persistence).changeContactRole("e1", "p1", "Kontakt", "  Finanzen ");
-    expect(event).toMatchObject({ contactId: "p1", previousRole: "Kontakt", role: "Finanzen" });
+    const event = await new EventMutations(persistence).updateContactRole(
+      "e1",
+      "p1",
+      "Kontakt",
+      "  Finanzen ",
+      1,
+    );
+    expect(event).toMatchObject({
+      version: 2,
+      contactId: "p1",
+      previousRole: "Kontakt",
+      role: "Finanzen",
+    });
   });
 
   it("returns the refreshed Event and rejects a stale detail command", async () => {

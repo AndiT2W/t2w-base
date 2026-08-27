@@ -52,7 +52,8 @@ export class EventMutationConflict extends Error {
 export class EventMutations {
   constructor(
     private readonly persistence: EventMutationAdapter,
-    private readonly generateEventCode = () => `event_${Date.now()}`,
+    private readonly generateEventCode = (startAt: string) =>
+      `${new Date(startAt).toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`,
   ) {}
 
   create(input: CreateEventMutation) {
@@ -65,7 +66,7 @@ export class EventMutations {
           : [];
       return adapter.createEvent({
         ...input,
-        eventCode: input.eventCode?.trim() || this.generateEventCode(),
+        eventCode: input.eventCode?.trim() || this.generateEventCode(input.startAt),
         startAt: new Date(input.startAt),
         endAt: new Date(input.endAt ?? input.startAt),
         status: input.status ?? EventStatus.ANFRAGE,
@@ -89,13 +90,6 @@ export class EventMutations {
       const event = await adapter.getEvent(id);
       if (!event) throw new EventMutationConflict();
       return event;
-    });
-  }
-
-  changeContactRole(eventId: string, contactId: string, role: string, nextRole: string) {
-    return this.mutate(eventId, undefined, async (adapter) => {
-      if (!adapter.replaceContactRole) throw new Error("CONTACT_ROLE_ADAPTER_UNAVAILABLE");
-      await adapter.replaceContactRole(eventId, contactId, role, nextRole.trim() || "Kontakt");
     });
   }
 

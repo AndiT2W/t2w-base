@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-const event = {
+export const event = {
   id: "11111111-1111-4111-8111-111111111111",
   eventCode: "260820_demo_event",
   name: "Bestehendes Event",

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockEventManagementApi as mockApi } from "./support/event-management-api";
+import { event, mockEventManagementApi as mockApi } from "./support/event-management-api";
 
 test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }) => {
   await mockApi(page);

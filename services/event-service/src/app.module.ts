@@ -9,7 +9,8 @@ import { AuthGuard } from "./auth.guard.js";
 import { APP_GUARD } from "@nestjs/core";
 import { SettingsController } from "./settings.controller.js";
 import { OutlookModule } from "./outlook/outlook.module.js";
-import { EventMutationService } from "./event-mutation.service.js";
+import { EventMutations } from "./event-mutations.js";
+import { PrismaEventMutationAdapter } from "./prisma-event-mutation.adapter.js";
 
 @Module({
   imports: [OutlookModule],
@@ -23,7 +24,12 @@ import { EventMutationService } from "./event-mutation.service.js";
   providers: [
     PrismaService,
     AuthService,
-    EventMutationService,
+    {
+      provide: EventMutations,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) =>
+        new EventMutations(new PrismaEventMutationAdapter(prisma)),
+    },
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
 })

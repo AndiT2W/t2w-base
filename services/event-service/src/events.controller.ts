@@ -16,8 +16,7 @@ import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min 
 import { EventStatus } from "@prisma/client";
 import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
-import { EventMutationConflict } from "./event-mutations.js";
-import { EventMutationService } from "./event-mutation.service.js";
+import { EventMutationConflict, EventMutations } from "./event-mutations.js";
 
 export class CreateEventDto {
   @IsOptional() @IsString() eventCode?: string;
@@ -46,7 +45,7 @@ export class EventsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outlookFolders: OutlookFolderService,
-    private readonly eventMutations: EventMutationService,
+    private readonly eventMutations: EventMutations,
   ) {}
 
   @Post(":id/outlook-folder/sync")
@@ -112,13 +111,7 @@ export class EventsController {
 
   @Post()
   create(@Body() dto: CreateEventDto) {
-    const start = new Date(dto.startAt);
-    return this.eventMutations.create({
-      ...dto,
-      eventCode:
-        dto.eventCode?.trim() ||
-        `${start.toISOString().slice(2, 10).replaceAll("-", "")}_event_${Date.now()}`,
-    });
+    return this.eventMutations.create(dto);
   }
 
   @Patch(":id") update(
@@ -148,7 +141,7 @@ export class EventsController {
     @Param("role") role: string,
     @Body() body: { role?: string; version: number },
   ) {
-    return this.mutate(() => this.eventMutations.changeContactRole(eventId, contactId, role, body.role ?? "Kontakt", body.version));
+    return this.mutate(() => this.eventMutations.updateContactRole(eventId, contactId, role, body.role ?? "Kontakt", body.version));
   }
 
   @Delete(":id/contacts/:contactId/:role")
