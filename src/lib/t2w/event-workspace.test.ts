@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createEventWorkspace } from "./event-workspace";
+import { createEventEditingSession, createEventWorkspace } from "./event-workspace";
 import type { T2WEvent } from "./types";
 
 const event = {
@@ -12,6 +12,24 @@ const event = {
 } as T2WEvent;
 
 describe("Event workspace", () => {
+  it("owns organizer recipient defaults in an editing session", async () => {
+    const initial = {
+      ...event,
+      veranstalterId: "old",
+      auszahlungsempfaengerId: "old",
+      rechnungsempfaengerIds: ["old"],
+    };
+    const session = createEventEditingSession(initial, async (draft) => ({
+      kind: "saved",
+      event: draft,
+    }));
+
+    session.update({ veranstalterId: "new" });
+    expect(session.snapshot().auszahlungsempfaengerId).toBe("new");
+    expect(session.snapshot().rechnungsempfaengerIds).toEqual(["new"]);
+    await expect(session.save()).resolves.toMatchObject({ kind: "saved" });
+  });
+
   it("owns the Event collection and publishes only persisted creations", async () => {
     const created = { ...event, id: "e2", name: "Created" };
     const transport = {
@@ -112,15 +130,25 @@ describe("Event workspace", () => {
   });
 
   it("publishes a refreshed Event snapshot after a detail command", async () => {
-    const refreshed = { ...event, version: 4, aufgaben: [{ id: "t1", titel: "Briefing" }] } as T2WEvent;
+    const refreshed = {
+      ...event,
+      version: 4,
+      aufgaben: [{ id: "t1", titel: "Briefing" }],
+    } as T2WEvent;
     const transport = {
-      create: vi.fn(), save: vi.fn(), syncOutlook: vi.fn(), outlookPlan: vi.fn(),
+      create: vi.fn(),
+      save: vi.fn(),
+      syncOutlook: vi.fn(),
+      outlookPlan: vi.fn(),
       createTask: vi.fn().mockResolvedValue(refreshed),
     };
     const workspace = createEventWorkspace(transport);
     workspace.load([event]);
 
-    await expect(workspace.createTask("e1", { title: "Briefing" })).resolves.toEqual({ kind: "saved", event: refreshed });
+    await expect(workspace.createTask("e1", { title: "Briefing" })).resolves.toEqual({
+      kind: "saved",
+      event: refreshed,
+    });
     expect(transport.createTask).toHaveBeenCalledWith("e1", { title: "Briefing" }, 3);
     expect(workspace.events()).toEqual([refreshed]);
   });

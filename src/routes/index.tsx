@@ -1,29 +1,19 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  CalendarClock,
-  CheckSquare,
-  Mail,
-  Pencil,
-  Plus,
-  Share2,
-} from "lucide-react";
+import { CalendarClock, CheckSquare, Mail, Pencil, Plus, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso, tageZwischen } from "@/lib/t2w/format";
-import { STATUS_LABEL, STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
+import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { cn } from "@/lib/utils";
 import { FolderLink } from "@/components/t2w/FolderLink";
-import { jahr } from "@/lib/t2w/eventcode";
 import { useI18n } from "@/lib/i18n";
 import { activeEvents } from "@/lib/t2w/event-projections";
-import { ColumnPicker, SortHeader, useStoredColumns } from "@/components/t2w/TableFeatures";
+import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
+import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -54,6 +44,22 @@ const OVERVIEW_COLUMNS = [
   "Ordner",
 ] as const;
 type OverviewColumn = (typeof OVERVIEW_COLUMNS)[number];
+const OVERVIEW_TABLE_COLUMNS = [
+  { key: "Status", sortValue: (event: T2WEvent) => STATUS_LABEL[event.status] },
+  { key: "Event", sortValue: (event: T2WEvent) => event.name },
+  { key: "Veranstalter", sortValue: (event: T2WEvent) => event.veranstalter },
+  { key: "Zeitraum", sortValue: (event: T2WEvent) => event.start },
+  { key: "Tage", sortValue: (event: T2WEvent) => tageZwischen(event.start, event.ende) },
+  {
+    key: "Aufgaben",
+    sortValue: (event: T2WEvent) => event.aufgaben.filter((task) => !task.erledigt).length,
+  },
+  {
+    key: "Ordner",
+    sortValue: (event: T2WEvent) =>
+      Number(Boolean(event.outlookOrdner)) + Number(Boolean(event.sharepointOrdner)),
+  },
+] as const;
 
 const SCHNELLFILTER: { key: Schnellfilter; label: string }[] = [
   { key: "alle", label: "Alle aktiven" },
@@ -76,14 +82,12 @@ function Uebersicht() {
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [suche, setSuche] = useState("");
-  const [sortierung, setSortierung] = useState<{
-    feld: "name" | "veranstalter" | "start" | "ende" | "tage" | "aufgaben" | "status";
-    richtung: "auf" | "ab";
-  }>({ feld: "start", richtung: "auf" });
-  const { visibleColumns, toggleColumn } = useStoredColumns<OverviewColumn>(
-    "t2w-overview-table-columns",
-    OVERVIEW_COLUMNS,
-  );
+  const table = useTableBehavior<T2WEvent, OverviewColumn>({
+    storageKey: "t2w-overview-table-columns",
+    columns: OVERVIEW_TABLE_COLUMNS,
+    initialSort: { key: "Zeitraum", direction: "asc" },
+  });
+  const { visibleColumns, toggleColumn, sort } = table;
 
   const aktive = useMemo(() => activeEvents(events), [events]);
 
@@ -93,7 +97,7 @@ function Uebersicht() {
     return { kommend, aufgaben };
   }, [aktive, heute]);
 
-  const zeilen = useMemo(() => {
+  const gefilterte = useMemo(() => {
     const q = suche.trim().toLowerCase();
     return aktive
       .filter((e) => (status === "alle" ? true : e.status === status))
@@ -110,67 +114,10 @@ function Uebersicht() {
               .toLowerCase()
               .includes(q)
           : true,
-      )
-      .sort((a, b) => {
-        const av =
-          sortierung.feld === "aufgaben"
-            ? a.aufgaben.filter((x) => !x.erledigt).length
-            : sortierung.feld === "tage"
-              ? tageZwischen(a.start, a.ende)
-              : sortierung.feld === "status"
-                ? STATUS_LABEL[a.status]
-                : a[sortierung.feld];
-        const bv =
-          sortierung.feld === "aufgaben"
-            ? b.aufgaben.filter((x) => !x.erledigt).length
-            : sortierung.feld === "tage"
-              ? tageZwischen(b.start, b.ende)
-              : sortierung.feld === "status"
-                ? STATUS_LABEL[b.status]
-                : b[sortierung.feld];
-        const result =
-          typeof av === "number" && typeof bv === "number"
-            ? av - bv
-            : String(av).localeCompare(String(bv));
-        return sortierung.richtung === "auf" ? result : -result;
-      });
-  }, [aktive, filter, status, suche, heute, sortierung]);
-
-  function sortiere(feld: typeof sortierung.feld) {
-    setSortierung((aktuell) =>
-      aktuell.feld === feld
-        ? { feld, richtung: aktuell.richtung === "auf" ? "ab" : "auf" }
-        : { feld, richtung: "auf" },
-    );
-  }
-
-  function OverviewSortHeader({
-    feld,
-    children,
-  }: {
-    feld: typeof sortierung.feld;
-    children: ReactNode;
-  }) {
-    const aktiv = sortierung.feld === feld;
-    return (
-      <button
-        type="button"
-        onClick={() => sortiere(feld)}
-        className="inline-flex items-center gap-1 font-semibold hover:text-foreground"
-      >
-        <span>{children}</span>
-        {aktiv ? (
-          sortierung.richtung === "auf" ? (
-            <ArrowUp className="size-3" />
-          ) : (
-            <ArrowDown className="size-3" />
-          )
-        ) : (
-          <ArrowUpDown className="size-3 opacity-50" />
-        )}
-      </button>
-    );
-  }
+      );
+  }, [aktive, filter, status, suche, heute]);
+  const zeilen = table.rows(gefilterte);
+  const sortiere = table.sortBy;
 
   return (
     <div>
@@ -246,34 +193,49 @@ function Uebersicht() {
                   <th className="px-2 py-1.5">
                     <SortHeader
                       label="Status"
-                      active={sortierung.feld === "status"}
-                      direction={sortierung.richtung === "auf" ? "asc" : "desc"}
-                      onSort={() => sortiere("status")}
+                      active={sort.key === "Status"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("Status")}
                     />
                   </th>
                 )}
                 {visibleColumns.includes("Event") && (
                   <th className="px-2 py-1.5">
-                    <OverviewSortHeader feld="name">Event</OverviewSortHeader>
+                    <SortHeader
+                      label="Event"
+                      active={sort.key === "Event"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("Event")}
+                    />
                   </th>
                 )}
                 {visibleColumns.includes("Veranstalter") && (
                   <th className="px-2 py-1.5">
-                    <OverviewSortHeader feld="veranstalter">Veranstalter</OverviewSortHeader>
+                    <SortHeader
+                      label="Veranstalter"
+                      active={sort.key === "Veranstalter"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("Veranstalter")}
+                    />
                   </th>
                 )}
                 {visibleColumns.includes("Zeitraum") && (
                   <th className="px-2 py-1.5">
-                    <OverviewSortHeader feld="start">Zeitraum</OverviewSortHeader>
+                    <SortHeader
+                      label="Zeitraum"
+                      active={sort.key === "Zeitraum"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("Zeitraum")}
+                    />
                   </th>
                 )}
                 {visibleColumns.includes("Tage") && (
                   <th className="px-2 py-1.5">
                     <SortHeader
                       label="Tage"
-                      active={sortierung.feld === "tage"}
-                      direction={sortierung.richtung === "auf" ? "asc" : "desc"}
-                      onSort={() => sortiere("tage")}
+                      active={sort.key === "Tage"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("Tage")}
                     >
                       Tage
                     </SortHeader>
@@ -281,7 +243,14 @@ function Uebersicht() {
                 )}
                 {visibleColumns.includes("Aufgaben") && (
                   <th className="px-2 py-1.5">
-                    <OverviewSortHeader feld="aufgaben">Aufg.</OverviewSortHeader>
+                    <SortHeader
+                      label="Aufgaben"
+                      active={sort.key === "Aufgaben"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("Aufgaben")}
+                    >
+                      Aufg.
+                    </SortHeader>
                   </th>
                 )}
                 {visibleColumns.includes("Ordner") && (
@@ -299,6 +268,7 @@ function Uebersicht() {
             <tbody>
               {zeilen.map((e) => {
                 const offen = e.aufgaben.filter((a) => !a.erledigt).length;
+                const folders = resolveEventFolderNavigation(e, settings);
                 return (
                   <tr
                     key={e.id}
@@ -358,24 +328,14 @@ function Uebersicht() {
                           <FolderLink
                             icon="outlook"
                             label="Outlook"
-                            href={
-                              e.outlookWebUrl ??
-                              (e.outlookOrdner ? "https://outlook.office.com/mail/" : null)
-                            }
-                            available={Boolean(e.outlookWebUrl || e.outlookOrdner)}
+                            href={folders.outlook.href}
+                            available={folders.outlook.available}
                           />
                           <FolderLink
                             icon="sharepoint"
                             label="SharePoint"
-                            href={(() => {
-                              const site = settings.jahresSites.find(
-                                (s) => s.jahr === jahr(e.start),
-                              );
-                              return e.sharepointOrdner && site
-                                ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
-                                : null;
-                            })()}
-                            available={Boolean(e.sharepointOrdner)}
+                            href={folders.sharepoint.href}
+                            available={folders.sharepoint.available}
                           />
                         </span>
                       </td>

@@ -314,3 +314,5 @@
 - Added persisted Event role options to **Auswahllisten**, seeded with `Anmeldung` and `Finanz`. Active options are available when assigning an Event contact; roles can be added, renamed, activated, or deactivated without rewriting existing Event relationships.
 
 - Placed Event start and end dates side by side in the Event creation dialog; browser coverage guards that shared row layout.
+
+- Implemented architecture recommendations 1-4: cohesive Event editing sessions, a shared selection-list workspace, centralized table behavior, and direct-first Outlook/SharePoint folder navigation. Added focused unit regressions and verified all 31 Event browser workflows.

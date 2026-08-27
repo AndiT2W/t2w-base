@@ -12,6 +12,10 @@ The Event workspace owns event participant and recipient rules: organizer assign
 
 Table behavior consists of generic column definitions, persisted visibility, locale-aware sorting, stable ordering, and preference recovery. Domain-specific filtering remains owned by the containing workspace. Browser storage is an adapter, not part of the table behavior’s core interface.
 
+## Selection lists
+
+A selection list is a centrally managed set of domain-named values offered as choices in Event workflows. Values can be activated or deactivated without rewriting existing Event data. Active values are available for selection; management views also include inactive values. Sport types and Event roles are selection lists.
+
 ## Architectural vocabulary
 
 - A workspace module presents a small intent-level interface and returns refreshed domain state.

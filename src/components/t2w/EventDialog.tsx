@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,12 +23,11 @@ import {
 } from "@/components/ui/select";
 import { useT2W } from "@/lib/t2w/store";
 import { useCrm } from "@/lib/crm/store";
-import { apiSports, type ApiSport } from "@/lib/t2w/api";
 import { buildEventcode } from "@/lib/t2w/eventcode";
 import { STATUS_ORDER, STATUS_LABEL, type EventStatus } from "@/lib/t2w/types";
 
 export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
-  const { events, neuesEvent } = useT2W();
+  const { events, neuesEvent, selectionLists } = useT2W();
   const { kunden } = useCrm();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -37,7 +36,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const [veranstalterId, setVeranstalterId] = useState<string | undefined>();
   const [veranstalterSuche, setVeranstalterSuche] = useState("");
   const [sportartId, setSportartId] = useState<string | undefined>();
-  const [sportarten, setSportarten] = useState<ApiSport[]>([]);
+  const sportarten = selectionLists.sports.filter((sport) => sport.active);
   const [ort, setOrt] = useState("");
   const [start, setStart] = useState("");
   const [eventcode, setEventcode] = useState("");
@@ -45,7 +44,6 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const [ende, setEnde] = useState("");
   const [status, setStatus] = useState<EventStatus>("anfrage");
   const [notizen, setNotizen] = useState("");
-  useEffect(() => { void apiSports().then(setSportarten).catch(() => setSportarten([])); }, []);
 
   const vorschau =
     name.trim() && start
@@ -80,8 +78,14 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
       toast.error("Das Startdatum ist verpflichtend.");
       return;
     }
-    if (!veranstalterId) { toast.error("Bitte einen Veranstalter auswählen."); return; }
-    if (!sportartId) { toast.error("Bitte eine Sportart auswählen."); return; }
+    if (!veranstalterId) {
+      toast.error("Bitte einen Veranstalter auswählen.");
+      return;
+    }
+    if (!sportartId) {
+      toast.error("Bitte eine Sportart auswählen.");
+      return;
+    }
     if (ende && ende < start) {
       toast.error("Das Enddatum darf nicht vor dem Startdatum liegen.");
       return;
@@ -147,12 +151,56 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
           </div>
           <div>
             <Label htmlFor="veranstalter">Veranstalter</Label>
-            <Input aria-label="Veranstalter aus Stammdaten" placeholder="Kunde suchen …" value={veranstalterId ? veranstalter : veranstalterSuche} onChange={(e) => { setVeranstalterSuche(e.target.value); setVeranstalterId(undefined); setVeranstalter(""); }} className="mt-1.5" />
-            {veranstalterSuche && !veranstalterId && <div className="mt-1 max-h-32 overflow-y-auto rounded-md border border-border bg-surface">{kunden.filter((kunde) => kunde.name.toLocaleLowerCase("de").includes(veranstalterSuche.toLocaleLowerCase("de"))).map((kunde) => <button type="button" key={kunde.id} className="block w-full px-3 py-2 text-left text-sm hover:bg-accent" onClick={() => { setVeranstalterId(kunde.id); setVeranstalter(kunde.name); setVeranstalterSuche(""); }}>{kunde.name}</button>)}</div>}
+            <Input
+              aria-label="Veranstalter aus Stammdaten"
+              placeholder="Kunde suchen …"
+              value={veranstalterId ? veranstalter : veranstalterSuche}
+              onChange={(e) => {
+                setVeranstalterSuche(e.target.value);
+                setVeranstalterId(undefined);
+                setVeranstalter("");
+              }}
+              className="mt-1.5"
+            />
+            {veranstalterSuche && !veranstalterId && (
+              <div className="mt-1 max-h-32 overflow-y-auto rounded-md border border-border bg-surface">
+                {kunden
+                  .filter((kunde) =>
+                    kunde.name
+                      .toLocaleLowerCase("de")
+                      .includes(veranstalterSuche.toLocaleLowerCase("de")),
+                  )
+                  .map((kunde) => (
+                    <button
+                      type="button"
+                      key={kunde.id}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                      onClick={() => {
+                        setVeranstalterId(kunde.id);
+                        setVeranstalter(kunde.name);
+                        setVeranstalterSuche("");
+                      }}
+                    >
+                      {kunde.name}
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
           <div>
             <Label>Sportart *</Label>
-            <Select value={sportartId} onValueChange={setSportartId}><SelectTrigger aria-label="Sportart" className="mt-1.5"><SelectValue placeholder="Sportart auswählen" /></SelectTrigger><SelectContent>{sportarten.map((sport) => <SelectItem key={sport.id} value={sport.id}>{sport.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={sportartId} onValueChange={setSportartId}>
+              <SelectTrigger aria-label="Sportart" className="mt-1.5">
+                <SelectValue placeholder="Sportart auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {sportarten.map((sport) => (
+                  <SelectItem key={sport.id} value={sport.id}>
+                    {sport.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="start">Startdatum *</Label>

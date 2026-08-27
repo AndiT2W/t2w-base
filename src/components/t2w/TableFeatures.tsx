@@ -1,7 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createTablePreferences, type TablePreferenceAdapter } from "./table-model";
+import {
+  createTableBehavior,
+  createTablePreferences,
+  type TableColumn,
+  type TablePreferenceAdapter,
+  type TableSortDirection,
+} from "./table-model";
 
 export type SortDirection = "asc" | "desc";
 
@@ -15,17 +21,43 @@ export function useStoredColumns<T extends string>(storageKey: string, columns: 
   const [visibleColumns, setVisibleColumns] = useState<T[]>([...columns]);
 
   useEffect(() => {
-    setVisibleColumns(createTablePreferences(browserTablePreferenceAdapter, storageKey, columns).load());
+    setVisibleColumns(
+      createTablePreferences(browserTablePreferenceAdapter, storageKey, columns).load(),
+    );
   }, [columns, storageKey]);
 
   function toggleColumn(column: T) {
     setVisibleColumns((current) => {
-      const next = createTablePreferences(browserTablePreferenceAdapter, storageKey, columns).toggle(current, column);
+      const next = createTablePreferences(
+        browserTablePreferenceAdapter,
+        storageKey,
+        columns,
+      ).toggle(current, column);
       return next;
     });
   }
 
   return { visibleColumns, toggleColumn };
+}
+
+export function useTableBehavior<T, K extends string>(options: {
+  storageKey: string;
+  columns: readonly TableColumn<T, K>[];
+  initialSort: { key: K; direction: TableSortDirection };
+}) {
+  const [behavior] = useState(() =>
+    createTableBehavior({ ...options, adapter: browserTablePreferenceAdapter }),
+  );
+  const [snapshot, setSnapshot] = useState(behavior.snapshot());
+
+  useEffect(() => setSnapshot(behavior.load()), [behavior]);
+
+  return {
+    ...snapshot,
+    rows: (rows: readonly T[]) => behavior.rows(rows),
+    sortBy: (column: K) => setSnapshot(behavior.sortBy(column)),
+    toggleColumn: (column: K) => setSnapshot(behavior.toggleColumn(column)),
+  };
 }
 
 export function ColumnPicker<T extends string>({

@@ -37,11 +37,40 @@ type Transport = {
   outlookPlan(id: string): Promise<OutlookFolderPlan>;
   addContact?(id: string, contactId: string, role: string, version: number): Promise<T2WEvent>;
   removeContact?(id: string, contactId: string, role: string, version: number): Promise<T2WEvent>;
-  updateContactRole?(id: string, contactId: string, role: string, nextRole: string, version: number): Promise<T2WEvent>;
-  createTask?(id: string, input: { title: string; dueAt?: string; responsible?: string }, version: number): Promise<T2WEvent>;
-  updateTask?(id: string, taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }, version: number): Promise<T2WEvent>;
-  createFile?(id: string, input: { name: string; url?: string; size?: string }, version: number): Promise<T2WEvent>;
-  createActivity?(id: string, input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }, version: number): Promise<T2WEvent>;
+  updateContactRole?(
+    id: string,
+    contactId: string,
+    role: string,
+    nextRole: string,
+    version: number,
+  ): Promise<T2WEvent>;
+  createTask?(
+    id: string,
+    input: { title: string; dueAt?: string; responsible?: string },
+    version: number,
+  ): Promise<T2WEvent>;
+  updateTask?(
+    id: string,
+    taskId: string,
+    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
+    version: number,
+  ): Promise<T2WEvent>;
+  createFile?(
+    id: string,
+    input: { name: string; url?: string; size?: string },
+    version: number,
+  ): Promise<T2WEvent>;
+  createActivity?(
+    id: string,
+    input: {
+      channel: string;
+      subject: string;
+      author?: string;
+      body?: string;
+      occurredAt?: string;
+    },
+    version: number,
+  ): Promise<T2WEvent>;
 };
 export type OutlookFolderPlan = {
   year?: string;
@@ -54,6 +83,53 @@ export type OutlookFolderPlan = {
 export type SaveResult =
   { kind: "saved"; event: T2WEvent } | { kind: "conflict" } | { kind: "failed"; error: Error };
 export type SyncResult = { kind: "synced"; event: T2WEvent } | { kind: "failed"; error: Error };
+
+export function createEventEditingSession(
+  initial: T2WEvent,
+  persist: (draft: T2WEvent) => Promise<SaveResult>,
+) {
+  let draft = initial;
+  const subscribers = new Set<() => void>();
+  const publish = () => subscribers.forEach((subscriber) => subscriber());
+  return {
+    snapshot: () => draft,
+    subscribe(subscriber: () => void) {
+      subscribers.add(subscriber);
+      return () => subscribers.delete(subscriber);
+    },
+    accept(event: T2WEvent) {
+      draft = event;
+      publish();
+    },
+    update(patch: Partial<T2WEvent>) {
+      const organizerChanged =
+        patch.veranstalterId !== undefined && patch.veranstalterId !== draft.veranstalterId;
+      draft = {
+        ...draft,
+        ...patch,
+        ...(organizerChanged && patch.veranstalterId
+          ? {
+              auszahlungsempfaengerId: patch.veranstalterId,
+              rechnungsempfaengerIds: [patch.veranstalterId],
+            }
+          : {}),
+      };
+      publish();
+      return draft;
+    },
+    async save() {
+      if (!draft.start) {
+        return { kind: "failed", error: new Error("EVENT_START_REQUIRED") } as SaveResult;
+      }
+      const result = await persist(draft);
+      if (result.kind === "saved") {
+        draft = result.event;
+        publish();
+      }
+      return result;
+    },
+  };
+}
 
 export function createEventWorkspace(transport: Transport) {
   let collection: T2WEvent[] = [];
@@ -131,23 +207,95 @@ export function createEventWorkspace(transport: Transport) {
         };
       }
     },
-    addContact(id: string, contactId: string, role: string) { return mutateDetail(id, (event) => transport.addContact?.(id, contactId, role, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))); },
-    removeContact(id: string, contactId: string, role: string) { return mutateDetail(id, (event) => transport.removeContact?.(id, contactId, role, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))); },
-    updateContactRole(id: string, contactId: string, role: string, nextRole: string) { return mutateDetail(id, (event) => transport.updateContactRole?.(id, contactId, role, nextRole, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))); },
-    createTask(id: string, input: { title: string; dueAt?: string; responsible?: string }) { return mutateDetail(id, (event) => transport.createTask?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))); },
-    updateTask(id: string, taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) { return mutateDetail(id, (event) => transport.updateTask?.(id, taskId, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))); },
-    createFile(id: string, input: { name: string; url?: string; size?: string }) { return mutateDetail(id, (event) => transport.createFile?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))); },
-    createActivity(id: string, input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }) { return mutateDetail(id, (event) => transport.createActivity?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))); },
+    addContact(id: string, contactId: string, role: string) {
+      return mutateDetail(
+        id,
+        (event) =>
+          transport.addContact?.(id, contactId, role, event.version ?? 0) ??
+          Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")),
+      );
+    },
+    removeContact(id: string, contactId: string, role: string) {
+      return mutateDetail(
+        id,
+        (event) =>
+          transport.removeContact?.(id, contactId, role, event.version ?? 0) ??
+          Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")),
+      );
+    },
+    updateContactRole(id: string, contactId: string, role: string, nextRole: string) {
+      return mutateDetail(
+        id,
+        (event) =>
+          transport.updateContactRole?.(id, contactId, role, nextRole, event.version ?? 0) ??
+          Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")),
+      );
+    },
+    createTask(id: string, input: { title: string; dueAt?: string; responsible?: string }) {
+      return mutateDetail(
+        id,
+        (event) =>
+          transport.createTask?.(id, input, event.version ?? 0) ??
+          Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")),
+      );
+    },
+    updateTask(
+      id: string,
+      taskId: string,
+      input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
+    ) {
+      return mutateDetail(
+        id,
+        (event) =>
+          transport.updateTask?.(id, taskId, input, event.version ?? 0) ??
+          Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")),
+      );
+    },
+    createFile(id: string, input: { name: string; url?: string; size?: string }) {
+      return mutateDetail(
+        id,
+        (event) =>
+          transport.createFile?.(id, input, event.version ?? 0) ??
+          Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")),
+      );
+    },
+    createActivity(
+      id: string,
+      input: {
+        channel: string;
+        subject: string;
+        author?: string;
+        body?: string;
+        occurredAt?: string;
+      },
+    ) {
+      return mutateDetail(
+        id,
+        (event) =>
+          transport.createActivity?.(id, input, event.version ?? 0) ??
+          Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")),
+      );
+    },
     outlookPlan: (id: string) => transport.outlookPlan(id),
   };
 
-  async function mutateDetail(id: string, work: (event: T2WEvent) => Promise<T2WEvent>): Promise<SaveResult> {
+  async function mutateDetail(
+    id: string,
+    work: (event: T2WEvent) => Promise<T2WEvent>,
+  ): Promise<SaveResult> {
     const current = collection.find((event) => event.id === id);
     if (!current) return { kind: "failed", error: new Error("EVENT_NOT_FOUND") };
-    try { const event = await work(current); replace(event); return { kind: "saved", event }; }
-    catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "EVENT_VERSION_CONFLICT") return { kind: "conflict" };
-      return { kind: "failed", error: error instanceof Error ? error : new Error("EVENT_SAVE_FAILED") };
+    try {
+      const event = await work(current);
+      replace(event);
+      return { kind: "saved", event };
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "EVENT_VERSION_CONFLICT")
+        return { kind: "conflict" };
+      return {
+        kind: "failed",
+        error: error instanceof Error ? error : new Error("EVENT_SAVE_FAILED"),
+      };
     }
   }
 }

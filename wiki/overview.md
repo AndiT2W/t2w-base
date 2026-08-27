@@ -39,6 +39,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Persistente Outlook-/SharePoint-Einstellungen liegen im Event-Service/PostgreSQL; UI-Features mit Persistenz werden künftig bevorzugt durch echte Browser-E2E-Tests abgesichert. Siehe [Persistente Einstellungen und Browser-Regressionstests](concepts/settings-persistence-and-browser-tests.md).
 - Produktionskorrektur am 2026-08-25: Der separate Migrations-Container wurde im Deployment nicht neu gebaut und ließ dadurch DB-Migrationen aus. Der Workflow baut `event-migrate` vor `prisma migrate deploy` nun explizit.
 - CRM besitzt ein gemeinsames Person/Kunde-Interface mit zwei explizit wählbaren Adaptern: Event-Service/HTTP als Standard und lokale Demo-Persistenz via `VITE_CRM_ADAPTER=local`. Event-Speicherung und Outlook-Ordnerkonventionen liegen ebenfalls hinter vertieften Modulen. Siehe [Deep CRM, Event Workspace, and Outlook Modules](concepts/deep-crm-event-outlook-modules.md).
+- Architekturvertiefung am 2026-08-27: Event Editing Session, zentrale Auswahllisten, zusammenhängendes Tabellenverhalten und zentrale Ordnernavigation besitzen nun eigene tiefe Module. Siehe [Architekturvertiefung vom 2026-08-27](concepts/architecture-deepening-2026-08-27.md).
 
 ## Next Best Actions
 

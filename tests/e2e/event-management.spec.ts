@@ -21,7 +21,7 @@ const event = {
 
 async function mockApi(page: Page, eventOverride: Partial<typeof event> = {}) {
   const requests: { method: string; url: string; body?: string }[] = [];
-  const mockedEvent = { ...event, ...eventOverride };
+  let mockedEvent = { ...event, ...eventOverride };
   let settings = {
     outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }],
     jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }],
@@ -136,6 +136,28 @@ async function mockApi(page: Page, eventOverride: Partial<typeof event> = {}) {
       });
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
+      const eventContact = request.url().match(/\/events\/[^/]+\/contacts\/([^/?]+)$/);
+      if (eventContact) {
+        const contact = contacts.find((candidate) => candidate.id === eventContact[1]);
+        mockedEvent = {
+          ...mockedEvent,
+          contacts: contact
+            ? [
+                ...(mockedEvent.contacts ?? []),
+                {
+                  role: body.role,
+                  contact: {
+                    id: contact.id,
+                    name: contact.name,
+                    email: contact.email,
+                    phone: contact.phone,
+                  },
+                },
+              ]
+            : mockedEvent.contacts,
+        };
+        return route.fulfill({ status: 201, json: mockedEvent });
+      }
       return route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -297,7 +319,7 @@ test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }
   await expect(page.getByRole("tab", { name: "Auswahllisten" })).toBeVisible();
   await expect(page.getByLabel("Sportart Triathlon")).toBeVisible();
   await page.getByLabel("Neue Sportart").fill("Radfahren");
-  await page.getByRole("button", { name: "Hinzufügen" }).click();
+  await page.getByRole("button", { name: "Hinzufügen" }).first().click();
   await expect(page.getByText("Sportart angelegt.")).toBeVisible();
   await expect(page.getByLabel("Sportart Radfahren")).toBeVisible();
   await page.getByRole("button", { name: "Deaktivieren" }).first().click();
@@ -605,6 +627,7 @@ test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Even
 test("validiert Veranstalter und Sportart im Anlage-Modal", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
+  await expect(page.getByText("Bestehendes Event", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Event anlegen", exact: true }).first().click();
   await page.getByLabel(/Eventname/).fill("Pflichtfeldtest");
   await page.getByLabel(/Startdatum/).fill("2026-08-22");

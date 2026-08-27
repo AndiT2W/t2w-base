@@ -13,19 +13,14 @@ import { EventDialog } from "@/components/t2w/EventDialog";
 import { GanttSeite } from "@/routes/gantt";
 import { KalenderSeite } from "@/routes/kalender";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import {
-  ColumnPicker,
-  SortHeader,
-  useStoredColumns,
-  type SortDirection,
-} from "@/components/t2w/TableFeatures";
+import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
-import { STATUS_LABEL, STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
-import { jahr } from "@/lib/t2w/eventcode";
+import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { selectEvents, type ArchiveSelection, type EventPeriod } from "@/lib/t2w/event-projections";
+import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -65,6 +60,30 @@ const EVENT_COLUMNS = [
   "Ordner",
 ] as const;
 type EventColumn = (typeof EVENT_COLUMNS)[number];
+const EVENT_TABLE_COLUMNS = [
+  { key: "Status", sortValue: (event: T2WEvent) => STATUS_LABEL[event.status] },
+  { key: "Event", sortValue: (event: T2WEvent) => event.name },
+  { key: "Veranstalter", sortValue: (event: T2WEvent) => event.veranstalter },
+  { key: "Zeitraum", sortValue: (event: T2WEvent) => event.start },
+  {
+    key: "Tage",
+    sortValue: (event: T2WEvent) =>
+      Math.max(
+        1,
+        Math.round((new Date(event.ende).getTime() - new Date(event.start).getTime()) / 86400000) +
+          1,
+      ),
+  },
+  {
+    key: "Aufgaben",
+    sortValue: (event: T2WEvent) => event.aufgaben.filter((task) => !task.erledigt).length,
+  },
+  {
+    key: "Ordner",
+    sortValue: (event: T2WEvent) =>
+      Number(Boolean(event.outlookOrdner)) + Number(Boolean(event.sharepointOrdner)),
+  },
+] as const;
 
 function Veranstaltungen() {
   const { q, ansicht } = Route.useSearch();
@@ -74,14 +93,12 @@ function Veranstaltungen() {
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [zeitraum, setZeitraum] = useState<Zeitraum>("alle");
   const [archiv, setArchiv] = useState<ArchivFilter>("aktiv");
-  const [sort, setSort] = useState<{ key: EventColumn; direction: SortDirection }>({
-    key: "Zeitraum",
-    direction: "asc",
+  const table = useTableBehavior<T2WEvent, EventColumn>({
+    storageKey: "t2w-event-table-columns",
+    columns: EVENT_TABLE_COLUMNS,
+    initialSort: { key: "Zeitraum", direction: "asc" },
   });
-  const { visibleColumns, toggleColumn } = useStoredColumns<EventColumn>(
-    "t2w-event-table-columns",
-    EVENT_COLUMNS,
-  );
+  const { visibleColumns, toggleColumn, sort } = table;
   const heute = heuteIso();
 
   const gefiltert = useMemo(() => {
@@ -93,39 +110,8 @@ function Veranstaltungen() {
       today: heute,
     });
   }, [events, suche, status, zeitraum, archiv, heute]);
-  const sortiere = (key: EventColumn) =>
-    setSort((current) => ({
-      key,
-      direction: current.key === key && current.direction === "asc" ? "desc" : "asc",
-    }));
-  const zeilen = useMemo(
-    () =>
-      [...gefiltert].sort((a, b) => {
-        const wert = (event: typeof a): string | number =>
-          ({
-            Status: STATUS_LABEL[event.status],
-            Event: event.name,
-            Veranstalter: event.veranstalter,
-            Zeitraum: event.start,
-            Tage: Math.max(
-              1,
-              Math.round(
-                (new Date(event.ende).getTime() - new Date(event.start).getTime()) / 86400000,
-              ) + 1,
-            ),
-            Aufgaben: event.aufgaben.filter((task) => !task.erledigt).length,
-            Ordner: Number(Boolean(event.outlookOrdner)) + Number(Boolean(event.sharepointOrdner)),
-          })[sort.key];
-        const left = wert(a);
-        const right = wert(b);
-        const comparison =
-          typeof left === "number" && typeof right === "number"
-            ? left - right
-            : String(left).localeCompare(String(right), "de", { numeric: true });
-        return sort.direction === "asc" ? comparison : -comparison;
-      }),
-    [gefiltert, sort],
-  );
+  const sortiere = table.sortBy;
+  const zeilen = table.rows(gefiltert);
 
   if (ansicht === "kalender") return <KalenderSeite veranstaltungsmenue />;
   if (ansicht === "gantt") return <GanttSeite veranstaltungsmenue />;
@@ -304,88 +290,83 @@ function Veranstaltungen() {
               </tr>
             </thead>
             <tbody>
-              {zeilen.map((e) => (
-                <tr
-                  key={e.id}
-                  className="cursor-pointer border-t border-border hover:bg-accent/50"
-                  onClick={() =>
-                    navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })
-                  }
-                >
-                  {visibleColumns.includes("Status") && (
-                    <td className="px-2 py-1" title={STATUS_LABEL[e.status]}>
-                      <StatusDot status={e.status} />
+              {zeilen.map((e) => {
+                const folders = resolveEventFolderNavigation(e, settings);
+                return (
+                  <tr
+                    key={e.id}
+                    className="cursor-pointer border-t border-border hover:bg-accent/50"
+                    onClick={() =>
+                      navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })
+                    }
+                  >
+                    {visibleColumns.includes("Status") && (
+                      <td className="px-2 py-1" title={STATUS_LABEL[e.status]}>
+                        <StatusDot status={e.status} />
+                      </td>
+                    )}
+                    {visibleColumns.includes("Event") && (
+                      <td className="max-w-[16rem] truncate px-2 py-1 font-medium">{e.name}</td>
+                    )}
+                    {visibleColumns.includes("Veranstalter") && (
+                      <td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td>
+                    )}
+                    {visibleColumns.includes("Zeitraum") && (
+                      <td className="whitespace-nowrap px-2 py-1">
+                        {formatZeitraum(e.start, e.ende)}
+                      </td>
+                    )}
+                    {visibleColumns.includes("Tage") && (
+                      <td className="px-2 py-1 tabular-nums">
+                        {Math.max(
+                          1,
+                          Math.round(
+                            (new Date(e.ende).getTime() - new Date(e.start).getTime()) / 86400000,
+                          ) + 1,
+                        )}
+                      </td>
+                    )}
+                    {visibleColumns.includes("Aufgaben") && (
+                      <td className="px-2 py-1 tabular-nums">
+                        {e.aufgaben.filter((a) => !a.erledigt).length || "–"}
+                      </td>
+                    )}
+                    {visibleColumns.includes("Ordner") && (
+                      <td className="px-2 py-1">
+                        <span className="flex gap-1">
+                          <FolderLink
+                            icon="outlook"
+                            label="Outlook"
+                            href={folders.outlook.href}
+                            available={folders.outlook.available}
+                          >
+                            OL
+                          </FolderLink>
+                          <FolderLink
+                            icon="sharepoint"
+                            label="SharePoint"
+                            href={folders.sharepoint.href}
+                            available={folders.sharepoint.available}
+                          >
+                            SP
+                          </FolderLink>
+                        </span>
+                      </td>
+                    )}
+                    <td className="px-2 py-1 text-right">
+                      <Link
+                        to="/events/$eventcode"
+                        params={{ eventcode: e.eventcode }}
+                        className="inline-flex rounded p-1 text-primary hover:bg-accent"
+                        title="Event bearbeiten"
+                        aria-label={`Event bearbeiten: ${e.name}`}
+                      >
+                        <Pencil className="size-4" />
+                      </Link>
                     </td>
-                  )}
-                  {visibleColumns.includes("Event") && (
-                    <td className="max-w-[16rem] truncate px-2 py-1 font-medium">{e.name}</td>
-                  )}
-                  {visibleColumns.includes("Veranstalter") && (
-                    <td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td>
-                  )}
-                  {visibleColumns.includes("Zeitraum") && (
-                    <td className="whitespace-nowrap px-2 py-1">
-                      {formatZeitraum(e.start, e.ende)}
-                    </td>
-                  )}
-                  {visibleColumns.includes("Tage") && (
-                    <td className="px-2 py-1 tabular-nums">
-                      {Math.max(
-                        1,
-                        Math.round(
-                          (new Date(e.ende).getTime() - new Date(e.start).getTime()) / 86400000,
-                        ) + 1,
-                      )}
-                    </td>
-                  )}
-                  {visibleColumns.includes("Aufgaben") && (
-                    <td className="px-2 py-1 tabular-nums">
-                      {e.aufgaben.filter((a) => !a.erledigt).length || "–"}
-                    </td>
-                  )}
-                  {visibleColumns.includes("Ordner") && (
-                    <td className="px-2 py-1">
-                      <span className="flex gap-1">
-                        <FolderLink
-                          icon="outlook"
-                          label="Outlook"
-                          href={
-                            e.outlookWebUrl ??
-                            (e.outlookOrdner ? "https://outlook.office.com/mail/" : null)
-                          }
-                          available={Boolean(e.outlookWebUrl || e.outlookOrdner)}
-                        >
-                          OL
-                        </FolderLink>
-                        <FolderLink
-                          icon="sharepoint"
-                          label="SharePoint"
-                          href={(() => {
-                            const site = settings.jahresSites.find((s) => s.jahr === jahr(e.start));
-                            return e.sharepointOrdner && site
-                              ? `${site.url.replace(/\/$/, "")}/${e.sharepointOrdner.split("/").map(encodeURIComponent).join("/")}`
-                              : null;
-                          })()}
-                          available={Boolean(e.sharepointOrdner)}
-                        >
-                          SP
-                        </FolderLink>
-                      </span>
-                    </td>
-                  )}
-                  <td className="px-2 py-1 text-right">
-                    <Link
-                      to="/events/$eventcode"
-                      params={{ eventcode: e.eventcode }}
-                      className="inline-flex rounded p-1 text-primary hover:bg-accent"
-                      title="Event bearbeiten"
-                      aria-label={`Event bearbeiten: ${e.name}`}
-                    >
-                      <Pencil className="size-4" />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
               {gefiltert.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-2 py-8 text-center text-muted-foreground">

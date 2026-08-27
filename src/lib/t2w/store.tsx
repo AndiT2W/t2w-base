@@ -25,6 +25,12 @@ import {
   apiSyncOutlookFolder,
   apiUpdateEvent,
   apiUpdateSettings,
+  apiManageSports,
+  apiManageEventRoles,
+  apiCreateSport,
+  apiCreateEventRole,
+  apiUpdateSport,
+  apiUpdateEventRole,
 } from "./api";
 import {
   createEventWorkspace,
@@ -34,6 +40,11 @@ import {
   type SyncResult,
 } from "./event-workspace";
 import { LoginView } from "@/components/t2w/LoginView";
+import {
+  createSelectionListWorkspace,
+  type SelectionListKind,
+  type SelectionListSnapshot,
+} from "./selection-list-workspace";
 
 type State = {
   settings: Settings;
@@ -49,13 +60,32 @@ type Ctx = State & {
   getOutlookFolderPlan: (id: string) => Promise<OutlookFolderPlan>;
   addEventContact: (id: string, contactId: string, role: string) => Promise<SaveResult>;
   removeEventContact: (id: string, contactId: string, role: string) => Promise<SaveResult>;
-  updateEventContactRole: (id: string, contactId: string, role: string, nextRole: string) => Promise<SaveResult>;
+  updateEventContactRole: (
+    id: string,
+    contactId: string,
+    role: string,
+    nextRole: string,
+  ) => Promise<SaveResult>;
   createEventTask: (id: string, input: { title: string }) => Promise<SaveResult>;
-  updateEventTask: (id: string, taskId: string, input: { completed?: boolean }) => Promise<SaveResult>;
+  updateEventTask: (
+    id: string,
+    taskId: string,
+    input: { completed?: boolean },
+  ) => Promise<SaveResult>;
   createEventFile: (id: string, input: { name: string }) => Promise<SaveResult>;
-  createEventActivity: (id: string, input: { channel: string; subject: string }) => Promise<SaveResult>;
+  createEventActivity: (
+    id: string,
+    input: { channel: string; subject: string },
+  ) => Promise<SaveResult>;
   setSettings: (s: Settings) => Promise<Settings>;
   setSpalten: (c: ColumnKey[]) => void;
+  selectionLists: SelectionListSnapshot;
+  createSelectionValue: (kind: SelectionListKind, name: string) => Promise<void>;
+  updateSelectionValue: (
+    kind: SelectionListKind,
+    id: string,
+    patch: { name?: string; active?: boolean },
+  ) => Promise<void>;
 };
 
 const StoreContext = createContext<Ctx | null>(null);
@@ -77,12 +107,33 @@ export function T2WProvider({ children }: { children: ReactNode }) {
         save: apiUpdateEvent,
         syncOutlook: apiSyncOutlookFolder,
         outlookPlan: apiOutlookFolderPlan,
-        addContact: apiAddEventContact, removeContact: apiRemoveEventContact, updateContactRole: apiUpdateEventContactRole,
-        createTask: apiCreateEventTask, updateTask: apiUpdateEventTask, createFile: apiCreateEventFile, createActivity: apiCreateEventActivity,
+        addContact: apiAddEventContact,
+        removeContact: apiRemoveEventContact,
+        updateContactRole: apiUpdateEventContactRole,
+        createTask: apiCreateEventTask,
+        updateTask: apiUpdateEventTask,
+        createFile: apiCreateEventFile,
+        createActivity: apiCreateEventActivity,
+      }),
+    [],
+  );
+  const selectionWorkspace = useMemo(
+    () =>
+      createSelectionListWorkspace({
+        load: (kind) => (kind === "sports" ? apiManageSports() : apiManageEventRoles()),
+        create: (kind, name) =>
+          kind === "sports" ? apiCreateSport(name) : apiCreateEventRole(name),
+        update: (kind, id, patch) =>
+          kind === "sports" ? apiUpdateSport(id, patch) : apiUpdateEventRole(id, patch),
       }),
     [],
   );
   const events = useSyncExternalStore(workspace.subscribe, workspace.events, workspace.events);
+  const selectionLists = useSyncExternalStore(
+    selectionWorkspace.subscribe,
+    selectionWorkspace.snapshot,
+    selectionWorkspace.snapshot,
+  );
 
   useEffect(() => {
     void (async () => {
@@ -97,7 +148,8 @@ export function T2WProvider({ children }: { children: ReactNode }) {
         setBereit(true);
       }
     })();
-  }, [workspace]);
+    void selectionWorkspace.load().catch(() => undefined);
+  }, [workspace, selectionWorkspace]);
 
   const neuesEvent: Ctx["neuesEvent"] = useCallback(
     (input) => workspace.create(input),
@@ -142,10 +194,22 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       updateEvent,
       syncOutlookFolder,
       getOutlookFolderPlan: workspace.outlookPlan,
-      addEventContact: workspace.addContact, removeEventContact: workspace.removeContact, updateEventContactRole: workspace.updateContactRole,
-      createEventTask: workspace.createTask, updateEventTask: workspace.updateTask, createEventFile: workspace.createFile, createEventActivity: workspace.createActivity,
+      addEventContact: workspace.addContact,
+      removeEventContact: workspace.removeContact,
+      updateEventContactRole: workspace.updateContactRole,
+      createEventTask: workspace.createTask,
+      updateEventTask: workspace.updateTask,
+      createEventFile: workspace.createFile,
+      createEventActivity: workspace.createActivity,
       setSettings,
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
+      selectionLists,
+      createSelectionValue: async (kind, name) => {
+        await selectionWorkspace.create(kind, name);
+      },
+      updateSelectionValue: async (kind, id, patch) => {
+        await selectionWorkspace.update(kind, id, patch);
+      },
     }),
     [
       state,
@@ -157,6 +221,8 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       syncOutlookFolder,
       setSettings,
       workspace.outlookPlan,
+      selectionLists,
+      selectionWorkspace,
     ],
   );
 

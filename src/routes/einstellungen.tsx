@@ -9,12 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT2W } from "@/lib/t2w/store";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { apiCreateEventRole, apiCreateSport, apiManageEventRoles, apiManageSports, apiOutlookStatus, apiUpdateEventRole, apiUpdateSport, type ApiEventRole, type ApiSport } from "@/lib/t2w/api";
+import { apiOutlookStatus } from "@/lib/t2w/api";
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 
 export const Route = createFileRoute("/einstellungen")({
   validateSearch: (search) => ({
-    tab: search.tab === "outlook" || search.tab === "auswahllisten" ? search.tab : ("allgemein" as const),
+    tab:
+      search.tab === "outlook" || search.tab === "auswahllisten"
+        ? search.tab
+        : ("allgemein" as const),
   }),
   head: () => ({
     meta: [
@@ -35,15 +38,16 @@ export const Route = createFileRoute("/einstellungen")({
 });
 
 function Einstellungen() {
-  const { settings, setSettings } = useT2W();
+  const { settings, setSettings, selectionLists, createSelectionValue, updateSelectionValue } =
+    useT2W();
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
   const [workspace] = useState(() =>
     createSettingsWorkspace({ save: setSettings, checkOutlook: apiOutlookStatus }, settings),
   );
-  const [sports, setSports] = useState<(ApiSport & { active: boolean })[]>([]);
+  const sports = selectionLists.sports;
   const [newSport, setNewSport] = useState("");
-  const [eventRoles, setEventRoles] = useState<ApiEventRole[]>([]);
+  const eventRoles = selectionLists.eventRoles;
   const [newEventRole, setNewEventRole] = useState("");
   const { draft, connection: outlookStatus } = useSyncExternalStore(
     workspace.subscribe,
@@ -66,28 +70,43 @@ function Einstellungen() {
   useEffect(() => {
     workspace.acceptLoaded(settings);
   }, [settings, workspace]);
-  useEffect(() => { void apiManageSports().then(setSports).catch(() => toast.error("Sportarten konnten nicht geladen werden.")); }, []);
-  useEffect(() => { void apiManageEventRoles().then(setEventRoles).catch(() => toast.error("Eventrollen konnten nicht geladen werden.")); }, []);
-
   async function addSport() {
     const name = newSport.trim();
     if (!name) return;
-    try { const sport = await apiCreateSport(name); setSports((current) => [...current, sport].sort((a, b) => a.name.localeCompare(b.name, "de"))); setNewSport(""); toast.success("Sportart angelegt."); }
-    catch { toast.error("Sportart konnte nicht angelegt werden."); }
+    try {
+      await createSelectionValue("sports", name);
+      setNewSport("");
+      toast.success("Sportart angelegt.");
+    } catch {
+      toast.error("Sportart konnte nicht angelegt werden.");
+    }
   }
   async function saveSport(id: string, patch: { name?: string; active?: boolean }) {
-    try { const sport = await apiUpdateSport(id, patch); setSports((current) => current.map((item) => item.id === id ? sport : item)); toast.success("Sportart gespeichert."); }
-    catch { toast.error("Sportart konnte nicht gespeichert werden."); }
+    try {
+      await updateSelectionValue("sports", id, patch);
+      toast.success("Sportart gespeichert.");
+    } catch {
+      toast.error("Sportart konnte nicht gespeichert werden.");
+    }
   }
   async function addEventRole() {
     const name = newEventRole.trim();
     if (!name) return;
-    try { const role = await apiCreateEventRole(name); setEventRoles((current) => [...current, role].sort((a, b) => a.name.localeCompare(b.name, "de"))); setNewEventRole(""); toast.success("Eventrolle angelegt."); }
-    catch { toast.error("Eventrolle konnte nicht angelegt werden."); }
+    try {
+      await createSelectionValue("eventRoles", name);
+      setNewEventRole("");
+      toast.success("Eventrolle angelegt.");
+    } catch {
+      toast.error("Eventrolle konnte nicht angelegt werden.");
+    }
   }
   async function saveEventRole(id: string, patch: { name?: string; active?: boolean }) {
-    try { const role = await apiUpdateEventRole(id, patch); setEventRoles((current) => current.map((item) => item.id === id ? role : item)); toast.success("Eventrolle gespeichert."); }
-    catch { toast.error("Eventrolle konnte nicht gespeichert werden."); }
+    try {
+      await updateSelectionValue("eventRoles", id, patch);
+      toast.success("Eventrolle gespeichert.");
+    } catch {
+      toast.error("Eventrolle konnte nicht gespeichert werden.");
+    }
   }
 
   async function speichern() {
@@ -110,7 +129,11 @@ function Einstellungen() {
         <Tabs
           value={tab}
           onValueChange={(nextTab) =>
-            void navigate({ search: { tab: nextTab === "outlook" || nextTab === "auswahllisten" ? nextTab : "allgemein" } })
+            void navigate({
+              search: {
+                tab: nextTab === "outlook" || nextTab === "auswahllisten" ? nextTab : "allgemein",
+              },
+            })
           }
           className="space-y-5"
         >
@@ -208,15 +231,92 @@ function Einstellungen() {
           </TabsContent>
 
           <TabsContent value="auswahllisten" className="space-y-5">
-            <Card><CardHeader><CardTitle className="text-base">Sportarten</CardTitle><CardDescription>Werte für die Sportart-Auswahl beim Anlegen und Bearbeiten eines Events.</CardDescription></CardHeader><CardContent className="space-y-3">
-              {sports.map((sport) => <div key={sport.id} className="flex items-center gap-2"><Input aria-label={`Sportart ${sport.name}`} defaultValue={sport.name} onBlur={(event) => { const name = event.target.value.trim(); if (name && name !== sport.name) void saveSport(sport.id, { name }); }} /><Button type="button" variant={sport.active ? "outline" : "secondary"} onClick={() => void saveSport(sport.id, { active: !sport.active })}>{sport.active ? "Deaktivieren" : "Aktivieren"}</Button></div>)}
-              <div className="flex gap-2 pt-2"><Input aria-label="Neue Sportart" value={newSport} onChange={(event) => setNewSport(event.target.value)} placeholder="Sportart hinzufügen" /><Button type="button" onClick={() => void addSport()}><Plus className="size-4" />Hinzufügen</Button></div>
-            </CardContent></Card>
-            <Card><CardHeader><CardTitle className="text-base">Eventrollen</CardTitle><CardDescription>Vorgegebene Rollen für Eventkontakte, z. B. Anmeldung oder Finanz.</CardDescription></CardHeader><CardContent className="space-y-3">
-              {eventRoles.map((role) => <div key={role.id} className="flex items-center gap-2"><Input aria-label={`Eventrolle ${role.name}`} defaultValue={role.name} onBlur={(event) => { const name = event.target.value.trim(); if (name && name !== role.name) void saveEventRole(role.id, { name }); }} /><Button type="button" variant={role.active ? "outline" : "secondary"} onClick={() => void saveEventRole(role.id, { active: !role.active })}>{role.active ? "Deaktivieren" : "Aktivieren"}</Button></div>)}
-              <div className="flex gap-2 pt-2"><Input aria-label="Neue Eventrolle" value={newEventRole} onChange={(event) => setNewEventRole(event.target.value)} placeholder="Eventrolle hinzufügen" /><Button type="button" onClick={() => void addEventRole()}><Plus className="size-4" />Hinzufügen</Button></div>
-            </CardContent></Card>
-            <p className="text-sm text-muted-foreground">Weitere Auswahllisten werden hier ergänzt, sobald sie in einem Arbeitsablauf verwendet werden.</p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Sportarten</CardTitle>
+                <CardDescription>
+                  Werte für die Sportart-Auswahl beim Anlegen und Bearbeiten eines Events.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {sports.map((sport) => (
+                  <div key={sport.id} className="flex items-center gap-2">
+                    <Input
+                      aria-label={`Sportart ${sport.name}`}
+                      defaultValue={sport.name}
+                      onBlur={(event) => {
+                        const name = event.target.value.trim();
+                        if (name && name !== sport.name) void saveSport(sport.id, { name });
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant={sport.active ? "outline" : "secondary"}
+                      onClick={() => void saveSport(sport.id, { active: !sport.active })}
+                    >
+                      {sport.active ? "Deaktivieren" : "Aktivieren"}
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex gap-2 pt-2">
+                  <Input
+                    aria-label="Neue Sportart"
+                    value={newSport}
+                    onChange={(event) => setNewSport(event.target.value)}
+                    placeholder="Sportart hinzufügen"
+                  />
+                  <Button type="button" onClick={() => void addSport()}>
+                    <Plus className="size-4" />
+                    Hinzufügen
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Eventrollen</CardTitle>
+                <CardDescription>
+                  Vorgegebene Rollen für Eventkontakte, z. B. Anmeldung oder Finanz.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {eventRoles.map((role) => (
+                  <div key={role.id} className="flex items-center gap-2">
+                    <Input
+                      aria-label={`Eventrolle ${role.name}`}
+                      defaultValue={role.name}
+                      onBlur={(event) => {
+                        const name = event.target.value.trim();
+                        if (name && name !== role.name) void saveEventRole(role.id, { name });
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant={role.active ? "outline" : "secondary"}
+                      onClick={() => void saveEventRole(role.id, { active: !role.active })}
+                    >
+                      {role.active ? "Deaktivieren" : "Aktivieren"}
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex gap-2 pt-2">
+                  <Input
+                    aria-label="Neue Eventrolle"
+                    value={newEventRole}
+                    onChange={(event) => setNewEventRole(event.target.value)}
+                    placeholder="Eventrolle hinzufügen"
+                  />
+                  <Button type="button" onClick={() => void addEventRole()}>
+                    <Plus className="size-4" />
+                    Hinzufügen
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            <p className="text-sm text-muted-foreground">
+              Weitere Auswahllisten werden hier ergänzt, sobald sie in einem Arbeitsablauf verwendet
+              werden.
+            </p>
           </TabsContent>
 
           <TabsContent value="outlook" className="space-y-5">
