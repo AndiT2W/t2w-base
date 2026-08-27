@@ -35,6 +35,7 @@ import {
 import {
   createEventWorkspace,
   type CreateEventInput,
+  type EventEditingSession,
   type OutlookFolderPlan,
   type SaveResult,
   type SyncResult,
@@ -58,6 +59,7 @@ type Ctx = State & {
   updateEvent: (id: string, patch: Partial<T2WEvent>) => Promise<SaveResult>;
   syncOutlookFolder: (id: string) => Promise<SyncResult>;
   getOutlookFolderPlan: (id: string) => Promise<OutlookFolderPlan>;
+  openEventSession: (id: string) => EventEditingSession;
   addEventContact: (id: string, contactId: string, role: string) => Promise<SaveResult>;
   removeEventContact: (id: string, contactId: string, role: string) => Promise<SaveResult>;
   updateEventContactRole: (
@@ -194,6 +196,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       updateEvent,
       syncOutlookFolder,
       getOutlookFolderPlan: workspace.outlookPlan,
+      openEventSession: workspace.openSession,
       addEventContact: workspace.addContact,
       removeEventContact: workspace.removeContact,
       updateEventContactRole: workspace.updateContactRole,
@@ -221,6 +224,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       syncOutlookFolder,
       setSettings,
       workspace.outlookPlan,
+      workspace.openSession,
       selectionLists,
       selectionWorkspace,
     ],

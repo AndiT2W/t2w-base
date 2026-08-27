@@ -35,7 +35,7 @@ import { useCrm } from "@/lib/crm/store";
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
-import { createEventEditingSession, type OutlookFolderPlan } from "@/lib/t2w/event-workspace";
+import type { OutlookFolderPlan } from "@/lib/t2w/event-workspace";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import type { Kunde } from "@/lib/crm/types";
@@ -128,17 +128,9 @@ function EventDetail() {
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
   const {
-    updateEvent,
-    syncOutlookFolder,
     getOutlookFolderPlan,
+    openEventSession,
     settings,
-    addEventContact: persistContact,
-    removeEventContact,
-    updateEventContactRole: persistContactRole,
-    createEventTask,
-    updateEventTask,
-    createEventFile,
-    createEventActivity,
     selectionLists,
   } = useT2W();
   const { personen, kunden, kontakteVonKunde, neuLaden } = useCrm();
@@ -146,7 +138,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [outlookSyncing, setOutlookSyncing] = useState(false);
   const [outlookSyncMessage, setOutlookSyncMessage] = useState<string | null>(null);
   const [editingSession] = useState(() =>
-    createEventEditingSession(event, (draft) => updateEvent(event.id, draft)),
+    openEventSession(event.id),
   );
   const form = useSyncExternalStore(
     editingSession.subscribe,
@@ -220,9 +212,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     setOutlookSyncing(true);
     setOutlookSyncMessage(null);
     try {
-      const result = await syncOutlookFolder(event.id);
+      const result = await editingSession.syncOutlook();
       if (result.kind !== "synced") throw result.error;
-      editingSession.accept(result.event);
       setOutlookSyncMessage("Outlook-Ordner synchronisiert.");
       toast.success("Outlook-Ordner synchronisiert.");
     } catch {
@@ -243,9 +234,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   async function addEventContact(personId: string, role: string) {
     const person = personen.find((item) => item.id === personId);
     if (!person) return;
-    const result = await persistContact(event.id, personId, role);
+    const result = await editingSession.addContact(personId, role);
     if (result.kind !== "saved") throw new Error("EVENT_CONTACT_SAVE_FAILED");
-    editingSession.accept(result.event);
   }
   async function addContact() {
     if (!contactId) return;
@@ -256,32 +246,28 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   async function updateContactRole(contact: T2WEvent["kontakte"][number], role: string) {
     const nextRole = role.trim() || "Kontakt";
     if (nextRole === contact.rolle) return;
-    const result = await persistContactRole(event.id, contact.id, contact.rolle, nextRole);
+    const result = await editingSession.updateContactRole(contact.id, contact.rolle, nextRole);
     if (result.kind !== "saved") throw new Error("EVENT_CONTACT_SAVE_FAILED");
-    editingSession.accept(result.event);
     toast.success("Eventrolle gespeichert.");
   }
   async function addTask() {
     if (!newTask.trim()) return;
-    const result = await createEventTask(event.id, { title: newTask });
+    const result = await editingSession.createTask({ title: newTask });
     if (result.kind !== "saved") throw new Error("EVENT_TASK_SAVE_FAILED");
-    editingSession.accept(result.event);
     setNewTask("");
     toast.success("Aufgabe angelegt.");
   }
   async function addFile() {
     if (!newFile.trim()) return;
-    const result = await createEventFile(event.id, { name: newFile });
+    const result = await editingSession.createFile({ name: newFile });
     if (result.kind !== "saved") throw new Error("EVENT_FILE_SAVE_FAILED");
-    editingSession.accept(result.event);
     setNewFile("");
     toast.success("Dateiverknüpfung gespeichert.");
   }
   async function addActivity() {
     if (!newActivity.trim()) return;
-    const result = await createEventActivity(event.id, { channel: "Notiz", subject: newActivity });
+    const result = await editingSession.createActivity({ channel: "Notiz", subject: newActivity });
     if (result.kind !== "saved") throw new Error("EVENT_ACTIVITY_SAVE_FAILED");
-    editingSession.accept(result.event);
     setNewActivity("");
     toast.success("Aktivität angelegt.");
   }
@@ -881,9 +867,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               variant="ghost"
                               size="sm"
                               onClick={() =>
-                                void removeEventContact(event.id, k.id, k.rolle).then((result) => {
-                                  if (result.kind === "saved") editingSession.accept(result.event);
-                                  else toast.error("Kontaktrolle konnte nicht entfernt werden.");
+                                void editingSession.removeContact(k.id, k.rolle).then((result) => {
+                                  if (result.kind !== "saved")
+                                    toast.error("Kontaktrolle konnte nicht entfernt werden.");
                                 })
                               }
                             >
@@ -925,9 +911,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Checkbox
                     checked={a.erledigt}
                     onCheckedChange={(v) =>
-                      void updateEventTask(event.id, a.id, { completed: !!v }).then((result) => {
-                        if (result.kind === "saved") editingSession.accept(result.event);
-                        else toast.error("Aufgabe konnte nicht gespeichert werden.");
+                      void editingSession.updateTask(a.id, { completed: !!v }).then((result) => {
+                        if (result.kind !== "saved")
+                          toast.error("Aufgabe konnte nicht gespeichert werden.");
                       })
                     }
                   />
@@ -1038,7 +1024,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <AlertDialogAction
               onClick={() => {
                 set("outlookOrdner", outlookVorschlag);
-                void updateEvent(event.id, { outlookOrdner: outlookVorschlag }).then((result) => {
+                void editingSession.save().then((result) => {
                   if (result.kind === "saved") toast.success("Outlook-Verschiebung bestätigt.");
                   else toast.error("Outlook-Verschiebung konnte nicht gespeichert werden.");
                 });

@@ -2,6 +2,7 @@
 
 ## 2026-08-27
 
+- Event workspace in `@t2w/domain` vertieft: Eine gebundene Editing Session besitzt nun Draft, Validierung, Versionskonflikte und alle Detailkommandos. Persistierte Event-Snapshots werden automatisch in Collection und Session übernommen; die Event-Route koordiniert kein manuelles `accept` mehr nach Kontakt-, Aufgaben-, Datei-, Aktivitäts- oder Outlook-Kommandos.
 - Architekturvertiefung begonnen: Repository auf npm Workspaces umgestellt und `@t2w/domain` als gemeinsam gebautes, frameworkfreies Domain-Paket eingeführt. CRM-Zustandsübergänge sowie Lösch-/Referenzregeln liegen dort; React, HTTP, Nest, LocalStorage und Prisma bleiben Adapter. CI und Event-Service-Docker-Build nutzen den kanonischen Root-Lockfile.
 - Outlook-Ordnersynchronisierung speichert wieder den vollständigen lesbaren Pfad `Jahresordner/Quartal/Eventcode` statt nur des Anzeigenamens des Event-Unterordners. Eine Backend-Regression sichert die Persistierung des kanonischen Pfads.
 - Outlook-Ordnernavigation verwendet nun eine mailbox-spezifische Outlook-Web-URL (`/mail/{Mailbox}/{Ordner-ID}`), nicht mehr den nicht auflösbaren generischen `deeplink/folder`-Fallback.
