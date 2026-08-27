@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-08-27
+
+- Outlook-Ordnersynchronisierung speichert wieder den vollständigen lesbaren Pfad `Jahresordner/Quartal/Eventcode` statt nur des Anzeigenamens des Event-Unterordners. Eine Backend-Regression sichert die Persistierung des kanonischen Pfads.
+
 ## 2026-08-25
 
 - Issue #15 aktualisiert: Die zentrale Eventverwaltung, persistente Event-Service-Datenquelle, Event-Workspace-Grundfunktionen sowie Outlook-/SharePoint- und CRM-Anbindungen sind als erledigt bzw. vorhanden dokumentiert. Offen bleiben der dedizierte TIME2WIN-Reiter mit API-Daten, Teilnehmer-Synchronisierung, Rollenverwaltung sowie mutierbare Aufgaben/Aktivitäten und deren Browser-E2E-Abdeckung.

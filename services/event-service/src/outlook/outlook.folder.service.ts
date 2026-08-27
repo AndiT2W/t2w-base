@@ -100,7 +100,7 @@ export class OutlookFolderService {
           outlookYearFolderId: yearFolder.id,
           outlookQuarterFolderId: quarterFolder.id,
           outlookFolderId: eventFolder.id,
-          outlookFolder: eventFolder.displayName,
+          outlookFolder: plan.path,
           outlookWebUrl:
             eventFolder.webUrl ??
             `https://outlook.office.com/mail/deeplink/folder/${encodeURIComponent(eventFolder.id)}`,

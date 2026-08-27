@@ -13,8 +13,8 @@ function service(graph: OutlookGraphClient) {
       findUniqueOrThrow: vi.fn().mockResolvedValue(event),
       update: vi.fn().mockImplementation(({ data }) => Promise.resolve({ ...event, ...data })),
     },
-  } as never;
-  return { subject: new OutlookFolderService(prisma, graph), prisma };
+  };
+  return { subject: new OutlookFolderService(prisma as never, graph), prisma };
 }
 
 describe("OutlookFolderService", () => {
@@ -52,7 +52,7 @@ describe("OutlookFolderService", () => {
         return folder;
       }),
     };
-    const { subject } = service(graph);
+    const { subject, prisma } = service(graph);
 
     await subject.ensureEventFolder("event-1", "shared@example.com", "06_auftraege_26");
     await subject.ensureEventFolder("event-1", "shared@example.com", "06_auftraege_26");
@@ -75,6 +75,13 @@ describe("OutlookFolderService", () => {
       "shared@example.com",
       "inbox/06_auftraege_26/Q2",
       "260612_sommerfest",
+    );
+    expect(prisma.event.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          outlookFolder: "06_auftraege_26/Q2/260612_sommerfest",
+        }),
+      }),
     );
   });
 
