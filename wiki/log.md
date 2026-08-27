@@ -325,3 +325,5 @@
 - Implemented architecture recommendations 1-4: cohesive Event editing sessions, a shared selection-list workspace, centralized table behavior, and direct-first Outlook/SharePoint folder navigation. Added focused unit regressions and verified all 31 Event browser workflows.
 
 - Captured follow-up UI feedback in [GitHub issue #34](https://github.com/AndiT2W/t2w-base/issues/34): roles of existing Event contacts should be editable via the centrally managed role dropdown rather than free text. The issue is intentionally an extensible collection point for further Event-detail UI improvements.
+
+- Moved the shared sport and Event-role lifecycle into the framework-free `@t2w/domain/selection-lists` module. Prisma and browser HTTP mocks are now adapters around that lifecycle; the reusable mutable browser adapter keeps selection-list workflows covered end to end.

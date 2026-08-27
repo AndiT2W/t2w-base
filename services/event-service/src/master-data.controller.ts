@@ -17,14 +17,18 @@ import { ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "./prisma.service.js";
 import { CrmCommands, type CrmCommandResult } from "@t2w/domain/crm";
 import { PrismaCrmCommandAdapter, type CustomerProfileInput } from "./crm-command.adapter.js";
+import { SelectionLists } from "@t2w/domain/selection-lists";
+import { PrismaSelectionListAdapter } from "./selection-list.adapter.js";
 
 @ApiTags("master-data")
 @Controller("api/v1")
 export class MasterDataController {
   private readonly crm: CrmCommands<CustomerProfileInput, unknown>;
+  private readonly selectionLists: SelectionLists;
 
   constructor(private readonly prisma: PrismaService) {
     this.crm = new CrmCommands(new PrismaCrmCommandAdapter(prisma));
+    this.selectionLists = new SelectionLists(new PrismaSelectionListAdapter(prisma));
   }
 
   private unwrap(result: CrmCommandResult<unknown>) {
@@ -128,38 +132,32 @@ export class MasterDataController {
   }
 
   @Get("sports") sports(@Query("includeInactive") includeInactive?: string) {
-    return this.prisma.sport.findMany({
-      where: includeInactive === "true" ? {} : { active: true },
-      orderBy: { name: "asc" },
-    });
+    return this.selectionLists.list("sports", includeInactive === "true");
   }
   @Post("sports") sport(@Body() body: { name: string }) {
-    return this.prisma.sport.create({ data: { name: body.name } });
+    return this.selectionLists.create("sports", body.name);
   }
   @Patch("sports/:id") updateSport(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean },
   ) {
-    return this.prisma.sport.update({ where: { id }, data: body });
+    return this.selectionLists.update("sports", id, body);
   }
   @Patch("sports/:id/deactivate") deactivateSport(@Param("id", ParseUUIDPipe) id: string) {
-    return this.prisma.sport.update({ where: { id }, data: { active: false } });
+    return this.selectionLists.update("sports", id, { active: false });
   }
 
   @Get("event-roles") eventRoles(@Query("includeInactive") includeInactive?: string) {
-    return this.prisma.eventRoleOption.findMany({
-      where: includeInactive === "true" ? {} : { active: true },
-      orderBy: { name: "asc" },
-    });
+    return this.selectionLists.list("eventRoles", includeInactive === "true");
   }
   @Post("event-roles") eventRole(@Body() body: { name: string }) {
-    return this.prisma.eventRoleOption.create({ data: { name: body.name } });
+    return this.selectionLists.create("eventRoles", body.name);
   }
   @Patch("event-roles/:id") updateEventRole(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean },
   ) {
-    return this.prisma.eventRoleOption.update({ where: { id }, data: body });
+    return this.selectionLists.update("eventRoles", id, body);
   }
 
   @Get("contacts") contacts() {
