@@ -19,8 +19,9 @@ const event = {
   sharepointFolder: null,
 };
 
-async function mockApi(page: Page) {
+async function mockApi(page: Page, eventOverride: Partial<typeof event> = {}) {
   const requests: { method: string; url: string; body?: string }[] = [];
+  const mockedEvent = { ...event, ...eventOverride };
   let settings = {
     outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }],
     jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }],
@@ -78,8 +79,14 @@ async function mockApi(page: Page) {
       personId: "p3",
     },
   ];
-  let sports = [{ id: "s1", name: "Triathlon", active: true }, { id: "s2", name: "Laufen", active: true }];
-  let eventRoles = [{ id: "r1", name: "Anmeldung", active: true }, { id: "r2", name: "Finanz", active: true }];
+  let sports = [
+    { id: "s1", name: "Triathlon", active: true },
+    { id: "s2", name: "Laufen", active: true },
+  ];
+  let eventRoles = [
+    { id: "r1", name: "Anmeldung", active: true },
+    { id: "r2", name: "Finanz", active: true },
+  ];
   await page.route("**/api/v1/settings", async (route) => {
     const request = route.request();
     requests.push({
@@ -116,8 +123,8 @@ async function mockApi(page: Page) {
           year: "2026",
           yearFolderName: "06_auftraege_26",
           quarter: "Q3",
-          eventFolderName: event.eventCode,
-          path: `06_auftraege_26/Q3/${event.eventCode}`,
+          eventFolderName: mockedEvent.eventCode,
+          path: `06_auftraege_26/Q3/${mockedEvent.eventCode}`,
           drifted: false,
         },
       });
@@ -125,7 +132,7 @@ async function mockApi(page: Page) {
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([event]),
+        body: JSON.stringify([mockedEvent]),
       });
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
@@ -133,7 +140,7 @@ async function mockApi(page: Page) {
         status: 201,
         contentType: "application/json",
         body: JSON.stringify({
-          ...event,
+          ...mockedEvent,
           id: "22222222-2222-4222-8222-222222222222",
           eventCode: body.eventCode,
           name: body.name,
@@ -147,7 +154,7 @@ async function mockApi(page: Page) {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          ...event,
+          ...mockedEvent,
           organizer: { name: body.organizerName },
           name: body.name,
         }),
@@ -241,7 +248,12 @@ async function mockApi(page: Page) {
   });
   await page.route("**/api/v1/sports**", async (route) => {
     const request = route.request();
-    if (request.method() === "GET") return route.fulfill({ json: request.url().includes("includeInactive=true") ? sports : sports.filter((sport) => sport.active) });
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: request.url().includes("includeInactive=true")
+          ? sports
+          : sports.filter((sport) => sport.active),
+      });
     const body = JSON.parse(request.postData() ?? "{}");
     if (request.method() === "POST") {
       const sport = { id: `s${sports.length + 1}`, name: body.name, active: true };
@@ -250,14 +262,19 @@ async function mockApi(page: Page) {
     }
     const id = request.url().match(/\/sports\/([^/?]+)/)?.[1];
     if (request.method() === "PATCH" && id) {
-      sports = sports.map((sport) => sport.id === id ? { ...sport, ...body } : sport);
+      sports = sports.map((sport) => (sport.id === id ? { ...sport, ...body } : sport));
       return route.fulfill({ json: sports.find((sport) => sport.id === id) });
     }
     return route.continue();
   });
   await page.route("**/api/v1/event-roles**", async (route) => {
     const request = route.request();
-    if (request.method() === "GET") return route.fulfill({ json: request.url().includes("includeInactive=true") ? eventRoles : eventRoles.filter((role) => role.active) });
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: request.url().includes("includeInactive=true")
+          ? eventRoles
+          : eventRoles.filter((role) => role.active),
+      });
     const body = JSON.parse(request.postData() ?? "{}");
     if (request.method() === "POST") {
       const role = { id: `r${eventRoles.length + 1}`, name: body.name, active: true };
@@ -266,7 +283,7 @@ async function mockApi(page: Page) {
     }
     const id = request.url().match(/\/event-roles\/([^/?]+)/)?.[1];
     if (request.method() === "PATCH" && id) {
-      eventRoles = eventRoles.map((role) => role.id === id ? { ...role, ...body } : role);
+      eventRoles = eventRoles.map((role) => (role.id === id ? { ...role, ...body } : role));
       return route.fulfill({ json: eventRoles.find((role) => role.id === id) });
     }
     return route.continue();
@@ -398,6 +415,10 @@ test("reduziert die Navigation und verwendet das Bearbeiten-Symbol", async ({ pa
   await expect(
     page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ }),
   ).toBeVisible();
+  for (const modul of ["Aufgaben", "Angebote", "Rechnungen"]) {
+    await expect(page.getByRole("link", { name: modul, exact: true })).toHaveCount(0);
+    await expect(page.getByLabel(`${modul}: In Vorbereitung`)).toBeVisible();
+  }
 });
 
 test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) => {
@@ -497,6 +518,17 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(page.getByText("Bestehendes Event")).toBeVisible();
 });
 
+test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/veranstaltungen");
+
+  const filterZeile = page.getByRole("group", { name: "Eventfilter und Tabellenspalten" });
+  await expect(filterZeile.getByRole("button", { name: "Spalten auswählen" })).toBeVisible();
+  await expect(filterZeile).toContainText("Alle Status");
+  await expect(filterZeile).toContainText("Alle Zeiträume");
+  await expect(filterZeile).toContainText("Nur aktive");
+});
+
 test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/");
@@ -509,7 +541,9 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   const endDate = page.getByLabel(/Enddatum/);
   await expect(startDate).toBeVisible();
   await expect(endDate).toBeVisible();
-  expect(Math.abs(((await startDate.boundingBox())?.y ?? 0) - ((await endDate.boundingBox())?.y ?? 0))).toBeLessThan(1);
+  expect(
+    Math.abs(((await startDate.boundingBox())?.y ?? 0) - ((await endDate.boundingBox())?.y ?? 0)),
+  ).toBeLessThan(1);
   await page.getByLabel(/Eventname/).fill("Neues E2E Event");
   await page.getByLabel("Veranstalter aus Stammdaten").fill("Jonas");
   await page.getByRole("button", { name: "Jonas Feld", exact: true }).click();
@@ -522,6 +556,9 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   await page.getByRole("button", { name: "Event anlegen" }).last().click();
   await expect(page).toHaveURL(/\/events\/260821_sondercode$/);
   await expect(page.getByText("Neues E2E Event")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Veranstalter aus Stammdaten" })).toHaveText(
+    "Jonas Feld",
+  );
   expect(
     requests.some(
       (request) => request.method === "POST" && request.body?.includes('"organizerId":"c2"'),
@@ -529,7 +566,9 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   ).toBeTruthy();
 });
 
-test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Event an", async ({ page }) => {
+test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Event an", async ({
+  page,
+}) => {
   const requests = await mockApi(page);
   await page.goto("/veranstaltungen");
   await page
@@ -796,6 +835,22 @@ test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page
   await expect(ordnerSpalte).toHaveAttribute("title", "Outlook und SharePoint");
   await expect(page.getByLabel("Outlook: nicht verknüpft")).toBeVisible();
   await expect(page.getByLabel("SharePoint: nicht verknüpft")).toBeVisible();
+});
+
+test("öffnet den Outlook-Ordner per Deep Link in Übersicht und Veranstaltungen", async ({
+  page,
+}) => {
+  const outlookFolderUrl = "https://outlook.office.com/mail/deeplink/folder/AQMkADAwATM0MDA=";
+  await mockApi(page, {
+    outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
+    outlookWebUrl: outlookFolderUrl,
+  });
+
+  await page.goto("/");
+  await expect(page.getByTitle("Outlook öffnen")).toHaveAttribute("href", outlookFolderUrl);
+
+  await page.goto("/veranstaltungen");
+  await expect(page.getByTitle("Outlook öffnen")).toHaveAttribute("href", outlookFolderUrl);
 });
 
 test("zeigt den Eventcode in der Metadatenzeile des Events", async ({ page }) => {

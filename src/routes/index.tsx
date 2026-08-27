@@ -358,8 +358,11 @@ function Uebersicht() {
                           <FolderLink
                             icon="outlook"
                             label="Outlook"
-                            href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null}
-                            available={Boolean(e.outlookOrdner)}
+                            href={
+                              e.outlookWebUrl ??
+                              (e.outlookOrdner ? "https://outlook.office.com/mail/" : null)
+                            }
+                            available={Boolean(e.outlookWebUrl || e.outlookOrdner)}
                           />
                           <FolderLink
                             icon="sharepoint"

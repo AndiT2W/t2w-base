@@ -3,6 +3,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import {
   CalendarDays,
   CheckSquare,
+  Clock3,
   FileText,
   LayoutDashboard,
   Menu,
@@ -16,13 +17,19 @@ import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
 export const HAUPT_NAV = [
-  { to: "/", label: "Übersicht", icon: LayoutDashboard, exact: true },
-  { to: "/veranstaltungen", label: "Veranstaltungen", icon: CalendarDays, exact: false },
-  { to: "/aufgaben", label: "Aufgaben", icon: CheckSquare, exact: false },
-  { to: "/kontakte", label: "Kontakte & Kunden", icon: Users, exact: false },
-  { to: "/angebote", label: "Angebote", icon: FileText, exact: false },
-  { to: "/rechnungen", label: "Rechnungen", icon: Receipt, exact: false },
-  { to: "/einstellungen", label: "Einstellungen", icon: Settings2, exact: false },
+  { to: "/", label: "Übersicht", icon: LayoutDashboard, exact: true, available: true },
+  {
+    to: "/veranstaltungen",
+    label: "Veranstaltungen",
+    icon: CalendarDays,
+    exact: false,
+    available: true,
+  },
+  { to: "/aufgaben", label: "Aufgaben", icon: CheckSquare, exact: false, available: false },
+  { to: "/kontakte", label: "Kontakte & Kunden", icon: Users, exact: false, available: true },
+  { to: "/angebote", label: "Angebote", icon: FileText, exact: false, available: false },
+  { to: "/rechnungen", label: "Rechnungen", icon: Receipt, exact: false, available: false },
+  { to: "/einstellungen", label: "Einstellungen", icon: Settings2, exact: false, available: true },
 ] as const;
 
 export const NEBEN_NAV = [{ to: "/styleguide", label: "Styleguide", icon: Ruler }] as const;
@@ -92,18 +99,33 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
         <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
           {t("nav.modules")}
         </p>
-        {HAUPT_NAV.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            onClick={onNavigate}
-            activeOptions={{ exact: item.exact }}
-            className={linkClass}
-          >
-            <item.icon className="size-4 shrink-0" />
-            {t(HAUPT_NAV_KEYS[item.to])}
-          </Link>
-        ))}
+        {HAUPT_NAV.map((item) =>
+          item.available ? (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={onNavigate}
+              activeOptions={{ exact: item.exact }}
+              className={linkClass}
+            >
+              <item.icon className="size-4 shrink-0" />
+              {t(HAUPT_NAV_KEYS[item.to])}
+            </Link>
+          ) : (
+            <span
+              key={item.to}
+              aria-disabled="true"
+              aria-label={`${t(HAUPT_NAV_KEYS[item.to])}: ${t("nav.inPreparation")}`}
+              title={t("nav.inPreparation")}
+              className="flex cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-nav-muted/60"
+            >
+              <item.icon className="size-4 shrink-0" />
+              {t(HAUPT_NAV_KEYS[item.to])}
+              <Clock3 className="ml-auto size-3.5 shrink-0" aria-hidden="true" />
+              <span className="sr-only">{t("nav.inPreparation")}</span>
+            </span>
+          ),
+        )}
 
         <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
           {t("nav.more")}

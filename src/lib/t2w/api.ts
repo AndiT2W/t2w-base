@@ -181,7 +181,14 @@ export async function apiCreateEvent(input: {
     }),
   });
   if (!response.ok) throw new Error("Event konnte nicht gespeichert werden");
-  return mapApiEvent((await response.json()) as ApiEvent);
+  const created = (await response.json()) as ApiEvent;
+  return mapApiEvent({
+    ...created,
+    organizer:
+      created.organizer?.id || !input.veranstalterId
+        ? created.organizer
+        : { id: input.veranstalterId, name: input.veranstalter },
+  });
 }
 
 export type ApiSport = { id: string; name: string };

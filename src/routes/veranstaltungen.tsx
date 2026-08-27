@@ -169,7 +169,11 @@ function Veranstaltungen() {
             icon={GanttChartSquare}
           />
         </nav>
-        <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-surface p-3">
+        <div
+          role="group"
+          aria-label="Eventfilter und Tabellenspalten"
+          className="flex flex-wrap gap-3 rounded-lg border border-border bg-surface p-3"
+        >
           <Select value={status} onValueChange={(v) => setStatus(v as EventStatus | "alle")}>
             <SelectTrigger className="w-44">
               <SelectValue placeholder="Status" />
@@ -207,14 +211,17 @@ function Veranstaltungen() {
               <SelectItem value="alle">Aktive & Archiv</SelectItem>
             </SelectContent>
           </Select>
+
+          <div className="ml-auto">
+            <ColumnPicker
+              columns={EVENT_COLUMNS}
+              visibleColumns={visibleColumns}
+              toggleColumn={toggleColumn}
+            />
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-          <ColumnPicker
-            columns={EVENT_COLUMNS}
-            visibleColumns={visibleColumns}
-            toggleColumn={toggleColumn}
-          />
           <table className="w-full min-w-[54rem] border-collapse text-xs">
             <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -342,8 +349,11 @@ function Veranstaltungen() {
                         <FolderLink
                           icon="outlook"
                           label="Outlook"
-                          href={e.outlookOrdner ? "https://outlook.office.com/mail/" : null}
-                          available={Boolean(e.outlookOrdner)}
+                          href={
+                            e.outlookWebUrl ??
+                            (e.outlookOrdner ? "https://outlook.office.com/mail/" : null)
+                          }
+                          available={Boolean(e.outlookWebUrl || e.outlookOrdner)}
                         >
                           OL
                         </FolderLink>
