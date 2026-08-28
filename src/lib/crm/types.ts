@@ -3,6 +3,7 @@ export {
   KUNDENSTATUS_LABEL,
   personName,
   type EventRolle,
+  type KontaktSyncStatus,
   type Kunde,
   type KundenStatus,
   type Person,

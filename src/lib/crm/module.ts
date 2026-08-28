@@ -28,6 +28,11 @@ type ApiPerson = {
   note?: string | null;
   function?: string | null;
   location?: string | null;
+  syncSource?: string | null;
+  externalId?: string | null;
+  syncStatus?: string | null;
+  lastSyncedAt?: string | null;
+  externalUrl?: string | null;
   organizers?: { organizer: { id: string } }[];
   customerProfile?: { id: string } | null;
   eventRoles?: { role: string; event?: { eventCode: string; name: string } }[];
@@ -75,6 +80,11 @@ function mapPerson(value: ApiPerson): Person {
     strasse: value.street ?? "",
     plz: value.postalCode ?? "",
     notiz: value.note ?? "",
+    syncQuelle: value.syncSource ?? "",
+    externeId: value.externalId ?? "",
+    syncStatus: value.syncStatus?.toLowerCase() as Person["syncStatus"],
+    zuletztSynchronisiertAm: value.lastSyncedAt ?? null,
+    externeUrl: value.externalUrl ?? "",
     kundenprofilId: value.customerProfile?.id ?? null,
     kundenIds: value.organizers?.map(({ organizer }) => organizer.id) ?? [],
     eventRollen:
@@ -161,6 +171,11 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             note: input.notiz,
             function: input.funktion,
             location: input.ort,
+            syncSource: input.syncQuelle,
+            externalId: input.externeId,
+            syncStatus: input.syncStatus?.toUpperCase(),
+            lastSyncedAt: input.zuletztSynchronisiertAm,
+            externalUrl: input.externeUrl,
           }),
         }),
       );
@@ -208,6 +223,11 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             note: next.notiz,
             function: next.funktion,
             location: next.ort,
+            syncSource: next.syncQuelle,
+            externalId: next.externeId,
+            syncStatus: next.syncStatus?.toUpperCase(),
+            lastSyncedAt: next.zuletztSynchronisiertAm,
+            externalUrl: next.externeUrl,
           }),
         }),
       );

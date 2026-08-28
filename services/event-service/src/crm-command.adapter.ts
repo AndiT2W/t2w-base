@@ -33,13 +33,23 @@ export type ContactInput = {
   function?: string;
   location?: string;
   archived?: boolean;
+  syncSource?: string;
+  externalId?: string;
+  syncStatus?: "NEVER" | "SYNCING" | "SUCCESS" | "ERROR";
+  lastSyncedAt?: string | Date | null;
+  externalUrl?: string;
 };
 
 type CustomerProfile = Prisma.OrganizerGetPayload<{ include: { person: true } }>;
 
-export class PrismaCrmCommandAdapter
-  implements CrmCommandAdapter<CustomerProfileInput, CustomerProfile, OrganizerInput, unknown, ContactInput, unknown>
-{
+export class PrismaCrmCommandAdapter implements CrmCommandAdapter<
+  CustomerProfileInput,
+  CustomerProfile,
+  OrganizerInput,
+  unknown,
+  ContactInput,
+  unknown
+> {
   constructor(private readonly prisma: PrismaClient) {}
 
   organizers() {
@@ -66,7 +76,8 @@ export class PrismaCrmCommandAdapter
     });
   }
   async updateOrganizer(id: string, input: Partial<OrganizerInput>) {
-    if (!(await this.prisma.organizer.findUnique({ where: { id }, select: { id: true } }))) return null;
+    if (!(await this.prisma.organizer.findUnique({ where: { id }, select: { id: true } })))
+      return null;
     return this.prisma.organizer.update({ where: { id }, data: input });
   }
   async deactivateOrganizer(id: string) {
@@ -83,9 +94,12 @@ export class PrismaCrmCommandAdapter
       },
     });
   }
-  createContact(input: ContactInput) { return this.prisma.contact.create({ data: input }); }
+  createContact(input: ContactInput) {
+    return this.prisma.contact.create({ data: input });
+  }
   async updateContact(id: string, input: Partial<ContactInput>) {
-    if (!(await this.prisma.contact.findUnique({ where: { id }, select: { id: true } }))) return null;
+    if (!(await this.prisma.contact.findUnique({ where: { id }, select: { id: true } })))
+      return null;
     return this.prisma.contact.update({ where: { id }, data: input });
   }
 
@@ -139,8 +153,12 @@ export class PrismaCrmCommandAdapter
       : null;
   }
 
-  async deleteOrganizer(id: string) { await this.prisma.organizer.delete({ where: { id } }); }
-  async deleteContact(id: string) { await this.prisma.contact.delete({ where: { id } }); }
+  async deleteOrganizer(id: string) {
+    await this.prisma.organizer.delete({ where: { id } });
+  }
+  async deleteContact(id: string) {
+    await this.prisma.contact.delete({ where: { id } });
+  }
   async linkContact(organizerId: string, contactId: string) {
     await this.prisma.organizerContact.upsert({
       where: { organizerId_contactId: { organizerId, contactId } },

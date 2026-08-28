@@ -10,6 +10,11 @@ const personResponse = {
   email: "m@example.com",
   phone: "+43 1",
   note: "Leitung",
+  syncSource: "outlook",
+  externalId: "contact-42",
+  syncStatus: "SUCCESS",
+  lastSyncedAt: "2026-08-28T10:30:00.000Z",
+  externalUrl: "https://outlook.office.com/contacts/contact-42",
   organizers: [{ organizer: { id: "c1", name: "Nordwerk" } }],
   customerProfile: null,
   eventRoles: [],
@@ -43,6 +48,11 @@ describe("CRM module", () => {
         vorname: "Marion",
         nachname: "Kessler",
         kundenIds: ["c1"],
+        syncQuelle: "outlook",
+        externeId: "contact-42",
+        syncStatus: "success",
+        zuletztSynchronisiertAm: "2026-08-28T10:30:00.000Z",
+        externeUrl: "https://outlook.office.com/contacts/contact-42",
       }),
     ]);
     expect(state.kunden).toEqual([
@@ -67,7 +77,12 @@ describe("CRM module", () => {
     const request = vi
       .fn()
       .mockReturnValueOnce(pending)
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ ...personResponse, organizers: [{ organizer: { id: "c1" } }] }]), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([{ ...personResponse, organizers: [{ organizer: { id: "c1" } }] }]),
+          { status: 200 },
+        ),
+      )
       .mockResolvedValueOnce(new Response(JSON.stringify([customerResponse]), { status: 200 }));
     const crm = createHttpCrmAdapter(request);
     const state = {
@@ -120,6 +135,48 @@ describe("CRM module", () => {
       "/api/v1/organizers/c1/contacts/p1",
       expect.objectContaining({ method: "PUT" }),
     );
+  });
+
+  it("persists synchronization metadata through the contact API seam", async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify(personResponse), { status: 200 }));
+    const crm = createHttpCrmAdapter(request);
+
+    await crm.updatePerson(
+      {
+        id: "p1",
+        vorname: "Marion",
+        nachname: "Kessler",
+        email: "m@example.com",
+        telefonPrivat: "",
+        telefonBeruflich: "",
+        funktion: "",
+        ort: "",
+        land: "",
+        strasse: "",
+        plz: "",
+        notiz: "",
+        kundenprofilId: null,
+        kundenIds: [],
+        eventRollen: [],
+      },
+      {
+        syncQuelle: "outlook",
+        externeId: "contact-42",
+        syncStatus: "success",
+        zuletztSynchronisiertAm: "2026-08-28T10:30:00.000Z",
+        externeUrl: "https://outlook.office.com/contacts/contact-42",
+      },
+    );
+
+    expect(JSON.parse(request.mock.calls[0][1].body)).toMatchObject({
+      syncSource: "outlook",
+      externalId: "contact-42",
+      syncStatus: "SUCCESS",
+      lastSyncedAt: "2026-08-28T10:30:00.000Z",
+      externalUrl: "https://outlook.office.com/contacts/contact-42",
+    });
   });
 
   it("persists the same Person and Kunde interface through the local demo adapter", async () => {

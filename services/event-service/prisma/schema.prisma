@@ -85,6 +85,7 @@ model Contact {
   archived    Boolean             @default(false)
   syncSource  String?
   externalId  String?
+  externalUrl String?
   syncStatus  SyncStatus          @default(NEVER)
   lastSyncedAt DateTime?
   email       String?

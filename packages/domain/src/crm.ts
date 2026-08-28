@@ -1,4 +1,5 @@
 export type EventRolle = "anmeldung" | "finanzen" | "timing";
+export type KontaktSyncStatus = "never" | "syncing" | "success" | "error";
 export const EVENTROLLE_LABEL: Record<EventRolle, string> = {
   anmeldung: "Anmeldung",
   finanzen: "Finanzen",
@@ -22,6 +23,11 @@ export type Person = {
   strasse: string;
   plz: string;
   notiz: string;
+  syncQuelle?: string;
+  externeId?: string;
+  syncStatus?: KontaktSyncStatus;
+  zuletztSynchronisiertAm?: string | null;
+  externeUrl?: string;
   kundenprofilId: string | null;
   kundenIds: string[];
   eventRollen: { eventcode: string; eventName: string; rolle: EventRolle }[];
@@ -69,8 +75,7 @@ export interface CrmAdapter {
 
 export type CrmExpectedError = "PERSON_REFERENCED" | "ORGANIZER_REFERENCED" | "NOT_FOUND";
 export type CrmCommandResult<T = void> =
-  | { kind: "saved"; value: T }
-  | { kind: "rejected"; reason: CrmExpectedError };
+  { kind: "saved"; value: T } | { kind: "rejected"; reason: CrmExpectedError };
 
 export type ReferenceSnapshot = {
   events: number;
@@ -115,14 +120,30 @@ export class CrmCommands<
   TContactInput = unknown,
   TContact = unknown,
 > {
-  constructor(private readonly adapter: CrmCommandAdapter<TCustomerProfileInput, TCustomerProfile, TOrganizerInput, TOrganizer, TContactInput, TContact>) {}
+  constructor(
+    private readonly adapter: CrmCommandAdapter<
+      TCustomerProfileInput,
+      TCustomerProfile,
+      TOrganizerInput,
+      TOrganizer,
+      TContactInput,
+      TContact
+    >,
+  ) {}
 
-  organizers() { return this.adapter.organizers(); }
-  contacts() { return this.adapter.contacts(); }
+  organizers() {
+    return this.adapter.organizers();
+  }
+  contacts() {
+    return this.adapter.contacts();
+  }
   async createOrganizer(input: TOrganizerInput): Promise<CrmCommandResult<TOrganizer>> {
     return { kind: "saved", value: await this.adapter.createOrganizer(input) };
   }
-  async updateOrganizer(id: string, input: Partial<TOrganizerInput>): Promise<CrmCommandResult<TOrganizer>> {
+  async updateOrganizer(
+    id: string,
+    input: Partial<TOrganizerInput>,
+  ): Promise<CrmCommandResult<TOrganizer>> {
     const value = await this.adapter.updateOrganizer(id, input);
     return value ? { kind: "saved", value } : { kind: "rejected", reason: "NOT_FOUND" };
   }
@@ -133,7 +154,10 @@ export class CrmCommands<
   async createContact(input: TContactInput): Promise<CrmCommandResult<TContact>> {
     return { kind: "saved", value: await this.adapter.createContact(input) };
   }
-  async updateContact(id: string, input: Partial<TContactInput>): Promise<CrmCommandResult<TContact>> {
+  async updateContact(
+    id: string,
+    input: Partial<TContactInput>,
+  ): Promise<CrmCommandResult<TContact>> {
     const value = await this.adapter.updateContact(id, input);
     return value ? { kind: "saved", value } : { kind: "rejected", reason: "NOT_FOUND" };
   }
@@ -148,7 +172,8 @@ export class CrmCommands<
       references.contacts ||
       references.person ||
       references.primaryContact
-    ) return { kind: "rejected", reason: "ORGANIZER_REFERENCED" };
+    )
+      return { kind: "rejected", reason: "ORGANIZER_REFERENCED" };
     await this.adapter.deleteOrganizer(id);
     return { kind: "saved", value: undefined };
   }
@@ -161,7 +186,8 @@ export class CrmCommands<
       references.eventRoles ||
       references.customerProfile ||
       references.primaryContact
-    ) return { kind: "rejected", reason: "PERSON_REFERENCED" };
+    )
+      return { kind: "rejected", reason: "PERSON_REFERENCED" };
     await this.adapter.deleteContact(id);
     return { kind: "saved", value: undefined };
   }
@@ -176,7 +202,10 @@ export class CrmCommands<
     return { kind: "saved", value: undefined };
   }
 
-  async upsertCustomerProfile(contactId: string, input: TCustomerProfileInput): Promise<CrmCommandResult<TCustomerProfile>> {
+  async upsertCustomerProfile(
+    contactId: string,
+    input: TCustomerProfileInput,
+  ): Promise<CrmCommandResult<TCustomerProfile>> {
     return { kind: "saved", value: await this.adapter.upsertCustomerProfile(contactId, input) };
   }
 }
@@ -195,60 +224,161 @@ export function createCrmWorkspace(adapter: CrmAdapter) {
     snapshot = { ...state, bereit: ready, fehler: error };
     subscribers.forEach((subscriber) => subscriber());
   };
-  const replace = (next: CrmState) => { state = next; publish(); };
-  const fail = (message: string, cause: unknown): never => { error = message; publish(); throw cause; };
+  const replace = (next: CrmState) => {
+    state = next;
+    publish();
+  };
+  const fail = (message: string, cause: unknown): never => {
+    error = message;
+    publish();
+    throw cause;
+  };
   const mutate = async (operation: () => Promise<CrmState>) => {
     error = null;
-    try { replace(await operation()); } catch (cause) { fail("Änderung konnte nicht gespeichert werden.", cause); }
+    try {
+      replace(await operation());
+    } catch (cause) {
+      fail("Änderung konnte nicht gespeichert werden.", cause);
+    }
   };
   const findDuplicate = (vorname: string, nachname: string, email: string) =>
-    state.personen.find((person) =>
-      person.email.toLowerCase() === email.toLowerCase() ||
-      (personName(person).toLowerCase() === `${vorname} ${nachname}`.trim().toLowerCase() && !!vorname && !!nachname),
+    state.personen.find(
+      (person) =>
+        person.email.toLowerCase() === email.toLowerCase() ||
+        (personName(person).toLowerCase() === `${vorname} ${nachname}`.trim().toLowerCase() &&
+          !!vorname &&
+          !!nachname),
     );
 
   return {
     snapshot: () => snapshot,
-    subscribe(subscriber: () => void) { subscribers.add(subscriber); return () => subscribers.delete(subscriber); },
+    subscribe(subscriber: () => void) {
+      subscribers.add(subscriber);
+      return () => subscribers.delete(subscriber);
+    },
     async load() {
-      try { replace(await adapter.load()); }
-      catch (cause) { error = "Kunden und Kontakte konnten nicht geladen werden."; throw cause; }
-      finally { ready = true; publish(); }
+      try {
+        replace(await adapter.load());
+      } catch (cause) {
+        error = "Kunden und Kontakte konnten nicht geladen werden.";
+        throw cause;
+      } finally {
+        ready = true;
+        publish();
+      }
     },
     async createPerson(input: PersonInput) {
-      try { const person = await adapter.createPerson(input); replace({ ...state, personen: [...state.personen, person] }); return person; }
-      catch (cause) { return fail("Änderung konnte nicht gespeichert werden.", cause); }
+      try {
+        const person = await adapter.createPerson(input);
+        replace({ ...state, personen: [...state.personen, person] });
+        return person;
+      } catch (cause) {
+        return fail("Änderung konnte nicht gespeichert werden.", cause);
+      }
     },
     async createKunde(input: KundeInput) {
       try {
         const kunde = await adapter.createKunde(input);
-        const personen = input.personId ? state.personen.map((person) => person.id === input.personId ? { ...person, kundenprofilId: kunde.id, kundenIds: [...new Set([...person.kundenIds, kunde.id])] } : person) : state.personen;
-        replace({ personen, kunden: [...state.kunden, { ...kunde, kontaktIds: input.personId ? [input.personId] : kunde.kontaktIds }] });
+        const personen = input.personId
+          ? state.personen.map((person) =>
+              person.id === input.personId
+                ? {
+                    ...person,
+                    kundenprofilId: kunde.id,
+                    kundenIds: [...new Set([...person.kundenIds, kunde.id])],
+                  }
+                : person,
+            )
+          : state.personen;
+        replace({
+          personen,
+          kunden: [
+            ...state.kunden,
+            { ...kunde, kontaktIds: input.personId ? [input.personId] : kunde.kontaktIds },
+          ],
+        });
         return kunde;
-      } catch (cause) { return fail("Änderung konnte nicht gespeichert werden.", cause); }
+      } catch (cause) {
+        return fail("Änderung konnte nicht gespeichert werden.", cause);
+      }
     },
-    async createPersonAndKunde(personInput: PersonInput, kundeInput: Omit<KundeInput, "name" | "personId">) {
+    async createPersonAndKunde(
+      personInput: PersonInput,
+      kundeInput: Omit<KundeInput, "name" | "personId">,
+    ) {
       const existing = findDuplicate(personInput.vorname, personInput.nachname, personInput.email);
       const person = existing ?? (await this.createPerson(personInput));
       await this.createKunde({ ...kundeInput, name: personName(person), personId: person.id });
       return person;
     },
     async updatePerson(id: string, patch: Partial<Person>) {
-      const person = state.personen.find((item) => item.id === id); if (!person) return;
-      try { const saved = await adapter.updatePerson(person, patch); replace({ ...state, personen: state.personen.map((item) => item.id === id ? { ...item, ...saved, kundenIds: item.kundenIds, eventRollen: item.eventRollen } : item) }); }
-      catch (cause) { fail("Änderung konnte nicht gespeichert werden.", cause); }
+      const person = state.personen.find((item) => item.id === id);
+      if (!person) return;
+      try {
+        const saved = await adapter.updatePerson(person, patch);
+        replace({
+          ...state,
+          personen: state.personen.map((item) =>
+            item.id === id
+              ? { ...item, ...saved, kundenIds: item.kundenIds, eventRollen: item.eventRollen }
+              : item,
+          ),
+        });
+      } catch (cause) {
+        fail("Änderung konnte nicht gespeichert werden.", cause);
+      }
     },
     async updateKunde(id: string, patch: Partial<Kunde>) {
-      const kunde = state.kunden.find((item) => item.id === id); if (!kunde) return;
-      try { const saved = await adapter.updateKunde(kunde, patch); replace({ ...state, kunden: state.kunden.map((item) => item.id === id ? { ...item, ...saved, kontaktIds: item.kontaktIds, events: item.events } : item) }); }
-      catch (cause) { fail("Änderung konnte nicht gespeichert werden.", cause); }
+      const kunde = state.kunden.find((item) => item.id === id);
+      if (!kunde) return;
+      try {
+        const saved = await adapter.updateKunde(kunde, patch);
+        replace({
+          ...state,
+          kunden: state.kunden.map((item) =>
+            item.id === id
+              ? { ...item, ...saved, kontaktIds: item.kontaktIds, events: item.events }
+              : item,
+          ),
+        });
+      } catch (cause) {
+        fail("Änderung konnte nicht gespeichert werden.", cause);
+      }
     },
-    async deletePerson(id: string) { const person = state.personen.find((item) => item.id === id); if (!person) return; try { await adapter.deletePerson(person); replace({ ...state, personen: state.personen.filter((item) => item.id !== id) }); } catch (cause) { fail("Kontakt ist noch referenziert und kann nicht gelöscht werden.", cause); } },
-    async deleteKunde(id: string) { const kunde = state.kunden.find((item) => item.id === id); if (!kunde) return; try { await adapter.deleteKunde(kunde); replace({ ...state, kunden: state.kunden.filter((item) => item.id !== id) }); } catch (cause) { fail("Kunde ist noch referenziert und kann nicht gelöscht werden.", cause); } },
-    link(personId: string, kundeId: string) { return mutate(() => adapter.link(personId, kundeId)); },
-    unlink(personId: string, kundeId: string) { return mutate(() => adapter.unlink(personId, kundeId)); },
-    kundenVonPerson(person: Person) { return state.kunden.filter((kunde) => person.kundenIds.includes(kunde.id)); },
-    kontakteVonKunde(id: string) { return state.personen.filter((person) => person.kundenIds.includes(id)); },
-    findDuplicate(vorname: string, nachname: string, email: string) { return findDuplicate(vorname, nachname, email); },
+    async deletePerson(id: string) {
+      const person = state.personen.find((item) => item.id === id);
+      if (!person) return;
+      try {
+        await adapter.deletePerson(person);
+        replace({ ...state, personen: state.personen.filter((item) => item.id !== id) });
+      } catch (cause) {
+        fail("Kontakt ist noch referenziert und kann nicht gelöscht werden.", cause);
+      }
+    },
+    async deleteKunde(id: string) {
+      const kunde = state.kunden.find((item) => item.id === id);
+      if (!kunde) return;
+      try {
+        await adapter.deleteKunde(kunde);
+        replace({ ...state, kunden: state.kunden.filter((item) => item.id !== id) });
+      } catch (cause) {
+        fail("Kunde ist noch referenziert und kann nicht gelöscht werden.", cause);
+      }
+    },
+    link(personId: string, kundeId: string) {
+      return mutate(() => adapter.link(personId, kundeId));
+    },
+    unlink(personId: string, kundeId: string) {
+      return mutate(() => adapter.unlink(personId, kundeId));
+    },
+    kundenVonPerson(person: Person) {
+      return state.kunden.filter((kunde) => person.kundenIds.includes(kunde.id));
+    },
+    kontakteVonKunde(id: string) {
+      return state.personen.filter((person) => person.kundenIds.includes(id));
+    },
+    findDuplicate(vorname: string, nachname: string, email: string) {
+      return findDuplicate(vorname, nachname, email);
+    },
   };
 }
