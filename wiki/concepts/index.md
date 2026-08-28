@@ -16,3 +16,4 @@ Use this section for recurring ideas, workflows, business rules, technical patte
 - [Persistente Einstellungen und Browser-Regressionstests](settings-persistence-and-browser-tests.md)
 - [Tool Consolidation And Migration](tool-consolidation-and-migration.md)
 - [TIME2WIN CI und Branding](time2win-ci-branding.md)
+- [Ticket #34: UI und Outlook-Sync-Rückmeldung](ticket-34-ui-and-outlook-sync-feedback.md)

@@ -123,6 +123,10 @@ export function createEventDetailWorkspace(
       outlookSyncMessage = null;
       publish();
       const result = await session.syncOutlook();
+      if (result.kind === "synced") {
+        try { outlookPlan = await session.outlookPlan(); }
+        catch { outlookPlan = null; }
+      }
       outlookSyncing = false;
       outlookSyncMessage = result.kind === "synced"
         ? "Outlook-Ordner synchronisiert."

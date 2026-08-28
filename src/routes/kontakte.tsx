@@ -1,10 +1,25 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { ColumnPicker, SortHeader, useStoredColumns } from "@/components/t2w/TableFeatures";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useCrm, passtKunde, passtPerson } from "@/lib/crm/store";
 import { KUNDENSTATUS_LABEL, personName, type Kunde, type Person } from "@/lib/crm/types";
 
@@ -120,6 +135,7 @@ function KundenKontakte() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<Auswahl>(null);
   const [create, setCreate] = useState(false);
+  const createTriggerRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     if (window.location.search.includes("neu=1")) setCreate(true);
     const kundeId = new URLSearchParams(window.location.search).get("kunde");
@@ -129,6 +145,7 @@ function KundenKontakte() {
   function closeCreate() {
     setCreate(false);
     window.history.replaceState({}, "", "/kontakte");
+    window.requestAnimationFrame(() => createTriggerRef.current?.focus());
   }
   const people = useMemo(
     () =>
@@ -155,6 +172,7 @@ function KundenKontakte() {
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
           <a
+            ref={createTriggerRef}
             href="/kontakte?neu=1"
             className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
           >
@@ -200,15 +218,14 @@ function KundenKontakte() {
         </p>
       </div>
       {sel && (p || k) && (
-        <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-xl overflow-y-auto border-l border-border bg-background p-5 shadow-xl">
-          <button
-            aria-label="Detail schließen"
-            onClick={() => setSel(null)}
-            className="float-right"
-          >
-            <X />
-          </button>
-          <h2 className="mb-5 text-xl font-semibold">{p ? personName(p) : k?.name}</h2>
+        <Sheet open onOpenChange={(open) => !open && setSel(null)}>
+          <SheetContent side="right" className="w-full max-w-xl overflow-y-auto p-5 sm:max-w-xl">
+            <SheetHeader className="mb-5 pr-10 text-left">
+              <SheetTitle>{p ? personName(p) : k?.name}</SheetTitle>
+              <SheetDescription className="sr-only">
+                Stammdaten und Zuordnungen bearbeiten
+              </SheetDescription>
+            </SheetHeader>
           {p ? (
             <>
               <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
@@ -228,7 +245,7 @@ function KundenKontakte() {
               />
             </>
           )}
-          <div className="mt-8 border-t border-border pt-4">
+            <div className="mt-8 border-t border-border pt-4">
             <DeleteAction
               label={p ? "Kontakt löschen" : "Kunde löschen"}
               onDelete={async () => {
@@ -237,8 +254,9 @@ function KundenKontakte() {
                 setSel(null);
               }}
             />
-          </div>
-        </aside>
+            </div>
+          </SheetContent>
+        </Sheet>
       )}
       {create && <CreateDialog crm={crm} close={closeCreate} />}
     </div>
@@ -961,14 +979,12 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
     </label>
   );
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-      <div className="w-full max-w-2xl rounded-lg border border-border bg-background p-5 shadow-xl">
-        <div className="flex justify-between">
-          <h2 className="text-lg font-semibold">Neu anlegen</h2>
-          <button aria-label="Dialog schließen" onClick={close}>
-            <X />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && close()}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto p-5">
+        <DialogHeader className="pr-10">
+          <DialogTitle>Neu anlegen</DialogTitle>
+          <DialogDescription>Person, Kunde oder beide Datensätze gemeinsam anlegen.</DialogDescription>
+        </DialogHeader>
         <div className="mt-4 flex rounded border p-1">
           {(["person", "kunde", "beides"] as Modus[]).map((x) => (
             <button
@@ -1010,13 +1026,13 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
             </>
           )}
         </div>
-        <div className="mt-5 flex justify-end gap-2">
+        <DialogFooter className="mt-5 gap-2 sm:space-x-0">
           <Button variant="outline" onClick={close}>
             Abbrechen
           </Button>
           <Button onClick={() => void create()}>Speichern</Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

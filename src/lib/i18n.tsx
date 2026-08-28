@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createLocaleRenderer, type TranslationCatalog } from "./locale-rendering";
 
 export type Locale = "de" | "en";
@@ -434,15 +434,33 @@ export function I18nProvider({
   initialLocale?: Locale;
 }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const requestedLocale = useRef<Locale>(initialLocale);
+  const initialized = useRef(false);
   const setLocale = (next: Locale) => {
+    requestedLocale.current = next;
     setLocaleState(next);
     window.localStorage.setItem("t2w-locale", next);
     document.documentElement.lang = next;
   };
   useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true;
+      const stored = window.localStorage.getItem("t2w-locale");
+      const next =
+        requestedLocale.current !== initialLocale
+          ? requestedLocale.current
+          : stored === "de" || stored === "en"
+            ? stored
+            : initialLocale;
+      requestedLocale.current = next;
+      if (next !== locale) {
+        setLocaleState(next);
+        return;
+      }
+    }
     document.documentElement.lang = locale;
     window.localStorage.setItem("t2w-locale", locale);
-  }, [locale]);
+  }, [initialLocale, locale]);
   useEffect(() => {
     const applyHashLocale = () => {
       const hashLocale =
@@ -451,7 +469,10 @@ export function I18nProvider({
           : window.location.hash === "#locale=de"
             ? "de"
             : null;
-      if (hashLocale) setLocaleState(hashLocale);
+      if (hashLocale) {
+        requestedLocale.current = hashLocale;
+        setLocaleState(hashLocale);
+      }
     };
     applyHashLocale();
     window.addEventListener("hashchange", applyHashLocale);

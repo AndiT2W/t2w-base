@@ -11,7 +11,7 @@ export function FolderLink({
   label: string;
   href: string | null;
   available: boolean;
-  children: ReactNode;
+  children?: ReactNode;
   icon?: "outlook" | "sharepoint";
 }) {
   const ServiceIcon = icon === "outlook" ? Mail : icon === "sharepoint" ? Share2 : FolderX;

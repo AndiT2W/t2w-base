@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, FolderSync, Link2, Mail, Phone, StickyNote } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FolderPlus, FolderSync, HelpCircle, Link2, Mail, Phone, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,6 +156,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   }, [event.id, event.start, event.outlookOrdner, detailWorkspace]);
   const vergangen = event.ende < heuteIso();
   const outlookVorschlag = detail.outlookPlan?.path ?? form.outlookOrdner ?? "";
+  const outlookExistence = detail.outlookPlan?.existence ?? "UNKNOWN";
   const quartalsAbweichung = detail.outlookPlan?.drifted ?? false;
   const jahresSite = settings.jahresSites.find((s) => s.jahr === jahr(form.start));
   const folders = resolveEventFolderNavigation(form, settings);
@@ -440,6 +441,25 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Link2 className="size-4" />
                   Vorschlag übernehmen
                 </Button>
+                <div
+                  aria-label="Outlook-Ordnerstatus"
+                  className="mt-2 flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
+                >
+                  {outlookExistence === "EXISTS" ? (
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-status-zugesagt" aria-hidden="true" />
+                  ) : outlookExistence === "MISSING" ? (
+                    <FolderPlus className="mt-0.5 size-4 shrink-0 text-risk-beobachten" aria-hidden="true" />
+                  ) : (
+                    <HelpCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  )}
+                  <span>
+                    {outlookExistence === "EXISTS"
+                      ? "Ordner vorhanden – der bestehende Outlook-Ordner wird verwendet."
+                      : outlookExistence === "MISSING"
+                        ? "Ordner nicht vorhanden – er wird bei der Synchronisation neu erstellt."
+                        : "Ordnerstatus konnte noch nicht geprüft werden."}
+                  </span>
+                </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                   <FolderLink
                     label="Outlook"
@@ -788,12 +808,21 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                             {k.name}
                           </td>
                           <td className="min-w-48 px-3 py-2">
-                            <Input
-                              aria-label={`Eventrolle für ${k.name}`}
-                              defaultValue={k.rolle}
-                              className="h-8"
-                              onBlur={(e) => void updateContactRole(k, e.target.value)}
-                            />
+                            <Select
+                              value={k.rolle}
+                              onValueChange={(role) => void updateContactRole(k, role)}
+                            >
+                              <SelectTrigger aria-label={`Eventrolle für ${k.name}`} className="min-h-11 sm:min-h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[...new Set([k.rolle, "Kontakt", ...eventRoles])].map((role) => (
+                                  <SelectItem key={role} value={role}>
+                                    {role}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
                             {k.email || "—"}

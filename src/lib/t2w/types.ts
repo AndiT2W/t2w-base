@@ -113,6 +113,14 @@ export type T2WEvent = {
   notizen: string;
   outlookOrdner: string | null;
   outlookWebUrl: string | null;
+  outlookMailbox?: string | null;
+  outlookRootFolderId?: string | null;
+  outlookYearFolderId?: string | null;
+  outlookQuarterFolderId?: string | null;
+  outlookFolderId?: string | null;
+  outlookFolderSyncStatus?: "NEVER" | "SYNCING" | "SUCCESS" | "ERROR";
+  outlookFolderLastSuccessAt?: string | null;
+  outlookFolderLastError?: string | null;
   sharepointOrdner: string | null;
   kontakte: Contact[];
   aufgaben: Task[];

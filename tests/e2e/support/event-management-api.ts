@@ -16,7 +16,16 @@ export const event = {
   organizer: { id: "c1", name: "Alter Veranstalter" },
   sport: null,
   outlookFolder: null,
+  outlookWebUrl: null,
+  outlookFolderId: null,
+  outlookFolderSyncStatus: "NEVER",
+  outlookFolderLastSuccessAt: null,
+  outlookFolderLastError: null,
   sharepointFolder: null,
+  contacts: [] as {
+    role: string;
+    contact: { id: string; name: string; email: string | null; phone: string | null };
+  }[],
 };
 
 export async function mockEventManagementApi(
@@ -28,6 +37,7 @@ export async function mockEventManagementApi(
   let settings = {
     outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }],
     jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }],
+    outlookMailbox: "info@time2win.at",
   };
   let contacts = [
     {
@@ -129,6 +139,7 @@ export async function mockEventManagementApi(
           eventFolderName: mockedEvent.eventCode,
           path: `06_auftraege_26/Q3/${mockedEvent.eventCode}`,
           drifted: false,
+          existence: mockedEvent.outlookFolderId ? "EXISTS" : "MISSING",
         },
       });
     if (request.method() === "GET")
@@ -139,6 +150,18 @@ export async function mockEventManagementApi(
       });
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
+      if (request.url().endsWith("/outlook-folder/sync")) {
+        mockedEvent = {
+          ...mockedEvent,
+          outlookFolder: `06_auftraege_26/Q3/${mockedEvent.eventCode}`,
+          outlookWebUrl: "https://outlook.cloud.microsoft/mail/info%40time2win.at/event-folder-id",
+          outlookFolderId: "event-folder-id",
+          outlookFolderSyncStatus: "SUCCESS",
+          outlookFolderLastSuccessAt: "2026-08-28T12:00:00.000Z",
+          outlookFolderLastError: null,
+        };
+        return route.fulfill({ status: 200, json: mockedEvent });
+      }
       const eventContact = request.url().match(/\/events\/[^/]+\/contacts\/([^/?]+)$/);
       if (eventContact) {
         const contact = contacts.find((candidate) => candidate.id === eventContact[1]);
@@ -175,6 +198,20 @@ export async function mockEventManagementApi(
     }
     if (request.method() === "PATCH") {
       const body = JSON.parse(request.postData() ?? "{}");
+      const eventContact = request.url().match(/\/events\/[^/]+\/contacts\/([^/]+)\/([^/?]+)$/);
+      if (eventContact) {
+        const contactId = eventContact[1];
+        const previousRole = decodeURIComponent(eventContact[2]);
+        mockedEvent = {
+          ...mockedEvent,
+          contacts: mockedEvent.contacts.map((entry) =>
+            entry.contact.id === contactId && entry.role === previousRole
+              ? { ...entry, role: body.role }
+              : entry,
+          ),
+        };
+        return route.fulfill({ status: 200, json: mockedEvent });
+      }
       return route.fulfill({
         status: 200,
         contentType: "application/json",

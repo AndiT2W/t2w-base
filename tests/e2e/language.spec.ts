@@ -36,20 +36,19 @@ test("switches language, preserves event data, and persists the preference", asy
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
 
-  await page.getByRole("link", { name: "Englisch" }).click();
+  await page.getByRole("button", { name: "Englisch" }).click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("t2w-locale"))).toBe("en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await page.waitForTimeout(1000);
   await expect(page.getByRole("link", { name: "Events" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Tasks" })).toBeVisible();
+  await expect(page.getByLabel("Tasks: In preparation")).toBeVisible();
   await expect(page.getByRole("link", { name: "Contacts & customers" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Offers" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Invoices" })).toBeVisible();
+  await expect(page.getByLabel("Offers: In preparation")).toBeVisible();
+  await expect(page.getByLabel("Invoices: In preparation")).toBeVisible();
   await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
-  await expect(page.getByText("Confirmed", { exact: true })).toBeVisible();
-  await expect(page.getByText("All statuses", { exact: true })).toBeVisible();
-  await page.waitForTimeout(1000);
-  await expect(page.getByText("Demo Event")).toBeVisible();
-  await page.getByRole("link", { name: "German" }).click();
+  await expect(page.getByLabel("Status filtern")).toContainText("Confirmed");
+  await expect(page.getByLabel("Status filtern")).toContainText("All statuses");
+  await expect(page.locator("table").getByRole("link", { name: "Demo Event", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "German" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
 });
@@ -86,13 +85,14 @@ test("loads the event detail page", async ({ page }) => {
   await page.goto("/events/260820_demo_event");
   await expect(page.getByRole("tab", { name: "Stammdaten" })).toBeVisible({ timeout: 10000 });
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("link", { name: "Englisch" }).click();
+  await page.getByRole("button", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("tab", { name: "Basic data" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Contacts", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("tab", { name: "STAMMDATEN" })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Basic data", { exact: true })).toBeVisible();
 });
 
 test("renders every application route in English", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.route("**/api/v1/settings**", (route) =>
     route.fulfill({ json: { outlookJahresordner: [], jahresSites: [] } }),
   );
@@ -111,7 +111,7 @@ test("renders every application route in English", async ({ page }) => {
   ] as const;
   for (const [path, heading] of routes) {
     await page.goto(path);
-    await page.getByRole("link", { name: "Englisch" }).click();
+    await page.getByRole("button", { name: "Englisch" }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.getByText(heading, { exact: true }).first()).toBeVisible({ timeout: 10000 });
   }

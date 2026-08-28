@@ -24,7 +24,7 @@ export function PageHeader({
   const [global, setGlobal] = useState("");
 
   return (
-    <header className="sticky top-0 z-30 -mx-4 mb-5 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+    <header className="sticky top-16 z-30 -mx-4 mb-5 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <nav
@@ -67,7 +67,7 @@ export function PageHeader({
               onChange={(e) => (suche ? suche.onChange(e.target.value) : setGlobal(e.target.value))}
               placeholder={t(suche?.placeholder ?? "Global suchen …")}
               aria-label="Suche"
-              className="h-9 pl-8"
+              className="h-11 pl-8 sm:h-9"
             />
           </form>
           {aktion}
@@ -88,7 +88,7 @@ export function PageHeader({
             onChange={(e) => (suche ? suche.onChange(e.target.value) : setGlobal(e.target.value))}
             placeholder={t(suche?.placeholder ?? "Global suchen …")}
             aria-label="Suche"
-            className="h-9 pl-8"
+            className="h-11 pl-8 sm:h-9"
           />
         </form>
         {aktion}

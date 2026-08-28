@@ -146,20 +146,28 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             aria-label={t("language")}
           >
             {(["de", "en"] as const).map((option) => (
-              <a
+              <form
                 key={option}
-                href={`#locale=${option}`}
-                aria-pressed={locale === option}
-                aria-label={option === "de" ? t("language.de") : t("language.en")}
-                className={cn(
-                  "rounded px-2 py-1 text-xs",
-                  locale === option
-                    ? "bg-nav-active text-nav-foreground"
-                    : "text-nav-muted hover:text-nav-foreground",
-                )}
+                action={`#locale=${option}`}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setLocale(option);
+                }}
               >
-                {option.toUpperCase()}
-              </a>
+                <button
+                  type="submit"
+                  aria-pressed={locale === option}
+                  aria-label={option === "de" ? t("language.de") : t("language.en")}
+                  className={cn(
+                    "min-h-11 min-w-11 rounded px-2 py-1 text-xs sm:min-h-0 sm:min-w-0",
+                    locale === option
+                      ? "bg-nav-active text-nav-foreground"
+                      : "text-nav-muted hover:text-nav-foreground",
+                  )}
+                >
+                  {option.toUpperCase()}
+                </button>
+              </form>
             ))}
           </div>
         </div>
@@ -193,7 +201,7 @@ export function SidebarMobileTrigger({ className }: { className?: string }) {
       onClick={() => setOffen(true)}
       aria-label="Navigation öffnen"
       className={cn(
-        "grid size-9 shrink-0 place-items-center rounded-md border border-border text-foreground transition-colors hover:bg-accent lg:hidden",
+        "grid size-11 shrink-0 place-items-center rounded-md border border-border text-foreground transition-colors hover:bg-accent lg:hidden",
         className,
       )}
     >

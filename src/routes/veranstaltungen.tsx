@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, GanttChartSquare, List, Mail, Pencil, Plus, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { selectEvents, type ArchiveSelection, type EventPeriod } from "@/lib/t2w/event-projections";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
+import { EventMobileList } from "@/components/t2w/EventMobileList";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -88,7 +89,6 @@ const EVENT_TABLE_COLUMNS = [
 function Veranstaltungen() {
   const { q, ansicht } = Route.useSearch();
   const { events, settings } = useT2W();
-  const navigate = useNavigate();
   const [suche, setSuche] = useState(q);
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [zeitraum, setZeitraum] = useState<Zeitraum>("alle");
@@ -207,7 +207,12 @@ function Veranstaltungen() {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <EventMobileList
+          events={zeilen}
+          settings={settings}
+          emptyText="Keine Events für die aktuelle Filterauswahl."
+        />
+        <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface md:block">
           <table className="w-full min-w-[54rem] border-collapse text-xs">
             <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -293,20 +298,22 @@ function Veranstaltungen() {
               {zeilen.map((e) => {
                 const folders = resolveEventFolderNavigation(e, settings);
                 return (
-                  <tr
-                    key={e.id}
-                    className="cursor-pointer border-t border-border hover:bg-accent/50"
-                    onClick={() =>
-                      navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })
-                    }
-                  >
+                  <tr key={e.id} className="border-t border-border hover:bg-accent/50">
                     {visibleColumns.includes("Status") && (
                       <td className="px-2 py-1" title={STATUS_LABEL[e.status]}>
                         <StatusDot status={e.status} />
                       </td>
                     )}
                     {visibleColumns.includes("Event") && (
-                      <td className="max-w-[16rem] truncate px-2 py-1 font-medium">{e.name}</td>
+                      <td className="max-w-[16rem] truncate px-2 py-1 font-medium">
+                        <Link
+                          to="/events/$eventcode"
+                          params={{ eventcode: e.eventcode }}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {e.name}
+                        </Link>
+                      </td>
                     )}
                     {visibleColumns.includes("Veranstalter") && (
                       <td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td>
@@ -357,7 +364,7 @@ function Veranstaltungen() {
                       <Link
                         to="/events/$eventcode"
                         params={{ eventcode: e.eventcode }}
-                        className="inline-flex rounded p-1 text-primary hover:bg-accent"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded p-1 text-primary hover:bg-accent sm:min-h-0 sm:min-w-0"
                         title="Event bearbeiten"
                         aria-label={`Event bearbeiten: ${e.name}`}
                       >

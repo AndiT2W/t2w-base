@@ -47,6 +47,7 @@ export type OutlookFolderPlan = {
   eventFolderName?: string;
   path: string;
   drifted: boolean;
+  existence?: "EXISTS" | "MISSING" | "UNKNOWN";
 };
 
 export type SaveResult<TEvent extends EventRecord> =

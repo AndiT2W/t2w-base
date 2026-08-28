@@ -38,7 +38,26 @@ export class OutlookFolderService {
     const year = String(event.startAt.getUTCFullYear());
     const yearFolderName = mappings.find((entry) => entry.jahr === year)?.url?.trim();
     if (!yearFolderName) throw new Error(`OUTLOOK_YEAR_FOLDER_MISSING:${year}`);
-    return this.planEventFolder(event, yearFolderName, event.outlookFolder);
+    const plan = this.planEventFolder(event, yearFolderName, event.outlookFolder);
+    const mailbox = settings?.outlookMailbox?.trim();
+    if (!mailbox) return { ...plan, existence: "UNKNOWN" as const };
+
+    try {
+      const yearFolder = (await this.graph.listChildFolders(mailbox, "inbox")).find(
+        (folder) => folder.displayName === plan.yearFolderName,
+      );
+      if (!yearFolder) return { ...plan, existence: "MISSING" as const };
+      const quarterFolder = (await this.graph.listChildFolders(mailbox, yearFolder.id)).find(
+        (folder) => folder.displayName === plan.quarter,
+      );
+      if (!quarterFolder) return { ...plan, existence: "MISSING" as const };
+      const eventFolder = (await this.graph.listChildFolders(mailbox, quarterFolder.id)).find(
+        (folder) => folder.displayName === plan.eventFolderName,
+      );
+      return { ...plan, existence: eventFolder ? ("EXISTS" as const) : ("MISSING" as const) };
+    } catch {
+      return { ...plan, existence: "UNKNOWN" as const };
+    }
   }
 
   async syncEventFolder(eventId: string, mailboxOverride?: string) {
@@ -101,7 +120,7 @@ export class OutlookFolderService {
           outlookQuarterFolderId: quarterFolder.id,
           outlookFolderId: eventFolder.id,
           outlookFolder: plan.path,
-          outlookWebUrl: `https://outlook.office.com/mail/${encodeURIComponent(mailbox)}/${encodeURIComponent(eventFolder.id)}`,
+          outlookWebUrl: `https://outlook.cloud.microsoft/mail/${encodeURIComponent(mailbox)}/${encodeURIComponent(eventFolder.id)}`,
           outlookFolderSyncStatus: "SUCCESS",
           outlookFolderLastSuccessAt: new Date(),
           outlookFolderLastError: null,

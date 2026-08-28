@@ -31,11 +31,59 @@ test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page })
   await expect(page.getByRole("option", { name: "Finanz" })).toBeVisible();
 });
 
+test("ändert eine bestehende Eventkontakt-Rolle per Dropdown und behält sie nach Reload", async ({
+  page,
+}) => {
+  const requests = await mockApi(page, {
+    contacts: [
+      {
+        role: "Anmeldung",
+        contact: {
+          id: "p1",
+          name: "Marion Kessler",
+          email: "m.kessler@nordwerk.de",
+          phone: "+49 40",
+        },
+      },
+    ],
+  });
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "KONTAKTE" }).click();
+  await page.getByLabel("Eventrolle für Marion Kessler").click();
+  await page.getByRole("option", { name: "Finanz" }).click();
+  await expect(page.getByText("Eventrolle gespeichert.")).toBeVisible();
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "PATCH" &&
+        request.url.includes("/contacts/p1/Anmeldung") &&
+        request.body?.includes('"role":"Finanz"'),
+    ),
+  ).toBeTruthy();
+
+  await page.reload();
+  await page.getByRole("tab", { name: "KONTAKTE" }).click();
+  await expect(page.getByLabel("Eventrolle für Marion Kessler")).toHaveText(/Finanz/);
+});
+
+test("zeigt vor und nach Outlook-Sync, ob der Ordner neu erstellt oder bereits vorhanden ist", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  await expect(page.getByLabel("Outlook-Ordnerstatus")).toContainText(
+    "Ordner nicht vorhanden",
+  );
+
+  await page.getByRole("button", { name: "Outlook-Ordner synchronisieren" }).click();
+  await expect(page.getByLabel("Outlook-Ordnerstatus")).toContainText("Ordner vorhanden");
+});
+
 test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
-  await expect(page.getByText("Bestehendes Event")).toBeVisible();
-  await expect(page.getByText("Alter Veranstalter")).toBeVisible();
+  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(page.locator("table").getByText("Alter Veranstalter")).toBeVisible();
 });
 
 test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) => {
@@ -62,7 +110,7 @@ test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) 
   ).toHaveAttribute("aria-current", "page");
   await page.goto("/veranstaltungen?ansicht=gantt");
   await expect(page.getByRole("link", { name: "Gantt" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByText("Bestehendes Event")).toBeVisible();
+  await expect(page.getByText("Bestehendes Event", { exact: true })).toBeVisible();
   await expect(page.getByText(/KW \d+/).first()).toBeVisible();
   await expect(page.locator(".border-b").filter({ hasText: /2026/ }).first()).toBeVisible();
 });
@@ -74,13 +122,13 @@ test("filtert die Übersicht über den Status-Dropdown und zeigt Ordner nur als 
   await page.goto("/");
   await expect(page.getByLabel("Status filtern")).toBeVisible();
   await page.getByLabel("Status filtern").selectOption("zugesagt");
-  await expect(page.getByText("Bestehendes Event")).toBeVisible();
+  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await page.getByLabel("Status filtern").selectOption("alle");
   await expect(page.getByLabel("Status filtern")).toHaveValue("alle");
-  await expect(page.getByText("Bestehendes Event")).toBeVisible();
+  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await expect(page.getByLabel("Statuslegende")).toBeVisible();
-  await expect(page.getByLabel("Outlook").first()).toBeVisible();
-  await expect(page.getByLabel("SharePoint").first()).toBeVisible();
+  await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft")).toBeVisible();
+  await expect(page.locator("table").getByLabel("SharePoint: nicht verknüpft")).toBeVisible();
   await expect(page.getByText("Outlook-Ordner", { exact: true })).toHaveCount(0);
   await expect(page.getByText("SharePoint-Ordner", { exact: true })).toHaveCount(0);
 });
@@ -167,7 +215,7 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await expect(page.getByRole("button", { name: "Marion Kessler", exact: true })).toBeVisible();
   await contactSearch.press("Escape");
   await expect(page.getByRole("listbox")).toHaveCount(0);
-  await page.getByRole("button", { name: "Detail schließen" }).click();
+  await expect(page.getByRole("button", { name: "Detail schließen" })).toHaveCount(0);
   await page.getByRole("link", { name: "Neu anlegen" }).click();
   await expect(page.getByText("Zahlungsziel", { exact: true })).toHaveCount(0);
 });
@@ -225,7 +273,7 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(table.locator("thead")).toContainText("St");
   await expect(table.locator("thead")).toContainText("Aufgaben");
   await expect(table.locator("[title='Outlook und SharePoint']")).toBeVisible();
-  await expect(page.getByText("Bestehendes Event")).toBeVisible();
+  await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
 });
 
 test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async ({ page }) => {
@@ -242,7 +290,7 @@ test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async (
 test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/");
-  await expect(page.getByText("Bestehendes Event")).toBeVisible();
+  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
   const openButton = page.getByRole("button", { name: "Event anlegen", exact: true }).first();
   await expect(openButton).toBeVisible();
   await openButton.click();
@@ -265,7 +313,7 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   await code.fill("260821_sondercode");
   await page.getByRole("button", { name: "Event anlegen" }).last().click();
   await expect(page).toHaveURL(/\/events\/260821_sondercode$/);
-  await expect(page.getByText("Neues E2E Event")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Neues E2E Event", exact: true })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Veranstalter aus Stammdaten" })).toHaveText(
     "Jonas Feld",
   );
@@ -315,7 +363,7 @@ test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Even
 test("validiert Veranstalter und Sportart im Anlage-Modal", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
-  await expect(page.getByText("Bestehendes Event", { exact: true })).toBeVisible();
+  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Event anlegen", exact: true }).first().click();
   await page.getByLabel(/Eventname/).fill("Pflichtfeldtest");
   await page.getByLabel(/Startdatum/).fill("2026-08-22");
@@ -438,6 +486,67 @@ test("navigiert mobil durch Kalender und Gantt ohne verlorenes Hauptmenü", asyn
   );
 });
 
+test("zeigt Events mobil priorisiert und hält wichtige Touch-Ziele sowie Sticky-Header getrennt", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.setViewportSize({ width: 375, height: 700 });
+  await page.goto("/");
+
+  const mobileList = page.getByLabel("Veranstaltungen mobile Liste");
+  await expect(mobileList).toBeVisible();
+  await expect(mobileList.getByText("Bestehendes Event")).toBeVisible();
+  await expect(mobileList.getByText("Alter Veranstalter")).toBeVisible();
+  await expect(page.locator("table").first()).toBeHidden();
+
+  for (const target of [
+    page.getByLabel("Navigation öffnen"),
+    page.getByRole("button", { name: "Alle aktiven" }),
+    mobileList.getByRole("link", { name: "Bestehendes Event" }),
+  ]) {
+    const box = await target.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+  }
+
+  const appHeader = page.locator("div.sticky.top-0").first();
+  const pageHeader = page.locator("header.sticky").first();
+  const positions = await Promise.all([appHeader.boundingBox(), pageHeader.boundingBox()]);
+  expect((positions[1]?.y ?? 0) + 1).toBeGreaterThanOrEqual(
+    (positions[0]?.y ?? 0) + (positions[0]?.height ?? 0),
+  );
+  expect(await page.locator("body").evaluate((body) => body.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});
+
+test("trennt Tabellen-Detailnavigation von Outlook-, SharePoint- und Bearbeiten-Aktionen", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/");
+  await expect(page.locator('tbody tr[role="link"]')).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ })).toBeVisible();
+});
+
+test("schließt Kontakt-Dialog und Detail-Sheet per Escape mit Fokus-Rückgabe", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/kontakte");
+
+  const createTrigger = page.getByRole("link", { name: "Neu anlegen" });
+  await createTrigger.click();
+  await expect(page.getByRole("dialog", { name: "Neu anlegen" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Neu anlegen" })).toHaveCount(0);
+  await expect(createTrigger).toBeFocused();
+
+  await page.getByText("Marion Kessler", { exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Marion Kessler" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Marion Kessler" })).toHaveCount(0);
+});
+
 test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async ({ page }) => {
   await mockApi(page);
   await page.goto("/kontakte");
@@ -544,8 +653,8 @@ test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page
   await page.goto("/");
   const ordnerSpalte = page.locator("thead th").nth(6).locator("[title='Outlook und SharePoint']");
   await expect(ordnerSpalte).toHaveAttribute("title", "Outlook und SharePoint");
-  await expect(page.getByLabel("Outlook: nicht verknüpft")).toBeVisible();
-  await expect(page.getByLabel("SharePoint: nicht verknüpft")).toBeVisible();
+  await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft")).toBeVisible();
+  await expect(page.locator("table").getByLabel("SharePoint: nicht verknüpft")).toBeVisible();
 });
 
 test("öffnet den Outlook-Ordner per Deep Link in Übersicht und Veranstaltungen", async ({
@@ -558,10 +667,10 @@ test("öffnet den Outlook-Ordner per Deep Link in Übersicht und Veranstaltungen
   });
 
   await page.goto("/");
-  await expect(page.getByTitle("Outlook öffnen")).toHaveAttribute("href", outlookFolderUrl);
+  await expect(page.locator("table").getByTitle("Outlook öffnen")).toHaveAttribute("href", outlookFolderUrl);
 
   await page.goto("/veranstaltungen");
-  await expect(page.getByTitle("Outlook öffnen")).toHaveAttribute("href", outlookFolderUrl);
+  await expect(page.locator("table").getByTitle("Outlook öffnen")).toHaveAttribute("href", outlookFolderUrl);
 });
 
 test("zeigt den Eventcode in der Metadatenzeile des Events", async ({ page }) => {

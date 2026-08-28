@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { CalendarClock, CheckSquare, Mail, Pencil, Plus, Share2 } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AlertTriangle, CalendarClock, CheckSquare, Mail, Pencil, Plus, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -14,6 +14,7 @@ import { useI18n } from "@/lib/i18n";
 import { activeEvents } from "@/lib/t2w/event-projections";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
+import { EventMobileList } from "@/components/t2w/EventMobileList";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/")({
   component: Uebersicht,
 });
 
-type Schnellfilter = "alle" | "diese-woche" | "offen" | "ohne-ordner";
+type Schnellfilter = "alle" | "diese-woche" | "offen" | "ueberfaellig" | "ohne-ordner";
 const OVERVIEW_COLUMNS = [
   "Status",
   "Event",
@@ -65,6 +66,7 @@ const SCHNELLFILTER: { key: Schnellfilter; label: string }[] = [
   { key: "alle", label: "Alle aktiven" },
   { key: "diese-woche", label: "Nächste 14 Tage" },
   { key: "offen", label: "Offene Aufgaben" },
+  { key: "ueberfaellig", label: "Überfällige Aufgaben" },
   { key: "ohne-ordner", label: "Ordner fehlt" },
 ];
 
@@ -77,7 +79,6 @@ function inTagen(iso: string, tage: number, heute: string) {
 function Uebersicht() {
   const { events, settings } = useT2W();
   const { t } = useI18n();
-  const navigate = useNavigate();
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
@@ -94,7 +95,10 @@ function Uebersicht() {
   const kpi = useMemo(() => {
     const kommend = aktive.filter((e) => e.ende >= heute && inTagen(e.start, 14, heute)).length;
     const aufgaben = aktive.reduce((n, e) => n + e.aufgaben.filter((a) => !a.erledigt).length, 0);
-    return { kommend, aufgaben };
+    const ueberfaellig = aktive.filter((e) =>
+      e.aufgaben.some((a) => !a.erledigt && !!a.faellig && a.faellig < heute),
+    ).length;
+    return { kommend, aufgaben, ueberfaellig };
   }, [aktive, heute]);
 
   const gefilterte = useMemo(() => {
@@ -104,6 +108,8 @@ function Uebersicht() {
       .filter((e) => {
         if (filter === "diese-woche") return e.ende >= heute && inTagen(e.start, 14, heute);
         if (filter === "offen") return e.aufgaben.some((a) => !a.erledigt);
+        if (filter === "ueberfaellig")
+          return e.aufgaben.some((a) => !a.erledigt && !!a.faellig && a.faellig < heute);
         if (filter === "ohne-ordner") return !e.outlookOrdner || !e.sharepointOrdner;
         return true;
       })
@@ -146,13 +152,27 @@ function Uebersicht() {
           <Kpi icon={CheckSquare} label="Offene Aufgaben" wert={kpi.aufgaben} />
         </div>
 
+        {kpi.ueberfaellig > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilter("ueberfaellig")}
+            className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-risk-kritisch/40 bg-risk-kritisch/10 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-risk-kritisch/15"
+          >
+            <AlertTriangle className="size-5 shrink-0 text-risk-kritisch" aria-hidden="true" />
+            <span className="flex-1">
+              {kpi.ueberfaellig} {kpi.ueberfaellig === 1 ? "Event hat" : "Events haben"} überfällige Aufgaben.
+            </span>
+            <span className="font-medium text-risk-kritisch">Anzeigen</span>
+          </button>
+        )}
+
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2">
           {SCHNELLFILTER.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                "min-h-11 rounded-full px-3 py-1 text-xs font-medium transition-colors sm:min-h-0",
                 filter === f.key
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-muted-foreground hover:text-foreground",
@@ -180,7 +200,12 @@ function Uebersicht() {
           </label>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <EventMobileList
+          events={zeilen}
+          settings={settings}
+          emptyText="Keine Events für diese Schnellfilter."
+        />
+        <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface md:block">
           <ColumnPicker
             columns={OVERVIEW_COLUMNS}
             visibleColumns={visibleColumns}
@@ -270,22 +295,7 @@ function Uebersicht() {
                 const offen = e.aufgaben.filter((a) => !a.erledigt).length;
                 const folders = resolveEventFolderNavigation(e, settings);
                 return (
-                  <tr
-                    key={e.id}
-                    className="cursor-pointer border-t border-border hover:bg-accent/50"
-                    role="link"
-                    tabIndex={0}
-                    onClick={() =>
-                      navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } })
-                    }
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        navigate({ to: "/events/$eventcode", params: { eventcode: e.eventcode } });
-                      }
-                    }}
-                    aria-label={`${e.name} öffnen`}
-                  >
+                   <tr key={e.id} className="border-t border-border hover:bg-accent/50">
                     {visibleColumns.includes("Status") && (
                       <td
                         className="px-2 py-1"
@@ -297,7 +307,13 @@ function Uebersicht() {
                     )}
                     {visibleColumns.includes("Event") && (
                       <td className="max-w-[16rem] truncate px-2 py-1 font-medium text-foreground">
-                        {e.name}
+                        <Link
+                          to="/events/$eventcode"
+                          params={{ eventcode: e.eventcode }}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {e.name}
+                        </Link>
                       </td>
                     )}
                     {visibleColumns.includes("Veranstalter") && (
@@ -344,7 +360,7 @@ function Uebersicht() {
                       <Link
                         to="/events/$eventcode"
                         params={{ eventcode: e.eventcode }}
-                        className="inline-flex rounded p-1 text-primary hover:bg-accent"
+                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded p-1 text-primary hover:bg-accent sm:min-h-0 sm:min-w-0"
                         title={`Event bearbeiten: ${e.name}`}
                         aria-label={`Event bearbeiten: ${e.name}`}
                       >
