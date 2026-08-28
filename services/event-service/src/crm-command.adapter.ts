@@ -12,13 +12,82 @@ export type CustomerProfileInput = {
   bankName?: string;
   email?: string;
 };
+export type OrganizerInput = CustomerProfileInput & {
+  name: string;
+  personId?: string | null;
+  primaryContactId?: string | null;
+  active?: boolean;
+};
+export type ContactInput = {
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  privatePhone?: string;
+  workPhone?: string;
+  country?: string;
+  city?: string;
+  street?: string;
+  postalCode?: string;
+  note?: string;
+  function?: string;
+  location?: string;
+  archived?: boolean;
+};
 
 type CustomerProfile = Prisma.OrganizerGetPayload<{ include: { person: true } }>;
 
 export class PrismaCrmCommandAdapter
-  implements CrmCommandAdapter<CustomerProfileInput, CustomerProfile>
+  implements CrmCommandAdapter<CustomerProfileInput, CustomerProfile, OrganizerInput, unknown, ContactInput, unknown>
 {
   constructor(private readonly prisma: PrismaClient) {}
+
+  organizers() {
+    return this.prisma.organizer.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      include: {
+        contacts: { include: { contact: true } },
+        events: { select: { eventCode: true, name: true } },
+        payoutEvents: { select: { eventCode: true, name: true } },
+        invoiceRecipients: { include: { event: { select: { eventCode: true, name: true } } } },
+        person: true,
+        primaryContact: true,
+      },
+    });
+  }
+  createOrganizer(input: OrganizerInput) {
+    return this.prisma.organizer.create({
+      data: {
+        ...input,
+        personId: input.personId ?? undefined,
+        type: input.personId ? "PERSON" : "ORGANISATION",
+      },
+    });
+  }
+  async updateOrganizer(id: string, input: Partial<OrganizerInput>) {
+    if (!(await this.prisma.organizer.findUnique({ where: { id }, select: { id: true } }))) return null;
+    return this.prisma.organizer.update({ where: { id }, data: input });
+  }
+  async deactivateOrganizer(id: string) {
+    return this.updateOrganizer(id, { active: false });
+  }
+  contacts() {
+    return this.prisma.contact.findMany({
+      where: { archived: false },
+      orderBy: { name: "asc" },
+      include: {
+        organizers: { include: { organizer: true } },
+        customerProfile: true,
+        eventRoles: { include: { event: true } },
+      },
+    });
+  }
+  createContact(input: ContactInput) { return this.prisma.contact.create({ data: input }); }
+  async updateContact(id: string, input: Partial<ContactInput>) {
+    if (!(await this.prisma.contact.findUnique({ where: { id }, select: { id: true } }))) return null;
+    return this.prisma.contact.update({ where: { id }, data: input });
+  }
 
   async organizerReferences(id: string): Promise<ReferenceSnapshot | null> {
     const references = await this.prisma.organizer.findUnique({

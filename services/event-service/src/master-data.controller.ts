@@ -16,14 +16,26 @@ import {
 import { ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "./prisma.service.js";
 import { CrmCommands, type CrmCommandResult } from "@t2w/domain/crm";
-import { PrismaCrmCommandAdapter, type CustomerProfileInput } from "./crm-command.adapter.js";
+import {
+  PrismaCrmCommandAdapter,
+  type ContactInput,
+  type CustomerProfileInput,
+  type OrganizerInput,
+} from "./crm-command.adapter.js";
 import { SelectionLists } from "@t2w/domain/selection-lists";
 import { PrismaSelectionListAdapter } from "./selection-list.adapter.js";
 
 @ApiTags("master-data")
 @Controller("api/v1")
 export class MasterDataController {
-  private readonly crm: CrmCommands<CustomerProfileInput, unknown>;
+  private readonly crm: CrmCommands<
+    CustomerProfileInput,
+    unknown,
+    OrganizerInput,
+    unknown,
+    ContactInput,
+    unknown
+  >;
   private readonly selectionLists: SelectionLists;
 
   constructor(private readonly prisma: PrismaService) {
@@ -38,76 +50,23 @@ export class MasterDataController {
   }
 
   @Get("organizers") organizers() {
-    return this.prisma.organizer.findMany({
-      where: { active: true },
-      orderBy: { name: "asc" },
-      include: {
-        contacts: { include: { contact: true } },
-        events: { select: { eventCode: true, name: true } },
-        payoutEvents: { select: { eventCode: true, name: true } },
-        invoiceRecipients: { include: { event: { select: { eventCode: true, name: true } } } },
-        person: true,
-        primaryContact: true,
-      },
-    });
+    return this.crm.organizers();
   }
   @Post("organizers") organizer(
     @Body()
-    body: {
-      name: string;
-      personId?: string;
-      primaryContactId?: string;
-      country?: string;
-      city?: string;
-      street?: string;
-      postalCode?: string;
-      uid?: string;
-      iban?: string;
-      bic?: string;
-      bankName?: string;
-      email?: string;
-    },
+    body: OrganizerInput,
   ) {
-    return this.prisma.organizer.create({
-      data: {
-        name: body.name,
-        type: body.personId ? "PERSON" : "ORGANISATION",
-        personId: body.personId,
-        primaryContactId: body.primaryContactId,
-        country: body.country,
-        city: body.city,
-        street: body.street,
-        postalCode: body.postalCode,
-        uid: body.uid,
-        iban: body.iban,
-        bic: body.bic,
-        bankName: body.bankName,
-        email: body.email,
-      },
-    });
+    return this.crm.createOrganizer(body).then((result) => this.unwrap(result));
   }
   @Patch("organizers/:id") organizerUpdate(
     @Param("id", ParseUUIDPipe) id: string,
     @Body()
-    body: {
-      name?: string;
-      personId?: string | null;
-      primaryContactId?: string | null;
-      country?: string;
-      city?: string;
-      street?: string;
-      postalCode?: string;
-      uid?: string;
-      iban?: string;
-      bic?: string;
-      bankName?: string;
-      email?: string;
-    },
+    body: Partial<OrganizerInput>,
   ) {
-    return this.prisma.organizer.update({ where: { id }, data: body });
+    return this.crm.updateOrganizer(id, body).then((result) => this.unwrap(result));
   }
   @Patch("organizers/:id/deactivate") deactivateOrganizer(@Param("id", ParseUUIDPipe) id: string) {
-    return this.prisma.organizer.update({ where: { id }, data: { active: false } });
+    return this.crm.deactivateOrganizer(id).then((result) => this.unwrap(result));
   }
   @Delete("organizers/:id")
   @HttpCode(204)
@@ -161,57 +120,20 @@ export class MasterDataController {
   }
 
   @Get("contacts") contacts() {
-    return this.prisma.contact.findMany({
-      where: { archived: false },
-      orderBy: { name: "asc" },
-      include: {
-        organizers: { include: { organizer: true } },
-        customerProfile: true,
-        eventRoles: { include: { event: true } },
-      },
-    });
+    return this.crm.contacts();
   }
   @Post("contacts") contact(
     @Body()
-    body: {
-      name: string;
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      privatePhone?: string;
-      workPhone?: string;
-      country?: string;
-      city?: string;
-      street?: string;
-      postalCode?: string;
-      note?: string;
-      function?: string;
-      location?: string;
-    },
+    body: ContactInput,
   ) {
-    return this.prisma.contact.create({ data: body });
+    return this.crm.createContact(body).then((result) => this.unwrap(result));
   }
   @Patch("contacts/:id") contactUpdate(
     @Param("id", ParseUUIDPipe) id: string,
     @Body()
-    body: {
-      name?: string;
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      privatePhone?: string;
-      workPhone?: string;
-      country?: string;
-      city?: string;
-      street?: string;
-      postalCode?: string;
-      note?: string;
-      function?: string;
-      location?: string;
-      archived?: boolean;
-    },
+    body: Partial<ContactInput>,
   ) {
-    return this.prisma.contact.update({ where: { id }, data: body });
+    return this.crm.updateContact(id, body).then((result) => this.unwrap(result));
   }
   @Delete("contacts/:id")
   @HttpCode(204)

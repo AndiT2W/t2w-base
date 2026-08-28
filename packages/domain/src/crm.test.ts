@@ -14,6 +14,13 @@ const empty: ReferenceSnapshot = {
 
 function adapter(overrides: Partial<CrmCommandAdapter<object, object>> = {}) {
   return {
+    organizers: vi.fn().mockResolvedValue([]),
+    createOrganizer: vi.fn().mockResolvedValue({}),
+    updateOrganizer: vi.fn().mockResolvedValue({}),
+    deactivateOrganizer: vi.fn().mockResolvedValue({}),
+    contacts: vi.fn().mockResolvedValue([]),
+    createContact: vi.fn().mockResolvedValue({}),
+    updateContact: vi.fn().mockResolvedValue({}),
     organizerReferences: vi.fn().mockResolvedValue(empty),
     contactReferences: vi.fn().mockResolvedValue(empty),
     deleteOrganizer: vi.fn(),
@@ -45,5 +52,27 @@ describe("CRM commands", () => {
     });
     expect(persistence.unlinkContact).toHaveBeenCalledWith("customer-1", "person-1");
     expect(persistence.deleteContact).not.toHaveBeenCalled();
+  });
+
+  it("owns create, update, deactivate, and not-found outcomes", async () => {
+    const persistence = adapter({
+      createOrganizer: vi.fn().mockResolvedValue({ id: "customer-1" }),
+      updateOrganizer: vi.fn().mockResolvedValue(null),
+      deactivateOrganizer: vi.fn().mockResolvedValue({ id: "customer-1", active: false }),
+    });
+    const crm = new CrmCommands(persistence);
+
+    await expect(crm.createOrganizer({ name: "Mountain Attack" })).resolves.toEqual({
+      kind: "saved",
+      value: { id: "customer-1" },
+    });
+    await expect(crm.updateOrganizer("missing", {})).resolves.toEqual({
+      kind: "rejected",
+      reason: "NOT_FOUND",
+    });
+    await expect(crm.deactivateOrganizer("customer-1")).resolves.toEqual({
+      kind: "saved",
+      value: { id: "customer-1", active: false },
+    });
   });
 });

@@ -83,7 +83,21 @@ export type ReferenceSnapshot = {
   customerProfile: boolean;
 };
 
-export interface CrmCommandAdapter<TCustomerProfileInput, TCustomerProfile> {
+export interface CrmCommandAdapter<
+  TCustomerProfileInput,
+  TCustomerProfile,
+  TOrganizerInput = unknown,
+  TOrganizer = unknown,
+  TContactInput = unknown,
+  TContact = unknown,
+> {
+  organizers(): Promise<TOrganizer[]>;
+  createOrganizer(input: TOrganizerInput): Promise<TOrganizer>;
+  updateOrganizer(id: string, input: Partial<TOrganizerInput>): Promise<TOrganizer | null>;
+  deactivateOrganizer(id: string): Promise<TOrganizer | null>;
+  contacts(): Promise<TContact[]>;
+  createContact(input: TContactInput): Promise<TContact>;
+  updateContact(id: string, input: Partial<TContactInput>): Promise<TContact | null>;
   organizerReferences(id: string): Promise<ReferenceSnapshot | null>;
   contactReferences(id: string): Promise<ReferenceSnapshot | null>;
   deleteOrganizer(id: string): Promise<void>;
@@ -93,8 +107,36 @@ export interface CrmCommandAdapter<TCustomerProfileInput, TCustomerProfile> {
   upsertCustomerProfile(contactId: string, input: TCustomerProfileInput): Promise<TCustomerProfile>;
 }
 
-export class CrmCommands<TCustomerProfileInput, TCustomerProfile> {
-  constructor(private readonly adapter: CrmCommandAdapter<TCustomerProfileInput, TCustomerProfile>) {}
+export class CrmCommands<
+  TCustomerProfileInput,
+  TCustomerProfile,
+  TOrganizerInput = unknown,
+  TOrganizer = unknown,
+  TContactInput = unknown,
+  TContact = unknown,
+> {
+  constructor(private readonly adapter: CrmCommandAdapter<TCustomerProfileInput, TCustomerProfile, TOrganizerInput, TOrganizer, TContactInput, TContact>) {}
+
+  organizers() { return this.adapter.organizers(); }
+  contacts() { return this.adapter.contacts(); }
+  async createOrganizer(input: TOrganizerInput): Promise<CrmCommandResult<TOrganizer>> {
+    return { kind: "saved", value: await this.adapter.createOrganizer(input) };
+  }
+  async updateOrganizer(id: string, input: Partial<TOrganizerInput>): Promise<CrmCommandResult<TOrganizer>> {
+    const value = await this.adapter.updateOrganizer(id, input);
+    return value ? { kind: "saved", value } : { kind: "rejected", reason: "NOT_FOUND" };
+  }
+  async deactivateOrganizer(id: string): Promise<CrmCommandResult<TOrganizer>> {
+    const value = await this.adapter.deactivateOrganizer(id);
+    return value ? { kind: "saved", value } : { kind: "rejected", reason: "NOT_FOUND" };
+  }
+  async createContact(input: TContactInput): Promise<CrmCommandResult<TContact>> {
+    return { kind: "saved", value: await this.adapter.createContact(input) };
+  }
+  async updateContact(id: string, input: Partial<TContactInput>): Promise<CrmCommandResult<TContact>> {
+    const value = await this.adapter.updateContact(id, input);
+    return value ? { kind: "saved", value } : { kind: "rejected", reason: "NOT_FOUND" };
+  }
 
   async deleteOrganizer(id: string): Promise<CrmCommandResult> {
     const references = await this.adapter.organizerReferences(id);
