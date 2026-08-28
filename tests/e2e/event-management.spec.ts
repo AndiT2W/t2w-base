@@ -486,6 +486,23 @@ test("navigiert mobil durch Kalender und Gantt ohne verlorenes Hauptmenü", asyn
   );
 });
 
+test("filtert archivierte Events im Kalender und öffnet deren Detailseite", async ({ page }) => {
+  await mockApi(page, { archived: true });
+  const eventsLoaded = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/events") && response.request().method() === "GET",
+  );
+  await page.goto("/kalender");
+  await eventsLoaded;
+
+  await expect(page.getByText("Bestehendes Event", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Archiv filtern").selectOption("archiv");
+  await expect(page.getByLabel("Archiv filtern")).toHaveValue("archiv");
+  await page.getByRole("link", { name: "Bestehendes Event", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/events\/260820_demo_event$/);
+});
+
 test("zeigt Events mobil priorisiert und hält wichtige Touch-Ziele sowie Sticky-Header getrennt", async ({
   page,
 }) => {

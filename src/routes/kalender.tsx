@@ -10,7 +10,11 @@ import { STATUS_LABEL, STATUS_ORDER, type T2WEvent } from "@/lib/t2w/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { EventDialog } from "@/components/t2w/EventDialog";
-import { activeEvents, austrianHoliday } from "@/lib/t2w/event-projections";
+import {
+  austrianHoliday,
+  selectEvents,
+  type ArchiveSelection,
+} from "@/lib/t2w/event-projections";
 import {
   addDays,
   iso,
@@ -136,10 +140,21 @@ export function KalenderSeite({
   const { events } = useT2W();
   const { t } = useI18n();
   const [modus, setModus] = useState<"monat" | "woche" | "tag">("monat");
+  const [archiv, setArchiv] = useState<ArchiveSelection>("aktiv");
   const [anker, setAnker] = useState(() => new Date());
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigatingScroll = useRef(false);
-  const sichtbareEvents = useMemo(() => activeEvents(events), [events]);
+  const sichtbareEvents = useMemo(
+    () =>
+      selectEvents(events, {
+        query: "",
+        status: "alle",
+        period: "alle",
+        archive: archiv,
+        today: heuteIso(),
+      }),
+    [archiv, events],
+  );
 
   const monatsStart = new Date(anker.getFullYear(), anker.getMonth(), 1);
   const gitterStart = mondayOf(monatsStart);
@@ -228,6 +243,19 @@ export function KalenderSeite({
               </button>
             ))}
           </div>
+          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Archiv</span>
+            <select
+              aria-label="Archiv filtern"
+              value={archiv}
+              onChange={(event) => setArchiv(event.target.value as ArchiveSelection)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            >
+              <option value="aktiv">Nur aktive</option>
+              <option value="archiv">Nur archivierte</option>
+              <option value="alle">Aktive & Archiv</option>
+            </select>
+          </label>
           <Button variant="outline" size="icon" aria-label="Zurück" onClick={() => blaettern(-1)}>
             <ChevronLeft className="size-4" />
           </Button>
