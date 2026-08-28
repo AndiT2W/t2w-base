@@ -8,6 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -593,15 +602,34 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 </Button>
               </div>
               <div className="sm:col-span-2">
-                <h3 className="text-sm font-medium text-foreground">Bewerbe</h3>
+                <h3 className="text-sm font-medium text-foreground">Teilnehmer nach Bewerb</h3>
                 {form.time2winSnapshot?.races.length ? (
-                  <ul className="mt-2 divide-y rounded-md border border-border">
-                    {form.time2winSnapshot.races.map((race) => (
-                      <li key={race.id} className="flex justify-between gap-3 px-3 py-2 text-sm">
-                        <span>{race.name}</span><span>Gemeldete TN: <strong>{race.participantCount ?? "—"}</strong></span>
-                      </li>
-                    ))}
-                  </ul>
+                  <Table className="mt-2 min-w-[22rem]" aria-label="TIME2WIN Teilnehmer nach Bewerb">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Bewerb</TableHead>
+                        <TableHead className="text-right">Gemeldete TN</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {form.time2winSnapshot.races.map((race) => (
+                        <TableRow key={race.id}>
+                          <TableCell className="font-medium">{race.name}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {race.participantCount ?? "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell>Gesamt</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {form.teilnehmerwerte?.aktuell ?? "—"}
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
                 ) : <p className="mt-2 text-sm text-muted-foreground">Noch keine TIME2WIN-Bewerbe geladen.</p>}
               </div>
             </CardContent>

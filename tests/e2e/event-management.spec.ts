@@ -87,10 +87,11 @@ test("zeigt synchronisierte TIME2WIN-Teilnehmer im Event", async ({ page }) => {
   await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
 
   await expect(page.getByText("Gemeldete TN:", { exact: false }).first()).toContainText("300");
-  await expect(page.getByText("OstseeMan Langdistanz", { exact: true })).toBeVisible();
-  await expect(
-    page.locator("ul").getByText("Gemeldete TN: 300", { exact: true }),
-  ).toBeVisible();
+  const participantTable = page.getByRole("table", { name: "TIME2WIN Teilnehmer nach Bewerb" });
+  await expect(participantTable.getByRole("columnheader", { name: "Bewerb" })).toBeVisible();
+  await expect(participantTable.getByRole("columnheader", { name: "Gemeldete TN" })).toBeVisible();
+  await expect(participantTable.getByRole("cell", { name: "OstseeMan Langdistanz" })).toBeVisible();
+  await expect(participantTable.getByRole("cell", { name: "300" })).toHaveCount(2);
 });
 
 test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) => {
