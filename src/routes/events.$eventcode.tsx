@@ -35,7 +35,7 @@ import { useCrm } from "@/lib/crm/store";
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
-import type { OutlookFolderPlan } from "@/lib/t2w/event-workspace";
+import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import type { Kunde } from "@/lib/crm/types";
@@ -127,147 +127,85 @@ function EventDetail() {
 }
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
-  const {
-    openEventSession,
-    settings,
-    selectionLists,
-  } = useT2W();
-  const { personen, kunden, kontakteVonKunde, neuLaden } = useCrm();
+  const { openEventSession, settings, selectionLists } = useT2W();
+  const { personen, kunden, neuLaden } = useCrm();
   const { t } = useI18n();
-  const [outlookSyncing, setOutlookSyncing] = useState(false);
-  const [outlookSyncMessage, setOutlookSyncMessage] = useState<string | null>(null);
-  const [editingSession] = useState(() =>
-    openEventSession(event.id),
+  const [detailWorkspace] = useState(() =>
+    createEventDetailWorkspace(openEventSession(event.id), {
+      event,
+      persons: personen,
+      customers: kunden,
+    }),
   );
-  const form = useSyncExternalStore(
-    editingSession.subscribe,
-    editingSession.snapshot,
-    editingSession.snapshot,
+  const detail = useSyncExternalStore(
+    detailWorkspace.subscribe,
+    detailWorkspace.snapshot,
+    detailWorkspace.snapshot,
   );
+  const { form } = detail;
   const [quartalsDialog, setQuartalsDialog] = useState(false);
-  const [outlookPlan, setOutlookPlan] = useState<OutlookFolderPlan | null>(null);
-  const [contactId, setContactId] = useState("");
-  const [contactRole, setContactRole] = useState("Kontakt");
   const eventRoles = selectionLists.eventRoles
     .filter((role) => role.active)
     .map((role) => role.name);
-  const [contactSearch, setContactSearch] = useState("");
-  const [invoiceRecipientSearch, setInvoiceRecipientSearch] = useState("");
-  const [newTask, setNewTask] = useState("");
-  const [newFile, setNewFile] = useState("");
-  const [newActivity, setNewActivity] = useState("");
 
-  useEffect(() => editingSession.accept(event), [editingSession, event]);
   useEffect(() => {
-    void editingSession.outlookPlan()
-      .then(setOutlookPlan)
-      .catch(() => setOutlookPlan(null));
-  }, [event.id, event.start, event.outlookOrdner, editingSession]);
-
+    detailWorkspace.accept(event, personen, kunden);
+  }, [detailWorkspace, event, personen, kunden]);
+  useEffect(() => {
+    void detailWorkspace.refreshOutlookPlan();
+  }, [event.id, event.start, event.outlookOrdner, detailWorkspace]);
   const vergangen = event.ende < heuteIso();
-  const outlookVorschlag = outlookPlan?.path ?? form.outlookOrdner ?? "";
-  const quartalsAbweichung = outlookPlan?.drifted ?? false;
+  const outlookVorschlag = detail.outlookPlan?.path ?? form.outlookOrdner ?? "";
+  const quartalsAbweichung = detail.outlookPlan?.drifted ?? false;
   const jahresSite = settings.jahresSites.find((s) => s.jahr === jahr(form.start));
   const folders = resolveEventFolderNavigation(form, settings);
-  const veranstalterKontakte = event.veranstalterId ? kontakteVonKunde(event.veranstalterId) : [];
-  const sichtbareKontakte = personen.filter((person) => {
-    if (form.kontakte.some((item) => item.id === person.id)) return false;
-    const query = contactSearch.trim().toLocaleLowerCase("de");
-    return (
-      !query ||
-      `${person.vorname} ${person.nachname} ${person.email}`.toLocaleLowerCase("de").includes(query)
-    );
-  });
-  const auszahlungsempfaengerId = form.auszahlungsempfaengerId ?? event.veranstalterId;
-  const auszahlungsempfaenger = kunden.find((kunde) => kunde.id === auszahlungsempfaengerId);
-  const rechnungsempfaengerIds =
-    form.rechnungsempfaengerIds ?? (event.veranstalterId ? [event.veranstalterId] : []);
-  const rechnungsempfaenger = kunden.filter((kunde) => rechnungsempfaengerIds.includes(kunde.id));
-  const sichtbareRechnungsempfaenger = kunden.filter((kunde) =>
-    kunde.name
-      .toLocaleLowerCase("de")
-      .includes(invoiceRecipientSearch.trim().toLocaleLowerCase("de")),
-  );
 
   function set<K extends keyof T2WEvent>(key: K, wert: T2WEvent[K]) {
-    editingSession.update({ [key]: wert });
+    detailWorkspace.update(key, wert);
   }
 
   async function speichern() {
-    if (!form.start) {
-      toast.error("Das Startdatum ist verpflichtend.");
-      return;
-    }
-    const result = await editingSession.save();
-    if (result.kind === "saved") {
-      await neuLaden();
+    const result = await detailWorkspace.save(neuLaden);
+    if (result.kind === "saved")
       toast.success("Änderungen gespeichert.");
-    } else if (result.kind === "conflict")
+    else if (result.kind === "conflict")
       toast.error("Das Event wurde zwischenzeitlich geändert. Bitte neu laden.");
+    else if (result.error.message === "EVENT_START_REQUIRED")
+      toast.error("Das Startdatum ist verpflichtend.");
     else toast.error("Änderungen konnten nicht gespeichert werden.");
   }
 
   async function outlookSynchronisieren() {
-    setOutlookSyncing(true);
-    setOutlookSyncMessage(null);
-    try {
-      const result = await editingSession.syncOutlook();
-      if (result.kind !== "synced") throw result.error;
-      setOutlookSyncMessage("Outlook-Ordner synchronisiert.");
-      toast.success("Outlook-Ordner synchronisiert.");
-    } catch {
-      setOutlookSyncMessage("Outlook-Ordner konnte nicht synchronisiert werden.");
-      toast.error("Outlook-Ordner konnte nicht synchronisiert werden.");
-    } finally {
-      setOutlookSyncing(false);
-    }
+    const result = await detailWorkspace.syncOutlook();
+    if (result.kind === "synced") toast.success("Outlook-Ordner synchronisiert.");
+    else toast.error("Outlook-Ordner konnte nicht synchronisiert werden.");
   }
-  function toggleRechnungsempfaenger(id: string) {
-    set(
-      "rechnungsempfaengerIds",
-      rechnungsempfaengerIds.includes(id)
-        ? rechnungsempfaengerIds.filter((recipientId) => recipientId !== id)
-        : [...rechnungsempfaengerIds, id],
-    );
-  }
+
   async function addEventContact(personId: string, role: string) {
-    const person = personen.find((item) => item.id === personId);
-    if (!person) return;
-    const result = await editingSession.addContact(personId, role);
-    if (result.kind !== "saved") throw new Error("EVENT_CONTACT_SAVE_FAILED");
+    await detailWorkspace.addEventContact(personId, role);
   }
   async function addContact() {
-    if (!contactId) return;
-    await addEventContact(contactId, contactRole);
-    setContactId("");
+    if (!detail.contactId) return;
+    await detailWorkspace.addSelectedContact();
     toast.success("Kontaktrolle gespeichert.");
   }
   async function updateContactRole(contact: T2WEvent["kontakte"][number], role: string) {
-    const nextRole = role.trim() || "Kontakt";
-    if (nextRole === contact.rolle) return;
-    const result = await editingSession.updateContactRole(contact.id, contact.rolle, nextRole);
-    if (result.kind !== "saved") throw new Error("EVENT_CONTACT_SAVE_FAILED");
+    await detailWorkspace.updateContactRole(contact, role);
     toast.success("Eventrolle gespeichert.");
   }
   async function addTask() {
-    if (!newTask.trim()) return;
-    const result = await editingSession.createTask({ title: newTask });
-    if (result.kind !== "saved") throw new Error("EVENT_TASK_SAVE_FAILED");
-    setNewTask("");
+    if (!detail.newTask.trim()) return;
+    await detailWorkspace.addTask();
     toast.success("Aufgabe angelegt.");
   }
   async function addFile() {
-    if (!newFile.trim()) return;
-    const result = await editingSession.createFile({ name: newFile });
-    if (result.kind !== "saved") throw new Error("EVENT_FILE_SAVE_FAILED");
-    setNewFile("");
+    if (!detail.newFile.trim()) return;
+    await detailWorkspace.addFile();
     toast.success("Dateiverknüpfung gespeichert.");
   }
   async function addActivity() {
-    if (!newActivity.trim()) return;
-    const result = await editingSession.createActivity({ channel: "Notiz", subject: newActivity });
-    if (result.kind !== "saved") throw new Error("EVENT_ACTIVITY_SAVE_FAILED");
-    setNewActivity("");
+    if (!detail.newActivity.trim()) return;
+    await detailWorkspace.addActivity();
     toast.success("Aktivität angelegt.");
   }
 
@@ -305,7 +243,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       {quartalsAbweichung && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent px-4 py-3">
           <p className="text-sm text-accent-foreground">
-            Quartalswechsel erkannt: Der Outlook-Ordner liegt nicht in {outlookPlan?.quarter}.
+            Quartalswechsel erkannt: Der Outlook-Ordner liegt nicht in {detail.outlookPlan?.quarter}.
             Vorschlag: <span className="font-mono">{outlookVorschlag}</span>. SharePoint bleibt
             unverändert.
           </p>
@@ -514,12 +452,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={outlookSyncing || !settings.outlookMailbox}
+                    disabled={detail.outlookSyncing || !settings.outlookMailbox}
                     onClick={() => void outlookSynchronisieren()}
                   >
-                    {outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}
+                    {detail.outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}
                   </Button>
-                  {outlookSyncMessage && <span role="status">{outlookSyncMessage}</span>}
+                  {detail.outlookSyncMessage && <span role="status">{detail.outlookSyncMessage}</span>}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   Graph-Sync:{" "}
@@ -626,7 +564,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <div>
                 <Label>Auszahlungsempfänger</Label>
                 <Select
-                  value={auszahlungsempfaengerId ?? undefined}
+                  value={detail.payoutRecipientId ?? undefined}
                   onValueChange={(id) => set("auszahlungsempfaengerId", id)}
                 >
                   <SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5">
@@ -640,9 +578,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     ))}
                   </SelectContent>
                 </Select>
-                {auszahlungsempfaenger && (
+                {detail.payoutRecipient && (
                   <div aria-label="Stammdaten Auszahlungsempfänger" className="mt-3">
-                    <RecipientMasterData recipient={auszahlungsempfaenger} />
+                    <RecipientMasterData recipient={detail.payoutRecipient} />
                   </div>
                 )}
               </div>
@@ -656,8 +594,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       variant="outline"
                       className="mt-2 w-full justify-start font-normal"
                     >
-                      {rechnungsempfaenger.length
-                        ? rechnungsempfaenger.map((kunde) => kunde.name).join(", ")
+                      {detail.invoiceRecipients.length
+                        ? detail.invoiceRecipients.map((kunde) => kunde.name).join(", ")
                         : "Rechnungsempfänger auswählen"}
                     </Button>
                   </PopoverTrigger>
@@ -665,19 +603,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     <Input
                       aria-label="Rechnungsempfänger suchen"
                       placeholder="Rechnungsempfänger suchen …"
-                      value={invoiceRecipientSearch}
-                      onChange={(e) => setInvoiceRecipientSearch(e.target.value)}
+                      value={detail.invoiceRecipientSearch}
+                      onChange={(e) => detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)}
                     />
                     <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                      {sichtbareRechnungsempfaenger.length ? (
-                        sichtbareRechnungsempfaenger.map((kunde) => (
+                      {detail.visibleInvoiceRecipients.length ? (
+                        detail.visibleInvoiceRecipients.map((kunde) => (
                           <label
                             key={kunde.id}
                             className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
                           >
                             <Checkbox
-                              checked={rechnungsempfaengerIds.includes(kunde.id)}
-                              onCheckedChange={() => toggleRechnungsempfaenger(kunde.id)}
+                              checked={detail.invoiceRecipientIds.includes(kunde.id)}
+                              onCheckedChange={() => detailWorkspace.toggleInvoiceRecipient(kunde.id)}
                             />
                             {kunde.name}
                           </label>
@@ -688,9 +626,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     </div>
                   </PopoverContent>
                 </Popover>
-                {rechnungsempfaenger.length > 0 && (
+                {detail.invoiceRecipients.length > 0 && (
                   <div aria-label="Stammdaten Rechnungsempfänger" className="mt-3 space-y-3">
-                    {rechnungsempfaenger.map((kunde) => (
+                    {detail.invoiceRecipients.map((kunde) => (
                       <RecipientMasterData key={kunde.id} recipient={kunde} />
                     ))}
                   </div>
@@ -715,13 +653,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <p className="mt-3 text-sm text-muted-foreground">
                     Kein Veranstalter ausgewählt.
                   </p>
-                ) : veranstalterKontakte.length === 0 ? (
+                ) : detail.organizerContacts.length === 0 ? (
                   <p className="mt-3 text-sm text-muted-foreground">
                     Für diesen Veranstalter sind keine Kontakte hinterlegt.
                   </p>
                 ) : (
                   <div className="mt-3 space-y-2">
-                    {veranstalterKontakte.map((person) => {
+                    {detail.organizerContacts.map((person) => {
                       const alreadyAdded = form.kontakte.some((item) => item.id === person.id);
                       return (
                         <div
@@ -768,9 +706,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                         className="w-56 justify-start font-normal"
                         aria-label="Kontakt auswählen"
                       >
-                        {contactId
+                        {detail.contactId
                           ? (() => {
-                              const person = personen.find((item) => item.id === contactId);
+                              const person = personen.find((item) => item.id === detail.contactId);
                               return person
                                 ? `${person.vorname} ${person.nachname}`
                                 : "Kontakt auswählen";
@@ -782,19 +720,18 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       <Input
                         aria-label="Kontakt suchen"
                         placeholder="Kontakt suchen …"
-                        value={contactSearch}
-                        onChange={(e) => setContactSearch(e.target.value)}
+                        value={detail.contactSearch}
+                        onChange={(e) => detailWorkspace.setInput("contactSearch", e.target.value)}
                       />
                       <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                        {sichtbareKontakte.length ? (
-                          sichtbareKontakte.map((person) => (
+                        {detail.visibleContacts.length ? (
+                          detail.visibleContacts.map((person) => (
                             <button
                               type="button"
                               key={person.id}
                               className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
                               onClick={() => {
-                                setContactId(person.id);
-                                setContactSearch("");
+                                detailWorkspace.selectContact(person.id);
                               }}
                             >
                               {person.vorname} {person.nachname}
@@ -807,19 +744,22 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       </div>
                     </PopoverContent>
                   </Popover>
-                  <Select value={contactRole} onValueChange={setContactRole}>
+                  <Select
+                    value={detail.contactRole}
+                    onValueChange={(value) => detailWorkspace.setInput("contactRole", value)}
+                  >
                     <SelectTrigger aria-label="Eventrolle" className="w-36">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {[...new Set([contactRole, "Kontakt", ...eventRoles])].map((role) => (
+                      {[...new Set([detail.contactRole, "Kontakt", ...eventRoles])].map((role) => (
                         <SelectItem key={role} value={role}>
                           {role}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button onClick={() => void addContact()} disabled={!contactId}>
+                  <Button onClick={() => void addContact()} disabled={!detail.contactId}>
                     Hinzufügen
                   </Button>
                 </div>
@@ -866,10 +806,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               variant="ghost"
                               size="sm"
                               onClick={() =>
-                                void editingSession.removeContact(k.id, k.rolle).then((result) => {
-                                  if (result.kind !== "saved")
-                                    toast.error("Kontaktrolle konnte nicht entfernt werden.");
-                                })
+                                void detailWorkspace
+                                  .removeContact(k.id, k.rolle)
+                                  .catch(() => toast.error("Kontaktrolle konnte nicht entfernt werden."))
                               }
                             >
                               Entfernen
@@ -894,8 +833,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <div className="flex gap-2">
                 <Input
                   aria-label="Neue Aufgabe"
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
+                  value={detail.newTask}
+                  onChange={(e) => detailWorkspace.setInput("newTask", e.target.value)}
                 />
                 <Button onClick={() => void addTask()}>Aufgabe anlegen</Button>
               </div>
@@ -910,10 +849,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <Checkbox
                     checked={a.erledigt}
                     onCheckedChange={(v) =>
-                      void editingSession.updateTask(a.id, { completed: !!v }).then((result) => {
-                        if (result.kind !== "saved")
-                          toast.error("Aufgabe konnte nicht gespeichert werden.");
-                      })
+                      void detailWorkspace
+                        .updateTask(a.id, !!v)
+                        .catch(() => toast.error("Aufgabe konnte nicht gespeichert werden."))
                     }
                   />
                   <div className="min-w-0 flex-1">
@@ -946,8 +884,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <div className="flex gap-2">
                 <Input
                   aria-label="Dateiverknüpfung"
-                  value={newFile}
-                  onChange={(e) => setNewFile(e.target.value)}
+                  value={detail.newFile}
+                  onChange={(e) => detailWorkspace.setInput("newFile", e.target.value)}
                   placeholder="Dateiname oder SharePoint-Link"
                 />
                 <Button onClick={() => void addFile()}>Verknüpfen</Button>
@@ -979,8 +917,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <div className="flex gap-2">
                 <Input
                   aria-label="Neue Aktivität"
-                  value={newActivity}
-                  onChange={(e) => setNewActivity(e.target.value)}
+                  value={detail.newActivity}
+                  onChange={(e) => detailWorkspace.setInput("newActivity", e.target.value)}
                   placeholder="Betreff der Notiz"
                 />
                 <Button onClick={() => void addActivity()}>Aktivität anlegen</Button>
@@ -1022,8 +960,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                set("outlookOrdner", outlookVorschlag);
-                void editingSession.save().then((result) => {
+                void detailWorkspace.confirmOutlookMove(outlookVorschlag).then((result) => {
                   if (result.kind === "saved") toast.success("Outlook-Verschiebung bestätigt.");
                   else toast.error("Outlook-Verschiebung konnte nicht gespeichert werden.");
                 });
