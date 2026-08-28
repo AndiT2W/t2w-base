@@ -127,6 +127,26 @@ export function createEventWorkspace<TEvent extends EventRecord>(transport: Even
     }
   }
 
+  async function save(id: string, patch: Partial<TEvent>): Promise<SaveResult<TEvent>> {
+    const current = find(id);
+    if (!current) return { kind: "failed", error: new Error("EVENT_NOT_FOUND") };
+    const start = patch.start ?? current.start;
+    const ende = patch.ende && patch.ende >= start ? patch.ende : start;
+    try {
+      const event = await transport.save(id, { ...patch, ende, version: current.version });
+      replace(event);
+      return { kind: "saved", event };
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "EVENT_VERSION_CONFLICT") return { kind: "conflict" };
+      return { kind: "failed", error: error instanceof Error ? error : new Error("EVENT_SAVE_FAILED") };
+    }
+  }
+
+  async function syncOutlook(id: string): Promise<SyncResult<TEvent>> {
+    try { const event = await transport.syncOutlook(id); replace(event); return { kind: "synced", event }; }
+    catch (error) { return { kind: "failed", error: error instanceof Error ? error : new Error("OUTLOOK_FOLDER_SYNC_FAILED") }; }
+  }
+
   const workspace = {
     events: () => collection,
     subscribe(subscriber: () => void) { subscribers.add(subscriber); return () => subscribers.delete(subscriber); },
@@ -148,40 +168,10 @@ export function createEventWorkspace<TEvent extends EventRecord>(transport: Even
       });
       collection = [...collection, event]; publish(); return event;
     },
-    async save(id: string, patch: Partial<TEvent>): Promise<SaveResult<TEvent>> {
-      const current = find(id);
-      if (!current) return { kind: "failed", error: new Error("EVENT_NOT_FOUND") };
-      const start = patch.start ?? current.start;
-      const ende = patch.ende && patch.ende >= start ? patch.ende : start;
-      try {
-        const event = await transport.save(id, { ...patch, ende, version: current.version });
-        replace(event);
-        return { kind: "saved", event };
-      } catch (error) {
-        if (error instanceof Error && "code" in error && error.code === "EVENT_VERSION_CONFLICT") return { kind: "conflict" };
-        return { kind: "failed", error: error instanceof Error ? error : new Error("EVENT_SAVE_FAILED") };
-      }
-    },
-    async syncOutlook(id: string): Promise<SyncResult<TEvent>> {
-      try { const event = await transport.syncOutlook(id); replace(event); return { kind: "synced", event }; }
-      catch (error) { return { kind: "failed", error: error instanceof Error ? error : new Error("OUTLOOK_FOLDER_SYNC_FAILED") }; }
-    },
-    addContact: (id: string, contactId: string, role: string) => mutateDetail(id, (event) => transport.addContact?.(id, contactId, role, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))),
-    removeContact: (id: string, contactId: string, role: string) => mutateDetail(id, (event) => transport.removeContact?.(id, contactId, role, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))),
-    updateContactRole: (id: string, contactId: string, role: string, nextRole: string) => mutateDetail(id, (event) => transport.updateContactRole?.(id, contactId, role, nextRole, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))),
-    createTask: (id: string, input: { title: string; dueAt?: string; responsible?: string }) => mutateDetail(id, (event) => transport.createTask?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))),
-    updateTask: (id: string, taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) => mutateDetail(id, (event) => transport.updateTask?.(id, taskId, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))),
-    createFile: (id: string, input: { name: string; url?: string; size?: string }) => mutateDetail(id, (event) => transport.createFile?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))),
-    createActivity: (id: string, input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }) => mutateDetail(id, (event) => transport.createActivity?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE"))),
-    outlookPlan: (id: string) => transport.outlookPlan(id),
-  };
-
-  return {
-    ...workspace,
     openSession(id: string) {
       const current = find(id);
       if (!current) throw new Error("EVENT_NOT_FOUND");
-      const editing = createEventEditingSession(current, (draft) => workspace.save(id, draft));
+      const editing = createEventEditingSession(current, (draft) => save(id, draft));
       const acceptSaved = async (result: Promise<SaveResult<TEvent>>) => {
         const resolved = await result;
         if (resolved.kind === "saved") editing.accept(resolved.event);
@@ -190,19 +180,21 @@ export function createEventWorkspace<TEvent extends EventRecord>(transport: Even
       return {
         ...editing,
         syncOutlook: async () => {
-          const result = await workspace.syncOutlook(id);
+          const result = await syncOutlook(id);
           if (result.kind === "synced") editing.accept(result.event);
           return result;
         },
-        addContact: (contactId: string, role: string) => acceptSaved(workspace.addContact(id, contactId, role)),
-        removeContact: (contactId: string, role: string) => acceptSaved(workspace.removeContact(id, contactId, role)),
-        updateContactRole: (contactId: string, role: string, nextRole: string) => acceptSaved(workspace.updateContactRole(id, contactId, role, nextRole)),
-        createTask: (input: { title: string; dueAt?: string; responsible?: string }) => acceptSaved(workspace.createTask(id, input)),
-        updateTask: (taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) => acceptSaved(workspace.updateTask(id, taskId, input)),
-        createFile: (input: { name: string; url?: string; size?: string }) => acceptSaved(workspace.createFile(id, input)),
-        createActivity: (input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }) => acceptSaved(workspace.createActivity(id, input)),
-        outlookPlan: () => workspace.outlookPlan(id),
+        addContact: (contactId: string, role: string) => acceptSaved(mutateDetail(id, (event) => transport.addContact?.(id, contactId, role, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")))),
+        removeContact: (contactId: string, role: string) => acceptSaved(mutateDetail(id, (event) => transport.removeContact?.(id, contactId, role, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")))),
+        updateContactRole: (contactId: string, role: string, nextRole: string) => acceptSaved(mutateDetail(id, (event) => transport.updateContactRole?.(id, contactId, role, nextRole, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")))),
+        createTask: (input: { title: string; dueAt?: string; responsible?: string }) => acceptSaved(mutateDetail(id, (event) => transport.createTask?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")))),
+        updateTask: (taskId: string, input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }) => acceptSaved(mutateDetail(id, (event) => transport.updateTask?.(id, taskId, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")))),
+        createFile: (input: { name: string; url?: string; size?: string }) => acceptSaved(mutateDetail(id, (event) => transport.createFile?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")))),
+        createActivity: (input: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }) => acceptSaved(mutateDetail(id, (event) => transport.createActivity?.(id, input, event.version ?? 0) ?? Promise.reject(new Error("EVENT_TRANSPORT_UNAVAILABLE")))),
+        outlookPlan: () => transport.outlookPlan(id),
       };
     },
   };
+
+  return workspace;
 }

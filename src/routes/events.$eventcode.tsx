@@ -128,7 +128,6 @@ function EventDetail() {
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
   const {
-    getOutlookFolderPlan,
     openEventSession,
     settings,
     selectionLists,
@@ -160,10 +159,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
   useEffect(() => editingSession.accept(event), [editingSession, event]);
   useEffect(() => {
-    void getOutlookFolderPlan(event.id)
+    void editingSession.outlookPlan()
       .then(setOutlookPlan)
       .catch(() => setOutlookPlan(null));
-  }, [event.id, event.start, event.outlookOrdner, getOutlookFolderPlan]);
+  }, [event.id, event.start, event.outlookOrdner, editingSession]);
 
   const vergangen = event.ende < heuteIso();
   const outlookVorschlag = outlookPlan?.path ?? form.outlookOrdner ?? "";

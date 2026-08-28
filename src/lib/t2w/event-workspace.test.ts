@@ -71,9 +71,9 @@ describe("Event workspace", () => {
     const workspace = createEventWorkspace(transport);
     workspace.load([event]);
 
-    await expect(
-      workspace.save(event.id, { start: "2026-08-23", ende: "2026-08-20" }),
-    ).resolves.toEqual({ kind: "saved", event: saved });
+    const session = workspace.openSession(event.id);
+    session.update({ start: "2026-08-23", ende: "2026-08-20" });
+    await expect(session.save()).resolves.toEqual({ kind: "saved", event: saved });
     expect(transport.save).toHaveBeenCalledWith(
       "e1",
       expect.objectContaining({ ende: "2026-08-23", version: 3 }),
@@ -95,7 +95,9 @@ describe("Event workspace", () => {
     const workspace = createEventWorkspace(transport);
     workspace.load([event]);
 
-    await expect(workspace.save(event.id, { name: "Changed" })).resolves.toEqual({
+    const session = workspace.openSession(event.id);
+    session.update({ name: "Changed" });
+    await expect(session.save()).resolves.toEqual({
       kind: "conflict",
     });
     expect(workspace.events()).toEqual([event]);
@@ -111,7 +113,7 @@ describe("Event workspace", () => {
     };
     const workspace = createEventWorkspace(transport);
     workspace.load([event]);
-    await expect(workspace.syncOutlook(event.id)).resolves.toEqual({
+    await expect(workspace.openSession(event.id).syncOutlook()).resolves.toEqual({
       kind: "synced",
       event: synced,
     });
@@ -126,7 +128,9 @@ describe("Event workspace", () => {
       syncOutlook: vi.fn(),
       outlookPlan: vi.fn().mockResolvedValue(plan),
     };
-    await expect(createEventWorkspace(transport).outlookPlan("e1")).resolves.toEqual(plan);
+    const workspace = createEventWorkspace(transport);
+    workspace.load([event]);
+    await expect(workspace.openSession("e1").outlookPlan()).resolves.toEqual(plan);
   });
 
   it("publishes a refreshed Event snapshot after a detail command", async () => {
@@ -145,7 +149,7 @@ describe("Event workspace", () => {
     const workspace = createEventWorkspace(transport);
     workspace.load([event]);
 
-    await expect(workspace.createTask("e1", { title: "Briefing" })).resolves.toEqual({
+    await expect(workspace.openSession("e1").createTask({ title: "Briefing" })).resolves.toEqual({
       kind: "saved",
       event: refreshed,
     });

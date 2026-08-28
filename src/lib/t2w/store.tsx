@@ -36,9 +36,6 @@ import {
   createEventWorkspace,
   type CreateEventInput,
   type EventEditingSession,
-  type OutlookFolderPlan,
-  type SaveResult,
-  type SyncResult,
 } from "./event-workspace";
 import { LoginView } from "@/components/t2w/LoginView";
 import {
@@ -56,29 +53,7 @@ type Ctx = State & {
   bereit: boolean;
   ladefehler: string | null;
   neuesEvent: (input: CreateEventInput) => Promise<T2WEvent>;
-  updateEvent: (id: string, patch: Partial<T2WEvent>) => Promise<SaveResult>;
-  syncOutlookFolder: (id: string) => Promise<SyncResult>;
-  getOutlookFolderPlan: (id: string) => Promise<OutlookFolderPlan>;
   openEventSession: (id: string) => EventEditingSession;
-  addEventContact: (id: string, contactId: string, role: string) => Promise<SaveResult>;
-  removeEventContact: (id: string, contactId: string, role: string) => Promise<SaveResult>;
-  updateEventContactRole: (
-    id: string,
-    contactId: string,
-    role: string,
-    nextRole: string,
-  ) => Promise<SaveResult>;
-  createEventTask: (id: string, input: { title: string }) => Promise<SaveResult>;
-  updateEventTask: (
-    id: string,
-    taskId: string,
-    input: { completed?: boolean },
-  ) => Promise<SaveResult>;
-  createEventFile: (id: string, input: { name: string }) => Promise<SaveResult>;
-  createEventActivity: (
-    id: string,
-    input: { channel: string; subject: string },
-  ) => Promise<SaveResult>;
   setSettings: (s: Settings) => Promise<Settings>;
   setSpalten: (c: ColumnKey[]) => void;
   selectionLists: SelectionListSnapshot;
@@ -158,28 +133,6 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     [workspace],
   );
 
-  const updateEvent = useCallback(
-    async (id: string, patch: Partial<T2WEvent>) => {
-      const result = await workspace.save(id, patch);
-      if (result.kind !== "saved")
-        setLadefehler(
-          result.kind === "conflict"
-            ? "Das Event wurde zwischenzeitlich geändert."
-            : "Änderungen konnten nicht dauerhaft gespeichert werden.",
-        );
-      return result;
-    },
-    [workspace],
-  );
-
-  const syncOutlookFolder = useCallback(
-    async (id: string) => {
-      const result = await workspace.syncOutlook(id);
-      return result;
-    },
-    [workspace],
-  );
-
   const setSettings = useCallback(async (settings: Settings) => {
     const saved = await apiUpdateSettings(settings);
     setState((current) => ({ ...current, settings: saved }));
@@ -193,17 +146,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       bereit,
       ladefehler,
       neuesEvent,
-      updateEvent,
-      syncOutlookFolder,
-      getOutlookFolderPlan: workspace.outlookPlan,
       openEventSession: workspace.openSession,
-      addEventContact: workspace.addContact,
-      removeEventContact: workspace.removeContact,
-      updateEventContactRole: workspace.updateContactRole,
-      createEventTask: workspace.createTask,
-      updateEventTask: workspace.updateTask,
-      createEventFile: workspace.createFile,
-      createEventActivity: workspace.createActivity,
       setSettings,
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
       selectionLists,
@@ -220,10 +163,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       bereit,
       ladefehler,
       neuesEvent,
-      updateEvent,
-      syncOutlookFolder,
       setSettings,
-      workspace.outlookPlan,
       workspace.openSession,
       selectionLists,
       selectionWorkspace,
