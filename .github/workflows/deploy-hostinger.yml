@@ -53,7 +53,15 @@ jobs:
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "${{ secrets.HOSTINGER_SSH_KEY }}" > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
-          ssh-keyscan -p "$HOSTINGER_PORT" -H "$HOSTINGER_HOST" >> "$HOME/.ssh/known_hosts"
+          for attempt in 1 2 3; do
+            if ssh-keyscan -T 10 -p "$HOSTINGER_PORT" -H "$HOSTINGER_HOST" >> "$HOME/.ssh/known_hosts"; then
+              exit 0
+            fi
+            echo "SSH-Host-Key konnte nicht ermittelt werden (Versuch $attempt/3)."
+            sleep $((attempt * 5))
+          done
+          echo "SSH-Host-Key nach 3 Versuchen nicht erreichbar."
+          exit 1
 
       - name: Package current commit
         run: git archive --format=tar.gz --output=/tmp/t2w-base-${GITHUB_SHA}.tar.gz HEAD
