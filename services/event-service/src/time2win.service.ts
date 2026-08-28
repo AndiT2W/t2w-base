@@ -63,13 +63,20 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
   private async fetchSnapshot(eventId: number): Promise<Time2winSnapshot> {
     const eventData = await this.request(`/event/${eventId}/eventdata`);
     const source = object(eventData.data ?? eventData);
-    const races = array(source.races).map(object);
+    const event = object(source.event);
+    const races = array(source.races ?? event.races).map(object);
     const raceSnapshots = await Promise.all(races.map(async (race) => {
-      const raceId = number(race.id);
+      const raceData = object(race.race ?? race);
+      const raceId = firstNumber(raceData, ["id", "race_id", "raceId"]);
       const stats = await this.request(`/participants/${eventId}/stats${raceId === null ? "" : `?race_id=${raceId}`}`);
-      return { id: raceId ?? 0, name: string(race.name) ?? `Bewerb ${raceId ?? ""}`.trim(), participantCount: participantCount(stats) };
+      return { id: raceId ?? 0, name: firstString(raceData, ["name", "race_name", "raceName", "title"]) ?? `Bewerb ${raceId ?? ""}`.trim(), participantCount: participantCount(stats) };
     }));
-    return { eventId, name: string(source.name), sportName: string(object(source.sport).name), races: raceSnapshots };
+    return {
+      eventId,
+      name: firstString(event, ["name", "event_name", "eventName"]) ?? firstString(source, ["name", "event_name", "eventName"]),
+      sportName: firstString(object(event.sport ?? source.sport), ["name", "sport_name", "sportName"]),
+      races: raceSnapshots,
+    };
   }
 
   private async request(path: string): Promise<Record<string, unknown>> {
@@ -85,8 +92,10 @@ const object = (value: unknown): Record<string, unknown> =>
 const array = (value: unknown): unknown[] => Array.isArray(value) ? value : [];
 const string = (value: unknown): string | null => typeof value === "string" ? value : null;
 const number = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
+const firstString = (source: Record<string, unknown>, keys: string[]) => keys.map((key) => string(source[key])).find((value): value is string => value !== null) ?? null;
+const firstNumber = (source: Record<string, unknown>, keys: string[]) => keys.map((key) => number(source[key])).find((value): value is number => value !== null) ?? null;
 function participantCount(value: Record<string, unknown>) {
-  const source = object(value.data ?? value);
+  const source = object(object(value.data ?? value).statistics ?? value.data ?? value);
   for (const key of ["participantCount", "participants", "registered", "count"]) {
     const found = number(source[key]);
     if (found !== null) return found;
