@@ -233,13 +233,20 @@ export async function mockEventManagementApi(
         };
         return route.fulfill({ status: 200, json: mockedEvent });
       }
+      const sport = sports.find((candidate) => candidate.id === body.sportId);
+      mockedEvent = {
+        ...mockedEvent,
+        ...body,
+        sport: sport ? { id: sport.id, name: sport.name } : mockedEvent.sport,
+      };
       return route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           ...mockedEvent,
-          organizer: { name: body.organizerName },
-          name: body.name,
+          organizer: body.organizerId
+            ? organizers.find((candidate) => candidate.id === body.organizerId)
+            : mockedEvent.organizer,
         }),
       });
     }

@@ -158,6 +158,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const eventRoles = selectionLists.eventRoles
     .filter((role) => role.active)
     .map((role) => role.name);
+  const sportarten = selectionLists.sports.filter((sport) => sport.active);
 
   useEffect(() => {
     detailWorkspace.accept(event, personen, kunden);
@@ -353,6 +354,21 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   onChange={(e) => set("start", e.target.value)}
                   className="mt-1.5"
                 />
+              </div>
+              <div>
+                <Label>Sportart</Label>
+                <Select value={form.sportartId} onValueChange={(id) => set("sportartId", id)}>
+                  <SelectTrigger aria-label="Sportart" className="mt-1.5">
+                    <SelectValue placeholder="Sportart auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sportarten.map((sport) => (
+                      <SelectItem key={sport.id} value={sport.id}>
+                        {sport.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="d-ende">Enddatum</Label>

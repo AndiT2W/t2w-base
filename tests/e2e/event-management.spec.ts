@@ -408,6 +408,27 @@ test("speichert den Veranstalter der Detailseite über seine Stammdaten-ID", asy
   ).toBeTruthy();
 });
 
+test("zeigt und speichert die Sportart im Event-Detailformular", async ({ page }) => {
+  const requests = await mockApi(page, { sport: { id: "s1", name: "Triathlon" } });
+  await page.goto("/events/260820_demo_event");
+
+  const sportart = page.getByLabel("Sportart");
+  await expect(sportart).toHaveText("Triathlon");
+  await sportart.click();
+  await page.getByRole("option", { name: "Laufen" }).click();
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "PATCH" && JSON.parse(request.body ?? "{}").sportId === "s2",
+    ),
+  ).toBeTruthy();
+
+  await page.reload();
+  await expect(page.getByLabel("Sportart")).toHaveText("Laufen");
+});
+
 test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
