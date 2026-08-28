@@ -11,6 +11,11 @@ export const event = {
   responsible: "Andi",
   participantForecast: 10,
   participantCurrent: null,
+  t2wEventId: null,
+  time2winSyncStatus: "NEVER",
+  time2winLastSuccessAt: null,
+  time2winLastError: null,
+  time2winSnapshot: null,
   notes: "",
   archived: false,
   organizer: { id: "c1", name: "Alter Veranstalter" },
@@ -150,6 +155,22 @@ export async function mockEventManagementApi(
       });
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
+      if (request.url().endsWith("/time2win/sync")) {
+        mockedEvent = {
+          ...mockedEvent,
+          participantCurrent: 300,
+          time2winSyncStatus: "SUCCESS",
+          time2winLastSuccessAt: "2026-08-28T12:00:00.000Z",
+          time2winLastError: null,
+          time2winSnapshot: {
+            eventId: 1082,
+            name: "OstseeMan Triathlon 2027",
+            sportName: "Triathlon",
+            races: [{ id: 7709, name: "OstseeMan Langdistanz", participantCount: 300 }],
+          },
+        };
+        return route.fulfill({ status: 200, json: mockedEvent });
+      }
       if (request.url().endsWith("/outlook-folder/sync")) {
         mockedEvent = {
           ...mockedEvent,

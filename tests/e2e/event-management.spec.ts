@@ -79,6 +79,20 @@ test("zeigt vor und nach Outlook-Sync, ob der Ordner neu erstellt oder bereits v
   await expect(page.getByLabel("Outlook-Ordnerstatus")).toContainText("Ordner vorhanden");
 });
 
+test("zeigt synchronisierte TIME2WIN-Teilnehmer im Event", async ({ page }) => {
+  await mockApi(page, { t2wEventId: 1082, time2winSyncStatus: "NEVER" });
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "TIME2WIN" }).click();
+
+  await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
+
+  await expect(page.getByText("Gemeldete TN:", { exact: false }).first()).toContainText("300");
+  await expect(page.getByText("OstseeMan Langdistanz", { exact: true })).toBeVisible();
+  await expect(
+    page.locator("ul").getByText("Gemeldete TN: 300", { exact: true }),
+  ).toBeVisible();
+});
+
 test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");

@@ -74,7 +74,10 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
     return {
       eventId,
       name: firstString(event, ["name", "event_name", "eventName"]) ?? firstString(source, ["name", "event_name", "eventName"]),
-      sportName: firstString(object(event.sport ?? source.sport), ["name", "sport_name", "sportName"]),
+      sportName:
+        firstString(object(event.sport ?? source.sport), ["name", "sport_name", "sportName"]) ??
+        firstString(event, ["type_name", "sport_name", "sportName"]) ??
+        firstString(source, ["type_name", "sport_name", "sportName"]),
       races: raceSnapshots,
     };
   }
@@ -95,10 +98,16 @@ const number = (value: unknown): number | null => typeof value === "number" && N
 const firstString = (source: Record<string, unknown>, keys: string[]) => keys.map((key) => string(source[key])).find((value): value is string => value !== null) ?? null;
 const firstNumber = (source: Record<string, unknown>, keys: string[]) => keys.map((key) => number(source[key])).find((value): value is number => value !== null) ?? null;
 function participantCount(value: Record<string, unknown>) {
-  const source = object(object(value.data ?? value).statistics ?? value.data ?? value);
-  for (const key of ["participantCount", "participants", "registered", "count"]) {
-    const found = number(source[key]);
-    if (found !== null) return found;
+  const data = object(value.data ?? value);
+  const sources = [
+    object(data.statistics ?? data),
+    ...array(data.races).map(object),
+  ];
+  for (const source of sources) {
+    for (const key of ["participantCount", "participants_count", "participants", "registered", "count"]) {
+      const found = number(source[key]);
+      if (found !== null) return found;
+    }
   }
   return null;
 }

@@ -72,4 +72,50 @@ describe("Time2winService", () => {
       }),
     }));
   });
+
+  it("reads the flat production response with participants_count", async () => {
+    process.env.TIME2WIN_API_KEY = "test-key";
+    const prisma = {
+      event: {
+        findUniqueOrThrow: vi.fn().mockResolvedValue(event),
+        update: vi.fn().mockResolvedValue(event),
+        findMany: vi.fn(),
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            event_name: "OstseeMan Triathlon 2027",
+            type_name: "Triathlon",
+            races: [{ race_id: 7709, race_name: "OstseeMan Langdistanz" }],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            races: [{ race_id: 7709, participants_count: 300, participants_max: 300 }],
+            breakdowns: null,
+          }),
+        }),
+    );
+    const service = new Time2winService(prisma as never);
+
+    await service.syncEvent(event.id);
+
+    expect(prisma.event.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          participantCurrent: 300,
+          time2winSnapshot: expect.objectContaining({
+            sportName: "Triathlon",
+            races: [{ id: 7709, name: "OstseeMan Langdistanz", participantCount: 300 }],
+          }),
+        }),
+      }),
+    );
+  });
 });
