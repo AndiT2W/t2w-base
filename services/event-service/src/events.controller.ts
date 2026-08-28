@@ -17,6 +17,7 @@ import { EventStatus } from "@prisma/client";
 import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
 import { EventMutationConflict, EventMutations } from "./event-mutations.js";
+import { Time2winService } from "./time2win.service.js";
 
 export class CreateEventDto {
   @IsOptional() @IsString() eventCode?: string;
@@ -46,6 +47,7 @@ export class EventsController {
     private readonly prisma: PrismaService,
     private readonly outlookFolders: OutlookFolderService,
     private readonly eventMutations: EventMutations,
+    private readonly time2win: Time2winService,
   ) {}
 
   @Post(":id/outlook-folder/sync")
@@ -123,6 +125,11 @@ export class EventsController {
         throw new ConflictException("EVENT_VERSION_CONFLICT");
       throw error;
     });
+  }
+
+  @Post(":id/time2win/sync")
+  syncTime2win(@Param("id", ParseUUIDPipe) id: string) {
+    return this.time2win.syncEvent(id);
   }
 
   @Post(":id/contacts/:contactId")

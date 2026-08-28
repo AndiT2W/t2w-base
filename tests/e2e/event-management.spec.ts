@@ -594,6 +594,36 @@ test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ pa
   await expect(page.getByText("Status: NEVER")).toBeVisible();
 });
 
+test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben", async ({ page }) => {
+  await mockApi(page, { t2wEventId: 42, participantForecast: 10, participantCurrent: 4 });
+  await page.route("**/api/v1/events/11111111-1111-4111-8111-111111111111/time2win/sync", async (route) =>
+    route.fulfill({
+      json: {
+        ...event,
+        t2wEventId: 42,
+        participantForecast: 10,
+        participantCurrent: 21,
+        time2winSyncStatus: "SUCCESS",
+        time2winLastSuccessAt: "2026-08-28T12:00:00.000Z",
+        time2winLastError: null,
+        time2winSnapshot: {
+          eventId: 42,
+          name: "TIME2WIN Testevent",
+          sportName: "Laufen",
+          races: [{ id: 7, name: "Hauptbewerb", participantCount: 21 }],
+        },
+      },
+    }),
+  );
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "TIME2WIN" }).click();
+  await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
+  await expect(page.getByText("TIME2WIN Testevent")).toBeVisible();
+  await expect(page.getByText("Hauptbewerb")).toBeVisible();
+  await expect(page.getByText("Gemeldete TN: 21")).toHaveCount(2);
+  await expect(page.getByText("TIME2WIN-Teilnehmer synchronisiert.")).toBeVisible();
+});
+
 test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/events/260820_demo_event");

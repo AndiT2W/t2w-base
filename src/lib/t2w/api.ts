@@ -31,6 +31,7 @@ type ApiEvent = {
   time2winSyncStatus?: string;
   time2winLastSuccessAt?: string | null;
   time2winLastError?: string | null;
+  time2winSnapshot?: T2WEvent["time2winSnapshot"];
   contacts?: { role: string; contact: { id: string; name: string; email: string | null; phone: string | null } }[];
   tasks?: { id: string; title: string; dueAt: string | null; responsible: string | null; completed: boolean }[];
   files?: { id: string; name: string; size: string | null; updatedAt: string }[];
@@ -90,6 +91,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     time2winSyncStatus: event.time2winSyncStatus,
     time2winLastSuccessAt: event.time2winLastSuccessAt ?? null,
     time2winLastError: event.time2winLastError ?? null,
+    time2winSnapshot: event.time2winSnapshot ?? null,
     auszahlungsempfaengerId: event.payoutRecipient?.id ?? event.organizer?.id ?? null,
     rechnungsempfaengerIds: event.invoiceRecipients?.map((recipient) => recipient.organizer.id) ?? (event.organizer?.id ? [event.organizer.id] : []),
     kontakte: (event.contacts ?? []).map(({ role, contact }) => ({ id: contact.id, name: contact.name, rolle: role, email: contact.email ?? "", telefon: contact.phone ?? "" })),
@@ -299,6 +301,12 @@ export async function apiSyncOutlookFolder(id: string, input?: { mailbox?: strin
     body: JSON.stringify(input ?? {}),
   });
   if (!response.ok) throw new Error("OUTLOOK_FOLDER_SYNC_FAILED");
+  return mapApiEvent((await response.json()) as ApiEvent);
+}
+
+export async function apiSyncTime2win(id: string) {
+  const response = await fetch(`/api/v1/events/${id}/time2win/sync`, { method: "POST", credentials: "include" });
+  if (!response.ok) throw new Error("TIME2WIN_SYNC_FAILED");
   return mapApiEvent((await response.json()) as ApiEvent);
 }
 

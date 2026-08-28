@@ -154,6 +154,7 @@ model Event {
   time2winSyncStatus    SyncStatus  @default(NEVER)
   time2winLastSuccessAt DateTime?
   time2winLastError     String?
+  time2winSnapshot      Json?
   version               Int         @default(1)
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt

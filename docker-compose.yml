@@ -46,6 +46,8 @@ services:
       OUTLOOK_CLIENT_ID: ${OUTLOOK_CLIENT_ID:-}
       OUTLOOK_CLIENT_SECRET: ${OUTLOOK_CLIENT_SECRET:-}
       OUTLOOK_GRAPH_ACCESS_TOKEN: ${OUTLOOK_GRAPH_ACCESS_TOKEN:-}
+      TIME2WIN_API_KEY: ${TIME2WIN_API_KEY:-}
+      TIME2WIN_API_BASE_URL: ${TIME2WIN_API_BASE_URL:-https://time2win.at/api/1.1}
     depends_on:
       event-db: { condition: service_started }
     networks: [event_internal, traefik_proxy]

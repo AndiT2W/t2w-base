@@ -11,6 +11,7 @@ import { SettingsController } from "./settings.controller.js";
 import { OutlookModule } from "./outlook/outlook.module.js";
 import { EventMutations } from "./event-mutations.js";
 import { PrismaEventMutationAdapter } from "./prisma-event-mutation.adapter.js";
+import { Time2winService } from "./time2win.service.js";
 
 @Module({
   imports: [OutlookModule],
@@ -23,6 +24,7 @@ import { PrismaEventMutationAdapter } from "./prisma-event-mutation.adapter.js";
   ],
   providers: [
     PrismaService,
+    Time2winService,
     AuthService,
     {
       provide: EventMutations,

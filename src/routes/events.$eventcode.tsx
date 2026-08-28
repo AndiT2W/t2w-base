@@ -36,6 +36,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
+import { apiSyncTime2win } from "@/lib/t2w/api";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import type { Kunde } from "@/lib/crm/types";
@@ -144,6 +145,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   );
   const { form } = detail;
   const [quartalsDialog, setQuartalsDialog] = useState(false);
+  const [time2winSyncing, setTime2winSyncing] = useState(false);
   const eventRoles = selectionLists.eventRoles
     .filter((role) => role.active)
     .map((role) => role.name);
@@ -180,6 +182,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     const result = await detailWorkspace.syncOutlook();
     if (result.kind === "synced") toast.success("Outlook-Ordner synchronisiert.");
     else toast.error("Outlook-Ordner konnte nicht synchronisiert werden.");
+  }
+  async function time2winSynchronisieren() {
+    if (!form.t2wEventId) return;
+    setTime2winSyncing(true);
+    try {
+      const synced = await apiSyncTime2win(form.id);
+      detailWorkspace.accept(synced, personen, kunden);
+      toast.success("TIME2WIN-Teilnehmer synchronisiert.");
+    } catch {
+      toast.error("TIME2WIN-Synchronisierung fehlgeschlagen. Der letzte erfolgreiche Wert bleibt erhalten.");
+    } finally {
+      setTime2winSyncing(false);
+    }
   }
 
   async function addEventContact(personId: string, role: string) {
@@ -553,6 +568,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 />
               </div>
               <div className="text-sm">
+                <p>Verknüpftes Event: <strong>{form.time2winSnapshot?.name ?? "—"}</strong></p>
+                <p>TIME2WIN-Sportart: {form.time2winSnapshot?.sportName ?? "—"}</p>
                 <p>
                   Gemeldete TN: <strong>{form.teilnehmerwerte?.aktuell ?? "—"}</strong>
                 </p>
@@ -566,6 +583,26 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 {form.time2winLastError && (
                   <p className="text-destructive">{form.time2winLastError}</p>
                 )}
+                <Button
+                  type="button"
+                  className="mt-3"
+                  disabled={!form.t2wEventId || time2winSyncing}
+                  onClick={() => void time2winSynchronisieren()}
+                >
+                  {time2winSyncing ? "Synchronisiere …" : "Jetzt synchronisieren"}
+                </Button>
+              </div>
+              <div className="sm:col-span-2">
+                <h3 className="text-sm font-medium text-foreground">Bewerbe</h3>
+                {form.time2winSnapshot?.races.length ? (
+                  <ul className="mt-2 divide-y rounded-md border border-border">
+                    {form.time2winSnapshot.races.map((race) => (
+                      <li key={race.id} className="flex justify-between gap-3 px-3 py-2 text-sm">
+                        <span>{race.name}</span><span>Gemeldete TN: <strong>{race.participantCount ?? "—"}</strong></span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="mt-2 text-sm text-muted-foreground">Noch keine TIME2WIN-Bewerbe geladen.</p>}
               </div>
             </CardContent>
           </Card>
