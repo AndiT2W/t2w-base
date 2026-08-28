@@ -656,7 +656,8 @@ test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben
   await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
   await expect(page.getByText("TIME2WIN Testevent")).toBeVisible();
   await expect(page.getByText("Hauptbewerb")).toBeVisible();
-  await expect(page.getByText("Gemeldete TN: 21")).toHaveCount(2);
+  await expect(page.getByText("Gemeldete TN: 21")).toBeVisible();
+  await expect(page.getByRole("table", { name: "TIME2WIN Teilnehmer nach Bewerb" })).toContainText("21");
   await expect(page.getByText("TIME2WIN-Teilnehmer synchronisiert.")).toBeVisible();
 });
 

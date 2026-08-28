@@ -12,6 +12,8 @@ The Event workspace owns event participant and recipient rules: organizer assign
 
 The Event detail workspace coordinates a single Event detail interaction. It owns searches, selections, recipient projections, persistence progress, and user-facing outcomes while delegating Event persistence to an Event editing session. Visual presentation state such as tabs and dialogs is not part of the Event detail workspace.
 
+A TIME2WIN synchronization outcome is a user-facing result of refreshing the linked TIME2WIN Event. A failed outcome does not block Event editing and preserves the last successful TIME2WIN snapshot.
+
 ## Table preferences
 
 Table behavior consists of generic column definitions, persisted visibility, locale-aware sorting, stable ordering, and preference recovery. Domain-specific filtering remains owned by the containing workspace. Browser storage is an adapter, not part of the table behavior’s core interface.
@@ -19,6 +21,8 @@ Table behavior consists of generic column definitions, persisted visibility, loc
 ## Selection lists
 
 A selection list is a centrally managed set of domain-named values offered as choices in Event workflows. Values can be activated or deactivated without rewriting existing Event data. Active values are available for selection; management views also include inactive values. Sport types and Event roles are selection lists.
+
+An inactive Event role remains visible for an existing Event-contact assignment, but is not available for a new assignment.
 
 ## Architectural vocabulary
 

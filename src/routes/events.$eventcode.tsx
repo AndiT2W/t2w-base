@@ -41,11 +41,11 @@ import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { useCrm } from "@/lib/crm/store";
+import { eventContactRoleChoices, selectionListChoices } from "@/lib/t2w/selection-list-workspace";
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
-import { apiSyncTime2win } from "@/lib/t2w/api";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import type { Kunde } from "@/lib/crm/types";
@@ -154,11 +154,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   );
   const { form } = detail;
   const [quartalsDialog, setQuartalsDialog] = useState(false);
-  const [time2winSyncing, setTime2winSyncing] = useState(false);
-  const eventRoles = selectionLists.eventRoles
-    .filter((role) => role.active)
-    .map((role) => role.name);
-  const sportarten = selectionLists.sports.filter((sport) => sport.active);
+  const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
 
   useEffect(() => {
     detailWorkspace.accept(event, personen, kunden);
@@ -194,17 +190,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     else toast.error("Outlook-Ordner konnte nicht synchronisiert werden.");
   }
   async function time2winSynchronisieren() {
-    if (!form.t2wEventId) return;
-    setTime2winSyncing(true);
-    try {
-      const synced = await apiSyncTime2win(form.id);
-      detailWorkspace.accept(synced, personen, kunden);
-      toast.success("TIME2WIN-Teilnehmer synchronisiert.");
-    } catch {
-      toast.error("TIME2WIN-Synchronisierung fehlgeschlagen. Der letzte erfolgreiche Wert bleibt erhalten.");
-    } finally {
-      setTime2winSyncing(false);
-    }
+    const result = await detailWorkspace.syncTime2win();
+    if (result.kind === "synced") toast.success(detail.time2winSyncMessage ?? "TIME2WIN-Teilnehmer synchronisiert.");
+    else toast.error(detail.time2winSyncMessage ?? "TIME2WIN-Synchronisierung fehlgeschlagen.");
   }
 
   async function addEventContact(personId: string, role: string) {
@@ -611,10 +599,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 <Button
                   type="button"
                   className="mt-3"
-                  disabled={!form.t2wEventId || time2winSyncing}
+                  disabled={!form.t2wEventId || detail.time2winSyncing}
                   onClick={() => void time2winSynchronisieren()}
                 >
-                  {time2winSyncing ? "Synchronisiere …" : "Jetzt synchronisieren"}
+                  {detail.time2winSyncing ? "Synchronisiere …" : "Jetzt synchronisieren"}
                 </Button>
               </div>
               <div className="sm:col-span-2">
@@ -853,7 +841,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {[...new Set([detail.contactRole, "Kontakt", ...eventRoles])].map((role) => (
+                      {eventContactRoleChoices(selectionLists.eventRoles, detail.contactRole).map((role) => (
                         <SelectItem key={role} value={role}>
                           {role}
                         </SelectItem>
@@ -897,7 +885,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {[...new Set([k.rolle, "Kontakt", ...eventRoles])].map((role) => (
+                                {eventContactRoleChoices(selectionLists.eventRoles, k.rolle).map((role) => (
                                   <SelectItem key={role} value={role}>
                                     {role}
                                   </SelectItem>

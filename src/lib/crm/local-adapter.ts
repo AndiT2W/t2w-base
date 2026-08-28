@@ -39,7 +39,7 @@ export function createLocalCrmAdapter(
     },
     async link(personId, kundeId) {
       const state = read();
-      return write({
+      write({
         personen: state.personen.map((person) =>
           person.id === personId && !person.kundenIds.includes(kundeId)
             ? { ...person, kundenIds: [...person.kundenIds, kundeId] }
@@ -54,7 +54,7 @@ export function createLocalCrmAdapter(
     },
     async unlink(personId, kundeId) {
       const state = read();
-      return write({
+      write({
         personen: state.personen.map((person) =>
           person.id === personId
             ? { ...person, kundenIds: person.kundenIds.filter((id) => id !== kundeId) }

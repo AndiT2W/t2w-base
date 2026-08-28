@@ -51,8 +51,16 @@ describe("CRM workspace", () => {
   });
 
   it("creates a Person and Kundenprofil as one workspace transition without stale lookup", async () => {
+    const withPerson = { personen: [person], kunden: [] };
+    const complete = {
+      personen: [{ ...person, kundenprofilId: "k1", kundenIds: ["k1"] }],
+      kunden: [kunde],
+    };
     const adapter = {
-      load: vi.fn().mockResolvedValue({ personen: [], kunden: [] }),
+      load: vi.fn()
+        .mockResolvedValueOnce({ personen: [], kunden: [] })
+        .mockResolvedValueOnce(withPerson)
+        .mockResolvedValueOnce(complete),
       createPerson: vi.fn().mockResolvedValue(person),
       createKunde: vi.fn().mockResolvedValue(kunde),
     } as unknown as CrmModule;
@@ -66,6 +74,7 @@ describe("CRM workspace", () => {
       personen: [expect.objectContaining({ kundenprofilId: "k1", kundenIds: ["k1"] })],
       kunden: [expect.objectContaining({ id: "k1", kontaktIds: ["p1"] })],
     });
+    expect(adapter.load).toHaveBeenCalledTimes(3);
   });
 
   it("publishes no optimistic state when persistence fails", async () => {

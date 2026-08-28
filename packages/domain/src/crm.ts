@@ -63,8 +63,8 @@ export type KundeInput = Omit<Kunde, "id" | "kontaktIds" | "events">;
 
 export interface CrmAdapter {
   load(): Promise<CrmState>;
-  link(personId: string, kundeId: string): Promise<CrmState>;
-  unlink(personId: string, kundeId: string): Promise<CrmState>;
+  link(personId: string, kundeId: string): Promise<void>;
+  unlink(personId: string, kundeId: string): Promise<void>;
   createPerson(input: PersonInput): Promise<Person>;
   createKunde(input: KundeInput): Promise<Kunde>;
   updatePerson(person: Person, patch: Partial<Person>): Promise<Person>;
@@ -233,12 +233,14 @@ export function createCrmWorkspace(adapter: CrmAdapter) {
     publish();
     throw cause;
   };
-  const mutate = async (operation: () => Promise<CrmState>) => {
+  const persist = async <T>(operation: () => Promise<T>, message = "Änderung konnte nicht gespeichert werden.") => {
     error = null;
     try {
-      replace(await operation());
+      const value = await operation();
+      replace(await adapter.load());
+      return value;
     } catch (cause) {
-      fail("Änderung konnte nicht gespeichert werden.", cause);
+      return fail(message, cause);
     }
   };
   const findDuplicate = (vorname: string, nachname: string, email: string) =>
@@ -268,39 +270,10 @@ export function createCrmWorkspace(adapter: CrmAdapter) {
       }
     },
     async createPerson(input: PersonInput) {
-      try {
-        const person = await adapter.createPerson(input);
-        replace({ ...state, personen: [...state.personen, person] });
-        return person;
-      } catch (cause) {
-        return fail("Änderung konnte nicht gespeichert werden.", cause);
-      }
+      return persist(() => adapter.createPerson(input));
     },
     async createKunde(input: KundeInput) {
-      try {
-        const kunde = await adapter.createKunde(input);
-        const personen = input.personId
-          ? state.personen.map((person) =>
-              person.id === input.personId
-                ? {
-                    ...person,
-                    kundenprofilId: kunde.id,
-                    kundenIds: [...new Set([...person.kundenIds, kunde.id])],
-                  }
-                : person,
-            )
-          : state.personen;
-        replace({
-          personen,
-          kunden: [
-            ...state.kunden,
-            { ...kunde, kontaktIds: input.personId ? [input.personId] : kunde.kontaktIds },
-          ],
-        });
-        return kunde;
-      } catch (cause) {
-        return fail("Änderung konnte nicht gespeichert werden.", cause);
-      }
+      return persist(() => adapter.createKunde(input));
     },
     async createPersonAndKunde(
       personInput: PersonInput,
@@ -314,62 +287,28 @@ export function createCrmWorkspace(adapter: CrmAdapter) {
     async updatePerson(id: string, patch: Partial<Person>) {
       const person = state.personen.find((item) => item.id === id);
       if (!person) return;
-      try {
-        const saved = await adapter.updatePerson(person, patch);
-        replace({
-          ...state,
-          personen: state.personen.map((item) =>
-            item.id === id
-              ? { ...item, ...saved, kundenIds: item.kundenIds, eventRollen: item.eventRollen }
-              : item,
-          ),
-        });
-      } catch (cause) {
-        fail("Änderung konnte nicht gespeichert werden.", cause);
-      }
+      await persist(() => adapter.updatePerson(person, patch));
     },
     async updateKunde(id: string, patch: Partial<Kunde>) {
       const kunde = state.kunden.find((item) => item.id === id);
       if (!kunde) return;
-      try {
-        const saved = await adapter.updateKunde(kunde, patch);
-        replace({
-          ...state,
-          kunden: state.kunden.map((item) =>
-            item.id === id
-              ? { ...item, ...saved, kontaktIds: item.kontaktIds, events: item.events }
-              : item,
-          ),
-        });
-      } catch (cause) {
-        fail("Änderung konnte nicht gespeichert werden.", cause);
-      }
+      await persist(() => adapter.updateKunde(kunde, patch));
     },
     async deletePerson(id: string) {
       const person = state.personen.find((item) => item.id === id);
       if (!person) return;
-      try {
-        await adapter.deletePerson(person);
-        replace({ ...state, personen: state.personen.filter((item) => item.id !== id) });
-      } catch (cause) {
-        fail("Kontakt ist noch referenziert und kann nicht gelöscht werden.", cause);
-      }
+      await persist(() => adapter.deletePerson(person), "Kontakt ist noch referenziert und kann nicht gelöscht werden.");
     },
     async deleteKunde(id: string) {
       const kunde = state.kunden.find((item) => item.id === id);
       if (!kunde) return;
-      try {
-        await adapter.deleteKunde(kunde);
-        replace({ ...state, kunden: state.kunden.filter((item) => item.id !== id) });
-      } catch (cause) {
-        fail("Kunde ist noch referenziert und kann nicht gelöscht werden.", cause);
-      }
+      await persist(() => adapter.deleteKunde(kunde), "Kunde ist noch referenziert und kann nicht gelöscht werden.");
     },
     link(personId: string, kundeId: string) {
-      return mutate(() => adapter.link(personId, kundeId));
+      return persist(() => adapter.link(personId, kundeId));
     },
     unlink(personId: string, kundeId: string) {
-      return mutate(() => adapter.unlink(personId, kundeId));
+      return persist(() => adapter.unlink(personId, kundeId));
     },
     kundenVonPerson(person: Person) {
       return state.kunden.filter((kunde) => person.kundenIds.includes(kunde.id));

@@ -10,6 +10,8 @@ export type EventDetailSnapshot = DraftInputs & {
   outlookPlan: OutlookFolderPlan | null;
   outlookSyncing: boolean;
   outlookSyncMessage: string | null;
+  time2winSyncing: boolean;
+  time2winSyncMessage: string | null;
   visibleContacts: Person[];
   organizerContacts: Person[];
   payoutRecipientId?: string | null;
@@ -29,6 +31,8 @@ export function createEventDetailWorkspace(
   let outlookPlan: OutlookFolderPlan | null = null;
   let outlookSyncing = false;
   let outlookSyncMessage: string | null = null;
+  let time2winSyncing = false;
+  let time2winSyncMessage: string | null = null;
   let inputs: DraftInputs = {
     contactId: "",
     contactRole: "Kontakt",
@@ -54,6 +58,8 @@ export function createEventDetailWorkspace(
       outlookPlan,
       outlookSyncing,
       outlookSyncMessage,
+      time2winSyncing,
+      time2winSyncMessage,
       organizerContacts: event.veranstalterId
         ? persons.filter((person) => person.kundenIds.includes(event.veranstalterId!))
         : [],
@@ -133,6 +139,24 @@ export function createEventDetailWorkspace(
         : "Outlook-Ordner konnte nicht synchronisiert werden.";
       publish();
       return result;
+    },
+    async syncTime2win() {
+      time2winSyncing = true;
+      time2winSyncMessage = null;
+      publish();
+      try {
+        const result = await session.syncTime2win();
+        if (result.kind !== "synced") throw result.error;
+        event = result.event;
+        time2winSyncMessage = "TIME2WIN-Teilnehmer synchronisiert.";
+        return result;
+      } catch {
+        time2winSyncMessage = "TIME2WIN-Synchronisierung fehlgeschlagen. Der letzte erfolgreiche Wert bleibt erhalten.";
+        return { kind: "failed" as const };
+      } finally {
+        time2winSyncing = false;
+        publish();
+      }
     },
     addEventContact(personId: string, role: string) {
       if (!persons.some((person) => person.id === personId)) return Promise.reject(new Error("PERSON_NOT_FOUND"));

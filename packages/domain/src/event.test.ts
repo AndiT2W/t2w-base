@@ -50,4 +50,19 @@ describe("Event workspace editing lifecycle", () => {
     expect(session.snapshot().name).toBe("Local draft");
     expect(workspace.events()).toEqual([event]);
   });
+
+  it("replaces the Event session and collection after a TIME2WIN sync", async () => {
+    const refreshed = { ...event, version: 4, name: "TIME2WIN snapshot" };
+    const persistence = transport({ syncTime2win: vi.fn().mockResolvedValue(refreshed) });
+    const workspace = createEventWorkspace(persistence);
+    workspace.load([event]);
+    const session = workspace.openSession(event.id);
+
+    await expect(session.syncTime2win()).resolves.toEqual({
+      kind: "synced",
+      event: refreshed,
+    });
+    expect(session.snapshot()).toEqual(refreshed);
+    expect(workspace.events()).toEqual([refreshed]);
+  });
 });

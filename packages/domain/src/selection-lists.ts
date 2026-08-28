@@ -19,6 +19,18 @@ const normalizeName = (name: string) => {
 const sortValues = (values: SelectionListValue[]) =>
   [...values].sort((left, right) => left.name.localeCompare(right.name, "de"));
 
+/**
+ * Returns selectable values while preserving an already assigned inactive value.
+ * New assignments remain limited to active values.
+ */
+export const selectionListChoices = (
+  values: SelectionListValue[],
+  assignedId?: string,
+) => values.filter((value) => value.active || value.id === assignedId);
+
+export const eventContactRoleChoices = (values: SelectionListValue[], assignedRole?: string) =>
+  [...new Set([...(assignedRole ? [assignedRole] : []), "Kontakt", ...values.filter((value) => value.active).map((value) => value.name)])];
+
 export class SelectionLists {
   constructor(private readonly adapter: SelectionListAdapter) {}
 
@@ -51,7 +63,7 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
   return {
     snapshot: () => snapshot,
     subscribe(subscriber: () => void) { subscribers.add(subscriber); return () => subscribers.delete(subscriber); },
-    active(kind: SelectionListKind) { return snapshot[kind].filter((value) => value.active); },
+    active(kind: SelectionListKind) { return selectionListChoices(snapshot[kind]); },
     async load() {
       const [sports, eventRoles] = await Promise.all([
         lists.list("sports", true),

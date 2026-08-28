@@ -12,6 +12,7 @@ import { OutlookModule } from "./outlook/outlook.module.js";
 import { EventMutations } from "./event-mutations.js";
 import { PrismaEventMutationAdapter } from "./prisma-event-mutation.adapter.js";
 import { Time2winService } from "./time2win.service.js";
+import { HttpTime2winAdapter, TIME2WIN_ADAPTER } from "./time2win.adapter.js";
 
 @Module({
   imports: [OutlookModule],
@@ -25,6 +26,7 @@ import { Time2winService } from "./time2win.service.js";
   providers: [
     PrismaService,
     Time2winService,
+    { provide: TIME2WIN_ADAPTER, useClass: HttpTime2winAdapter },
     AuthService,
     {
       provide: EventMutations,

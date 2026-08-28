@@ -142,15 +142,13 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
       ]);
       return { personen: personen.map(mapPerson), kunden: kunden.map(mapKunde) };
     },
-    async link(personId: string, kundeId: string): Promise<CrmState> {
+    async link(personId: string, kundeId: string): Promise<void> {
       await json(request, `/api/v1/organizers/${kundeId}/contacts/${personId}`, { method: "PUT" });
-      return this.load();
     },
-    async unlink(personId: string, kundeId: string): Promise<CrmState> {
+    async unlink(personId: string, kundeId: string): Promise<void> {
       await json(request, `/api/v1/organizers/${kundeId}/contacts/${personId}`, {
         method: "DELETE",
       });
-      return this.load();
     },
     async createPerson(input: PersonInput): Promise<Person> {
       return mapPerson(

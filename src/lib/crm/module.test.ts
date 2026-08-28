@@ -127,10 +127,7 @@ describe("CRM module", () => {
     expect(state.personen[0].kundenIds).toEqual([]);
     release();
 
-    await expect(linking).resolves.toEqual({
-      personen: [expect.objectContaining({ kundenIds: ["c1"] })],
-      kunden: [expect.objectContaining({ kontaktIds: ["p1"] })],
-    });
+    await expect(linking).resolves.toBeUndefined();
     expect(request).toHaveBeenCalledWith(
       "/api/v1/organizers/c1/contacts/p1",
       expect.objectContaining({ method: "PUT" }),
@@ -188,7 +185,8 @@ describe("CRM module", () => {
     const seed = { personen: [statePerson()], kunden: [stateKunde()] };
     const local = createLocalCrmAdapter(storage, "crm-test", seed);
 
-    const linked = await local.link("p1", "c1");
+    await local.link("p1", "c1");
+    const linked = await local.load();
     expect(linked.personen[0].kundenIds).toEqual(["c1"]);
     expect(linked.kunden[0].kontaktIds).toEqual(["p1"]);
 

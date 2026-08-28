@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { SelectionLists, createSelectionListWorkspace, type SelectionListAdapter } from "./selection-lists.js";
+import {
+  SelectionLists,
+  createSelectionListWorkspace,
+  eventContactRoleChoices,
+  selectionListChoices,
+  type SelectionListAdapter,
+} from "./selection-lists.js";
 
 const values = {
   sports: [{ id: "s1", name: "Triathlon", active: true }],
@@ -12,6 +18,27 @@ const adapter = (): SelectionListAdapter => ({
 });
 
 describe("Selection lists", () => {
+  it("offers active values and retains an assigned inactive value", () => {
+    const choices = selectionListChoices(
+      [
+        { id: "s1", name: "Triathlon", active: true },
+        { id: "s2", name: "Laufen", active: false },
+      ],
+      "s2",
+    );
+
+    expect(choices.map((choice) => choice.id)).toEqual(["s1", "s2"]);
+  });
+
+  it("offers inactive Event roles only for an existing assignment", () => {
+    const roles = [
+      { id: "r1", name: "Anmeldung", active: true },
+      { id: "r2", name: "Finanz", active: false },
+    ];
+    expect(eventContactRoleChoices(roles)).toEqual(["Kontakt", "Anmeldung"]);
+    expect(eventContactRoleChoices(roles, "Finanz")).toEqual(["Finanz", "Kontakt", "Anmeldung"]);
+  });
+
   it("owns active visibility for every registered kind", async () => {
     const lists = new SelectionLists(adapter());
     await expect(lists.list("eventRoles")).resolves.toEqual([]);
