@@ -1,8 +1,14 @@
 import type { Kunde, Person } from "@/lib/crm/types";
-import type { EventEditingSession, OutlookFolderPlan, SaveResult, SyncResult } from "./event-workspace";
+import type {
+  EventEditingSession,
+  OutlookFolderPlan,
+  SaveResult,
+  SyncResult,
+} from "./event-workspace";
 import type { T2WEvent } from "./types";
 
-type DraftInputKey = "contactSearch" | "invoiceRecipientSearch" | "newTask" | "newFile" | "newActivity";
+type DraftInputKey =
+  "contactSearch" | "invoiceRecipientSearch" | "newTask" | "newFile" | "newActivity";
 type DraftInputs = Record<DraftInputKey, string> & { contactId: string; contactRole: string };
 
 export type EventDetailSnapshot = DraftInputs & {
@@ -63,9 +69,13 @@ export function createEventDetailWorkspace(
       organizerContacts: event.veranstalterId
         ? persons.filter((person) => person.kundenIds.includes(event.veranstalterId!))
         : [],
-      visibleContacts: persons.filter((person) =>
-        !form.kontakte.some((contact) => contact.id === person.id) &&
-        (!contactQuery || `${person.vorname} ${person.nachname} ${person.email}`.toLocaleLowerCase("de").includes(contactQuery)),
+      visibleContacts: persons.filter(
+        (person) =>
+          !form.kontakte.some((contact) => contact.id === person.id) &&
+          (!contactQuery ||
+            `${person.vorname} ${person.nachname} ${person.email}`
+              .toLocaleLowerCase("de")
+              .includes(contactQuery)),
       ),
       payoutRecipientId,
       payoutRecipient: customers.find((customer) => customer.id === payoutRecipientId),
@@ -90,7 +100,10 @@ export function createEventDetailWorkspace(
 
   return {
     snapshot: () => snapshot,
-    subscribe(subscriber: () => void) { subscribers.add(subscriber); return () => subscribers.delete(subscriber); },
+    subscribe(subscriber: () => void) {
+      subscribers.add(subscriber);
+      return () => subscribers.delete(subscriber);
+    },
     accept(eventSnapshot: T2WEvent, nextPersons: Person[], nextCustomers: Kunde[]) {
       event = eventSnapshot;
       persons = nextPersons;
@@ -98,7 +111,9 @@ export function createEventDetailWorkspace(
       session.accept(eventSnapshot);
       publish();
     },
-    update<K extends keyof T2WEvent>(key: K, value: T2WEvent[K]) { session.update({ [key]: value }); },
+    update<K extends keyof T2WEvent>(key: K, value: T2WEvent[K]) {
+      session.update({ [key]: value });
+    },
     setInput<K extends keyof DraftInputs>(key: K, value: DraftInputs[K]) {
       inputs = { ...inputs, [key]: value };
       publish();
@@ -114,8 +129,11 @@ export function createEventDetailWorkspace(
       session.update({ rechnungsempfaengerIds: ids });
     },
     async refreshOutlookPlan() {
-      try { outlookPlan = await session.outlookPlan(); }
-      catch { outlookPlan = null; }
+      try {
+        outlookPlan = await session.outlookPlan();
+      } catch {
+        outlookPlan = null;
+      }
       publish();
       return outlookPlan;
     },
@@ -130,13 +148,17 @@ export function createEventDetailWorkspace(
       publish();
       const result = await session.syncOutlook();
       if (result.kind === "synced") {
-        try { outlookPlan = await session.outlookPlan(); }
-        catch { outlookPlan = null; }
+        try {
+          outlookPlan = await session.outlookPlan();
+        } catch {
+          outlookPlan = null;
+        }
       }
       outlookSyncing = false;
-      outlookSyncMessage = result.kind === "synced"
-        ? "Outlook-Ordner synchronisiert."
-        : "Outlook-Ordner konnte nicht synchronisiert werden.";
+      outlookSyncMessage =
+        result.kind === "synced"
+          ? "Outlook-Ordner synchronisiert."
+          : "Outlook-Ordner konnte nicht synchronisiert werden.";
       publish();
       return result;
     },
@@ -151,7 +173,8 @@ export function createEventDetailWorkspace(
         time2winSyncMessage = "TIME2WIN-Teilnehmer synchronisiert.";
         return result;
       } catch {
-        time2winSyncMessage = "TIME2WIN-Synchronisierung fehlgeschlagen. Der letzte erfolgreiche Wert bleibt erhalten.";
+        time2winSyncMessage =
+          "TIME2WIN-Synchronisierung fehlgeschlagen. Der letzte erfolgreiche Wert bleibt erhalten.";
         return { kind: "failed" as const };
       } finally {
         time2winSyncing = false;
@@ -159,8 +182,12 @@ export function createEventDetailWorkspace(
       }
     },
     addEventContact(personId: string, role: string) {
-      if (!persons.some((person) => person.id === personId)) return Promise.reject(new Error("PERSON_NOT_FOUND"));
-      return requireSaved(session.addContact(personId, role), "EVENT_CONTACT_SAVE_FAILED");
+      if (!persons.some((person) => person.id === personId))
+        return Promise.reject(new Error("PERSON_NOT_FOUND"));
+      return requireSaved(
+        session.execute({ kind: "add-contact", contactId: personId, role }),
+        "EVENT_CONTACT_SAVE_FAILED",
+      );
     },
     async addSelectedContact() {
       if (!inputs.contactId) return undefined;
@@ -173,26 +200,43 @@ export function createEventDetailWorkspace(
       const nextRole = role.trim() || "Kontakt";
       if (nextRole === contact.rolle) return Promise.resolve(undefined);
       return requireSaved(
-        session.updateContactRole(contact.id, contact.rolle, nextRole),
+        session.execute({
+          kind: "change-contact-role",
+          contactId: contact.id,
+          role: contact.rolle,
+          nextRole,
+        }),
         "EVENT_CONTACT_SAVE_FAILED",
       );
     },
     removeContact(contactId: string, role: string) {
-      return requireSaved(session.removeContact(contactId, role), "EVENT_CONTACT_REMOVE_FAILED");
+      return requireSaved(
+        session.execute({ kind: "remove-contact", contactId, role }),
+        "EVENT_CONTACT_REMOVE_FAILED",
+      );
     },
     async addTask() {
       if (!inputs.newTask.trim()) return undefined;
-      const result = await requireSaved(session.createTask({ title: inputs.newTask }), "EVENT_TASK_SAVE_FAILED");
+      const result = await requireSaved(
+        session.execute({ kind: "create-task", input: { title: inputs.newTask } }),
+        "EVENT_TASK_SAVE_FAILED",
+      );
       inputs = { ...inputs, newTask: "" };
       publish();
       return result;
     },
     updateTask(taskId: string, completed: boolean) {
-      return requireSaved(session.updateTask(taskId, { completed }), "EVENT_TASK_SAVE_FAILED");
+      return requireSaved(
+        session.execute({ kind: "update-task", taskId, input: { completed } }),
+        "EVENT_TASK_SAVE_FAILED",
+      );
     },
     async addFile() {
       if (!inputs.newFile.trim()) return undefined;
-      const result = await requireSaved(session.createFile({ name: inputs.newFile }), "EVENT_FILE_SAVE_FAILED");
+      const result = await requireSaved(
+        session.execute({ kind: "create-file", input: { name: inputs.newFile } }),
+        "EVENT_FILE_SAVE_FAILED",
+      );
       inputs = { ...inputs, newFile: "" };
       publish();
       return result;
@@ -200,7 +244,10 @@ export function createEventDetailWorkspace(
     async addActivity() {
       if (!inputs.newActivity.trim()) return undefined;
       const result = await requireSaved(
-        session.createActivity({ channel: "Notiz", subject: inputs.newActivity }),
+        session.execute({
+          kind: "create-activity",
+          input: { channel: "Notiz", subject: inputs.newActivity },
+        }),
         "EVENT_ACTIVITY_SAVE_FAILED",
       );
       inputs = { ...inputs, newActivity: "" };

@@ -17,3 +17,4 @@ Use this section for recurring ideas, workflows, business rules, technical patte
 - [Tool Consolidation And Migration](tool-consolidation-and-migration.md)
 - [TIME2WIN CI und Branding](time2win-ci-branding.md)
 - [Ticket #34: UI und Outlook-Sync-Rückmeldung](ticket-34-ui-and-outlook-sync-feedback.md)
+- [Architekturvertiefung vom 2026-08-28](architecture-deepening-2026-08-28.md)

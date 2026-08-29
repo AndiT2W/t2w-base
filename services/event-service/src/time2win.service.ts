@@ -29,7 +29,7 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
           total === null || race.participantCount === null ? null : total + race.participantCount,
         0,
       );
-      return await this.prisma.event.update({
+      const updated = await this.prisma.event.update({
         where: { id },
         data: {
           participantCurrent,
@@ -38,20 +38,49 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
           time2winLastSuccessAt: new Date(),
           time2winLastError: null,
         },
-        include: { organizer: true, sport: true, contacts: { include: { contact: true } }, payoutRecipient: true, invoiceRecipients: { include: { organizer: true } }, tasks: true, files: true, activities: true },
+        include: {
+          organizer: true,
+          sport: true,
+          contacts: { include: { contact: true } },
+          payoutRecipient: true,
+          invoiceRecipients: { include: { organizer: true } },
+          tasks: true,
+          files: true,
+          activities: true,
+        },
       });
+      return { kind: "synced" as const, event: updated };
     } catch (error) {
-      await this.prisma.event.update({
+      const updated = await this.prisma.event.update({
         where: { id },
-        data: { time2winSyncStatus: "ERROR", time2winLastError: error instanceof Error ? error.message : "TIME2WIN_SYNC_FAILED" },
+        data: {
+          time2winSyncStatus: "ERROR",
+          time2winLastError: error instanceof Error ? error.message : "TIME2WIN_SYNC_FAILED",
+        },
+        include: {
+          organizer: true,
+          sport: true,
+          contacts: { include: { contact: true } },
+          payoutRecipient: true,
+          invoiceRecipients: { include: { organizer: true } },
+          tasks: true,
+          files: true,
+          activities: true,
+        },
       });
-      throw error;
+      return {
+        kind: "failed" as const,
+        event: updated,
+        error: error instanceof Error ? error.message : "TIME2WIN_SYNC_FAILED",
+      };
     }
   }
 
   async syncDueEvents() {
-    const events = await this.prisma.event.findMany({ where: { t2wEventId: { not: null } }, select: { id: true } });
-    await Promise.allSettled(events.map(({ id }) => this.syncEvent(id)));
+    const events = await this.prisma.event.findMany({
+      where: { t2wEventId: { not: null } },
+      select: { id: true },
+    });
+    await Promise.all(events.map(({ id }) => this.syncEvent(id)));
   }
-
 }

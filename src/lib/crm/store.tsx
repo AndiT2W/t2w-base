@@ -9,7 +9,8 @@ import {
 import { createHttpCrmAdapter, type CrmModule, type CrmState } from "./module";
 import { createCrmWorkspace } from "./workspace";
 import { createBrowserLocalCrmAdapter } from "./local-adapter";
-import { personName, type Kunde, type Person } from "./types";
+import { type Kunde, type Person } from "./types";
+import { createCrmLifecycle } from "./lifecycle";
 
 type Ctx = CrmState & {
   bereit: boolean;
@@ -49,6 +50,7 @@ export function CrmProvider({ children, adapter }: { children: ReactNode; adapte
     [adapter],
   );
   const workspace = useMemo(() => createCrmWorkspace(persistence), [persistence]);
+  const lifecycle = useMemo(() => createCrmLifecycle(workspace), [workspace]);
   const state = useSyncExternalStore(workspace.subscribe, workspace.snapshot, workspace.snapshot);
   useEffect(() => {
     void workspace.load().catch(() => undefined);
@@ -57,48 +59,23 @@ export function CrmProvider({ children, adapter }: { children: ReactNode; adapte
     () => ({
       ...state,
       neuLaden: async () => {
-        await workspace.load();
+        await lifecycle.reload();
       },
-      neuePerson: workspace.createPerson,
-      neuerKunde: async (input) => {
-        await workspace.createKunde({
-          ...input,
-          personId: input.personId ?? null,
-          kontaktIds: [],
-          events: [],
-        });
-      },
-      personAlsKunde: async (id, input) => {
-        const person = workspace.snapshot().personen.find((item) => item.id === id);
-        if (!person) throw new Error("PERSON_NOT_FOUND");
-        await workspace.createKunde({
-          ...input,
-          name: personName(person),
-          typ: "person",
-          personId: id,
-          kontaktIds: [],
-          events: [],
-        });
-      },
-      neuePersonAlsKunde: async (person, kunde) => {
-        await workspace.createPersonAndKunde(person, {
-          ...kunde,
-          typ: "person",
-          kontaktIds: [],
-          events: [],
-        });
-      },
-      updatePerson: workspace.updatePerson,
-      updateKunde: workspace.updateKunde,
-      deletePerson: workspace.deletePerson,
-      deleteKunde: workspace.deleteKunde,
-      verknuepfe: workspace.link,
-      loeseVerknuepfung: workspace.unlink,
-      kundenVonPerson: workspace.kundenVonPerson,
-      kontakteVonKunde: workspace.kontakteVonKunde,
-      findeDublette: workspace.findDuplicate,
+      neuePerson: lifecycle.createPerson,
+      neuerKunde: lifecycle.createCustomer,
+      personAlsKunde: lifecycle.createCustomerForPerson,
+      neuePersonAlsKunde: lifecycle.createPersonAndCustomer,
+      updatePerson: lifecycle.updatePerson,
+      updateKunde: lifecycle.updateCustomer,
+      deletePerson: lifecycle.deletePerson,
+      deleteKunde: lifecycle.deleteCustomer,
+      verknuepfe: lifecycle.link,
+      loeseVerknuepfung: lifecycle.unlink,
+      kundenVonPerson: lifecycle.customersForPerson,
+      kontakteVonKunde: lifecycle.contactsForCustomer,
+      findeDublette: lifecycle.findDuplicate,
     }),
-    [state, workspace],
+    [state, lifecycle],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

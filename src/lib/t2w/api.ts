@@ -1,4 +1,5 @@
 import type { Settings, T2WEvent } from "./types";
+import type { SyncResult } from "./event-workspace";
 
 type ApiEvent = {
   id: string;
@@ -32,10 +33,26 @@ type ApiEvent = {
   time2winLastSuccessAt?: string | null;
   time2winLastError?: string | null;
   time2winSnapshot?: T2WEvent["time2winSnapshot"];
-  contacts?: { role: string; contact: { id: string; name: string; email: string | null; phone: string | null } }[];
-  tasks?: { id: string; title: string; dueAt: string | null; responsible: string | null; completed: boolean }[];
+  contacts?: {
+    role: string;
+    contact: { id: string; name: string; email: string | null; phone: string | null };
+  }[];
+  tasks?: {
+    id: string;
+    title: string;
+    dueAt: string | null;
+    responsible: string | null;
+    completed: boolean;
+  }[];
   files?: { id: string; name: string; size: string | null; updatedAt: string }[];
-  activities?: { id: string; channel: string; subject: string; author: string | null; body: string | null; occurredAt: string }[];
+  activities?: {
+    id: string;
+    channel: string;
+    subject: string;
+    author: string | null;
+    body: string | null;
+    occurredAt: string;
+  }[];
   payoutRecipient?: { id: string; name: string } | null;
   invoiceRecipients?: { organizer: { id: string; name: string } }[];
 };
@@ -93,31 +110,128 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     time2winLastError: event.time2winLastError ?? null,
     time2winSnapshot: event.time2winSnapshot ?? null,
     auszahlungsempfaengerId: event.payoutRecipient?.id ?? event.organizer?.id ?? null,
-    rechnungsempfaengerIds: event.invoiceRecipients?.map((recipient) => recipient.organizer.id) ?? (event.organizer?.id ? [event.organizer.id] : []),
-    kontakte: (event.contacts ?? []).map(({ role, contact }) => ({ id: contact.id, name: contact.name, rolle: role, email: contact.email ?? "", telefon: contact.phone ?? "" })),
-    aufgaben: (event.tasks ?? []).map((task) => ({ id: task.id, titel: task.title, faellig: task.dueAt ? dateOnly(task.dueAt) : "", verantwortlich: task.responsible ?? "", erledigt: task.completed })),
-    dateien: (event.files ?? []).map((file) => ({ id: file.id, name: file.name, groesse: file.size ?? "", aktualisiert: dateOnly(file.updatedAt) })),
-    kommunikation: (event.activities ?? []).map((activity) => ({ id: activity.id, kanal: activity.channel as "E-Mail" | "Telefon" | "Notiz", betreff: activity.subject, datum: dateOnly(activity.occurredAt), autor: activity.author ?? "", text: activity.body ?? "" })),
+    rechnungsempfaengerIds:
+      event.invoiceRecipients?.map((recipient) => recipient.organizer.id) ??
+      (event.organizer?.id ? [event.organizer.id] : []),
+    kontakte: (event.contacts ?? []).map(({ role, contact }) => ({
+      id: contact.id,
+      name: contact.name,
+      rolle: role,
+      email: contact.email ?? "",
+      telefon: contact.phone ?? "",
+    })),
+    aufgaben: (event.tasks ?? []).map((task) => ({
+      id: task.id,
+      titel: task.title,
+      faellig: task.dueAt ? dateOnly(task.dueAt) : "",
+      verantwortlich: task.responsible ?? "",
+      erledigt: task.completed,
+    })),
+    dateien: (event.files ?? []).map((file) => ({
+      id: file.id,
+      name: file.name,
+      groesse: file.size ?? "",
+      aktualisiert: dateOnly(file.updatedAt),
+    })),
+    kommunikation: (event.activities ?? []).map((activity) => ({
+      id: activity.id,
+      kanal: activity.channel as "E-Mail" | "Telefon" | "Notiz",
+      betreff: activity.subject,
+      datum: dateOnly(activity.occurredAt),
+      autor: activity.author ?? "",
+      text: activity.body ?? "",
+    })),
     sportart: event.sport?.name ?? "",
   };
 }
 
-async function eventAction<T>(url: string, method: "POST" | "PATCH" | "DELETE", body?: unknown): Promise<T> {
-  const response = await fetch(url, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+async function eventAction<T>(
+  url: string,
+  method: "POST" | "PATCH" | "DELETE",
+  body?: unknown,
+): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (!response.ok) {
-    const error = new Error("Event-Arbeitsfläche konnte nicht gespeichert werden") as Error & { code?: string };
+    const error = new Error("Event-Arbeitsfläche konnte nicht gespeichert werden") as Error & {
+      code?: string;
+    };
     if (response.status === 409) error.code = "EVENT_VERSION_CONFLICT";
     throw error;
   }
-  return response.status === 204 ? (undefined as T) : (await response.json()) as T;
+  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
-export const apiAddEventContact = (eventId: string, contactId: string, role: string, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/contacts/${contactId}`, "POST", { role, version }).then(mapApiEvent);
-export const apiRemoveEventContact = (eventId: string, contactId: string, role: string, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "DELETE", { version }).then(mapApiEvent);
-export const apiUpdateEventContactRole = (eventId: string, contactId: string, role: string, nextRole: string, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`, "PATCH", { role: nextRole, version }).then(mapApiEvent);
-export const apiCreateEventTask = (eventId: string, body: { title: string; dueAt?: string; responsible?: string }, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks`, "POST", { ...body, version }).then(mapApiEvent);
-export const apiUpdateEventTask = (eventId: string, taskId: string, body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean }, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", { ...body, version }).then(mapApiEvent);
-export const apiCreateEventFile = (eventId: string, body: { name: string; url?: string; size?: string }, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/files`, "POST", { ...body, version }).then(mapApiEvent);
-export const apiCreateEventActivity = (eventId: string, body: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string }, version: number) => eventAction<ApiEvent>(`/api/v1/events/${eventId}/activities`, "POST", { ...body, version }).then(mapApiEvent);
+export const apiAddEventContact = (
+  eventId: string,
+  contactId: string,
+  role: string,
+  version: number,
+) =>
+  eventAction<ApiEvent>(`/api/v1/events/${eventId}/contacts/${contactId}`, "POST", {
+    role,
+    version,
+  }).then(mapApiEvent);
+export const apiRemoveEventContact = (
+  eventId: string,
+  contactId: string,
+  role: string,
+  version: number,
+) =>
+  eventAction<ApiEvent>(
+    `/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`,
+    "DELETE",
+    { version },
+  ).then(mapApiEvent);
+export const apiUpdateEventContactRole = (
+  eventId: string,
+  contactId: string,
+  role: string,
+  nextRole: string,
+  version: number,
+) =>
+  eventAction<ApiEvent>(
+    `/api/v1/events/${eventId}/contacts/${contactId}/${encodeURIComponent(role)}`,
+    "PATCH",
+    { role: nextRole, version },
+  ).then(mapApiEvent);
+export const apiCreateEventTask = (
+  eventId: string,
+  body: { title: string; dueAt?: string; responsible?: string },
+  version: number,
+) =>
+  eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks`, "POST", { ...body, version }).then(
+    mapApiEvent,
+  );
+export const apiUpdateEventTask = (
+  eventId: string,
+  taskId: string,
+  body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
+  version: number,
+) =>
+  eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", {
+    ...body,
+    version,
+  }).then(mapApiEvent);
+export const apiCreateEventFile = (
+  eventId: string,
+  body: { name: string; url?: string; size?: string },
+  version: number,
+) =>
+  eventAction<ApiEvent>(`/api/v1/events/${eventId}/files`, "POST", { ...body, version }).then(
+    mapApiEvent,
+  );
+export const apiCreateEventActivity = (
+  eventId: string,
+  body: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string },
+  version: number,
+) =>
+  eventAction<ApiEvent>(`/api/v1/events/${eventId}/activities`, "POST", { ...body, version }).then(
+    mapApiEvent,
+  );
 
 export async function apiLogin(email: string, password: string) {
   const response = await fetch("/api/v1/auth/login", {
@@ -205,12 +319,22 @@ export async function apiManageSports(): Promise<(ApiSport & { active: boolean }
   return (await response.json()) as (ApiSport & { active: boolean })[];
 }
 export async function apiCreateSport(name: string) {
-  const response = await fetch("/api/v1/sports", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  const response = await fetch("/api/v1/sports", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
   if (!response.ok) throw new Error("Sportart konnte nicht angelegt werden");
   return response.json() as Promise<ApiSport & { active: boolean }>;
 }
 export async function apiUpdateSport(id: string, patch: { name?: string; active?: boolean }) {
-  const response = await fetch(`/api/v1/sports/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+  const response = await fetch(`/api/v1/sports/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
   if (!response.ok) throw new Error("Sportart konnte nicht gespeichert werden");
   return response.json() as Promise<ApiSport & { active: boolean }>;
 }
@@ -221,17 +345,29 @@ export async function apiEventRoles(): Promise<ApiEventRole[]> {
   return response.json() as Promise<ApiEventRole[]>;
 }
 export async function apiManageEventRoles(): Promise<ApiEventRole[]> {
-  const response = await fetch("/api/v1/event-roles?includeInactive=true", { credentials: "include" });
+  const response = await fetch("/api/v1/event-roles?includeInactive=true", {
+    credentials: "include",
+  });
   if (!response.ok) throw new Error("Eventrollen konnten nicht geladen werden");
   return response.json() as Promise<ApiEventRole[]>;
 }
 export async function apiCreateEventRole(name: string) {
-  const response = await fetch("/api/v1/event-roles", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+  const response = await fetch("/api/v1/event-roles", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
   if (!response.ok) throw new Error("Eventrolle konnte nicht angelegt werden");
   return response.json() as Promise<ApiEventRole>;
 }
 export async function apiUpdateEventRole(id: string, patch: { name?: string; active?: boolean }) {
-  const response = await fetch(`/api/v1/event-roles/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+  const response = await fetch(`/api/v1/event-roles/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
   if (!response.ok) throw new Error("Eventrolle konnte nicht gespeichert werden");
   return response.json() as Promise<ApiEventRole>;
 }
@@ -274,7 +410,18 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       notes: patch.notizen,
       organizerId: patch.veranstalterId,
       sportId: patch.sportartId,
-      status: patch.status === "anfrage" ? "ANFRAGE" : patch.status === "angebot-gesendet" ? "ANGEBOT_GESENDET" : patch.status === "datum-pruefen" ? "DATUM_PRUEFEN" : patch.status === "akquise" ? "AKQUISE" : patch.status === "abgesagt" ? "ABGESAGT" : "ZUGESAGT",
+      status:
+        patch.status === "anfrage"
+          ? "ANFRAGE"
+          : patch.status === "angebot-gesendet"
+            ? "ANGEBOT_GESENDET"
+            : patch.status === "datum-pruefen"
+              ? "DATUM_PRUEFEN"
+              : patch.status === "akquise"
+                ? "AKQUISE"
+                : patch.status === "abgesagt"
+                  ? "ABGESAGT"
+                  : "ZUGESAGT",
       archived: patch.archiviert,
       t2wEventId: patch.t2wEventId,
       payoutRecipientId: patch.auszahlungsempfaengerId,
@@ -305,9 +452,16 @@ export async function apiSyncOutlookFolder(id: string, input?: { mailbox?: strin
 }
 
 export async function apiSyncTime2win(id: string) {
-  const response = await fetch(`/api/v1/events/${id}/time2win/sync`, { method: "POST", credentials: "include" });
+  const response = await fetch(`/api/v1/events/${id}/time2win/sync`, {
+    method: "POST",
+    credentials: "include",
+  });
   if (!response.ok) throw new Error("TIME2WIN_SYNC_FAILED");
-  return mapApiEvent((await response.json()) as ApiEvent);
+  const outcome = (await response.json()) as
+    { kind: "synced"; event: ApiEvent } | { kind: "failed"; event: ApiEvent; error: string };
+  return outcome.kind === "synced"
+    ? { kind: "synced", event: mapApiEvent(outcome.event) }
+    : ({ kind: "failed", error: new Error(outcome.error) } satisfies SyncResult<T2WEvent>);
 }
 
 export async function apiOutlookFolderPlan(id: string) {

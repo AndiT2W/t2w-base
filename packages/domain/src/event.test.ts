@@ -22,14 +22,16 @@ function transport(overrides: Partial<EventTransport<TestEvent>> = {}) {
 }
 
 describe("Event workspace editing lifecycle", () => {
-  it("accepts refreshed Event state after a detail command", async () => {
+  it("accepts refreshed Event state after an intent-level Event-detail command", async () => {
     const refreshed = { ...event, version: 4, name: "Mountain Attack 2027" };
     const persistence = transport({ createTask: vi.fn().mockResolvedValue(refreshed) });
     const workspace = createEventWorkspace(persistence);
     workspace.load([event]);
     const session = workspace.openSession(event.id);
 
-    await expect(session.createTask({ title: "Briefing" })).resolves.toEqual({
+    await expect(
+      session.execute({ kind: "create-task", input: { title: "Briefing" } }),
+    ).resolves.toEqual({
       kind: "saved",
       event: refreshed,
     });
@@ -39,7 +41,11 @@ describe("Event workspace editing lifecycle", () => {
 
   it("keeps draft and collection unchanged after a version conflict", async () => {
     const persistence = transport({
-      save: vi.fn().mockRejectedValue(Object.assign(new Error("conflict"), { code: "EVENT_VERSION_CONFLICT" })),
+      save: vi
+        .fn()
+        .mockRejectedValue(
+          Object.assign(new Error("conflict"), { code: "EVENT_VERSION_CONFLICT" }),
+        ),
     });
     const workspace = createEventWorkspace(persistence);
     workspace.load([event]);
@@ -53,7 +59,9 @@ describe("Event workspace editing lifecycle", () => {
 
   it("replaces the Event session and collection after a TIME2WIN sync", async () => {
     const refreshed = { ...event, version: 4, name: "TIME2WIN snapshot" };
-    const persistence = transport({ syncTime2win: vi.fn().mockResolvedValue(refreshed) });
+    const persistence = transport({
+      syncTime2win: vi.fn().mockResolvedValue({ kind: "synced", event: refreshed }),
+    });
     const workspace = createEventWorkspace(persistence);
     workspace.load([event]);
     const session = workspace.openSession(event.id);

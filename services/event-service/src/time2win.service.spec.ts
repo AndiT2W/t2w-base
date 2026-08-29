@@ -30,7 +30,10 @@ describe("Time2winService", () => {
       snapshot: vi.fn().mockRejectedValue(new Error("TIME2WIN_API_KEY_NOT_CONFIGURED")),
     });
 
-    await expect(service.syncEvent(event.id)).rejects.toThrow("TIME2WIN_API_KEY_NOT_CONFIGURED");
+    await expect(service.syncEvent(event.id)).resolves.toMatchObject({
+      kind: "failed",
+      error: "TIME2WIN_API_KEY_NOT_CONFIGURED",
+    });
     expect(prisma.event.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: event.id },
@@ -53,12 +56,24 @@ describe("Time2winService", () => {
         findMany: vi.fn(),
       },
     };
-    vi.stubGlobal("fetch", vi
-      .fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({
-        data: { event: { name: "Ostseeman 2027", sport: { name: "Triathlon" } }, races: [{ race: { id: 11, name: "Olympische Distanz" } }] },
-      }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ data: { statistics: { registered: 128 } } }) }));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: {
+              event: { name: "Ostseeman 2027", sport: { name: "Triathlon" } },
+              races: [{ race: { id: 11, name: "Olympische Distanz" } }],
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ data: { statistics: { registered: 128 } } }),
+        }),
+    );
     const service = new Time2winService(prisma as never, {
       snapshot: vi.fn().mockResolvedValue({
         eventId: 42,
@@ -68,18 +83,20 @@ describe("Time2winService", () => {
       }),
     });
 
-    await service.syncEvent(event.id);
+    await expect(service.syncEvent(event.id)).resolves.toMatchObject({ kind: "synced" });
 
-    expect(prisma.event.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        participantCurrent: 128,
-        time2winSnapshot: expect.objectContaining({
-          name: "Ostseeman 2027",
-          sportName: "Triathlon",
-          races: [{ id: 11, name: "Olympische Distanz", participantCount: 128 }],
+    expect(prisma.event.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          participantCurrent: 128,
+          time2winSnapshot: expect.objectContaining({
+            name: "Ostseeman 2027",
+            sportName: "Triathlon",
+            races: [{ id: 11, name: "Olympische Distanz", participantCount: 128 }],
+          }),
         }),
       }),
-    }));
+    );
   });
 
   it("reads the flat production response with participants_count", async () => {
@@ -120,7 +137,7 @@ describe("Time2winService", () => {
       }),
     });
 
-    await service.syncEvent(event.id);
+    await expect(service.syncEvent(event.id)).resolves.toMatchObject({ kind: "synced" });
 
     expect(prisma.event.update).toHaveBeenCalledWith(
       expect.objectContaining({

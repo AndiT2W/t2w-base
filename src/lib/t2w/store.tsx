@@ -26,12 +26,6 @@ import {
   apiSyncTime2win,
   apiUpdateEvent,
   apiUpdateSettings,
-  apiManageSports,
-  apiManageEventRoles,
-  apiCreateSport,
-  apiCreateEventRole,
-  apiUpdateSport,
-  apiUpdateEventRole,
 } from "./api";
 import {
   createEventWorkspace,
@@ -44,6 +38,7 @@ import {
   type SelectionListKind,
   type SelectionListSnapshot,
 } from "./selection-list-workspace";
+import { createHttpSelectionListAdapter } from "./selection-list-adapter";
 
 type State = {
   settings: Settings;
@@ -97,14 +92,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     [],
   );
   const selectionWorkspace = useMemo(
-    () =>
-      createSelectionListWorkspace({
-        load: (kind) => (kind === "sports" ? apiManageSports() : apiManageEventRoles()),
-        create: (kind, name) =>
-          kind === "sports" ? apiCreateSport(name) : apiCreateEventRole(name),
-        update: (kind, id, patch) =>
-          kind === "sports" ? apiUpdateSport(id, patch) : apiUpdateEventRole(id, patch),
-      }),
+    () => createSelectionListWorkspace(createHttpSelectionListAdapter()),
     [],
   );
   const events = useSyncExternalStore(workspace.subscribe, workspace.events, workspace.events);

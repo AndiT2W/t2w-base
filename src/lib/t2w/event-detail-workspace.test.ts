@@ -5,23 +5,56 @@ import type { T2WEvent } from "./types";
 import type { Kunde, Person } from "@/lib/crm/types";
 
 const event = {
-  id: "e1", version: 1, eventcode: "270115_mountain_attack", name: "Mountain Attack",
-  start: "2027-01-15", ende: "2027-01-15", veranstalterId: "c1", kontakte: [],
-  aufgaben: [], dateien: [], kommunikation: [], rechnungsempfaengerIds: ["c1"],
+  id: "e1",
+  version: 1,
+  eventcode: "270115_mountain_attack",
+  name: "Mountain Attack",
+  start: "2027-01-15",
+  ende: "2027-01-15",
+  veranstalterId: "c1",
+  kontakte: [],
+  aufgaben: [],
+  dateien: [],
+  kommunikation: [],
+  rechnungsempfaengerIds: ["c1"],
 } as T2WEvent;
-const person = { id: "p1", vorname: "Marion", nachname: "Kessler", email: "m@example.at", kundenIds: ["c1"] } as Person;
+const person = {
+  id: "p1",
+  vorname: "Marion",
+  nachname: "Kessler",
+  email: "m@example.at",
+  kundenIds: ["c1"],
+} as Person;
 const customer = { id: "c1", name: "Mountain Attack GmbH" } as Kunde;
 
-function setup(syncTime2win = vi.fn().mockResolvedValue({ ...event, participantCurrent: 42 })) {
+function setup(
+  syncTime2win = vi
+    .fn()
+    .mockResolvedValue({ kind: "synced", event: { ...event, participantCurrent: 42 } }),
+) {
   const saved = { ...event, version: 2, aufgaben: [{ id: "t1", titel: "Briefing" }] } as T2WEvent;
   const transport = {
-    create: vi.fn(), save: vi.fn().mockResolvedValue(saved), syncOutlook: vi.fn().mockResolvedValue(saved), syncTime2win,
-    outlookPlan: vi.fn().mockResolvedValue({ path: "07_auftraege_27/Q1/270115_mountain_attack", drifted: false }),
-    addContact: vi.fn().mockResolvedValue(saved), createTask: vi.fn().mockResolvedValue(saved),
+    create: vi.fn(),
+    save: vi.fn().mockResolvedValue(saved),
+    syncOutlook: vi.fn().mockResolvedValue(saved),
+    syncTime2win,
+    outlookPlan: vi
+      .fn()
+      .mockResolvedValue({ path: "07_auftraege_27/Q1/270115_mountain_attack", drifted: false }),
+    addContact: vi.fn().mockResolvedValue(saved),
+    createTask: vi.fn().mockResolvedValue(saved),
   };
   const events = createEventWorkspace(transport);
   events.load([event]);
-  return { workspace: createEventDetailWorkspace(events.openSession("e1"), { event, persons: [person], customers: [customer] }), transport, syncTime2win };
+  return {
+    workspace: createEventDetailWorkspace(events.openSession("e1"), {
+      event,
+      persons: [person],
+      customers: [customer],
+    }),
+    transport,
+    syncTime2win,
+  };
 }
 
 describe("Event detail workspace", () => {
@@ -45,7 +78,9 @@ describe("Event detail workspace", () => {
 
   it("owns Outlook planning and synchronization status", async () => {
     const { workspace } = setup();
-    await expect(workspace.refreshOutlookPlan()).resolves.toMatchObject({ path: "07_auftraege_27/Q1/270115_mountain_attack" });
+    await expect(workspace.refreshOutlookPlan()).resolves.toMatchObject({
+      path: "07_auftraege_27/Q1/270115_mountain_attack",
+    });
     await expect(workspace.syncOutlook()).resolves.toMatchObject({ kind: "synced" });
     expect(workspace.snapshot().outlookSyncMessage).toBe("Outlook-Ordner synchronisiert.");
   });
