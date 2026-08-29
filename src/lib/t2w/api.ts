@@ -1,5 +1,6 @@
 import type { Settings, T2WEvent } from "./types";
 import type { SyncResult } from "./event-workspace";
+import type { EventTransport } from "@t2w/domain/event";
 
 type ApiEvent = {
   id: string;
@@ -470,6 +471,24 @@ export async function apiOutlookFolderPlan(id: string) {
   });
   if (!response.ok) throw new Error("OUTLOOK_FOLDER_PLAN_FAILED");
   return response.json() as Promise<import("./event-workspace").OutlookFolderPlan>;
+}
+
+/** The HTTP adapter for the Event workspace seam. */
+export function createHttpEventTransport(): EventTransport<T2WEvent> {
+  return {
+    create: apiCreateEvent,
+    save: apiUpdateEvent,
+    syncOutlook: apiSyncOutlookFolder,
+    syncTime2win: apiSyncTime2win,
+    outlookPlan: apiOutlookFolderPlan,
+    addContact: apiAddEventContact,
+    removeContact: apiRemoveEventContact,
+    updateContactRole: apiUpdateEventContactRole,
+    createTask: apiCreateEventTask,
+    updateTask: apiUpdateEventTask,
+    createFile: apiCreateEventFile,
+    createActivity: apiCreateEventActivity,
+  };
 }
 
 export async function apiContacts() {

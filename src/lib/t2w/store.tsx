@@ -11,20 +11,9 @@ import {
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
 import {
-  apiCreateEvent,
-  apiAddEventContact,
-  apiRemoveEventContact,
-  apiUpdateEventContactRole,
-  apiCreateEventTask,
-  apiUpdateEventTask,
-  apiCreateEventFile,
-  apiCreateEventActivity,
+  createHttpEventTransport,
   apiEvents,
-  apiOutlookFolderPlan,
   apiSettings,
-  apiSyncOutlookFolder,
-  apiSyncTime2win,
-  apiUpdateEvent,
   apiUpdateSettings,
 } from "./api";
 import {
@@ -74,21 +63,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   const [ladefehler, setLadefehler] = useState<string | null>(null);
   const [angemeldet, setAngemeldet] = useState(true);
   const workspace = useMemo(
-    () =>
-      createEventWorkspace({
-        create: apiCreateEvent,
-        save: apiUpdateEvent,
-        syncOutlook: apiSyncOutlookFolder,
-        syncTime2win: apiSyncTime2win,
-        outlookPlan: apiOutlookFolderPlan,
-        addContact: apiAddEventContact,
-        removeContact: apiRemoveEventContact,
-        updateContactRole: apiUpdateEventContactRole,
-        createTask: apiCreateEventTask,
-        updateTask: apiUpdateEventTask,
-        createFile: apiCreateEventFile,
-        createActivity: apiCreateEventActivity,
-      }),
+    () => createEventWorkspace(createHttpEventTransport()),
     [],
   );
   const selectionWorkspace = useMemo(

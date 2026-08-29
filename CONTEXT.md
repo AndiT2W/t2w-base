@@ -8,6 +8,8 @@ The CRM workspace manages people, customer profiles, and their independent relat
 
 The Event workspace owns event participant and recipient rules: organizer assignment, payout recipients, invoice recipients, contact roles, deletion eligibility, defaults, and optimistic-concurrency behavior. Multi-relationship commands are atomic. Referenced organizers are not deleted; they may be deactivated.
 
+An Event record is the authoritative detailed snapshot of an Event together with the relations needed by Event workflows. Event record retrieval is separate from Event mutation intent: callers receive a refreshed record after a successful change without knowing how its persistence projection is assembled.
+
 ## Event detail workspace
 
 The Event detail workspace coordinates a single Event detail interaction. It owns searches, selections, recipient projections, persistence progress, and user-facing outcomes while delegating Event persistence to an Event editing session. Visual presentation state such as tabs and dialogs is not part of the Event detail workspace.
