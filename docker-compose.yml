@@ -47,6 +47,8 @@ services:
       OUTLOOK_CLIENT_SECRET: ${OUTLOOK_CLIENT_SECRET:-}
       OUTLOOK_GRAPH_ACCESS_TOKEN: ${OUTLOOK_GRAPH_ACCESS_TOKEN:-}
       TIME2WIN_API_KEY: ${TIME2WIN_API_KEY:-}
+      # Set TIME2WIN_API_BASE_URL=https://data-hub.time2win.at in the deployment
+      # environment to use the Data Hub. The legacy API remains the default.
       TIME2WIN_API_BASE_URL: ${TIME2WIN_API_BASE_URL:-https://time2win.at/api/1.1}
     depends_on:
       event-db: { condition: service_started }
