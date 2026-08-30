@@ -426,8 +426,9 @@ test("kopiert ein Event als editierbare Vorlage und zeigt die Seriennachbarn nac
   await page.locator("#copy-start").fill("2027-08-26");
   await page.getByRole("button", { name: "Kopie speichern" }).click();
   await expect(page.getByRole("heading", { name: "Bestehendes Event 2027" })).toBeVisible();
-  await expect(page.getByText("Eventserie:")).toBeVisible();
-  await expect(page.getByRole("link", { name: /Bestehendes Event/ })).toBeVisible();
+  const seriesNavigation = page.getByTestId("event-series-navigation");
+  await expect(seriesNavigation).toBeVisible();
+  await expect(seriesNavigation.getByRole("link", { name: /Bestehendes Event/ })).toBeVisible();
   await page.reload();
   await expect(page.getByText("Eventserie:")).toBeVisible();
 });

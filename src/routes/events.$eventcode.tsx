@@ -300,6 +300,38 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <span>{event.veranstalter}</span>
             <span>·</span>
             <span>{formatZeitraum(event.start, event.ende)}</span>
+            {form.seriesId && (
+              <nav
+                aria-label="Eventserie"
+                data-testid="event-series-navigation"
+                className="flex flex-wrap items-center gap-2"
+              >
+                <span>·</span>
+                <span>Eventserie:</span>
+                {previousEvent ? (
+                  <Link
+                    className="underline"
+                    to="/events/$eventcode"
+                    params={{ eventcode: previousEvent.eventcode }}
+                  >
+                    ← {previousEvent.name}
+                  </Link>
+                ) : (
+                  <span>Kein vorheriges Event</span>
+                )}
+                {nextEvent ? (
+                  <Link
+                    className="underline"
+                    to="/events/$eventcode"
+                    params={{ eventcode: nextEvent.eventcode }}
+                  >
+                    {nextEvent.name} →
+                  </Link>
+                ) : (
+                  <span>Kein nächstes Event</span>
+                )}
+              </nav>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <StatusBadge status={form.status} />
@@ -317,34 +349,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <Button onClick={speichern}>Änderungen speichern</Button>
         </div>
       </div>
-
-      {form.seriesId && (
-        <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
-          <span className="text-muted-foreground">Eventserie:</span>
-          {previousEvent ? (
-            <Link
-              className="underline"
-              to="/events/$eventcode"
-              params={{ eventcode: previousEvent.eventcode }}
-            >
-              ← {previousEvent.name}
-            </Link>
-          ) : (
-            <span>Kein vorheriges Event</span>
-          )}
-          {nextEvent ? (
-            <Link
-              className="underline"
-              to="/events/$eventcode"
-              params={{ eventcode: nextEvent.eventcode }}
-            >
-              {nextEvent.name} →
-            </Link>
-          ) : (
-            <span>Kein nächstes Event</span>
-          )}
-        </div>
-      )}
 
       {quartalsAbweichung && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent px-4 py-3">
