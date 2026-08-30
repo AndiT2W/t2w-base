@@ -635,18 +635,21 @@ test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben
   await page.route("**/api/v1/events/11111111-1111-4111-8111-111111111111/time2win/sync", async (route) =>
     route.fulfill({
       json: {
-        ...event,
-        t2wEventId: 42,
-        participantForecast: 10,
-        participantCurrent: 21,
-        time2winSyncStatus: "SUCCESS",
-        time2winLastSuccessAt: "2026-08-28T12:00:00.000Z",
-        time2winLastError: null,
-        time2winSnapshot: {
-          eventId: 42,
-          name: "TIME2WIN Testevent",
-          sportName: "Laufen",
-          races: [{ id: 7, name: "Hauptbewerb", participantCount: 21 }],
+        kind: "synced",
+        event: {
+          ...event,
+          t2wEventId: 42,
+          participantForecast: 10,
+          participantCurrent: 21,
+          time2winSyncStatus: "SUCCESS",
+          time2winLastSuccessAt: "2026-08-28T12:00:00.000Z",
+          time2winLastError: null,
+          time2winSnapshot: {
+            eventId: 42,
+            name: "TIME2WIN Testevent",
+            sportName: "Laufen",
+            races: [{ id: 7, name: "Hauptbewerb", participantCount: 21 }],
+          },
         },
       },
     }),
@@ -862,4 +865,32 @@ test("synchronisiert ein Event mit dem konfigurierten Shared-Mailbox-Stammordner
       (request) => request.method === "POST" && request.url.endsWith("/outlook-folder/sync"),
     ),
   ).toBeTruthy();
+});
+
+test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Duplikate", async ({ page }) => {
+  const requests = await mockApi(page, {
+    outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
+    outlookFolderId: "event-folder-id",
+    outlookFolderSyncStatus: "SUCCESS",
+  });
+
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "Kommunikation" }).click();
+  await page.getByRole("button", { name: "Outlook-Nachrichten synchronisieren" }).click();
+
+  await expect(page.getByText("Startzeit bestätigt")).toBeVisible();
+  await expect(page.getByText("Eingehend · Eva Beispiel <eva@example.at>")).toBeVisible();
+  await expect(page.getByText("Der Start bleibt um 09:00 Uhr.")).toBeVisible();
+  await expect(page.getByText("Ausgehend · TIME2WIN <info@time2win.at>")).toBeVisible();
+  await expect(page.getByText("Zeitplan an das Team gesendet")).toBeVisible();
+  await expect(
+    page.locator('a[href="https://outlook.office.com/mail/deeplink/read/mail-1"]'),
+  ).toHaveAccessibleName("In Outlook öffnen");
+
+  await page.getByRole("button", { name: "Outlook-Nachrichten synchronisieren" }).click();
+  await expect(page.getByText("Startzeit bestätigt")).toHaveCount(1);
+  await page.reload();
+  await page.getByRole("tab", { name: "Kommunikation" }).click();
+  await expect(page.getByText("Startzeit bestätigt")).toBeVisible();
+  expect(requests.filter((request) => request.url.endsWith("/outlook-messages/sync"))).toHaveLength(2);
 });

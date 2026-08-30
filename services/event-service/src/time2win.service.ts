@@ -47,6 +47,7 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
           tasks: true,
           files: true,
           activities: true,
+          communicationMessages: { orderBy: { occurredAt: "desc" } },
         },
       });
       return { kind: "synced" as const, event: updated };
@@ -66,6 +67,7 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
           tasks: true,
           files: true,
           activities: true,
+          communicationMessages: { orderBy: { occurredAt: "desc" } },
         },
       });
       return {

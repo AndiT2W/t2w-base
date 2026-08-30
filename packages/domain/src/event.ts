@@ -82,6 +82,7 @@ export type EventTransport<TEvent extends EventRecord> = {
   create(input: PersistedCreateEventInput<TEvent>): Promise<TEvent>;
   save(id: string, patch: Partial<TEvent>): Promise<TEvent>;
   syncOutlook(id: string): Promise<TEvent>;
+  syncCommunication?(id: string): Promise<TEvent>;
   syncTime2win?(id: string): Promise<SyncResult<TEvent>>;
   outlookPlan(id: string): Promise<OutlookFolderPlan>;
   addContact?(id: string, contactId: string, role: string, version: number): Promise<TEvent>;
@@ -230,6 +231,21 @@ export function createEventWorkspace<TEvent extends EventRecord>(
     }
   }
 
+  async function syncCommunication(id: string): Promise<SyncResult<TEvent>> {
+    if (!transport.syncCommunication)
+      return { kind: "failed", error: new Error("OUTLOOK_MESSAGE_SYNC_UNAVAILABLE") };
+    try {
+      const event = await transport.syncCommunication(id);
+      replace(event);
+      return { kind: "synced", event };
+    } catch (error) {
+      return {
+        kind: "failed",
+        error: error instanceof Error ? error : new Error("OUTLOOK_MESSAGE_SYNC_FAILED"),
+      };
+    }
+  }
+
   async function syncTime2win(id: string): Promise<SyncResult<TEvent>> {
     if (!transport.syncTime2win)
       return { kind: "failed", error: new Error("TIME2WIN_SYNC_UNAVAILABLE") };
@@ -337,6 +353,11 @@ export function createEventWorkspace<TEvent extends EventRecord>(
         ...editing,
         syncOutlook: async () => {
           const result = await syncOutlook(id);
+          if (result.kind === "synced") editing.accept(result.event);
+          return result;
+        },
+        syncCommunication: async () => {
+          const result = await syncCommunication(id);
           if (result.kind === "synced") editing.accept(result.event);
           return result;
         },

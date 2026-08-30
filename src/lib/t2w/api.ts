@@ -25,6 +25,9 @@ type ApiEvent = {
   outlookFolderSyncStatus?: string;
   outlookFolderLastSuccessAt?: string | null;
   outlookFolderLastError?: string | null;
+  outlookMessageSyncStatus?: string;
+  outlookMessageLastSuccessAt?: string | null;
+  outlookMessageLastError?: string | null;
   sharepointFolder: string | null;
   archived: boolean;
   organizer?: { id: string; name: string } | null;
@@ -53,6 +56,17 @@ type ApiEvent = {
     author: string | null;
     body: string | null;
     occurredAt: string;
+  }[];
+  communicationMessages?: {
+    id: string;
+    direction: "INCOMING" | "OUTGOING";
+    author: string;
+    recipients: string;
+    subject: string;
+    preview: string;
+    occurredAt: string;
+    hasAttachments: boolean;
+    webUrl: string | null;
   }[];
   payoutRecipient?: { id: string; name: string } | null;
   invoiceRecipients?: { organizer: { id: string; name: string } }[];
@@ -104,6 +118,9 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     outlookFolderSyncStatus: event.outlookFolderSyncStatus,
     outlookFolderLastSuccessAt: event.outlookFolderLastSuccessAt,
     outlookFolderLastError: event.outlookFolderLastError,
+    outlookMessageSyncStatus: event.outlookMessageSyncStatus as T2WEvent["outlookMessageSyncStatus"],
+    outlookMessageLastSuccessAt: event.outlookMessageLastSuccessAt,
+    outlookMessageLastError: event.outlookMessageLastError,
     sharepointOrdner: event.sharepointFolder,
     t2wEventId: event.t2wEventId ?? null,
     time2winSyncStatus: event.time2winSyncStatus,
@@ -134,14 +151,28 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
       groesse: file.size ?? "",
       aktualisiert: dateOnly(file.updatedAt),
     })),
-    kommunikation: (event.activities ?? []).map((activity) => ({
-      id: activity.id,
-      kanal: activity.channel as "E-Mail" | "Telefon" | "Notiz",
-      betreff: activity.subject,
-      datum: dateOnly(activity.occurredAt),
-      autor: activity.author ?? "",
-      text: activity.body ?? "",
-    })),
+    kommunikation: [
+      ...(event.activities ?? []).map((activity) => ({
+        id: activity.id,
+        kanal: activity.channel as "E-Mail" | "Telefon" | "Notiz",
+        betreff: activity.subject,
+        datum: activity.occurredAt,
+        autor: activity.author ?? "",
+        text: activity.body ?? "",
+      })),
+      ...(event.communicationMessages ?? []).map((message) => ({
+        id: message.id,
+        kanal: "E-Mail" as const,
+        betreff: message.subject,
+        datum: message.occurredAt,
+        autor: message.author,
+        text: message.preview,
+        richtung: message.direction,
+        empfaenger: message.recipients,
+        hatAnlagen: message.hasAttachments,
+        outlookWebUrl: message.webUrl ?? undefined,
+      })),
+    ].sort((left, right) => right.datum.localeCompare(left.datum)),
     sportart: event.sport?.name ?? "",
   };
 }
@@ -452,6 +483,15 @@ export async function apiSyncOutlookFolder(id: string, input?: { mailbox?: strin
   return mapApiEvent((await response.json()) as ApiEvent);
 }
 
+export async function apiSyncOutlookMessages(id: string) {
+  const response = await fetch(`/api/v1/events/${id}/outlook-messages/sync`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("OUTLOOK_MESSAGE_SYNC_FAILED");
+  return mapApiEvent((await response.json()) as ApiEvent);
+}
+
 export async function apiSyncTime2win(id: string) {
   const response = await fetch(`/api/v1/events/${id}/time2win/sync`, {
     method: "POST",
@@ -479,6 +519,7 @@ export function createHttpEventTransport(): EventTransport<T2WEvent> {
     create: apiCreateEvent,
     save: apiUpdateEvent,
     syncOutlook: apiSyncOutlookFolder,
+    syncCommunication: apiSyncOutlookMessages,
     syncTime2win: apiSyncTime2win,
     outlookPlan: apiOutlookFolderPlan,
     addContact: apiAddEventContact,

@@ -18,6 +18,7 @@ import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
 import { EventMutationConflict, EventMutations } from "./event-mutations.js";
 import { Time2winService } from "./time2win.service.js";
+import { EventCommunicationHub } from "./outlook/event-communication.hub.js";
 
 export class CreateEventDto {
   @IsOptional() @IsString() eventCode?: string;
@@ -48,6 +49,7 @@ export class EventsController {
     private readonly outlookFolders: OutlookFolderService,
     private readonly eventMutations: EventMutations,
     private readonly time2win: Time2winService,
+    private readonly communication: EventCommunicationHub,
   ) {}
 
   @Post(":id/outlook-folder/sync")
@@ -61,6 +63,11 @@ export class EventsController {
   @Get(":id/outlook-folder/plan")
   outlookFolderPlan(@Param("id", ParseUUIDPipe) id: string) {
     return this.outlookFolders.eventFolderPlan(id);
+  }
+
+  @Post(":id/outlook-messages/sync")
+  syncOutlookMessages(@Param("id", ParseUUIDPipe) id: string) {
+    return this.communication.syncEvent(id);
   }
 
   @Get()
@@ -91,6 +98,7 @@ export class EventsController {
         tasks: true,
         files: true,
         activities: true,
+        communicationMessages: { orderBy: { occurredAt: "desc" } },
       },
     });
   }
@@ -107,6 +115,7 @@ export class EventsController {
         tasks: true,
         files: true,
         activities: true,
+        communicationMessages: { orderBy: { occurredAt: "desc" } },
       },
     });
   }

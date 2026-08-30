@@ -26,6 +26,20 @@ export const event = {
   outlookFolderSyncStatus: "NEVER",
   outlookFolderLastSuccessAt: null,
   outlookFolderLastError: null,
+  outlookMessageSyncStatus: "NEVER",
+  outlookMessageLastSuccessAt: null,
+  outlookMessageLastError: null,
+  communicationMessages: [] as {
+    id: string;
+    direction: "INCOMING" | "OUTGOING";
+    author: string;
+    recipients: string;
+    subject: string;
+    preview: string;
+    occurredAt: string;
+    hasAttachments: boolean;
+    webUrl: string | null;
+  }[],
   sharepointFolder: null,
   contacts: [] as {
     role: string;
@@ -155,6 +169,39 @@ export async function mockEventManagementApi(
       });
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
+      if (request.url().endsWith("/outlook-messages/sync")) {
+        mockedEvent = {
+          ...mockedEvent,
+          outlookMessageSyncStatus: "SUCCESS",
+          outlookMessageLastSuccessAt: "2026-08-30T08:20:00.000Z",
+          outlookMessageLastError: null,
+          communicationMessages: [
+            {
+              id: "message-1",
+              direction: "INCOMING",
+              author: "Eva Beispiel <eva@example.at>",
+              recipients: "TIME2WIN <info@time2win.at>",
+              subject: "Startzeit bestätigt",
+              preview: "Der Start bleibt um 09:00 Uhr.",
+              occurredAt: "2026-08-30T08:15:00.000Z",
+              hasAttachments: true,
+              webUrl: "https://outlook.office.com/mail/deeplink/read/mail-1",
+            },
+            {
+              id: "message-2",
+              direction: "OUTGOING",
+              author: "TIME2WIN <info@time2win.at>",
+              recipients: "Eva Beispiel <eva@example.at>",
+              subject: "Zeitplan an das Team gesendet",
+              preview: "Im Anhang findet ihr den aktuellen Zeitplan.",
+              occurredAt: "2026-08-30T08:18:00.000Z",
+              hasAttachments: true,
+              webUrl: "https://outlook.office.com/mail/deeplink/read/mail-2",
+            },
+          ],
+        };
+        return route.fulfill({ status: 200, json: mockedEvent });
+      }
       if (request.url().endsWith("/time2win/sync")) {
         mockedEvent = {
           ...mockedEvent,
@@ -169,7 +216,7 @@ export async function mockEventManagementApi(
             races: [{ id: 7709, name: "OstseeMan Langdistanz", participantCount: 300 }],
           },
         };
-        return route.fulfill({ status: 200, json: mockedEvent });
+        return route.fulfill({ status: 200, json: { kind: "synced", event: mockedEvent } });
       }
       if (request.url().endsWith("/outlook-folder/sync")) {
         mockedEvent = {

@@ -16,6 +16,8 @@ export type EventDetailSnapshot = DraftInputs & {
   outlookPlan: OutlookFolderPlan | null;
   outlookSyncing: boolean;
   outlookSyncMessage: string | null;
+  communicationSyncing: boolean;
+  communicationSyncMessage: string | null;
   time2winSyncing: boolean;
   time2winSyncMessage: string | null;
   visibleContacts: Person[];
@@ -37,6 +39,8 @@ export function createEventDetailWorkspace(
   let outlookPlan: OutlookFolderPlan | null = null;
   let outlookSyncing = false;
   let outlookSyncMessage: string | null = null;
+  let communicationSyncing = false;
+  let communicationSyncMessage: string | null = null;
   let time2winSyncing = false;
   let time2winSyncMessage: string | null = null;
   let inputs: DraftInputs = {
@@ -64,6 +68,8 @@ export function createEventDetailWorkspace(
       outlookPlan,
       outlookSyncing,
       outlookSyncMessage,
+      communicationSyncing,
+      communicationSyncMessage,
       time2winSyncing,
       time2winSyncMessage,
       organizerContacts: event.veranstalterId
@@ -180,6 +186,19 @@ export function createEventDetailWorkspace(
         time2winSyncing = false;
         publish();
       }
+    },
+    async syncCommunication(): Promise<SyncResult> {
+      communicationSyncing = true;
+      communicationSyncMessage = null;
+      publish();
+      const result = await session.syncCommunication();
+      communicationSyncing = false;
+      communicationSyncMessage =
+        result.kind === "synced"
+          ? "Outlook-Nachrichten synchronisiert."
+          : "Outlook-Nachrichten konnten nicht synchronisiert werden. Die letzte Timeline bleibt erhalten.";
+      publish();
+      return result;
     },
     addEventContact(personId: string, role: string) {
       if (!persons.some((person) => person.id === personId))

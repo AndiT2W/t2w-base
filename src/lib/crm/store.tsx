@@ -9,7 +9,7 @@ import {
 import { createHttpCrmAdapter, type CrmModule, type CrmState } from "./module";
 import { createCrmWorkspace } from "./workspace";
 import { createBrowserLocalCrmAdapter } from "./local-adapter";
-import { type Kunde, type Person } from "./types";
+import { personName, type Kunde, type Person } from "./types";
 import { createCrmLifecycle } from "./lifecycle";
 
 type Ctx = CrmState & {

@@ -85,6 +85,10 @@ export type Message = {
   datum: string;
   autor: string;
   text: string;
+  richtung?: "INCOMING" | "OUTGOING";
+  empfaenger?: string;
+  hatAnlagen?: boolean;
+  outlookWebUrl?: string;
 };
 
 export type T2WEvent = {
@@ -122,6 +126,9 @@ export type T2WEvent = {
   outlookFolderSyncStatus?: "NEVER" | "SYNCING" | "SUCCESS" | "ERROR";
   outlookFolderLastSuccessAt?: string | null;
   outlookFolderLastError?: string | null;
+  outlookMessageSyncStatus?: "NEVER" | "SYNCING" | "SUCCESS" | "ERROR";
+  outlookMessageLastSuccessAt?: string | null;
+  outlookMessageLastError?: string | null;
   sharepointOrdner: string | null;
   kontakte: Contact[];
   aufgaben: Task[];

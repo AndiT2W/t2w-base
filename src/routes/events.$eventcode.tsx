@@ -194,6 +194,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     if (result.kind === "synced") toast.success(detail.time2winSyncMessage ?? "TIME2WIN-Teilnehmer synchronisiert.");
     else toast.error(detail.time2winSyncMessage ?? "TIME2WIN-Synchronisierung fehlgeschlagen.");
   }
+  async function kommunikationSynchronisieren() {
+    const result = await detailWorkspace.syncCommunication();
+    if (result.kind === "synced") toast.success("Outlook-Nachrichten synchronisiert.");
+    else toast.error("Outlook-Nachrichten konnten nicht synchronisiert werden.");
+  }
 
   async function addEventContact(personId: string, role: string) {
     await detailWorkspace.addEventContact(personId, role);
@@ -1010,8 +1015,36 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Kommunikation</CardTitle>
+              <CardDescription>
+                Outlook-Nachrichten aus dem Eventordner und manuelle Aktivitäten in einer Timeline.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => void kommunikationSynchronisieren()}
+                  disabled={detail.communicationSyncing || !form.outlookFolderId}
+                >
+                  <FolderSync className="size-4" />
+                  {detail.communicationSyncing ? "Synchronisiere …" : "Outlook-Nachrichten synchronisieren"}
+                </Button>
+                {form.outlookMessageLastSuccessAt && (
+                  <span className="text-xs text-muted-foreground">
+                    Zuletzt synchronisiert: {formatDatum(form.outlookMessageLastSuccessAt)}
+                  </span>
+                )}
+              </div>
+              {detail.communicationSyncMessage && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {detail.communicationSyncMessage}
+                </p>
+              )}
+              {!form.outlookFolderId && (
+                <p className="text-sm text-muted-foreground">
+                  Zuerst den Outlook-Eventordner synchronisieren.
+                </p>
+              )}
               <div className="flex gap-2">
                 <Input
                   aria-label="Neue Aktivität"
@@ -1033,10 +1066,29 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       <Icon className="size-4 text-muted-foreground" />
                       <span className="font-medium text-foreground">{m.betreff}</span>
                       <span className="text-xs text-muted-foreground">
-                        {m.kanal} · {formatDatum(m.datum)} · {m.autor}
+                        {m.kanal} · {formatDatum(m.datum)}
                       </span>
                     </div>
+                    {m.richtung && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {m.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"} · {m.autor}
+                      </p>
+                    )}
                     <p className="mt-2 text-sm text-muted-foreground">{m.text}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      {!m.richtung && m.autor && <span>{m.autor}</span>}
+                      {m.hatAnlagen && <span>Anlagen vorhanden</span>}
+                      {m.outlookWebUrl && (
+                        <a
+                          className="font-medium text-primary hover:underline"
+                          href={m.outlookWebUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          In Outlook öffnen
+                        </a>
+                      )}
+                    </div>
                   </div>
                 );
               })}

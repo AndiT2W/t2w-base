@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { OutlookGraphError, type OutlookFolder, type OutlookGraphClient } from "./outlook.types.js";
+import { OutlookGraphError, type OutlookFolder, type OutlookGraphClient, type OutlookMessage } from "./outlook.types.js";
 
 @Injectable()
 export class MicrosoftGraphClient implements OutlookGraphClient {
@@ -42,5 +42,17 @@ export class MicrosoftGraphClient implements OutlookGraphClient {
 
   async createChildFolder(mailbox: string, parentId: string, displayName: string): Promise<OutlookFolder> {
     return this.request<OutlookFolder>(`/users/${encodeURIComponent(mailbox)}/mailFolders/${encodeURIComponent(parentId)}/childFolders`, { method: "POST", body: JSON.stringify({ displayName }) });
+  }
+
+  async listMessages(mailbox: string, folderId: string): Promise<OutlookMessage[]> {
+    const messages: OutlookMessage[] = [];
+    const fields = "id,conversationId,subject,bodyPreview,receivedDateTime,sentDateTime,from,toRecipients,hasAttachments,webLink";
+    let next: string | undefined = `/users/${encodeURIComponent(mailbox)}/mailFolders/${encodeURIComponent(folderId)}/messages?$select=${fields}&$top=100`;
+    while (next) {
+      const result: { value: OutlookMessage[]; "@odata.nextLink"?: string } = await this.request(next);
+      messages.push(...result.value);
+      next = result["@odata.nextLink"];
+    }
+    return messages;
   }
 }
