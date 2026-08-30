@@ -12,7 +12,16 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
-import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from "class-validator";
 import { EventStatus } from "@prisma/client";
 import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
@@ -39,6 +48,14 @@ export class CreateEventDto {
   @IsOptional() @IsString() sharepointFolder?: string;
   @IsOptional() @IsString() payoutRecipientId?: string;
   @IsOptional() invoiceRecipientIds?: string[];
+}
+class CopyEventDto {
+  @IsString() name!: string;
+  @IsString() eventCode!: string;
+  @IsDateString() startAt!: string;
+  @IsDateString() endAt!: string;
+  @IsOptional() @IsBoolean() createRelationship?: boolean;
+  @IsOptional() @IsInt() version?: number;
 }
 
 @ApiTags("events")
@@ -125,6 +142,14 @@ export class EventsController {
     return this.eventMutations.create(dto);
   }
 
+  @Post(":id/copy")
+  copy(@Param("id", ParseUUIDPipe) id: string, @Body() dto: CopyEventDto) {
+    return this.eventMutations.copy(id, {
+      ...dto,
+      createRelationship: dto.createRelationship ?? true,
+    });
+  }
+
   @Patch(":id") update(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() dto: Partial<CreateEventDto> & { version?: number },
@@ -147,7 +172,9 @@ export class EventsController {
     @Param("contactId", ParseUUIDPipe) contactId: string,
     @Body() body: { role?: string; version: number },
   ) {
-    return this.mutate(() => this.eventMutations.addContact(eventId, contactId, body.role ?? "Kontakt", body.version));
+    return this.mutate(() =>
+      this.eventMutations.addContact(eventId, contactId, body.role ?? "Kontakt", body.version),
+    );
   }
 
   @Patch(":id/contacts/:contactId/:role")
@@ -157,34 +184,79 @@ export class EventsController {
     @Param("role") role: string,
     @Body() body: { role?: string; version: number },
   ) {
-    return this.mutate(() => this.eventMutations.updateContactRole(eventId, contactId, role, body.role ?? "Kontakt", body.version));
+    return this.mutate(() =>
+      this.eventMutations.updateContactRole(
+        eventId,
+        contactId,
+        role,
+        body.role ?? "Kontakt",
+        body.version,
+      ),
+    );
   }
 
   @Delete(":id/contacts/:contactId/:role")
   async removeContact(
     @Param("id", ParseUUIDPipe) eventId: string,
     @Param("contactId", ParseUUIDPipe) contactId: string,
-    @Param("role") role: string, @Body() body: { version: number },
+    @Param("role") role: string,
+    @Body() body: { version: number },
   ) {
-    return this.mutate(() => this.eventMutations.removeContact(eventId, contactId, role, body.version));
+    return this.mutate(() =>
+      this.eventMutations.removeContact(eventId, contactId, role, body.version),
+    );
   }
 
-  @Post(":id/tasks") createTask(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { title: string; dueAt?: string; responsible?: string; version: number }) {
+  @Post(":id/tasks") createTask(
+    @Param("id", ParseUUIDPipe) eventId: string,
+    @Body() body: { title: string; dueAt?: string; responsible?: string; version: number },
+  ) {
     const { version, ...input } = body;
     return this.mutate(() => this.eventMutations.createTask(eventId, input, version));
   }
-  @Patch(":id/tasks/:taskId") updateTask(@Param("id", ParseUUIDPipe) eventId: string, @Param("taskId", ParseUUIDPipe) taskId: string, @Body() body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean; version: number }) {
+  @Patch(":id/tasks/:taskId") updateTask(
+    @Param("id", ParseUUIDPipe) eventId: string,
+    @Param("taskId", ParseUUIDPipe) taskId: string,
+    @Body()
+    body: {
+      title?: string;
+      dueAt?: string | null;
+      responsible?: string;
+      completed?: boolean;
+      version: number;
+    },
+  ) {
     const { version, ...input } = body;
     return this.mutate(() => this.eventMutations.updateTask(eventId, taskId, input, version));
   }
-  @Post(":id/files") createFile(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { name: string; url?: string; size?: string; version: number }) {
+  @Post(":id/files") createFile(
+    @Param("id", ParseUUIDPipe) eventId: string,
+    @Body() body: { name: string; url?: string; size?: string; version: number },
+  ) {
     const { version, ...input } = body;
     return this.mutate(() => this.eventMutations.createFile(eventId, input, version));
   }
-  @Post(":id/activities") createActivity(@Param("id", ParseUUIDPipe) eventId: string, @Body() body: { channel: string; subject: string; author?: string; body?: string; occurredAt?: string; version: number }) {
+  @Post(":id/activities") createActivity(
+    @Param("id", ParseUUIDPipe) eventId: string,
+    @Body()
+    body: {
+      channel: string;
+      subject: string;
+      author?: string;
+      body?: string;
+      occurredAt?: string;
+      version: number;
+    },
+  ) {
     const { version, ...input } = body;
     return this.mutate(() => this.eventMutations.createActivity(eventId, input, version));
   }
 
-  private mutate(work: () => Promise<unknown>) { return work().catch((error: unknown) => { if (error instanceof EventMutationConflict) throw new ConflictException("EVENT_VERSION_CONFLICT"); throw error; }); }
+  private mutate(work: () => Promise<unknown>) {
+    return work().catch((error: unknown) => {
+      if (error instanceof EventMutationConflict)
+        throw new ConflictException("EVENT_VERSION_CONFLICT");
+      throw error;
+    });
+  }
 }

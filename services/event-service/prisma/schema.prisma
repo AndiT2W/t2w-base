@@ -163,6 +163,7 @@ model Event {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   updatedById           String?     @db.Uuid
+  seriesId              String?     @db.Uuid
   organizer             Organizer?  @relation(fields: [organizerId], references: [id], onDelete: SetNull)
   payoutRecipient       Organizer?  @relation("EventPayoutRecipient", fields: [payoutRecipientId], references: [id], onDelete: SetNull)
   sport                 Sport?      @relation(fields: [sportId], references: [id], onDelete: SetNull)
@@ -173,6 +174,7 @@ model Event {
   files                 EventFile[]
   activities            EventActivity[]
   communicationMessages EventCommunicationMessage[]
+  @@index([seriesId, startAt])
   @@index([status, archived])
   @@index([startAt, endAt])
 }

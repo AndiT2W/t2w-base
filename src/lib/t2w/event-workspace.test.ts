@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createEventEditingSession, createEventWorkspace } from "./event-workspace";
 import type { T2WEvent } from "./types";
+import { copyDateSuggestion } from "./eventcode";
 
 const event = {
   id: "e1",
@@ -12,6 +13,12 @@ const event = {
 } as T2WEvent;
 
 describe("Event workspace", () => {
+  it("suggests the following year's matching weekday and preserves duration", () => {
+    expect(copyDateSuggestion("2026-08-23", "2026-08-25")).toEqual({
+      start: "2027-08-29",
+      ende: "2027-08-31",
+    });
+  });
   it("owns organizer recipient defaults in an editing session", async () => {
     const initial = {
       ...event,

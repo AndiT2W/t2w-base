@@ -5,6 +5,7 @@ import type { EventTransport } from "@t2w/domain/event";
 type ApiEvent = {
   id: string;
   version?: number;
+  seriesId?: string | null;
   eventCode: string;
   name: string;
   status: string;
@@ -89,6 +90,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
   return {
     id: event.id,
     version: event.version,
+    seriesId: event.seriesId ?? null,
     eventcode: event.eventCode,
     name: event.name,
     veranstalter: event.organizer?.name ?? "—",
@@ -118,7 +120,8 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     outlookFolderSyncStatus: event.outlookFolderSyncStatus,
     outlookFolderLastSuccessAt: event.outlookFolderLastSuccessAt,
     outlookFolderLastError: event.outlookFolderLastError,
-    outlookMessageSyncStatus: event.outlookMessageSyncStatus as T2WEvent["outlookMessageSyncStatus"],
+    outlookMessageSyncStatus:
+      event.outlookMessageSyncStatus as T2WEvent["outlookMessageSyncStatus"],
     outlookMessageLastSuccessAt: event.outlookMessageLastSuccessAt,
     outlookMessageLastError: event.outlookMessageLastError,
     sharepointOrdner: event.sharepointFolder,
@@ -511,6 +514,27 @@ export async function apiOutlookFolderPlan(id: string) {
   });
   if (!response.ok) throw new Error("OUTLOOK_FOLDER_PLAN_FAILED");
   return response.json() as Promise<import("./event-workspace").OutlookFolderPlan>;
+}
+
+export async function apiCopyEvent(
+  id: string,
+  input: {
+    name: string;
+    eventcode: string;
+    start: string;
+    ende: string;
+    createRelationship: boolean;
+    version?: number;
+  },
+) {
+  return eventAction<ApiEvent>(`/api/v1/events/${id}/copy`, "POST", {
+    name: input.name,
+    eventCode: input.eventcode,
+    startAt: input.start,
+    endAt: input.ende,
+    createRelationship: input.createRelationship,
+    version: input.version,
+  }).then(mapApiEvent);
 }
 
 /** The HTTP adapter for the Event workspace seam. */

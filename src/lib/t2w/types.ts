@@ -94,6 +94,7 @@ export type Message = {
 export type T2WEvent = {
   id: string;
   version?: number;
+  seriesId?: string | null;
   eventcode: string;
   name: string;
   veranstalter: string;
@@ -104,7 +105,12 @@ export type T2WEvent = {
   time2winSyncStatus?: string;
   time2winLastSuccessAt?: string | null;
   time2winLastError?: string | null;
-  time2winSnapshot?: { eventId: number; name: string | null; sportName: string | null; races: { id: number; name: string; participantCount: number | null }[] } | null;
+  time2winSnapshot?: {
+    eventId: number;
+    name: string | null;
+    sportName: string | null;
+    races: { id: number; name: string; participantCount: number | null }[];
+  } | null;
   auszahlungsempfaengerId?: string | null;
   rechnungsempfaengerIds?: string[];
   ort: string;

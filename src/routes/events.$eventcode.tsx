@@ -1,6 +1,16 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, CheckCircle2, FolderPlus, FolderSync, HelpCircle, Link2, Mail, Phone, StickyNote } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  FolderPlus,
+  FolderSync,
+  HelpCircle,
+  Link2,
+  Mail,
+  Phone,
+  StickyNote,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +54,8 @@ import { useCrm } from "@/lib/crm/store";
 import { eventContactRoleChoices, selectionListChoices } from "@/lib/t2w/selection-list-workspace";
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
-import { jahr } from "@/lib/t2w/eventcode";
+import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
+import { apiCopyEvent } from "@/lib/t2w/api";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
@@ -137,7 +148,7 @@ function EventDetail() {
 }
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
-  const { openEventSession, settings, selectionLists } = useT2W();
+  const { openEventSession, settings, selectionLists, events } = useT2W();
   const { personen, kunden, neuLaden } = useCrm();
   const { t } = useI18n();
   const [detailWorkspace] = useState(() =>
@@ -154,6 +165,25 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   );
   const { form } = detail;
   const [quartalsDialog, setQuartalsDialog] = useState(false);
+  const [copyDialog, setCopyDialog] = useState(false);
+  const initialCopy = copyDateSuggestion(event.start, event.ende);
+  const [copyStart, setCopyStart] = useState(initialCopy.start);
+  const [copyEnde, setCopyEnde] = useState(initialCopy.ende);
+  const [copyName, setCopyName] = useState(() => {
+    const fromYear = jahr(event.start);
+    const toYear = jahr(initialCopy.start);
+    return event.name.split(fromYear).length === 2
+      ? event.name.replace(fromYear, toYear)
+      : event.name;
+  });
+  const [copyCode, setCopyCode] = useState(() =>
+    buildEventcode(
+      copyName,
+      initialCopy.start,
+      events.map((item) => item.eventcode),
+    ),
+  );
+  const [createRelationship, setCreateRelationship] = useState(true);
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
 
   useEffect(() => {
@@ -175,8 +205,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
   async function speichern() {
     const result = await detailWorkspace.save(neuLaden);
-    if (result.kind === "saved")
-      toast.success("Änderungen gespeichert.");
+    if (result.kind === "saved") toast.success("Änderungen gespeichert.");
     else if (result.kind === "conflict")
       toast.error("Das Event wurde zwischenzeitlich geändert. Bitte neu laden.");
     else if (result.error.message === "EVENT_START_REQUIRED")
@@ -191,7 +220,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   }
   async function time2winSynchronisieren() {
     const result = await detailWorkspace.syncTime2win();
-    if (result.kind === "synced") toast.success(detail.time2winSyncMessage ?? "TIME2WIN-Teilnehmer synchronisiert.");
+    if (result.kind === "synced")
+      toast.success(detail.time2winSyncMessage ?? "TIME2WIN-Teilnehmer synchronisiert.");
     else toast.error(detail.time2winSyncMessage ?? "TIME2WIN-Synchronisierung fehlgeschlagen.");
   }
   async function kommunikationSynchronisieren() {
@@ -199,6 +229,31 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     if (result.kind === "synced") toast.success("Outlook-Nachrichten synchronisiert.");
     else toast.error("Outlook-Nachrichten konnten nicht synchronisiert werden.");
   }
+  async function copyEvent() {
+    try {
+      const copied = await apiCopyEvent(event.id, {
+        name: copyName,
+        eventcode: copyCode,
+        start: copyStart,
+        ende: copyEnde,
+        createRelationship,
+        version: event.version,
+      });
+      toast.success("Event kopiert.");
+      setCopyDialog(false);
+      window.location.assign(`/events/${copied.eventcode}`);
+    } catch {
+      toast.error("Event konnte nicht kopiert werden. Der Eventcode muss eindeutig sein.");
+    }
+  }
+  const seriesEvents = form.seriesId
+    ? events
+        .filter((item) => item.seriesId === form.seriesId)
+        .sort((a, b) => a.start.localeCompare(b.start))
+    : [];
+  const seriesIndex = seriesEvents.findIndex((item) => item.id === event.id);
+  const previousEvent = seriesEvents[seriesIndex - 1];
+  const nextEvent = seriesEvents[seriesIndex + 1];
 
   async function addEventContact(personId: string, role: string) {
     await detailWorkspace.addEventContact(personId, role);
@@ -256,14 +311,47 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             )}
           </div>
         </div>
-        <Button onClick={speichern}>Änderungen speichern</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCopyDialog(true)}>
+            Event kopieren
+          </Button>
+          <Button onClick={speichern}>Änderungen speichern</Button>
+        </div>
       </div>
+
+      {form.seriesId && (
+        <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+          <span className="text-muted-foreground">Eventserie:</span>
+          {previousEvent ? (
+            <Link
+              className="underline"
+              to="/events/$eventcode"
+              params={{ eventcode: previousEvent.eventcode }}
+            >
+              ← {previousEvent.name}
+            </Link>
+          ) : (
+            <span>Kein vorheriges Event</span>
+          )}
+          {nextEvent ? (
+            <Link
+              className="underline"
+              to="/events/$eventcode"
+              params={{ eventcode: nextEvent.eventcode }}
+            >
+              {nextEvent.name} →
+            </Link>
+          ) : (
+            <span>Kein nächstes Event</span>
+          )}
+        </div>
+      )}
 
       {quartalsAbweichung && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent px-4 py-3">
           <p className="text-sm text-accent-foreground">
-            Quartalswechsel erkannt: Der Outlook-Ordner liegt nicht in {detail.outlookPlan?.quarter}.
-            Vorschlag: <span className="font-mono">{outlookVorschlag}</span>. SharePoint bleibt
+            Quartalswechsel erkannt: Der Outlook-Ordner liegt nicht in {detail.outlookPlan?.quarter}
+            . Vorschlag: <span className="font-mono">{outlookVorschlag}</span>. SharePoint bleibt
             unverändert.
           </p>
           <Button variant="outline" size="sm" onClick={() => setQuartalsDialog(true)}>
@@ -479,11 +567,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   className="mt-2 flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
                 >
                   {outlookExistence === "EXISTS" ? (
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-status-zugesagt" aria-hidden="true" />
+                    <CheckCircle2
+                      className="mt-0.5 size-4 shrink-0 text-status-zugesagt"
+                      aria-hidden="true"
+                    />
                   ) : outlookExistence === "MISSING" ? (
-                    <FolderPlus className="mt-0.5 size-4 shrink-0 text-risk-beobachten" aria-hidden="true" />
+                    <FolderPlus
+                      className="mt-0.5 size-4 shrink-0 text-risk-beobachten"
+                      aria-hidden="true"
+                    />
                   ) : (
-                    <HelpCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <HelpCircle
+                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
                   )}
                   <span>
                     {outlookExistence === "EXISTS"
@@ -510,7 +607,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   >
                     {detail.outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}
                   </Button>
-                  {detail.outlookSyncMessage && <span role="status">{detail.outlookSyncMessage}</span>}
+                  {detail.outlookSyncMessage && (
+                    <span role="status">{detail.outlookSyncMessage}</span>
+                  )}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   Graph-Sync:{" "}
@@ -586,7 +685,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 />
               </div>
               <div className="text-sm">
-                <p>Verknüpftes Event: <strong>{form.time2winSnapshot?.name ?? "—"}</strong></p>
+                <p>
+                  Verknüpftes Event: <strong>{form.time2winSnapshot?.name ?? "—"}</strong>
+                </p>
                 <p>TIME2WIN-Sportart: {form.time2winSnapshot?.sportName ?? "—"}</p>
                 <p>
                   Gemeldete TN: <strong>{form.teilnehmerwerte?.aktuell ?? "—"}</strong>
@@ -613,7 +714,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <div className="sm:col-span-2">
                 <h3 className="text-sm font-medium text-foreground">Teilnehmer nach Bewerb</h3>
                 {form.time2winSnapshot?.races.length ? (
-                  <Table className="mt-2 min-w-[22rem]" aria-label="TIME2WIN Teilnehmer nach Bewerb">
+                  <Table
+                    className="mt-2 min-w-[22rem]"
+                    aria-label="TIME2WIN Teilnehmer nach Bewerb"
+                  >
                     <TableHeader>
                       <TableRow>
                         <TableHead>Bewerb</TableHead>
@@ -639,7 +743,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       </TableRow>
                     </TableFooter>
                   </Table>
-                ) : <p className="mt-2 text-sm text-muted-foreground">Noch keine TIME2WIN-Bewerbe geladen.</p>}
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Noch keine TIME2WIN-Bewerbe geladen.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -698,7 +806,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       aria-label="Rechnungsempfänger suchen"
                       placeholder="Rechnungsempfänger suchen …"
                       value={detail.invoiceRecipientSearch}
-                      onChange={(e) => detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)}
+                      onChange={(e) =>
+                        detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)
+                      }
                     />
                     <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
                       {detail.visibleInvoiceRecipients.length ? (
@@ -709,7 +819,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                           >
                             <Checkbox
                               checked={detail.invoiceRecipientIds.includes(kunde.id)}
-                              onCheckedChange={() => detailWorkspace.toggleInvoiceRecipient(kunde.id)}
+                              onCheckedChange={() =>
+                                detailWorkspace.toggleInvoiceRecipient(kunde.id)
+                              }
                             />
                             {kunde.name}
                           </label>
@@ -846,11 +958,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {eventContactRoleChoices(selectionLists.eventRoles, detail.contactRole).map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
+                      {eventContactRoleChoices(selectionLists.eventRoles, detail.contactRole).map(
+                        (role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                   <Button onClick={() => void addContact()} disabled={!detail.contactId}>
@@ -886,15 +1000,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               value={k.rolle}
                               onValueChange={(role) => void updateContactRole(k, role)}
                             >
-                              <SelectTrigger aria-label={`Eventrolle für ${k.name}`} className="min-h-11 sm:min-h-9">
+                              <SelectTrigger
+                                aria-label={`Eventrolle für ${k.name}`}
+                                className="min-h-11 sm:min-h-9"
+                              >
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {eventContactRoleChoices(selectionLists.eventRoles, k.rolle).map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {role}
-                                  </SelectItem>
-                                ))}
+                                {eventContactRoleChoices(selectionLists.eventRoles, k.rolle).map(
+                                  (role) => (
+                                    <SelectItem key={role} value={role}>
+                                      {role}
+                                    </SelectItem>
+                                  ),
+                                )}
                               </SelectContent>
                             </Select>
                           </td>
@@ -911,7 +1030,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               onClick={() =>
                                 void detailWorkspace
                                   .removeContact(k.id, k.rolle)
-                                  .catch(() => toast.error("Kontaktrolle konnte nicht entfernt werden."))
+                                  .catch(() =>
+                                    toast.error("Kontaktrolle konnte nicht entfernt werden."),
+                                  )
                               }
                             >
                               Entfernen
@@ -1027,7 +1148,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   disabled={detail.communicationSyncing || !form.outlookFolderId}
                 >
                   <FolderSync className="size-4" />
-                  {detail.communicationSyncing ? "Synchronisiere …" : "Outlook-Nachrichten synchronisieren"}
+                  {detail.communicationSyncing
+                    ? "Synchronisiere …"
+                    : "Outlook-Nachrichten synchronisieren"}
                 </Button>
                 {form.outlookMessageLastSuccessAt && (
                   <span className="text-xs text-muted-foreground">
@@ -1097,6 +1220,89 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         </TabsContent>
       </Tabs>
 
+      <AlertDialog open={copyDialog} onOpenChange={setCopyDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Event kopieren</AlertDialogTitle>
+            <AlertDialogDescription>
+              Stammdaten, Empfänger und Kontaktrollen werden übernommen. Aufgaben, Dateien,
+              Kommunikation und TIME2WIN-Daten bleiben beim Quell-Event.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label htmlFor="copy-name">Eventname</Label>
+              <Input
+                id="copy-name"
+                value={copyName}
+                onChange={(e) => {
+                  setCopyName(e.target.value);
+                  setCopyCode(
+                    buildEventcode(
+                      e.target.value,
+                      copyStart,
+                      events.map((item) => item.eventcode),
+                    ),
+                  );
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="copy-start">Startdatum</Label>
+              <Input
+                id="copy-start"
+                type="date"
+                value={copyStart}
+                onChange={(e) => {
+                  setCopyStart(e.target.value);
+                  setCopyCode(
+                    buildEventcode(
+                      copyName,
+                      e.target.value,
+                      events.map((item) => item.eventcode),
+                    ),
+                  );
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="copy-ende">Enddatum</Label>
+              <Input
+                id="copy-ende"
+                type="date"
+                value={copyEnde}
+                onChange={(e) => setCopyEnde(e.target.value)}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="copy-code">Eventcode</Label>
+              <Input
+                id="copy-code"
+                value={copyCode}
+                onChange={(e) => setCopyCode(e.target.value)}
+              />
+            </div>
+            <label className="sm:col-span-2 flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={createRelationship}
+                onCheckedChange={(checked) => setCreateRelationship(checked === true)}
+              />
+              Als Eventserie verknüpfen
+            </label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void copyEvent();
+              }}
+            >
+              Kopie speichern
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={quartalsDialog} onOpenChange={setQuartalsDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

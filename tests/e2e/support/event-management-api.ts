@@ -53,6 +53,7 @@ export async function mockEventManagementApi(
 ) {
   const requests: { method: string; url: string; body?: string }[] = [];
   let mockedEvent = { ...event, ...eventOverride };
+  let copiedEvents: (typeof mockedEvent)[] = [];
   let settings = {
     outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }],
     jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }],
@@ -165,10 +166,35 @@ export async function mockEventManagementApi(
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([mockedEvent]),
+        body: JSON.stringify([mockedEvent, ...copiedEvents]),
       });
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
+      if (request.url().endsWith("/copy")) {
+        mockedEvent = body.createRelationship
+          ? { ...mockedEvent, seriesId: "series-1" }
+          : mockedEvent;
+        const copied = {
+          ...mockedEvent,
+          id: "22222222-2222-4222-8222-222222222222",
+          eventCode: body.eventCode,
+          name: body.name,
+          startAt: `${body.startAt}T00:00:00.000Z`,
+          endAt: `${body.endAt}T00:00:00.000Z`,
+          seriesId: body.createRelationship ? "series-1" : null,
+          t2wEventId: null,
+          participantCurrent: null,
+          tasks: [],
+          files: [],
+          activities: [],
+          communicationMessages: [],
+          outlookFolder: null,
+          outlookFolderId: null,
+          sharepointFolder: null,
+        };
+        copiedEvents = [...copiedEvents, copied];
+        return route.fulfill({ status: 201, json: copied });
+      }
       if (request.url().endsWith("/outlook-messages/sync")) {
         mockedEvent = {
           ...mockedEvent,

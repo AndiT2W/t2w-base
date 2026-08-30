@@ -10,12 +10,7 @@ import {
 } from "react";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
-import {
-  createHttpEventTransport,
-  apiEvents,
-  apiSettings,
-  apiUpdateSettings,
-} from "./api";
+import { createHttpEventTransport, apiEvents, apiSettings, apiUpdateSettings } from "./api";
 import {
   createEventWorkspace,
   type CreateEventInput,
@@ -35,6 +30,7 @@ type State = {
 };
 
 type Ctx = State & {
+  events: T2WEvent[];
   bereit: boolean;
   ladefehler: string | null;
   neuesEvent: (input: CreateEventInput) => Promise<T2WEvent>;
@@ -62,10 +58,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   const [bereit, setBereit] = useState(false);
   const [ladefehler, setLadefehler] = useState<string | null>(null);
   const [angemeldet, setAngemeldet] = useState(true);
-  const workspace = useMemo(
-    () => createEventWorkspace(createHttpEventTransport()),
-    [],
-  );
+  const workspace = useMemo(() => createEventWorkspace(createHttpEventTransport()), []);
   const selectionWorkspace = useMemo(
     () => createSelectionListWorkspace(createHttpSelectionListAdapter()),
     [],

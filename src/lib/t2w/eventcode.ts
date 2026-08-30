@@ -63,3 +63,19 @@ export function quartal(iso: string): "Q1" | "Q2" | "Q3" | "Q4" {
 export function jahr(iso: string): string {
   return iso.split("-")[0] ?? "";
 }
+
+/** Suggests the same weekday in the following year and keeps multi-day duration intact. */
+export function copyDateSuggestion(start: string, ende: string) {
+  const source = new Date(`${start}T00:00:00Z`);
+  const target = new Date(
+    Date.UTC(source.getUTCFullYear() + 1, source.getUTCMonth(), source.getUTCDate()),
+  );
+  target.setUTCDate(target.getUTCDate() + ((source.getUTCDay() - target.getUTCDay() + 7) % 7));
+  const end = new Date(`${ende}T00:00:00Z`);
+  const duration = Math.max(0, Math.round((end.getTime() - source.getTime()) / 86_400_000));
+  const iso = (value: Date) => value.toISOString().slice(0, 10);
+  const suggestedStart = iso(target);
+  const suggestedEnd = new Date(target);
+  suggestedEnd.setUTCDate(suggestedEnd.getUTCDate() + duration);
+  return { start: suggestedStart, ende: iso(suggestedEnd) };
+}

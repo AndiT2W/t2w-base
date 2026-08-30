@@ -71,9 +71,7 @@ test("zeigt vor und nach Outlook-Sync, ob der Ordner neu erstellt oder bereits v
 }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await expect(page.getByLabel("Outlook-Ordnerstatus")).toContainText(
-    "Ordner nicht vorhanden",
-  );
+  await expect(page.getByLabel("Outlook-Ordnerstatus")).toContainText("Ordner nicht vorhanden");
 
   await page.getByRole("button", { name: "Outlook-Ordner synchronisieren" }).click();
   await expect(page.getByLabel("Outlook-Ordnerstatus")).toContainText("Ordner vorhanden");
@@ -97,7 +95,9 @@ test("zeigt synchronisierte TIME2WIN-Teilnehmer im Event", async ({ page }) => {
 test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
-  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(
+    page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
+  ).toBeVisible();
   await expect(page.locator("table").getByText("Alter Veranstalter")).toBeVisible();
 });
 
@@ -137,10 +137,14 @@ test("filtert die Übersicht über den Status-Dropdown und zeigt Ordner nur als 
   await page.goto("/");
   await expect(page.getByLabel("Status filtern")).toBeVisible();
   await page.getByLabel("Status filtern").selectOption("zugesagt");
-  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(
+    page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
+  ).toBeVisible();
   await page.getByLabel("Status filtern").selectOption("alle");
   await expect(page.getByLabel("Status filtern")).toHaveValue("alle");
-  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(
+    page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Statuslegende")).toBeVisible();
   await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft")).toBeVisible();
   await expect(page.locator("table").getByLabel("SharePoint: nicht verknüpft")).toBeVisible();
@@ -305,7 +309,9 @@ test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async (
 test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/");
-  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(
+    page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
+  ).toBeVisible();
   const openButton = page.getByRole("button", { name: "Event anlegen", exact: true }).first();
   await expect(openButton).toBeVisible();
   await openButton.click();
@@ -378,7 +384,9 @@ test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Even
 test("validiert Veranstalter und Sportart im Anlage-Modal", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
-  await expect(page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(
+    page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Event anlegen", exact: true }).first().click();
   await page.getByLabel(/Eventname/).fill("Pflichtfeldtest");
   await page.getByLabel(/Startdatum/).fill("2026-08-22");
@@ -408,6 +416,22 @@ test("speichert den Veranstalter der Detailseite über seine Stammdaten-ID", asy
   ).toBeTruthy();
 });
 
+test("kopiert ein Event als editierbare Vorlage und zeigt die Seriennachbarn nach Reload", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("button", { name: "Event kopieren" }).click();
+  await page.locator("#copy-name").fill("Bestehendes Event 2027");
+  await page.locator("#copy-start").fill("2027-08-26");
+  await page.getByRole("button", { name: "Kopie speichern" }).click();
+  await expect(page.getByRole("heading", { name: "Bestehendes Event 2027" })).toBeVisible();
+  await expect(page.getByText("Eventserie:")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Bestehendes Event/ })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Eventserie:")).toBeVisible();
+});
+
 test("zeigt und speichert die Sportart im Event-Detailformular", async ({ page }) => {
   const requests = await mockApi(page, { sport: { id: "s1", name: "Triathlon" } });
   await page.goto("/events/260820_demo_event");
@@ -420,8 +444,7 @@ test("zeigt und speichert die Sportart im Event-Detailformular", async ({ page }
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
     requests.some(
-      (request) =>
-        request.method === "PATCH" && JSON.parse(request.body ?? "{}").sportId === "s2",
+      (request) => request.method === "PATCH" && JSON.parse(request.body ?? "{}").sportId === "s2",
     ),
   ).toBeTruthy();
 
@@ -580,7 +603,9 @@ test("trennt Tabellen-Detailnavigation von Outlook-, SharePoint- und Bearbeiten-
   await page.goto("/");
   await expect(page.locator('tbody tr[role="link"]')).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ }),
+  ).toBeVisible();
 });
 
 test("schließt Kontakt-Dialog und Detail-Sheet per Escape mit Fokus-Rückgabe", async ({ page }) => {
@@ -630,29 +655,33 @@ test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ pa
   await expect(page.getByText("Status: NEVER")).toBeVisible();
 });
 
-test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben", async ({ page }) => {
+test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben", async ({
+  page,
+}) => {
   await mockApi(page, { t2wEventId: 42, participantForecast: 10, participantCurrent: 4 });
-  await page.route("**/api/v1/events/11111111-1111-4111-8111-111111111111/time2win/sync", async (route) =>
-    route.fulfill({
-      json: {
-        kind: "synced",
-        event: {
-          ...event,
-          t2wEventId: 42,
-          participantForecast: 10,
-          participantCurrent: 21,
-          time2winSyncStatus: "SUCCESS",
-          time2winLastSuccessAt: "2026-08-28T12:00:00.000Z",
-          time2winLastError: null,
-          time2winSnapshot: {
-            eventId: 42,
-            name: "TIME2WIN Testevent",
-            sportName: "Laufen",
-            races: [{ id: 7, name: "Hauptbewerb", participantCount: 21 }],
+  await page.route(
+    "**/api/v1/events/11111111-1111-4111-8111-111111111111/time2win/sync",
+    async (route) =>
+      route.fulfill({
+        json: {
+          kind: "synced",
+          event: {
+            ...event,
+            t2wEventId: 42,
+            participantForecast: 10,
+            participantCurrent: 21,
+            time2winSyncStatus: "SUCCESS",
+            time2winLastSuccessAt: "2026-08-28T12:00:00.000Z",
+            time2winLastError: null,
+            time2winSnapshot: {
+              eventId: 42,
+              name: "TIME2WIN Testevent",
+              sportName: "Laufen",
+              races: [{ id: 7, name: "Hauptbewerb", participantCount: 21 }],
+            },
           },
         },
-      },
-    }),
+      }),
   );
   await page.goto("/events/260820_demo_event");
   await page.getByRole("tab", { name: "TIME2WIN" }).click();
@@ -660,7 +689,9 @@ test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben
   await expect(page.getByText("TIME2WIN Testevent")).toBeVisible();
   await expect(page.getByText("Hauptbewerb")).toBeVisible();
   await expect(page.getByText("Gemeldete TN: 21")).toBeVisible();
-  await expect(page.getByRole("table", { name: "TIME2WIN Teilnehmer nach Bewerb" })).toContainText("21");
+  await expect(page.getByRole("table", { name: "TIME2WIN Teilnehmer nach Bewerb" })).toContainText(
+    "21",
+  );
   await expect(page.getByText("TIME2WIN-Teilnehmer synchronisiert.")).toBeVisible();
 });
 
@@ -754,10 +785,16 @@ test("öffnet den Outlook-Ordner per Deep Link in Übersicht und Veranstaltungen
   });
 
   await page.goto("/");
-  await expect(page.locator("table").getByTitle("Outlook öffnen")).toHaveAttribute("href", outlookFolderUrl);
+  await expect(page.locator("table").getByTitle("Outlook öffnen")).toHaveAttribute(
+    "href",
+    outlookFolderUrl,
+  );
 
   await page.goto("/veranstaltungen");
-  await expect(page.locator("table").getByTitle("Outlook öffnen")).toHaveAttribute("href", outlookFolderUrl);
+  await expect(page.locator("table").getByTitle("Outlook öffnen")).toHaveAttribute(
+    "href",
+    outlookFolderUrl,
+  );
 });
 
 test("zeigt den Eventcode in der Metadatenzeile des Events", async ({ page }) => {
@@ -867,7 +904,9 @@ test("synchronisiert ein Event mit dem konfigurierten Shared-Mailbox-Stammordner
   ).toBeTruthy();
 });
 
-test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Duplikate", async ({ page }) => {
+test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Duplikate", async ({
+  page,
+}) => {
   const requests = await mockApi(page, {
     outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
     outlookFolderId: "event-folder-id",
@@ -892,5 +931,7 @@ test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Dup
   await page.reload();
   await page.getByRole("tab", { name: "Kommunikation" }).click();
   await expect(page.getByText("Startzeit bestätigt")).toBeVisible();
-  expect(requests.filter((request) => request.url.endsWith("/outlook-messages/sync"))).toHaveLength(2);
+  expect(requests.filter((request) => request.url.endsWith("/outlook-messages/sync"))).toHaveLength(
+    2,
+  );
 });
