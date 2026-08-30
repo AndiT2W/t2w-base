@@ -432,6 +432,17 @@ test("kopiert ein Event als editierbare Vorlage und zeigt die Seriennachbarn nac
   await expect(page.getByText("Eventserie:")).toBeVisible();
 });
 
+test("kopiert ein Event ohne Serienverknüpfung als reine Vorlage", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("button", { name: "Event kopieren" }).click();
+  await page.locator("#copy-name").fill("Unabhängige Vorlage");
+  await page.getByRole("checkbox", { name: "Als Eventserie verknüpfen" }).click();
+  await page.getByRole("button", { name: "Kopie speichern" }).click();
+  await expect(page.getByRole("heading", { name: "Unabhängige Vorlage" })).toBeVisible();
+  await expect(page.getByText("Eventserie:")).toHaveCount(0);
+});
+
 test("zeigt und speichert die Sportart im Event-Detailformular", async ({ page }) => {
   const requests = await mockApi(page, { sport: { id: "s1", name: "Triathlon" } });
   await page.goto("/events/260820_demo_event");

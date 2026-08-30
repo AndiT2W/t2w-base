@@ -34,6 +34,7 @@ type Ctx = State & {
   bereit: boolean;
   ladefehler: string | null;
   neuesEvent: (input: CreateEventInput) => Promise<T2WEvent>;
+  kopiereEvent: (id: string, input: { name: string; eventcode: string; start: string; ende: string; createRelationship: boolean; version?: number }) => Promise<T2WEvent>;
   openEventSession: (id: string) => EventEditingSession;
   setSettings: (s: Settings) => Promise<Settings>;
   setSpalten: (c: ColumnKey[]) => void;
@@ -90,6 +91,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     (input) => workspace.create(input),
     [workspace],
   );
+  const kopiereEvent: Ctx["kopiereEvent"] = useCallback((id, input) => workspace.copy(id, input), [workspace]);
 
   const setSettings = useCallback(async (settings: Settings) => {
     const saved = await apiUpdateSettings(settings);
@@ -104,6 +106,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       bereit,
       ladefehler,
       neuesEvent,
+      kopiereEvent,
       openEventSession: workspace.openSession,
       setSettings,
       setSpalten: (c) => setState((p) => ({ ...p, spalten: c })),
@@ -121,6 +124,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       bereit,
       ladefehler,
       neuesEvent,
+      kopiereEvent,
       setSettings,
       workspace.openSession,
       selectionLists,

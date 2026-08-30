@@ -55,7 +55,6 @@ import { eventContactRoleChoices, selectionListChoices } from "@/lib/t2w/selecti
 import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
-import { apiCopyEvent } from "@/lib/t2w/api";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
@@ -148,7 +147,7 @@ function EventDetail() {
 }
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
-  const { openEventSession, settings, selectionLists, events } = useT2W();
+  const { openEventSession, settings, selectionLists, events, kopiereEvent } = useT2W();
   const { personen, kunden, neuLaden } = useCrm();
   const { t } = useI18n();
   const [detailWorkspace] = useState(() =>
@@ -231,7 +230,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   }
   async function copyEvent() {
     try {
-      const copied = await apiCopyEvent(event.id, {
+      const copied = await kopiereEvent(event.id, {
         name: copyName,
         eventcode: copyCode,
         start: copyStart,

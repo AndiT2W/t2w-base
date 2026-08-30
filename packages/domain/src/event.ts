@@ -85,6 +85,7 @@ export type EventTransport<TEvent extends EventRecord> = {
   syncCommunication?(id: string): Promise<TEvent>;
   syncTime2win?(id: string): Promise<SyncResult<TEvent>>;
   outlookPlan(id: string): Promise<OutlookFolderPlan>;
+  copy?(id: string, input: { name: string; eventcode: string; start: string; ende: string; createRelationship: boolean; version?: number }): Promise<TEvent>;
   addContact?(id: string, contactId: string, role: string, version: number): Promise<TEvent>;
   removeContact?(id: string, contactId: string, role: string, version: number): Promise<TEvent>;
   updateContactRole?(
@@ -286,6 +287,13 @@ export function createEventWorkspace<TEvent extends EventRecord>(
         teilnehmerprognose: input.teilnehmerprognose ?? input.teilnehmer ?? 0,
         notizen: input.notizen,
       });
+      collection = [...collection, event];
+      publish();
+      return event;
+    },
+    async copy(id: string, input: { name: string; eventcode: string; start: string; ende: string; createRelationship: boolean; version?: number }) {
+      if (!transport.copy) throw new Error("EVENT_COPY_UNAVAILABLE");
+      const event = await transport.copy(id, input);
       collection = [...collection, event];
       publish();
       return event;

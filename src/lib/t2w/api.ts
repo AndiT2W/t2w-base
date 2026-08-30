@@ -546,6 +546,7 @@ export function createHttpEventTransport(): EventTransport<T2WEvent> {
     syncCommunication: apiSyncOutlookMessages,
     syncTime2win: apiSyncTime2win,
     outlookPlan: apiOutlookFolderPlan,
+    copy: apiCopyEvent,
     addContact: apiAddEventContact,
     removeContact: apiRemoveEventContact,
     updateContactRole: apiUpdateEventContactRole,
