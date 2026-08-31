@@ -8,3 +8,4 @@ Use this section only for task notes that create durable project context worth k
 - [MVP Backlog: Event CRM With Invoices And Contacts](mvp-event-crm-backlog.md)
 - [Spec: Zentrale Eventverwaltung und TIME2WIN-Verknüpfung](event-management-spec.md)
 - [Legacy Event Contact Migration Audit](legacy-event-contact-migration-audit.md)
+- [Event Communication Timeline UI](event-communication-timeline-ui.md)

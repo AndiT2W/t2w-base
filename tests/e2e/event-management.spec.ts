@@ -927,18 +927,20 @@ test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Dup
 
   await page.goto("/events/260820_demo_event");
   await page.getByRole("tab", { name: "Kommunikation" }).click();
-  await page.getByRole("button", { name: "Outlook-Nachrichten synchronisieren" }).click();
+  await page.getByRole("button", { name: "Synchronisieren" }).click();
 
   await expect(page.getByText("Startzeit bestätigt")).toBeVisible();
-  await expect(page.getByText("Eingehend · Eva Beispiel <eva@example.at>")).toBeVisible();
+  await expect(page.getByText("Eingehend", { exact: true })).toBeVisible();
+  await expect(page.getByText("Von: Eva Beispiel <eva@example.at>")).toBeVisible();
   await expect(page.getByText("Der Start bleibt um 09:00 Uhr.")).toBeVisible();
-  await expect(page.getByText("Ausgehend · TIME2WIN <info@time2win.at>")).toBeVisible();
+  await expect(page.getByText("Ausgehend", { exact: true })).toBeVisible();
+  await expect(page.getByText("An: Eva Beispiel <eva@example.at>")).toBeVisible();
   await expect(page.getByText("Zeitplan an das Team gesendet")).toBeVisible();
   await expect(
     page.locator('a[href="https://outlook.office.com/mail/deeplink/read/mail-1"]'),
   ).toHaveAccessibleName("In Outlook öffnen");
 
-  await page.getByRole("button", { name: "Outlook-Nachrichten synchronisieren" }).click();
+  await page.getByRole("button", { name: "Synchronisieren" }).click();
   await expect(page.getByText("Startzeit bestätigt")).toHaveCount(1);
   await page.reload();
   await page.getByRole("tab", { name: "Kommunikation" }).click();
@@ -946,4 +948,33 @@ test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Dup
   expect(requests.filter((request) => request.url.endsWith("/outlook-messages/sync"))).toHaveLength(
     2,
   );
+});
+
+test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer Vorschau", async ({
+  page,
+}) => {
+  await mockApi(page, {
+    outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
+    outlookFolderId: "event-folder-id",
+    outlookFolderSyncStatus: "SUCCESS",
+  });
+
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "Kommunikation" }).click();
+  await page.getByRole("button", { name: "Synchronisieren" }).click();
+
+  await expect(page.locator('section[aria-label^="Kommunikation "]')).toHaveCount(1);
+  await expect(page.getByText("Kontakt: Eva Beispiel")).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Vollständige Vorschau" })).toBeVisible();
+  await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.")).not.toBeVisible();
+
+  await page.getByRole("button", { name: "Vollständige Vorschau" }).click();
+  await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.")).toBeVisible();
+
+  await page.getByLabel("Kommunikation durchsuchen").fill("Zeitplan");
+  await expect(page.getByText("Zeitplan an das Team gesendet")).toBeVisible();
+  await expect(page.getByText("Startzeit bestätigt")).not.toBeVisible();
+
+  await page.getByRole("button", { name: "Aktivitäten" }).click();
+  await expect(page.getByText("Keine Einträge für diese Auswahl.")).toBeVisible();
 });

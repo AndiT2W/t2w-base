@@ -1,16 +1,21 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   FolderPlus,
   FolderSync,
   HelpCircle,
   Link2,
   Mail,
+  Paperclip,
   Phone,
+  Search,
   StickyNote,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +63,7 @@ import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
-import type { Kunde } from "@/lib/crm/types";
+import { personName, type Kunde } from "@/lib/crm/types";
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
   const address = [
@@ -99,6 +104,37 @@ function RecipientMasterData({ recipient }: { recipient: Kunde }) {
       </div>
     </dl>
   );
+}
+
+function formatCommunicationTime(value: string) {
+  return new Intl.DateTimeFormat("de-AT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function communicationDay(value: string) {
+  const date = new Date(value);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const key = (candidate: Date) =>
+    new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Vienna" }).format(candidate);
+  if (key(date) === key(today)) return "Heute";
+  if (key(date) === key(yesterday)) return "Gestern";
+  return new Intl.DateTimeFormat("de-AT", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function emailAddresses(value: string) {
+  return value.toLocaleLowerCase("de").match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/g) ?? [];
 }
 
 export const Route = createFileRoute("/events/$eventcode")({
@@ -183,7 +219,35 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     ),
   );
   const [createRelationship, setCreateRelationship] = useState(true);
+  const [communicationFilter, setCommunicationFilter] = useState<"all" | "email" | "activity">(
+    "all",
+  );
+  const [communicationSearch, setCommunicationSearch] = useState("");
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(() => new Set());
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
+  const communicationGroups = useMemo(() => {
+    const query = communicationSearch.trim().toLocaleLowerCase("de");
+    const filtered = form.kommunikation.filter((message) => {
+      if (communicationFilter === "email" && message.kanal !== "E-Mail") return false;
+      if (communicationFilter === "activity" && message.kanal === "E-Mail") return false;
+      return !query ||
+        [message.betreff, message.autor, message.empfaenger, message.text]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase("de")
+          .includes(query);
+    });
+    return filtered.reduce<{ day: string; messages: T2WEvent["kommunikation"] }[]>(
+      (groups, message) => {
+        const day = communicationDay(message.datum);
+        const current = groups.at(-1);
+        if (current?.day === day) current.messages.push(message);
+        else groups.push({ day, messages: [message] });
+        return groups;
+      },
+      [],
+    );
+  }, [communicationFilter, communicationSearch, form.kommunikation]);
 
   useEffect(() => {
     detailWorkspace.accept(event, personen, kunden);
@@ -1134,23 +1198,26 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 Outlook-Nachrichten aus dem Eventordner und manuelle Aktivitäten in einer Timeline.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {form.kommunikation.length} Einträge in der Timeline
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {form.outlookMessageLastSuccessAt
+                      ? `Zuletzt synchronisiert: ${formatCommunicationTime(form.outlookMessageLastSuccessAt)}`
+                      : "Noch keine Outlook-Nachrichten synchronisiert."}
+                  </p>
+                </div>
                 <Button
                   variant="outline"
                   onClick={() => void kommunikationSynchronisieren()}
                   disabled={detail.communicationSyncing || !form.outlookFolderId}
                 >
                   <FolderSync className="size-4" />
-                  {detail.communicationSyncing
-                    ? "Synchronisiere …"
-                    : "Outlook-Nachrichten synchronisieren"}
+                  {detail.communicationSyncing ? "Synchronisiere …" : "Synchronisieren"}
                 </Button>
-                {form.outlookMessageLastSuccessAt && (
-                  <span className="text-xs text-muted-foreground">
-                    Zuletzt synchronisiert: {formatDatum(form.outlookMessageLastSuccessAt)}
-                  </span>
-                )}
               </div>
               {detail.communicationSyncMessage && (
                 <p role="status" className="text-sm text-muted-foreground">
@@ -1162,53 +1229,149 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   Zuerst den Outlook-Eventordner synchronisieren.
                 </p>
               )}
-              <div className="flex gap-2">
-                <Input
-                  aria-label="Neue Aktivität"
-                  value={detail.newActivity}
-                  onChange={(e) => detailWorkspace.setInput("newActivity", e.target.value)}
-                  placeholder="Betreff der Notiz"
-                />
-                <Button onClick={() => void addActivity()}>Aktivität anlegen</Button>
+              <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-1" aria-label="Kommunikation filtern">
+                  {([
+                    ["all", "Alle"],
+                    ["email", "E-Mails"],
+                    ["activity", "Aktivitäten"],
+                  ] as const).map(([value, label]) => (
+                    <Button
+                      key={value}
+                      size="sm"
+                      variant={communicationFilter === value ? "secondary" : "ghost"}
+                      aria-pressed={communicationFilter === value}
+                      onClick={() => setCommunicationFilter(value)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    aria-label="Kommunikation durchsuchen"
+                    className="pl-9"
+                    value={communicationSearch}
+                    onChange={(event) => setCommunicationSearch(event.target.value)}
+                    placeholder="Nachrichten durchsuchen …"
+                  />
+                </div>
               </div>
+              <details className="rounded-lg border border-border p-3">
+                <summary className="cursor-pointer text-sm font-medium text-foreground">
+                  Manuelle Aktivität erfassen
+                </summary>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    aria-label="Neue Aktivität"
+                    value={detail.newActivity}
+                    onChange={(e) => detailWorkspace.setInput("newActivity", e.target.value)}
+                    placeholder="Betreff der Notiz"
+                  />
+                  <Button onClick={() => void addActivity()}>Aktivität anlegen</Button>
+                </div>
+              </details>
               {form.kommunikation.length === 0 && (
                 <p className="text-sm text-muted-foreground">Noch keine Einträge.</p>
               )}
-              {form.kommunikation.map((m) => {
-                const Icon =
-                  m.kanal === "E-Mail" ? Mail : m.kanal === "Telefon" ? Phone : StickyNote;
-                return (
-                  <div key={m.id} className="rounded-md border border-border p-3">
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <Icon className="size-4 text-muted-foreground" />
-                      <span className="font-medium text-foreground">{m.betreff}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {m.kanal} · {formatDatum(m.datum)}
-                      </span>
+              {form.kommunikation.length > 0 && communicationGroups.length === 0 && (
+                <p className="text-sm text-muted-foreground">Keine Einträge für diese Auswahl.</p>
+              )}
+              <div className="space-y-5">
+                {communicationGroups.map((group) => (
+                  <section key={group.day} aria-label={`Kommunikation ${group.day}`}>
+                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.day}
+                    </h3>
+                    <div className="space-y-3 border-l-2 border-border pl-4">
+                      {group.messages.map((message) => {
+                        const Icon =
+                          message.kanal === "E-Mail"
+                            ? Mail
+                            : message.kanal === "Telefon"
+                              ? Phone
+                              : StickyNote;
+                        const relatedEmails = emailAddresses(
+                          message.richtung === "OUTGOING"
+                            ? `${message.empfaenger ?? ""} ${message.autor}`
+                            : `${message.autor} ${message.empfaenger ?? ""}`,
+                        );
+                        const contact = personen.find((person) =>
+                          relatedEmails.includes(person.email.toLocaleLowerCase("de")),
+                        );
+                        const expanded = expandedMessages.has(message.id);
+                        const longPreview = message.text.length > 180;
+                        return (
+                          <article key={message.id} className="relative rounded-lg border border-border bg-background p-4 shadow-sm">
+                            <span className="absolute -left-[1.58rem] top-5 size-3 rounded-full border-2 border-background bg-primary" />
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                                <h4 className="font-medium text-foreground">{message.betreff}</h4>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Badge variant="outline">{message.kanal}</Badge>
+                                {message.richtung && (
+                                  <Badge variant="outline">
+                                    {message.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}
+                                  </Badge>
+                                )}
+                                <time dateTime={message.datum}>{formatCommunicationTime(message.datum)}</time>
+                              </div>
+                            </div>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              {message.richtung === "OUTGOING" ? "An" : "Von"}: {message.richtung === "OUTGOING" ? message.empfaenger : message.autor}
+                            </p>
+                            {contact ? (
+                              <Badge className="mt-2" variant="secondary">Kontakt: {personName(contact)}</Badge>
+                            ) : message.kanal === "E-Mail" ? (
+                              <Badge className="mt-2" variant="outline">Kein Kontakt zugeordnet</Badge>
+                            ) : null}
+                            <p className="mt-3 whitespace-pre-line text-sm leading-6 text-foreground/80">
+                              {expanded || !longPreview ? message.text : `${message.text.slice(0, 180).trimEnd()} …`}
+                            </p>
+                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                              {longPreview && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary"
+                                  onClick={() =>
+                                    setExpandedMessages((current) => {
+                                      const next = new Set(current);
+                                      expanded ? next.delete(message.id) : next.add(message.id);
+                                      return next;
+                                    })
+                                  }
+                                >
+                                  {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                                  {expanded ? "Weniger anzeigen" : "Vollständige Vorschau"}
+                                </Button>
+                              )}
+                              {message.hatAnlagen && (
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                  <Paperclip className="size-3" aria-hidden="true" /> Anlagen vorhanden
+                                </span>
+                              )}
+                              {message.outlookWebUrl && (
+                                <a
+                                  className="font-medium text-primary hover:underline"
+                                  href={message.outlookWebUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  In Outlook öffnen
+                                </a>
+                              )}
+                            </div>
+                          </article>
+                        );
+                      })}
                     </div>
-                    {m.richtung && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {m.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"} · {m.autor}
-                      </p>
-                    )}
-                    <p className="mt-2 text-sm text-muted-foreground">{m.text}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      {!m.richtung && m.autor && <span>{m.autor}</span>}
-                      {m.hatAnlagen && <span>Anlagen vorhanden</span>}
-                      {m.outlookWebUrl && (
-                        <a
-                          className="font-medium text-primary hover:underline"
-                          href={m.outlookWebUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          In Outlook öffnen
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  </section>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

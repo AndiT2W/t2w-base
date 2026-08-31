@@ -84,6 +84,18 @@ export async function mockEventManagementApi(
       customerProfile: { id: "c2" },
       eventRoles: [],
     },
+    {
+      id: "p4",
+      name: "Eva Beispiel",
+      firstName: "Eva",
+      lastName: "Beispiel",
+      email: "eva@example.at",
+      phone: "",
+      note: "",
+      organizers: [],
+      customerProfile: null,
+      eventRoles: [],
+    },
   ];
   let organizers = [
     {
@@ -208,7 +220,8 @@ export async function mockEventManagementApi(
               author: "Eva Beispiel <eva@example.at>",
               recipients: "TIME2WIN <info@time2win.at>",
               subject: "Startzeit bestätigt",
-              preview: "Der Start bleibt um 09:00 Uhr.",
+              preview:
+                "Der Start bleibt um 09:00 Uhr. Bitte gebt den aktualisierten Ablauf auch an das Helferteam weiter, damit alle rechtzeitig informiert sind. Diese ausführliche Nachricht dient als Regressionstest für die aufklappbare Vorschau.",
               occurredAt: "2026-08-30T08:15:00.000Z",
               hasAttachments: true,
               webUrl: "https://outlook.office.com/mail/deeplink/read/mail-1",
