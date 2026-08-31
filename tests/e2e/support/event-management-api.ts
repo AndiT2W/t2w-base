@@ -70,7 +70,10 @@ export async function mockEventManagementApi(
       note: "",
       organizers: [{ organizer: { id: "c1" } }],
       customerProfile: null,
-      eventRoles: [],
+      eventRoles: [
+        { role: "Anmeldung", event: { eventCode: "260820_demo_event", name: "Bestehendes Event" } },
+        { role: "Finanz", event: { eventCode: "260820_demo_event", name: "Bestehendes Event" } },
+      ],
     },
     {
       id: "p3",

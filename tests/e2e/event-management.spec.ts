@@ -239,6 +239,25 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await expect(page.getByText("Zahlungsziel", { exact: true })).toHaveCount(0);
 });
 
+test("bündelt Eventrollen je Event in Kunden- und Kontaktdetails", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/kontakte");
+
+  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByText("Nordwerk GmbH", { exact: true }).click();
+  const customerEvents = page.locator('a[href="/events/260820_demo_event"]');
+  await expect(customerEvents).toHaveCount(1);
+  await expect(customerEvents).toContainText("Veranstalter");
+  await expect(customerEvents).toContainText("Auszahlungsempfänger");
+
+  await page.getByRole("button", { name: "Detail schließen" }).click();
+  await page.getByText("Marion Kessler", { exact: true }).click();
+  const personEvents = page.locator('a[href="/events/260820_demo_event"]');
+  await expect(personEvents).toHaveCount(1);
+  await expect(personEvents).toContainText("Anmeldung");
+  await expect(personEvents).toContainText("Finanz");
+});
+
 test("fügt einen per Combobox angeklickten Kontakt im Kundenprofil hinzu", async ({ page }) => {
   await page.addInitScript(() => localStorage.removeItem("t2w-crm-v1"));
   await mockApi(page);

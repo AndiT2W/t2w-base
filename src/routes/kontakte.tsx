@@ -53,11 +53,40 @@ const validEmail = (value: string) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.tes
 const validPhone = (value: string) => !value || /^[+0-9() ./-]+$/.test(value);
 const Chip = ({ children, good = false }: { children: ReactNode; good?: boolean }) => (
   <span
-    className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] ${good ? "border-status-zugesagt/40 bg-status-zugesagt/15" : "border-border bg-secondary text-muted-foreground"}`}
+    className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] ${good ? "border-status-zugesagt/40 bg-status-zugesagt/15" : "border-border bg-secondary text-muted-foreground"}`}
   >
     {children}
   </span>
 );
+
+function groupPersonEventRoles(eventRollen: Person["eventRollen"]) {
+  const events = new Map<string, { eventcode: string; eventName: string; rollen: string[] }>();
+  for (const { eventcode, eventName, rolle } of eventRollen) {
+    const event = events.get(eventcode) ?? { eventcode, eventName, rollen: [] };
+    if (!event.rollen.includes(rolle)) event.rollen.push(rolle);
+    events.set(eventcode, event);
+  }
+  return [...events.values()];
+}
+
+function groupCustomerEvents(events: Kunde["events"]) {
+  const grouped = new Map<
+    string,
+    { eventcode: string; eventName: string; funktionen: Kunde["events"][number]["funktion"][] }
+  >();
+  for (const { eventcode, eventName, funktion } of events) {
+    const event = grouped.get(eventcode) ?? { eventcode, eventName, funktionen: [] };
+    if (!event.funktionen.includes(funktion)) event.funktionen.push(funktion);
+    grouped.set(eventcode, event);
+  }
+  return [...grouped.values()];
+}
+
+const customerEventFunctionLabel: Record<Kunde["events"][number]["funktion"], string> = {
+  veranstalter: "Veranstalter",
+  auszahlung: "Auszahlungsempfänger",
+  rechnung: "Rechnungsempfänger",
+};
 
 function Field({
   label,
@@ -477,6 +506,7 @@ function PersonDetail({
   go: (id: string) => void;
 }) {
   const assigned = crm.kundenVonPerson(person);
+  const events = groupPersonEventRoles(person.eventRollen);
   return (
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -568,12 +598,22 @@ function PersonDetail({
         />
       </section>
       <section>
-        <h3 className="mb-2 font-semibold">Eventrollen ({person.eventRollen.length})</h3>
-        {person.eventRollen.map((r) => (
-          <p key={r.eventcode + r.rolle} className="rounded border border-border p-2 text-sm">
-            <Chip>{r.rolle}</Chip> {r.eventName}
-          </p>
-        ))}
+        <h3 className="mb-2 font-semibold">Events ({events.length})</h3>
+        <div className="space-y-2">
+          {events.map((event) => (
+            <a
+              key={event.eventcode}
+              href={`/events/${event.eventcode}`}
+              className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-sm hover:bg-accent/50"
+            >
+              <span className="font-medium">{event.eventName}</span>
+              <span className="font-mono text-xs text-muted-foreground">{event.eventcode}</span>
+              {event.rollen.map((rolle) => (
+                <Chip key={rolle}>{rolle}</Chip>
+              ))}
+            </a>
+          ))}
+        </div>
       </section>
     </div>
   );
@@ -589,6 +629,7 @@ function CustomerDetail({
   go: (id: string) => void;
 }) {
   const contacts = crm.kontakteVonKunde(customer.id);
+  const events = groupCustomerEvents(customer.events);
   return (
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -700,28 +741,20 @@ function CustomerDetail({
         />
       </section>
       <section>
-        <h3 className="mb-2 font-semibold">Events ({customer.events.length})</h3>
-        {customer.events.length ? (
+        <h3 className="mb-2 font-semibold">Events ({events.length})</h3>
+        {events.length ? (
           <div className="space-y-2">
-            {customer.events.map((event) => (
+            {events.map((event) => (
               <a
-                key={`${event.eventcode}-${event.funktion}`}
+                key={event.eventcode}
                 href={`/events/${event.eventcode}`}
-                className="block rounded border border-border p-2 text-sm hover:bg-accent/50"
+                className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-sm hover:bg-accent/50"
               >
                 <span className="font-medium">{event.eventName}</span>
-                <span className="ml-2 font-mono text-xs text-muted-foreground">
-                  {event.eventcode}
-                </span>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  (
-                  {event.funktion === "veranstalter"
-                    ? "Veranstalter"
-                    : event.funktion === "auszahlung"
-                      ? "Auszahlungsempfänger"
-                      : "Rechnungsempfänger"}
-                  )
-                </span>
+                <span className="font-mono text-xs text-muted-foreground">{event.eventcode}</span>
+                {event.funktionen.map((funktion) => (
+                  <Chip key={funktion}>{customerEventFunctionLabel[funktion]}</Chip>
+                ))}
               </a>
             ))}
           </div>
