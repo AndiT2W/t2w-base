@@ -58,6 +58,19 @@ function setup(
 }
 
 describe("Event detail workspace", () => {
+  it("publishes consistent outcomes through the detail-interaction interface", async () => {
+    const { workspace } = setup();
+    const reloadCrm = vi.fn();
+    await expect(workspace.execute("save", reloadCrm)).resolves.toEqual({
+      kind: "success",
+      message: "Änderungen gespeichert.",
+    });
+    await expect(workspace.execute("sync-outlook")).resolves.toEqual({
+      kind: "success",
+      message: "Outlook-Ordner synchronisiert.",
+    });
+    expect(reloadCrm).toHaveBeenCalledOnce();
+  });
   it("owns search, selection, and recipient projections", () => {
     const { workspace } = setup();
     expect(workspace.snapshot().organizerContacts).toEqual([person]);

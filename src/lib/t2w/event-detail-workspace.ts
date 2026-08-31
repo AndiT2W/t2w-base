@@ -29,6 +29,13 @@ export type EventDetailSnapshot = DraftInputs & {
   visibleInvoiceRecipients: Kunde[];
 };
 
+export type EventDetailInteraction =
+  "save" | "sync-outlook" | "sync-time2win" | "sync-communication";
+export type EventDetailOutcome = {
+  kind: "success" | "conflict" | "failed";
+  message: string;
+};
+
 export function createEventDetailWorkspace(
   session: EventEditingSession,
   initial: { event: T2WEvent; persons: Person[]; customers: Kunde[] },
@@ -199,6 +206,51 @@ export function createEventDetailWorkspace(
           : "Outlook-Nachrichten konnten nicht synchronisiert werden. Die letzte Timeline bleibt erhalten.";
       publish();
       return result;
+    },
+    async execute(
+      interaction: EventDetailInteraction,
+      reloadCrm?: () => Promise<void>,
+    ): Promise<EventDetailOutcome> {
+      switch (interaction) {
+        case "save": {
+          const result = await this.save(reloadCrm);
+          if (result.kind === "saved")
+            return { kind: "success", message: "Änderungen gespeichert." };
+          if (result.kind === "conflict")
+            return {
+              kind: "conflict",
+              message: "Das Event wurde zwischenzeitlich geändert. Bitte neu laden.",
+            };
+          return {
+            kind: "failed",
+            message:
+              result.error.message === "EVENT_START_REQUIRED"
+                ? "Das Startdatum ist verpflichtend."
+                : "Änderungen konnten nicht gespeichert werden.",
+          };
+        }
+        case "sync-outlook": {
+          const result = await this.syncOutlook();
+          return result.kind === "synced"
+            ? { kind: "success", message: "Outlook-Ordner synchronisiert." }
+            : { kind: "failed", message: "Outlook-Ordner konnte nicht synchronisiert werden." };
+        }
+        case "sync-time2win": {
+          const result = await this.syncTime2win();
+          return result.kind === "synced"
+            ? { kind: "success", message: "TIME2WIN-Teilnehmer synchronisiert." }
+            : { kind: "failed", message: "TIME2WIN-Synchronisierung fehlgeschlagen." };
+        }
+        case "sync-communication": {
+          const result = await this.syncCommunication();
+          return result.kind === "synced"
+            ? { kind: "success", message: "Outlook-Nachrichten synchronisiert." }
+            : {
+                kind: "failed",
+                message: "Outlook-Nachrichten konnten nicht synchronisiert werden.",
+              };
+        }
+      }
     },
     addEventContact(personId: string, role: string) {
       if (!persons.some((person) => person.id === personId))

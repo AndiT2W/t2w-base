@@ -203,30 +203,21 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   }
 
   async function speichern() {
-    const result = await detailWorkspace.save(neuLaden);
-    if (result.kind === "saved") toast.success("Änderungen gespeichert.");
-    else if (result.kind === "conflict")
-      toast.error("Das Event wurde zwischenzeitlich geändert. Bitte neu laden.");
-    else if (result.error.message === "EVENT_START_REQUIRED")
-      toast.error("Das Startdatum ist verpflichtend.");
-    else toast.error("Änderungen konnten nicht gespeichert werden.");
+    const outcome = await detailWorkspace.execute("save", neuLaden);
+    outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
   }
 
   async function outlookSynchronisieren() {
-    const result = await detailWorkspace.syncOutlook();
-    if (result.kind === "synced") toast.success("Outlook-Ordner synchronisiert.");
-    else toast.error("Outlook-Ordner konnte nicht synchronisiert werden.");
+    const outcome = await detailWorkspace.execute("sync-outlook");
+    outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
   }
   async function time2winSynchronisieren() {
-    const result = await detailWorkspace.syncTime2win();
-    if (result.kind === "synced")
-      toast.success(detail.time2winSyncMessage ?? "TIME2WIN-Teilnehmer synchronisiert.");
-    else toast.error(detail.time2winSyncMessage ?? "TIME2WIN-Synchronisierung fehlgeschlagen.");
+    const outcome = await detailWorkspace.execute("sync-time2win");
+    outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
   }
   async function kommunikationSynchronisieren() {
-    const result = await detailWorkspace.syncCommunication();
-    if (result.kind === "synced") toast.success("Outlook-Nachrichten synchronisiert.");
-    else toast.error("Outlook-Nachrichten konnten nicht synchronisiert werden.");
+    const outcome = await detailWorkspace.execute("sync-communication");
+    outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
   }
   async function copyEvent() {
     try {
