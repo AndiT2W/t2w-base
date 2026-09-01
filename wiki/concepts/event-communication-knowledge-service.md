@@ -121,9 +121,19 @@ Follow-ups should not be modeled as a special communication-only reminder. They 
 
 The first search should search across event activities and mail with one query and return the event, channel, date, participants, and a highlighted text excerpt. Every result should link back to the original message or note.
 
+### Approved Outlook Timeline Slice
+
+On 2026-08-30, the first delivery slice was agreed and recorded as [GitHub issue #37](https://github.com/AndiT2W/t2w-base/issues/37): the Event communication tab will manually synchronize messages from its already linked Outlook Event folder and render a compact, persistent timeline alongside manual activities. It stores only the overview metadata (source, stable Graph message ID, direction, participants, subject, preview, timestamp, attachment indicator, and original Outlook link), not full message bodies or attachments.
+
+The Outlook Event folder is the authoritative Event relation. The agreed team convention is that relevant sent messages are moved into the Eventcode folder, so its manual sync provides both incoming and outgoing correspondence. A live test on 2026-09-01 confirmed that a uniquely identified sent reply can be moved from `Gesendete Elemente` into an Event folder; future automation must match the Microsoft Graph `conversationId`, require exactly one Event-folder match, and then resync the Event timeline. The Event detail workspace is the single Event-facing seam, while Microsoft Graph remains a channel adapter. Browser E2E must cover visible sync, persistence after reload, idempotent repeated sync, retained history after a sync failure, and a visible outgoing message.
+
+Implemented on 2026-08-30: the Event Service now persists Outlook message overview metadata separately from manual activities, reads every Microsoft Graph page from the linked Event folder, and upserts by mailbox plus Graph message ID. The Event detail communication tab renders the combined timeline with direction, sender, preview, attachment indicator, sync feedback, and a link to the original Outlook message. Migration `0015_event_outlook_messages` adds the durable message and sync-state schema.
+
+Implemented on 2026-09-01: communication sync also inspects `Gesendete Elemente` for matching Graph `conversationId` values. A sent message is moved only when its conversation exists in the current Event folder and no persisted communication message assigns that conversation to another Event. After a move, the authoritative Event folder is read again. The timeline exposes three selectable presentations (`Karten`, `Dialog`, `Kompakt`) and marks later messages in the same conversation as indented replies.
+
 ## Later Phases
 
-- Add sent-mail ingestion to capture the full conversation history.
+- Extend sent-mail ingestion with review handling for ambiguous conversations and richer thread metadata.
 - Ingest attachments into file storage with event linkage.
 - Support cross-channel ingestion such as WhatsApp, calls, and notes.
 - Add role-aware answers such as latest finance contact or latest timing requirement per event.

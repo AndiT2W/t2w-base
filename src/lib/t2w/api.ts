@@ -68,6 +68,7 @@ type ApiEvent = {
     occurredAt: string;
     hasAttachments: boolean;
     webUrl: string | null;
+    conversationId?: string | null;
   }[];
   payoutRecipient?: { id: string; name: string } | null;
   invoiceRecipients?: { organizer: { id: string; name: string } }[];
@@ -174,6 +175,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
         empfaenger: message.recipients,
         hatAnlagen: message.hasAttachments,
         outlookWebUrl: message.webUrl ?? undefined,
+        conversationId: message.conversationId ?? undefined,
       })),
     ].sort((left, right) => right.datum.localeCompare(left.datum)),
     sportart: event.sport?.name ?? "",

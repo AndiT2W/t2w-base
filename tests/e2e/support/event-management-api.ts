@@ -39,6 +39,7 @@ export const event = {
     occurredAt: string;
     hasAttachments: boolean;
     webUrl: string | null;
+    conversationId?: string | null;
   }[],
   sharepointFolder: null,
   contacts: [] as {
@@ -228,6 +229,7 @@ export async function mockEventManagementApi(
               occurredAt: "2026-08-30T08:15:00.000Z",
               hasAttachments: true,
               webUrl: "https://outlook.office.com/mail/deeplink/read/mail-1",
+              conversationId: "conversation-1",
             },
             {
               id: "message-2",
@@ -239,6 +241,7 @@ export async function mockEventManagementApi(
               occurredAt: "2026-08-30T08:18:00.000Z",
               hasAttachments: true,
               webUrl: "https://outlook.office.com/mail/deeplink/read/mail-2",
+              conversationId: "conversation-1",
             },
           ],
         };

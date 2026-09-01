@@ -5,15 +5,19 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  CornerDownRight,
   FolderPlus,
   FolderSync,
   HelpCircle,
   Link2,
   Mail,
+  MessageSquare,
   Paperclip,
   Phone,
   Search,
+  Rows3,
   StickyNote,
+  PanelsTopLeft,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -223,19 +227,36 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     "all",
   );
   const [communicationSearch, setCommunicationSearch] = useState("");
+  const [communicationView, setCommunicationView] = useState<"cards" | "conversation" | "compact">(
+    "cards",
+  );
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(() => new Set());
+  const replyMessageIds = useMemo(() => {
+    const seen = new Set<string>();
+    const replies = new Set<string>();
+    [...form.kommunikation]
+      .filter((message) => message.kanal === "E-Mail" && message.conversationId)
+      .sort((left, right) => left.datum.localeCompare(right.datum))
+      .forEach((message) => {
+        if (seen.has(message.conversationId!)) replies.add(message.id);
+        seen.add(message.conversationId!);
+      });
+    return replies;
+  }, [form.kommunikation]);
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
   const communicationGroups = useMemo(() => {
     const query = communicationSearch.trim().toLocaleLowerCase("de");
     const filtered = form.kommunikation.filter((message) => {
       if (communicationFilter === "email" && message.kanal !== "E-Mail") return false;
       if (communicationFilter === "activity" && message.kanal === "E-Mail") return false;
-      return !query ||
+      return (
+        !query ||
         [message.betreff, message.autor, message.empfaenger, message.text]
           .filter(Boolean)
           .join(" ")
           .toLocaleLowerCase("de")
-          .includes(query);
+          .includes(query)
+      );
     });
     return filtered.reduce<{ day: string; messages: T2WEvent["kommunikation"] }[]>(
       (groups, message) => {
@@ -1231,11 +1252,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               )}
               <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-1" aria-label="Kommunikation filtern">
-                  {([
-                    ["all", "Alle"],
-                    ["email", "E-Mails"],
-                    ["activity", "Aktivitäten"],
-                  ] as const).map(([value, label]) => (
+                  {(
+                    [
+                      ["all", "Alle"],
+                      ["email", "E-Mails"],
+                      ["activity", "Aktivitäten"],
+                    ] as const
+                  ).map(([value, label]) => (
                     <Button
                       key={value}
                       size="sm"
@@ -1256,6 +1279,37 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     onChange={(event) => setCommunicationSearch(event.target.value)}
                     placeholder="Nachrichten durchsuchen …"
                   />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Timeline-Ansicht</p>
+                  <p className="text-xs text-muted-foreground">
+                    Drei Varianten zum direkten Vergleichen.
+                  </p>
+                </div>
+                <div
+                  className="flex flex-wrap gap-1 rounded-lg border border-border p-1"
+                  aria-label="Timeline-Ansicht auswählen"
+                >
+                  {(
+                    [
+                      ["cards", "Karten", PanelsTopLeft],
+                      ["conversation", "Dialog", MessageSquare],
+                      ["compact", "Kompakt", Rows3],
+                    ] as const
+                  ).map(([value, label, ViewIcon]) => (
+                    <Button
+                      key={value}
+                      size="sm"
+                      variant={communicationView === value ? "secondary" : "ghost"}
+                      aria-pressed={communicationView === value}
+                      onClick={() => setCommunicationView(value)}
+                    >
+                      <ViewIcon className="size-4" aria-hidden="true" />
+                      {label}
+                    </Button>
+                  ))}
                 </div>
               </div>
               <details className="rounded-lg border border-border p-3">
@@ -1284,7 +1338,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {group.day}
                     </h3>
-                    <div className="space-y-3 border-l-2 border-border pl-4">
+                    <div
+                      className={
+                        communicationView === "compact"
+                          ? "overflow-hidden rounded-lg border border-border bg-background"
+                          : "space-y-3 border-l-2 border-border pl-4"
+                      }
+                    >
                       {group.messages.map((message) => {
                         const Icon =
                           message.kanal === "E-Mail"
@@ -1304,21 +1364,42 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                           relatedEmails.includes(person.email.toLocaleLowerCase("de")),
                         );
                         const linkedContact = eventContact
-                          ? { id: eventContact.id, label: eventContact.name, eventRole: eventContact.rolle }
+                          ? {
+                              id: eventContact.id,
+                              label: eventContact.name,
+                              eventRole: eventContact.rolle,
+                            }
                           : contact
                             ? { id: contact.id, label: personName(contact), eventRole: null }
                             : null;
                         const isTime2winOutgoing =
                           message.richtung === "OUTGOING" &&
                           emailAddresses(message.autor).includes(
-                            (form.outlookMailbox ?? settings.outlookMailbox ?? "").toLocaleLowerCase("de"),
+                            (
+                              form.outlookMailbox ??
+                              settings.outlookMailbox ??
+                              ""
+                            ).toLocaleLowerCase("de"),
                           );
                         const expanded = expandedMessages.has(message.id);
                         const longPreview = message.text.length > 180;
+                        const isReply = replyMessageIds.has(message.id);
+                        const viewClasses =
+                          communicationView === "compact"
+                            ? "rounded-none border-0 border-b border-border p-3 shadow-none last:border-b-0"
+                            : communicationView === "conversation"
+                              ? message.richtung === "OUTGOING"
+                                ? "ml-8 rounded-2xl rounded-tr-sm p-4 shadow-sm sm:ml-24"
+                                : "mr-8 rounded-2xl rounded-tl-sm p-4 shadow-sm sm:mr-24"
+                              : isReply
+                                ? "ml-4 rounded-lg p-4 shadow-sm sm:ml-8"
+                                : "rounded-lg p-4 shadow-sm";
                         return (
                           <article
                             key={message.id}
-                            className={`relative rounded-lg border p-4 shadow-sm ${
+                            data-timeline-view={communicationView}
+                            data-reply={isReply ? "true" : "false"}
+                            className={`relative border ${viewClasses} ${
                               isTime2winOutgoing
                                 ? "border-primary/50 bg-primary/5"
                                 : eventContact
@@ -1326,32 +1407,56 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                   : "border-border bg-background"
                             }`}
                           >
-                            <span
-                              className={`absolute -left-[1.58rem] top-5 size-3 rounded-full border-2 border-background ${
-                                isTime2winOutgoing ? "bg-primary" : eventContact ? "bg-sky-500" : "bg-muted-foreground"
-                              }`}
-                            />
+                            {communicationView !== "compact" && (
+                              <span
+                                className={`absolute -left-[1.58rem] top-5 size-3 rounded-full border-2 border-background ${
+                                  isTime2winOutgoing
+                                    ? "bg-primary"
+                                    : eventContact
+                                      ? "bg-sky-500"
+                                      : "bg-muted-foreground"
+                                }`}
+                              />
+                            )}
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="flex min-w-0 items-center gap-2">
-                                <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                                <Icon
+                                  className="size-4 shrink-0 text-muted-foreground"
+                                  aria-hidden="true"
+                                />
                                 <h4 className="font-medium text-foreground">{message.betreff}</h4>
                               </div>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Badge variant="outline">{message.kanal}</Badge>
                                 {message.richtung && (
                                   <Badge
-                                    className={isTime2winOutgoing ? "border-transparent bg-primary text-primary-foreground" : undefined}
+                                    className={
+                                      isTime2winOutgoing
+                                        ? "border-transparent bg-primary text-primary-foreground"
+                                        : undefined
+                                    }
                                     variant="outline"
                                   >
                                     {message.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}
                                   </Badge>
                                 )}
-                                {isTime2winOutgoing && <Badge variant="secondary">TIME2WIN gesendet</Badge>}
-                                <time dateTime={message.datum}>{formatCommunicationTime(message.datum)}</time>
+                                {isTime2winOutgoing && (
+                                  <Badge variant="secondary">TIME2WIN gesendet</Badge>
+                                )}
+                                {isReply && (
+                                  <Badge className="gap-1" variant="secondary">
+                                    <CornerDownRight className="size-3" aria-hidden="true" />
+                                    Antwort
+                                  </Badge>
+                                )}
+                                <time dateTime={message.datum}>
+                                  {formatCommunicationTime(message.datum)}
+                                </time>
                               </div>
                             </div>
                             <p className="mt-2 text-sm text-muted-foreground">
-                              {message.richtung === "OUTGOING" ? "An" : "Von"}: {message.richtung === "OUTGOING" ? message.empfaenger : message.autor}
+                              {message.richtung === "OUTGOING" ? "An" : "Von"}:{" "}
+                              {message.richtung === "OUTGOING" ? message.empfaenger : message.autor}
                             </p>
                             {linkedContact ? (
                               <a
@@ -1359,7 +1464,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 href={`/kontakte?person=${encodeURIComponent(linkedContact.id)}`}
                               >
                                 <Badge
-                                  className={eventContact ? "border-sky-300 bg-sky-100 text-sky-950 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100" : undefined}
+                                  className={
+                                    eventContact
+                                      ? "border-sky-300 bg-sky-100 text-sky-950 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
+                                      : undefined
+                                  }
                                   variant="secondary"
                                 >
                                   {eventContact
@@ -1368,10 +1477,22 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 </Badge>
                               </a>
                             ) : message.kanal === "E-Mail" ? (
-                              <Badge className="mt-2" variant="outline">Kein Kontakt zugeordnet</Badge>
+                              <Badge className="mt-2" variant="outline">
+                                Kein Kontakt zugeordnet
+                              </Badge>
                             ) : null}
-                            <p className="mt-3 whitespace-pre-line text-sm leading-6 text-foreground/80">
-                              {expanded || !longPreview ? message.text : `${message.text.slice(0, 180).trimEnd()} …`}
+                            {isReply && (
+                              <p className="mt-3 flex items-center gap-1 border-l-2 border-primary/40 pl-3 text-xs font-medium text-muted-foreground">
+                                <CornerDownRight className="size-3" aria-hidden="true" />
+                                Antwort in dieser Unterhaltung
+                              </p>
+                            )}
+                            <p
+                              className={`mt-3 whitespace-pre-line text-sm text-foreground/80 ${communicationView === "compact" && !expanded ? "line-clamp-2 leading-5" : "leading-6"}`}
+                            >
+                              {expanded || !longPreview
+                                ? message.text
+                                : `${message.text.slice(0, 180).trimEnd()} …`}
                             </p>
                             <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                               {longPreview && (
@@ -1387,13 +1508,18 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                     })
                                   }
                                 >
-                                  {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+                                  {expanded ? (
+                                    <ChevronUp className="size-3" />
+                                  ) : (
+                                    <ChevronDown className="size-3" />
+                                  )}
                                   {expanded ? "Weniger anzeigen" : "Vollständige Vorschau"}
                                 </Button>
                               )}
                               {message.hatAnlagen && (
                                 <span className="flex items-center gap-1 text-muted-foreground">
-                                  <Paperclip className="size-3" aria-hidden="true" /> Anlagen vorhanden
+                                  <Paperclip className="size-3" aria-hidden="true" /> Anlagen
+                                  vorhanden
                                 </span>
                               )}
                               {message.outlookWebUrl && (

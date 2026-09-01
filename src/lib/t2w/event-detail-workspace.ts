@@ -244,7 +244,10 @@ export function createEventDetailWorkspace(
         case "sync-communication": {
           const result = await this.syncCommunication();
           return result.kind === "synced"
-            ? { kind: "success", message: "Outlook-Nachrichten synchronisiert." }
+            ? {
+                kind: "success",
+                message: "Outlook-Nachrichten synchronisiert und gesendete Antworten zugeordnet.",
+              }
             : {
                 kind: "failed",
                 message: "Outlook-Nachrichten konnten nicht synchronisiert werden.",

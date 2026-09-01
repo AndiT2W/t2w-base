@@ -991,6 +991,9 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
   await expect(page.locator('section[aria-label^="Kommunikation "]')).toHaveCount(1);
   await expect(page.getByText("Eventkontakt · Eva Beispiel (Anmeldung)")).toHaveCount(2);
   await expect(page.getByText("TIME2WIN gesendet")).toBeVisible();
+  await expect(page.getByText("Antwort", { exact: true })).toBeVisible();
+  await expect(page.getByText("Antwort in dieser Unterhaltung")).toBeVisible();
+  await expect(page.locator('article[data-reply="true"]')).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Vollständige Vorschau" })).toBeVisible();
   await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.")).not.toBeVisible();
 
@@ -999,6 +1002,13 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
 
   const contactLink = page.locator('a[href="/kontakte?person=p4"]').first();
   await expect(contactLink).toHaveText("Eventkontakt · Eva Beispiel (Anmeldung)");
+
+  await page.getByRole("button", { name: "Dialog" }).click();
+  await expect(page.locator('article[data-timeline-view="conversation"]')).toHaveCount(2);
+  await page.getByRole("button", { name: "Kompakt" }).click();
+  await expect(page.locator('article[data-timeline-view="compact"]')).toHaveCount(2);
+  await page.getByRole("button", { name: "Karten" }).click();
+  await expect(page.locator('article[data-timeline-view="cards"]')).toHaveCount(2);
 
   await page.getByLabel("Kommunikation durchsuchen").fill("Zeitplan");
   await expect(page.getByText("Zeitplan an das Team gesendet")).toBeVisible();

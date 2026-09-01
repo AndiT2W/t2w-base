@@ -16,6 +16,11 @@ export type CommunicationMessage = {
 
 export interface EventCommunicationRepository {
   source(eventId: string): Promise<{ mailbox: string; folderId: string }>;
+  conflictingConversationIds(
+    eventId: string,
+    mailbox: string,
+    conversationIds: string[],
+  ): Promise<string[]>;
   begin(eventId: string): Promise<unknown>;
   store(eventId: string, messages: CommunicationMessage[]): Promise<unknown>;
   succeed(eventId: string, at: Date): Promise<unknown>;
@@ -61,7 +66,36 @@ export class EventCommunicationHub {
     const source = await this.repository.source(eventId);
     await this.repository.begin(eventId);
     try {
-      const messages = await this.graph.listMessages(source.mailbox, source.folderId);
+      let messages = await this.graph.listMessages(source.mailbox, source.folderId);
+      const conversationIds = [
+        ...new Set(
+          messages
+            .map((message) => message.conversationId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      const conflictingIds = new Set(
+        await this.repository.conflictingConversationIds(eventId, source.mailbox, conversationIds),
+      );
+      const unambiguousIds = conversationIds.filter((id) => !conflictingIds.has(id));
+      const sentReplies = await this.graph.listMessagesByConversationIds(
+        source.mailbox,
+        "sentitems",
+        unambiguousIds,
+      );
+      const mailbox = source.mailbox.toLocaleLowerCase();
+      const candidates = sentReplies.filter(
+        (message) =>
+          message.conversationId &&
+          unambiguousIds.includes(message.conversationId) &&
+          message.from?.emailAddress?.address?.toLocaleLowerCase() === mailbox,
+      );
+      for (const message of candidates) {
+        await this.graph.moveMessage(source.mailbox, message.id, source.folderId);
+      }
+      if (candidates.length > 0) {
+        messages = await this.graph.listMessages(source.mailbox, source.folderId);
+      }
       await this.repository.store(
         eventId,
         messages.map((message) => normalize(source.mailbox, message)),

@@ -31,6 +31,22 @@ export class PrismaEventCommunicationAdapter implements EventCommunicationReposi
     return { mailbox: event.outlookMailbox, folderId: event.outlookFolderId };
   }
 
+  async conflictingConversationIds(eventId: string, mailbox: string, conversationIds: string[]) {
+    if (conversationIds.length === 0) return [];
+    const conflicts = await this.prisma.eventCommunicationMessage.findMany({
+      where: {
+        mailbox,
+        conversationId: { in: conversationIds },
+        eventId: { not: eventId },
+      },
+      distinct: ["conversationId"],
+      select: { conversationId: true },
+    });
+    return conflicts
+      .map(({ conversationId }) => conversationId)
+      .filter((conversationId): conversationId is string => Boolean(conversationId));
+  }
+
   begin(eventId: string) {
     return this.prisma.event.update({
       where: { id: eventId },

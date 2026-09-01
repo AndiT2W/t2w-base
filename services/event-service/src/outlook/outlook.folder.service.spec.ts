@@ -25,7 +25,13 @@ function service(graph: OutlookGraphClient) {
 
 describe("OutlookFolderService", () => {
   it("plans the canonical year, quarter and Eventcode path and detects drift", () => {
-    const graph = { listChildFolders: vi.fn(), createChildFolder: vi.fn(), listMessages: vi.fn() };
+    const graph = {
+      listChildFolders: vi.fn(),
+      createChildFolder: vi.fn(),
+      listMessages: vi.fn(),
+      listMessagesByConversationIds: vi.fn(),
+      moveMessage: vi.fn(),
+    };
     const { subject } = service(graph);
 
     expect(
@@ -46,12 +52,15 @@ describe("OutlookFolderService", () => {
 
   it("reports whether the planned event folder already exists", async () => {
     const graph: OutlookGraphClient = {
-      listChildFolders: vi.fn()
+      listChildFolders: vi
+        .fn()
         .mockResolvedValueOnce([{ id: "year-id", displayName: "06_auftraege_26" }])
         .mockResolvedValueOnce([{ id: "quarter-id", displayName: "Q2" }])
         .mockResolvedValueOnce([{ id: "event-id", displayName: "260612_sommerfest" }]),
       createChildFolder: vi.fn(),
       listMessages: vi.fn(),
+      listMessagesByConversationIds: vi.fn(),
+      moveMessage: vi.fn(),
     };
     const { subject } = service(graph);
 
@@ -66,6 +75,8 @@ describe("OutlookFolderService", () => {
       listChildFolders: vi.fn().mockResolvedValueOnce([]),
       createChildFolder: vi.fn(),
       listMessages: vi.fn(),
+      listMessagesByConversationIds: vi.fn(),
+      moveMessage: vi.fn(),
     };
     const { subject } = service(graph);
 
@@ -88,6 +99,8 @@ describe("OutlookFolderService", () => {
         return folder;
       }),
       listMessages: vi.fn(),
+      listMessagesByConversationIds: vi.fn(),
+      moveMessage: vi.fn(),
     };
     const { subject, prisma } = service(graph);
 
@@ -126,7 +139,8 @@ describe("OutlookFolderService", () => {
 
   it("persists a URL-encoded Outlook cloud link for Graph folder IDs", async () => {
     const graph: OutlookGraphClient = {
-      listChildFolders: vi.fn()
+      listChildFolders: vi
+        .fn()
         .mockResolvedValueOnce([{ id: "year-id", displayName: "06_auftraege_26" }])
         .mockResolvedValueOnce([{ id: "quarter-id", displayName: "Q2" }])
         .mockResolvedValueOnce([
@@ -137,6 +151,8 @@ describe("OutlookFolderService", () => {
         ]),
       createChildFolder: vi.fn(),
       listMessages: vi.fn(),
+      listMessagesByConversationIds: vi.fn(),
+      moveMessage: vi.fn(),
     };
     const { subject, prisma } = service(graph);
 
@@ -160,6 +176,8 @@ describe("OutlookFolderService", () => {
         .mockResolvedValueOnce([{ id: "year-1", displayName: "2026" }]),
       createChildFolder: vi.fn().mockRejectedValue(new OutlookGraphError(409, "OUTLOOK_GRAPH_409")),
       listMessages: vi.fn(),
+      listMessagesByConversationIds: vi.fn(),
+      moveMessage: vi.fn(),
     };
     const { subject } = service(graph);
     await expect(subject.ensureFolder("shared@example.com", "root", "2026")).resolves.toEqual({

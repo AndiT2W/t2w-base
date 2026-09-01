@@ -89,6 +89,7 @@ export type Message = {
   empfaenger?: string;
   hatAnlagen?: boolean;
   outlookWebUrl?: string;
+  conversationId?: string;
 };
 
 export type T2WEvent = {
