@@ -167,10 +167,14 @@ function KundenKontakte() {
   const createTriggerRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     if (window.location.search.includes("neu=1")) setCreate(true);
-    const kundeId = new URLSearchParams(window.location.search).get("kunde");
+    const params = new URLSearchParams(window.location.search);
+    const kundeId = params.get("kunde");
+    const personId = params.get("person");
     if (kundeId && crm.kunden.some((kunde) => kunde.id === kundeId))
       setSel({ art: "kunde", id: kundeId });
-  }, [crm.kunden]);
+    if (personId && crm.personen.some((person) => person.id === personId))
+      setSel({ art: "person", id: personId });
+  }, [crm.kunden, crm.personen]);
   function closeCreate() {
     setCreate(false);
     window.history.replaceState({}, "", "/kontakte");

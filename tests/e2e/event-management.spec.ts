@@ -976,6 +976,12 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
     outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
     outlookFolderId: "event-folder-id",
     outlookFolderSyncStatus: "SUCCESS",
+    contacts: [
+      {
+        role: "Anmeldung",
+        contact: { id: "p4", name: "Eva Beispiel", email: "eva@example.at", phone: null },
+      },
+    ],
   });
 
   await page.goto("/events/260820_demo_event");
@@ -983,12 +989,16 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
   await page.getByRole("button", { name: "Synchronisieren" }).click();
 
   await expect(page.locator('section[aria-label^="Kommunikation "]')).toHaveCount(1);
-  await expect(page.getByText("Kontakt: Eva Beispiel")).toHaveCount(2);
+  await expect(page.getByText("Eventkontakt · Eva Beispiel (Anmeldung)")).toHaveCount(2);
+  await expect(page.getByText("TIME2WIN gesendet")).toBeVisible();
   await expect(page.getByRole("button", { name: "Vollständige Vorschau" })).toBeVisible();
   await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.")).not.toBeVisible();
 
   await page.getByRole("button", { name: "Vollständige Vorschau" }).click();
   await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.")).toBeVisible();
+
+  const contactLink = page.locator('a[href="/kontakte?person=p4"]').first();
+  await expect(contactLink).toHaveText("Eventkontakt · Eva Beispiel (Anmeldung)");
 
   await page.getByLabel("Kommunikation durchsuchen").fill("Zeitplan");
   await expect(page.getByText("Zeitplan an das Team gesendet")).toBeVisible();
@@ -996,4 +1006,9 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
 
   await page.getByRole("button", { name: "Aktivitäten" }).click();
   await expect(page.getByText("Keine Einträge für diese Auswahl.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Alle" }).click();
+  await page.getByLabel("Kommunikation durchsuchen").fill("");
+  await contactLink.click();
+  await expect(page.getByRole("heading", { name: "Eva Beispiel" })).toBeVisible();
 });

@@ -1297,14 +1297,40 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                             ? `${message.empfaenger ?? ""} ${message.autor}`
                             : `${message.autor} ${message.empfaenger ?? ""}`,
                         );
+                        const eventContact = form.kontakte.find((candidate) =>
+                          relatedEmails.includes(candidate.email.toLocaleLowerCase("de")),
+                        );
                         const contact = personen.find((person) =>
                           relatedEmails.includes(person.email.toLocaleLowerCase("de")),
                         );
+                        const linkedContact = eventContact
+                          ? { id: eventContact.id, label: eventContact.name, eventRole: eventContact.rolle }
+                          : contact
+                            ? { id: contact.id, label: personName(contact), eventRole: null }
+                            : null;
+                        const isTime2winOutgoing =
+                          message.richtung === "OUTGOING" &&
+                          emailAddresses(message.autor).includes(
+                            (form.outlookMailbox ?? settings.outlookMailbox ?? "").toLocaleLowerCase("de"),
+                          );
                         const expanded = expandedMessages.has(message.id);
                         const longPreview = message.text.length > 180;
                         return (
-                          <article key={message.id} className="relative rounded-lg border border-border bg-background p-4 shadow-sm">
-                            <span className="absolute -left-[1.58rem] top-5 size-3 rounded-full border-2 border-background bg-primary" />
+                          <article
+                            key={message.id}
+                            className={`relative rounded-lg border p-4 shadow-sm ${
+                              isTime2winOutgoing
+                                ? "border-primary/50 bg-primary/5"
+                                : eventContact
+                                  ? "border-sky-300 bg-sky-50/70 dark:border-sky-800 dark:bg-sky-950/25"
+                                  : "border-border bg-background"
+                            }`}
+                          >
+                            <span
+                              className={`absolute -left-[1.58rem] top-5 size-3 rounded-full border-2 border-background ${
+                                isTime2winOutgoing ? "bg-primary" : eventContact ? "bg-sky-500" : "bg-muted-foreground"
+                              }`}
+                            />
                             <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="flex min-w-0 items-center gap-2">
                                 <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -1313,18 +1339,34 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Badge variant="outline">{message.kanal}</Badge>
                                 {message.richtung && (
-                                  <Badge variant="outline">
+                                  <Badge
+                                    className={isTime2winOutgoing ? "border-transparent bg-primary text-primary-foreground" : undefined}
+                                    variant="outline"
+                                  >
                                     {message.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}
                                   </Badge>
                                 )}
+                                {isTime2winOutgoing && <Badge variant="secondary">TIME2WIN gesendet</Badge>}
                                 <time dateTime={message.datum}>{formatCommunicationTime(message.datum)}</time>
                               </div>
                             </div>
                             <p className="mt-2 text-sm text-muted-foreground">
                               {message.richtung === "OUTGOING" ? "An" : "Von"}: {message.richtung === "OUTGOING" ? message.empfaenger : message.autor}
                             </p>
-                            {contact ? (
-                              <Badge className="mt-2" variant="secondary">Kontakt: {personName(contact)}</Badge>
+                            {linkedContact ? (
+                              <a
+                                className="mt-2 inline-block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                href={`/kontakte?person=${encodeURIComponent(linkedContact.id)}`}
+                              >
+                                <Badge
+                                  className={eventContact ? "border-sky-300 bg-sky-100 text-sky-950 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100" : undefined}
+                                  variant="secondary"
+                                >
+                                  {eventContact
+                                    ? `Eventkontakt · ${linkedContact.label}${linkedContact.eventRole ? ` (${linkedContact.eventRole})` : ""}`
+                                    : `Kontakt: ${linkedContact.label}`}
+                                </Badge>
+                              </a>
                             ) : message.kanal === "E-Mail" ? (
                               <Badge className="mt-2" variant="outline">Kein Kontakt zugeordnet</Badge>
                             ) : null}
