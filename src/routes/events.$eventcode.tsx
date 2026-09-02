@@ -137,6 +137,14 @@ function communicationDay(value: string) {
   }).format(date);
 }
 
+function communicationDate(value: string) {
+  return new Intl.DateTimeFormat("de-AT", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 function emailAddresses(value: string) {
   return value.toLocaleLowerCase("de").match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/g) ?? [];
 }
@@ -230,6 +238,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [communicationView, setCommunicationView] = useState<"cards" | "conversation" | "compact">(
     "cards",
   );
+  const [selectedCommunicationId, setSelectedCommunicationId] = useState<string | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(() => new Set());
   const replyMessageIds = useMemo(() => {
     const seen = new Set<string>();
@@ -242,6 +251,16 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         seen.add(message.conversationId!);
       });
     return replies;
+  }, [form.kommunikation]);
+  const threadOrigins = useMemo(() => {
+    const origins = new Map<string, T2WEvent["kommunikation"][number]>();
+    [...form.kommunikation]
+      .filter((message) => message.kanal === "E-Mail" && message.conversationId)
+      .sort((left, right) => left.datum.localeCompare(right.datum))
+      .forEach((message) => {
+        if (!origins.has(message.conversationId!)) origins.set(message.conversationId!, message);
+      });
+    return origins;
   }, [form.kommunikation]);
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
   const communicationGroups = useMemo(() => {
@@ -258,17 +277,72 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           .includes(query)
       );
     });
-    return filtered.reduce<{ day: string; messages: T2WEvent["kommunikation"] }[]>(
-      (groups, message) => {
-        const day = communicationDay(message.datum);
-        const current = groups.at(-1);
-        if (current?.day === day) current.messages.push(message);
-        else groups.push({ day, messages: [message] });
-        return groups;
-      },
-      [],
-    );
-  }, [communicationFilter, communicationSearch, form.kommunikation]);
+    if (communicationView === "conversation") {
+      const threads = new Map<string, T2WEvent["kommunikation"]>();
+      filtered.forEach((message) => {
+        const key = message.conversationId
+          ? `conversation:${message.conversationId}`
+          : `single:${message.id}`;
+        threads.set(key, [...(threads.get(key) ?? []), message]);
+      });
+      return [...threads.entries()]
+        .map(([key, messages]) => {
+          const sorted = [...messages].sort((left, right) => left.datum.localeCompare(right.datum));
+          const first = sorted[0]!;
+          const last = sorted.at(-1)!;
+          return {
+            key,
+            label: first.betreff,
+            period:
+              communicationDate(first.datum) === communicationDate(last.datum)
+                ? communicationDate(first.datum)
+                : `${communicationDate(first.datum)} – ${communicationDate(last.datum)}`,
+            latest: last.datum,
+            messages: sorted,
+            conversation: true,
+          };
+        })
+        .sort((left, right) => right.latest.localeCompare(left.latest));
+    }
+    return filtered.reduce<
+      {
+        key: string;
+        label: string;
+        period: string;
+        latest: string;
+        messages: T2WEvent["kommunikation"];
+        conversation: boolean;
+      }[]
+    >((groups, message) => {
+      const day = communicationDay(message.datum);
+      const current = groups.at(-1);
+      if (current?.label === day) current.messages.push(message);
+      else
+        groups.push({
+          key: day,
+          label: day,
+          period: day,
+          latest: message.datum,
+          messages: [message],
+          conversation: false,
+        });
+      return groups;
+    }, []);
+  }, [communicationFilter, communicationSearch, communicationView, form.kommunikation]);
+  const selectedCommunication = useMemo(
+    () => form.kommunikation.find((message) => message.id === selectedCommunicationId) ?? form.kommunikation[0],
+    [form.kommunikation, selectedCommunicationId],
+  );
+  const selectedThread = useMemo(() => {
+    if (!selectedCommunication) return [];
+    return form.kommunikation
+      .filter((message) =>
+        selectedCommunication.conversationId
+          ? message.conversationId === selectedCommunication.conversationId
+          : message.id === selectedCommunication.id,
+      )
+      .sort((left, right) => left.datum.localeCompare(right.datum));
+  }, [form.kommunikation, selectedCommunication]);
 
   useEffect(() => {
     detailWorkspace.accept(event, personen, kunden);
@@ -1294,7 +1368,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 >
                   {(
                     [
-                      ["cards", "Karten", PanelsTopLeft],
+                      ["cards", "Hybrid", PanelsTopLeft],
                       ["conversation", "Dialog", MessageSquare],
                       ["compact", "Kompakt", Rows3],
                     ] as const
@@ -1332,12 +1406,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               {form.kommunikation.length > 0 && communicationGroups.length === 0 && (
                 <p className="text-sm text-muted-foreground">Keine Einträge für diese Auswahl.</p>
               )}
+              <div className={communicationView === "cards" ? "grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]" : "space-y-5"}>
               <div className="space-y-5">
                 {communicationGroups.map((group) => (
-                  <section key={group.day} aria-label={`Kommunikation ${group.day}`}>
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {group.day}
-                    </h3>
+                  <section key={group.key} aria-label={`Kommunikation ${group.label}`}>
+                    {group.conversation ? (
+                      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2">
+                        <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
+                        <span className="text-xs text-muted-foreground">{group.period}</span>
+                      </div>
+                    ) : (
+                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.label}
+                      </h3>
+                    )}
                     <div
                       className={
                         communicationView === "compact"
@@ -1384,6 +1466,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                         const expanded = expandedMessages.has(message.id);
                         const longPreview = message.text.length > 180;
                         const isReply = replyMessageIds.has(message.id);
+                        const threadOrigin = message.conversationId
+                          ? threadOrigins.get(message.conversationId)
+                          : undefined;
                         const viewClasses =
                           communicationView === "compact"
                             ? "rounded-none border-0 border-b border-border p-3 shadow-none last:border-b-0"
@@ -1391,12 +1476,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               ? message.richtung === "OUTGOING"
                                 ? "ml-8 rounded-2xl rounded-tr-sm p-4 shadow-sm sm:ml-24"
                                 : "mr-8 rounded-2xl rounded-tl-sm p-4 shadow-sm sm:mr-24"
-                              : isReply
-                                ? "ml-4 rounded-lg p-4 shadow-sm sm:ml-8"
-                                : "rounded-lg p-4 shadow-sm";
+                              : "rounded-lg p-4 shadow-sm";
                         return (
                           <article
                             key={message.id}
+                            id={`communication-${message.id}`}
+                            tabIndex={-1}
                             data-timeline-view={communicationView}
                             data-reply={isReply ? "true" : "false"}
                             className={`relative border ${viewClasses} ${
@@ -1406,6 +1491,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                   ? "border-sky-300 bg-sky-50/70 dark:border-sky-800 dark:bg-sky-950/25"
                                   : "border-border bg-background"
                             }`}
+                            onClick={() => setSelectedCommunicationId(message.id)}
                           >
                             {communicationView !== "compact" && (
                               <span
@@ -1441,7 +1527,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                   </Badge>
                                 )}
                                 {isTime2winOutgoing && (
-                                  <Badge variant="secondary">TIME2WIN gesendet</Badge>
+                                  <Badge
+                                    className="size-7 shrink-0 rounded-full border-0 bg-transparent p-0"
+                                    variant="secondary"
+                                    aria-label="Von TIME2WIN gesendet"
+                                    title="Von TIME2WIN gesendet"
+                                  >
+                                    <img
+                                      className="size-7"
+                                      src="/time2win_logo_button.svg"
+                                      alt=""
+                                      aria-hidden="true"
+                                    />
+                                  </Badge>
                                 )}
                                 {isReply && (
                                   <Badge className="gap-1" variant="secondary">
@@ -1481,11 +1579,24 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 Kein Kontakt zugeordnet
                               </Badge>
                             ) : null}
-                            {isReply && (
-                              <p className="mt-3 flex items-center gap-1 border-l-2 border-primary/40 pl-3 text-xs font-medium text-muted-foreground">
-                                <CornerDownRight className="size-3" aria-hidden="true" />
-                                Antwort in dieser Unterhaltung
-                              </p>
+                            {isReply && threadOrigin && communicationView !== "conversation" && (
+                              <button
+                                type="button"
+                                className="mt-3 flex max-w-full items-center gap-1 border-l-2 border-primary/40 pl-3 text-left text-xs font-medium text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                onClick={() => {
+                                  const original = document.getElementById(
+                                    `communication-${threadOrigin.id}`,
+                                  );
+                                  original?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                  original?.focus({ preventScroll: true });
+                                }}
+                              >
+                                <CornerDownRight className="size-3 shrink-0" aria-hidden="true" />
+                                <span className="truncate">
+                                  Antwort auf „{threadOrigin.betreff}“ vom{" "}
+                                  {communicationDate(threadOrigin.datum)}
+                                </span>
+                              </button>
                             )}
                             <p
                               className={`mt-3 whitespace-pre-line text-sm text-foreground/80 ${communicationView === "compact" && !expanded ? "line-clamp-2 leading-5" : "leading-6"}`}
@@ -1539,6 +1650,35 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     </div>
                   </section>
                 ))}
+              </div>
+              {communicationView === "cards" && selectedCommunication && (
+                <aside className="h-fit rounded-lg border border-border bg-muted/20 p-4 lg:sticky lg:top-4" aria-label="Thread-Kontext">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Thread-Kontext</p>
+                      <h3 className="mt-1 font-semibold text-foreground">{selectedCommunication.betreff}</h3>
+                    </div>
+                    <Badge variant="outline">{selectedThread.length} Nachrichten</Badge>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Badge variant="secondary">{selectedCommunication.kanal}</Badge>
+                    <Badge variant="outline">{selectedCommunication.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}</Badge>
+                    <Badge variant="outline">Rückfrage</Badge>
+                  </div>
+                  <div className="mt-4 space-y-3 border-l-2 border-border pl-3">
+                    {selectedThread.map((message) => (
+                      <button key={message.id} type="button" className="block w-full rounded-md p-2 text-left hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => { setSelectedCommunicationId(message.id); document.getElementById(`communication-${message.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
+                        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <span>{message.richtung === "INCOMING" ? message.autor : "TIME2WIN"}</span>
+                          <time dateTime={message.datum}>{formatCommunicationTime(message.datum)}</time>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-sm text-foreground/80">{message.text}</p>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-xs text-muted-foreground">Kontakt und Tags können hier künftig direkt bearbeitet werden.</p>
+                </aside>
+              )}
               </div>
             </CardContent>
           </Card>

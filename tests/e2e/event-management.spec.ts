@@ -990,25 +990,47 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
 
   await expect(page.locator('section[aria-label^="Kommunikation "]')).toHaveCount(1);
   await expect(page.getByText("Eventkontakt · Eva Beispiel (Anmeldung)")).toHaveCount(2);
-  await expect(page.getByText("TIME2WIN gesendet")).toBeVisible();
+  const time2winLogo = page.getByLabel("Von TIME2WIN gesendet");
+  await expect(time2winLogo).toBeVisible();
+  await expect(time2winLogo.locator('img[src="/time2win_logo_button.svg"]')).toBeVisible();
   await expect(page.getByText("Antwort", { exact: true })).toBeVisible();
-  await expect(page.getByText("Antwort in dieser Unterhaltung")).toBeVisible();
+  const replyReference = page.getByRole("button", {
+    name: /Antwort auf „Startzeit bestätigt“ vom/,
+  });
+  await expect(replyReference).toBeVisible();
   await expect(page.locator('article[data-reply="true"]')).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Vollständige Vorschau" })).toBeVisible();
-  await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.")).not.toBeVisible();
+  await expect(
+    page.locator('article[data-timeline-view="cards"]').getByText("Regressionstest für die aufklappbare Vorschau."),
+  ).not.toBeVisible();
 
   await page.getByRole("button", { name: "Vollständige Vorschau" }).click();
-  await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.")).toBeVisible();
+  await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.").first()).toBeVisible();
 
   const contactLink = page.locator('a[href="/kontakte?person=p4"]').first();
   await expect(contactLink).toHaveText("Eventkontakt · Eva Beispiel (Anmeldung)");
 
+  await replyReference.click();
+  await expect(page.locator("#communication-message-1")).toBeFocused();
+
   await page.getByRole("button", { name: "Dialog" }).click();
+  await expect(page.locator('section[aria-label="Kommunikation Startzeit bestätigt"]')).toHaveCount(
+    1,
+  );
   await expect(page.locator('article[data-timeline-view="conversation"]')).toHaveCount(2);
+  await expect(
+    page.getByRole("button", { name: /Antwort auf „Startzeit bestätigt“ vom/ }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Kompakt" }).click();
   await expect(page.locator('article[data-timeline-view="compact"]')).toHaveCount(2);
-  await page.getByRole("button", { name: "Karten" }).click();
+  await page.getByRole("button", { name: "Hybrid" }).click();
   await expect(page.locator('article[data-timeline-view="cards"]')).toHaveCount(2);
+  await expect(page.getByRole("complementary", { name: "Thread-Kontext" })).toBeVisible();
+  await expect(page.getByText("2 Nachrichten", { exact: true })).toBeVisible();
+  await page.locator('article[data-timeline-view="cards"]').last().click();
+  await expect(page.getByRole("complementary", { name: "Thread-Kontext" })).toContainText(
+    "Im Anhang findet ihr den aktuellen Zeitplan.",
+  );
 
   await page.getByLabel("Kommunikation durchsuchen").fill("Zeitplan");
   await expect(page.getByText("Zeitplan an das Team gesendet")).toBeVisible();
