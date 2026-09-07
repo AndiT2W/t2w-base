@@ -234,6 +234,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [communicationFilter, setCommunicationFilter] = useState<"all" | "email" | "activity">(
     "all",
   );
+  const [communicationContactFilter, setCommunicationContactFilter] = useState("all");
   const [communicationSearch, setCommunicationSearch] = useState("");
   const [communicationView, setCommunicationView] = useState<"cards" | "conversation" | "compact">(
     "cards",
@@ -274,6 +275,17 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     const filtered = form.kommunikation.filter((message) => {
       if (communicationFilter === "email" && message.kanal !== "E-Mail") return false;
       if (communicationFilter === "activity" && message.kanal === "E-Mail") return false;
+      if (communicationContactFilter !== "all") {
+        const relatedEmails = emailAddresses(
+          message.richtung === "OUTGOING"
+            ? `${message.empfaenger ?? ""} ${message.autor}`
+            : `${message.autor} ${message.empfaenger ?? ""}`,
+        );
+        const matchingContact = form.kontakte.find((contact) =>
+          relatedEmails.includes(contact.email.toLocaleLowerCase("de")),
+        );
+        if (communicationContactFilter === "unassigned" ? matchingContact : matchingContact?.id !== communicationContactFilter) return false;
+      }
       return (
         !query ||
         [message.betreff, message.autor, message.empfaenger, message.text]
@@ -334,7 +346,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         });
       return groups;
     }, []);
-  }, [communicationFilter, communicationSearch, communicationView, form.kommunikation]);
+  }, [communicationContactFilter, communicationFilter, communicationSearch, communicationView, form.kontakte, form.kommunikation]);
   const selectedCommunication = useMemo(
     () =>
       form.kommunikation.find((message) => message.id === selectedCommunicationId) ??
@@ -1420,6 +1432,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     placeholder="Nachrichten durchsuchen …"
                   />
                 </div>
+                <Select value={communicationContactFilter} onValueChange={setCommunicationContactFilter}>
+                  <SelectTrigger aria-label="Kommunikation nach Kontakt filtern" className="w-full sm:w-56">
+                    <SelectValue placeholder="Kontakt: Alle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Kontakt: Alle</SelectItem>
+                    <SelectItem value="unassigned">Ohne Kontakt</SelectItem>
+                    {form.kontakte.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
