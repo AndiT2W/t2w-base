@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -239,6 +239,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     "cards",
   );
   const [selectedCommunicationId, setSelectedCommunicationId] = useState<string | null>(null);
+  const threadContextRef = useRef<HTMLElement | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(() => new Set());
   const replyMessageIds = useMemo(() => {
     const seen = new Set<string>();
@@ -343,6 +344,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       )
       .sort((left, right) => left.datum.localeCompare(right.datum));
   }, [form.kommunikation, selectedCommunication]);
+  const selectCommunication = (messageId: string) => {
+    setSelectedCommunicationId(messageId);
+    requestAnimationFrame(() => {
+      threadContextRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
 
   useEffect(() => {
     detailWorkspace.accept(event, personen, kunden);
@@ -1491,7 +1498,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                   ? "border-sky-300 bg-sky-50/70 dark:border-sky-800 dark:bg-sky-950/25"
                                   : "border-border bg-background"
                             }`}
-                            onClick={() => setSelectedCommunicationId(message.id)}
+                            onClick={() => selectCommunication(message.id)}
+                            aria-current={selectedCommunicationId === message.id ? "true" : undefined}
                           >
                             {communicationView !== "compact" && (
                               <span
@@ -1652,7 +1660,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 ))}
               </div>
               {communicationView === "cards" && selectedCommunication && (
-                <aside className="h-fit rounded-lg border border-border bg-muted/20 p-4 lg:sticky lg:top-4" aria-label="Thread-Kontext">
+                <aside ref={threadContextRef} className={`h-fit rounded-lg border bg-muted/20 p-4 lg:sticky lg:top-4 ${selectedCommunicationId ? "border-primary/60 shadow-sm" : "border-border"}`} aria-label="Thread-Kontext">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Thread-Kontext</p>
@@ -1667,7 +1675,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   </div>
                   <div className="mt-4 space-y-3 border-l-2 border-border pl-3">
                     {selectedThread.map((message) => (
-                      <button key={message.id} type="button" className="block w-full rounded-md p-2 text-left hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={() => { setSelectedCommunicationId(message.id); document.getElementById(`communication-${message.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
+                      <button key={message.id} type="button" className={`block w-full rounded-md p-2 text-left hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${message.id === selectedCommunicationId ? "bg-background ring-1 ring-primary/30" : ""}`} onClick={() => { selectCommunication(message.id); document.getElementById(`communication-${message.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
                         <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                           <span>{message.richtung === "INCOMING" ? message.autor : "TIME2WIN"}</span>
                           <time dateTime={message.datum}>{formatCommunicationTime(message.datum)}</time>
