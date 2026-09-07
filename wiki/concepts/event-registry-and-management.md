@@ -32,6 +32,7 @@
 - location
 - sport type
 - optional technologies
+- mehrere zuordenbare Services, gepflegt über eine zentrale Auswahlliste
 - participant forecast
 - structured address plus optional location notes
 - organizer-side contact defaults and event overrides
@@ -60,3 +61,4 @@
 - [../sources/2026-06-15-veranstaltungen-xlsx.md](../sources/2026-06-15-veranstaltungen-xlsx.md)
 - [../sources/2026-06-30-user-target-model-v1.md](../sources/2026-06-30-user-target-model-v1.md)
 - User clarification dated 2026-08-19: ClickUp field `Teilnehmer` represents the forecast and maps to `Event.participantForecast`, not the current participant count.
+- [Event-Services-Anforderung (2026-09-07)](../sources/2026-09-07-user-event-services.md)

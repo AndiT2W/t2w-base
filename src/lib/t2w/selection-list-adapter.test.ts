@@ -4,10 +4,13 @@ import { createHttpSelectionListAdapter } from "./selection-list-adapter";
 vi.mock("./api", () => ({
   apiManageSports: vi.fn().mockResolvedValue([{ id: "s", name: "Lauf", active: true }]),
   apiManageEventRoles: vi.fn().mockResolvedValue([{ id: "r", name: "Timing", active: true }]),
+  apiManageServices: vi.fn().mockResolvedValue([{ id: "v", name: "UHF", active: true }]),
   apiCreateSport: vi.fn().mockResolvedValue({ id: "s", name: "Lauf", active: true }),
   apiCreateEventRole: vi.fn().mockResolvedValue({ id: "r", name: "Timing", active: true }),
+  apiCreateService: vi.fn().mockResolvedValue({ id: "v", name: "UHF", active: true }),
   apiUpdateSport: vi.fn().mockResolvedValue({ id: "s", name: "Lauf", active: false }),
   apiUpdateEventRole: vi.fn().mockResolvedValue({ id: "r", name: "Timing", active: false }),
+  apiUpdateService: vi.fn().mockResolvedValue({ id: "v", name: "UHF", active: false }),
 }));
 
 describe("selection-list HTTP adapter", () => {

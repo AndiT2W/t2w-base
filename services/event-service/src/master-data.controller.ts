@@ -106,6 +106,19 @@ export class MasterDataController {
     return this.selectionLists.update("sports", id, { active: false });
   }
 
+  @Get("services") services(@Query("includeInactive") includeInactive?: string) {
+    return this.selectionLists.list("services", includeInactive === "true");
+  }
+  @Post("services") service(@Body() body: { name: string }) {
+    return this.selectionLists.create("services", body.name);
+  }
+  @Patch("services/:id") updateService(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; active?: boolean },
+  ) {
+    return this.selectionLists.update("services", id, body);
+  }
+
   @Get("event-roles") eventRoles(@Query("includeInactive") includeInactive?: string) {
     return this.selectionLists.list("eventRoles", includeInactive === "true");
   }

@@ -27,6 +27,9 @@ function adapter(): EventMutationAdapter & { events: Map<string, Record<string, 
     async replaceInvoiceRecipients(id, organizerIds) {
       events.set(id, { ...events.get(id), invoiceRecipientIds: organizerIds });
     },
+    async replaceServices(id, serviceIds) {
+      events.set(id, { ...events.get(id), serviceIds });
+    },
     async touchEvent(id, version) {
       const current = events.get(id);
       if (!current || (version !== undefined && current.version !== version)) return false;
@@ -135,6 +138,18 @@ describe("Event mutation module", () => {
       mutations.update("e1", { version: 1, invoiceRecipientIds: ["o2"] }),
     ).rejects.toBeInstanceOf(EventMutationConflict);
     expect(persistence.events.get("e1")?.invoiceRecipientIds).toEqual(["o1"]);
+  });
+
+  it("replaces all selected services in the same Event update", async () => {
+    const persistence = adapter();
+    persistence.events.set("e1", { id: "e1", version: 1, serviceIds: ["service-1"] });
+
+    await expect(
+      new EventMutations(persistence).update("e1", {
+        version: 1,
+        serviceIds: ["service-2", "service-3"],
+      }),
+    ).resolves.toMatchObject({ serviceIds: ["service-2", "service-3"] });
   });
 
   it("changes a contact role atomically through the event mutation module", async () => {

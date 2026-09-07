@@ -33,6 +33,7 @@ type ApiEvent = {
   archived: boolean;
   organizer?: { id: string; name: string } | null;
   sport?: { id: string; name: string } | null;
+  services?: { service: { id: string; name: string } }[];
   t2wEventId?: number | null;
   time2winSyncStatus?: string;
   time2winLastSuccessAt?: string | null;
@@ -97,6 +98,8 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     veranstalter: event.organizer?.name ?? "—",
     veranstalterId: event.organizer?.id,
     sportartId: event.sport?.id,
+    serviceIds: event.services?.map(({ service }) => service.id) ?? [],
+    services: event.services?.map(({ service }) => service.name) ?? [],
     ort: event.location ?? "",
     start: dateOnly(event.startAt),
     ende: dateOnly(event.endAt),
@@ -302,6 +305,7 @@ export async function apiCreateEvent(input: {
   status: string;
   veranstalterId?: string;
   sportartId?: string;
+  serviceIds?: string[];
 }) {
   const status =
     input.status === "anfrage"
@@ -324,6 +328,7 @@ export async function apiCreateEvent(input: {
       eventCode: input.eventcode,
       organizerId: input.veranstalterId,
       sportId: input.sportartId,
+      serviceIds: input.serviceIds,
       startAt: input.start,
       endAt: input.ende,
       location: input.ort,
@@ -374,6 +379,32 @@ export async function apiUpdateSport(id: string, patch: { name?: string; active?
   });
   if (!response.ok) throw new Error("Sportart konnte nicht gespeichert werden");
   return response.json() as Promise<ApiSport & { active: boolean }>;
+}
+export type ApiService = { id: string; name: string; active: boolean };
+export async function apiManageServices(): Promise<ApiService[]> {
+  const response = await fetch("/api/v1/services?includeInactive=true", { credentials: "include" });
+  if (!response.ok) throw new Error("Services konnten nicht geladen werden");
+  return response.json() as Promise<ApiService[]>;
+}
+export async function apiCreateService(name: string) {
+  const response = await fetch("/api/v1/services", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error("Service konnte nicht angelegt werden");
+  return response.json() as Promise<ApiService>;
+}
+export async function apiUpdateService(id: string, patch: { name?: string; active?: boolean }) {
+  const response = await fetch(`/api/v1/services/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) throw new Error("Service konnte nicht gespeichert werden");
+  return response.json() as Promise<ApiService>;
 }
 export type ApiEventRole = { id: string; name: string; active: boolean };
 export async function apiEventRoles(): Promise<ApiEventRole[]> {
@@ -447,6 +478,7 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       notes: patch.notizen,
       organizerId: patch.veranstalterId,
       sportId: patch.sportartId,
+      serviceIds: patch.serviceIds,
       status:
         patch.status === "anfrage"
           ? "ANFRAGE"

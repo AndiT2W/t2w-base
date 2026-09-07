@@ -19,6 +19,7 @@ export type CreateEventMutation = {
   sharepointFolder?: string;
   payoutRecipientId?: string;
   invoiceRecipientIds?: string[];
+  serviceIds?: string[];
 };
 export type UpdateEventMutation = Partial<CreateEventMutation> & { version?: number };
 export type CopyEventMutation = {
@@ -40,6 +41,7 @@ export interface EventMutationAdapter {
     changes: EventMutationRecord,
   ): Promise<boolean>;
   replaceInvoiceRecipients(id: string, organizerIds: string[]): Promise<void>;
+  replaceServices(id: string, serviceIds: string[]): Promise<void>;
   getEvent(id: string): Promise<EventMutationRecord | undefined>;
   touchEvent(id: string, version: number | undefined): Promise<boolean>;
   addContact(eventId: string, contactId: string, role: string): Promise<void>;
@@ -113,7 +115,7 @@ export class EventMutations {
 
   update(id: string, input: UpdateEventMutation) {
     return this.persistence.transaction(async (adapter) => {
-      const { version, invoiceRecipientIds, ...changes } = input;
+      const { version, invoiceRecipientIds, serviceIds, ...changes } = input;
       const updated = await adapter.updateEvent(id, version, {
         ...changes,
         startAt: changes.startAt ? new Date(changes.startAt) : undefined,
@@ -121,6 +123,7 @@ export class EventMutations {
       });
       if (!updated) throw new EventMutationConflict();
       if (invoiceRecipientIds) await adapter.replaceInvoiceRecipients(id, invoiceRecipientIds);
+      if (serviceIds) await adapter.replaceServices(id, serviceIds);
       const event = await adapter.getEvent(id);
       if (!event) throw new EventMutationConflict();
       return event;

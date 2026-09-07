@@ -9,6 +9,7 @@ describe("selection list workspace", () => {
     const values = {
       sports: [{ id: "s1", name: "Triathlon", active: true }],
       eventRoles: [{ id: "r1", name: "Finanz", active: false }],
+      services: [{ id: "service-1", name: "UHF", active: true }],
     };
     const adapter: SelectionListAdapter = {
       load: async (kind) => values[kind],

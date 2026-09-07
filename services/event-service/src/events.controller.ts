@@ -48,6 +48,7 @@ export class CreateEventDto {
   @IsOptional() @IsString() sharepointFolder?: string;
   @IsOptional() @IsString() payoutRecipientId?: string;
   @IsOptional() invoiceRecipientIds?: string[];
+  @IsOptional() serviceIds?: string[];
 }
 class CopyEventDto {
   @IsString() name!: string;
@@ -116,6 +117,7 @@ export class EventsController {
         files: true,
         activities: true,
         communicationMessages: { orderBy: { occurredAt: "desc" } },
+        services: { include: { service: true } },
       },
     });
   }
@@ -133,6 +135,7 @@ export class EventsController {
         files: true,
         activities: true,
         communicationMessages: { orderBy: { occurredAt: "desc" } },
+        services: { include: { service: true } },
       },
     });
   }

@@ -49,6 +49,8 @@ function Einstellungen() {
   const [newSport, setNewSport] = useState("");
   const eventRoles = selectionLists.eventRoles;
   const [newEventRole, setNewEventRole] = useState("");
+  const services = selectionLists.services;
+  const [newService, setNewService] = useState("");
   const { draft, connection: outlookStatus } = useSyncExternalStore(
     workspace.subscribe,
     workspace.snapshot,
@@ -106,6 +108,25 @@ function Einstellungen() {
       toast.success("Eventrolle gespeichert.");
     } catch {
       toast.error("Eventrolle konnte nicht gespeichert werden.");
+    }
+  }
+  async function addService() {
+    const name = newService.trim();
+    if (!name) return;
+    try {
+      await createSelectionValue("services", name);
+      setNewService("");
+      toast.success("Service angelegt.");
+    } catch {
+      toast.error("Service konnte nicht angelegt werden.");
+    }
+  }
+  async function saveService(id: string, patch: { name?: string; active?: boolean }) {
+    try {
+      await updateSelectionValue("services", id, patch);
+      toast.success("Service gespeichert.");
+    } catch {
+      toast.error("Service konnte nicht gespeichert werden.");
     }
   }
 
@@ -274,6 +295,45 @@ function Einstellungen() {
             </Card>
             <Card>
               <CardHeader>
+                <CardTitle className="text-base">Services</CardTitle>
+                <CardDescription>Mehrfach auswählbare Leistungen eines Events.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {services.map((service) => (
+                  <div key={service.id} className="flex items-center gap-2">
+                    <Input
+                      aria-label={`Service ${service.name}`}
+                      defaultValue={service.name}
+                      onBlur={(event) => {
+                        const name = event.target.value.trim();
+                        if (name && name !== service.name) void saveService(service.id, { name });
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant={service.active ? "outline" : "secondary"}
+                      onClick={() => void saveService(service.id, { active: !service.active })}
+                    >
+                      {service.active ? "Deaktivieren" : "Aktivieren"}
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex gap-2 pt-2">
+                  <Input
+                    aria-label="Neuer Service"
+                    value={newService}
+                    onChange={(event) => setNewService(event.target.value)}
+                    placeholder="Service hinzufügen"
+                  />
+                  <Button type="button" onClick={() => void addService()}>
+                    <Plus className="size-4" />
+                    Hinzufügen
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
                 <CardTitle className="text-base">Eventrollen</CardTitle>
                 <CardDescription>
                   Vorgegebene Rollen für Eventkontakte, z. B. Anmeldung oder Finanz.
@@ -313,10 +373,6 @@ function Einstellungen() {
                 </div>
               </CardContent>
             </Card>
-            <p className="text-sm text-muted-foreground">
-              Weitere Auswahllisten werden hier ergänzt, sobald sie in einem Arbeitsablauf verwendet
-              werden.
-            </p>
           </TabsContent>
 
           <TabsContent value="outlook" className="space-y-5">

@@ -1,14 +1,24 @@
-export type SelectionListKind = "sports" | "eventRoles";
+export type SelectionListKind = "sports" | "eventRoles" | "services";
 export type SelectionListValue = { id: string; name: string; active: boolean };
-export type SelectionListSnapshot = Record<SelectionListKind, SelectionListValue[]> & { loaded: boolean };
+export type SelectionListSnapshot = Record<SelectionListKind, SelectionListValue[]> & {
+  loaded: boolean;
+};
 export type SelectionListPatch = { name?: string; active?: boolean };
 
-export const SELECTION_LIST_KINDS: readonly SelectionListKind[] = ["sports", "eventRoles"];
+export const SELECTION_LIST_KINDS: readonly SelectionListKind[] = [
+  "sports",
+  "eventRoles",
+  "services",
+];
 
 export interface SelectionListAdapter {
   load(kind: SelectionListKind): Promise<SelectionListValue[]>;
   create(kind: SelectionListKind, name: string): Promise<SelectionListValue>;
-  update(kind: SelectionListKind, id: string, patch: SelectionListPatch): Promise<SelectionListValue>;
+  update(
+    kind: SelectionListKind,
+    id: string,
+    patch: SelectionListPatch,
+  ): Promise<SelectionListValue>;
 }
 
 const normalizeName = (name: string) => {
@@ -23,21 +33,26 @@ const sortValues = (values: SelectionListValue[]) =>
  * Returns selectable values while preserving an already assigned inactive value.
  * New assignments remain limited to active values.
  */
-export const selectionListChoices = (
-  values: SelectionListValue[],
-  assignedId?: string,
-) => values.filter((value) => value.active || value.id === assignedId);
+export const selectionListChoices = (values: SelectionListValue[], assignedId?: string) =>
+  values.filter((value) => value.active || value.id === assignedId);
 
-export const eventContactRoleChoices = (values: SelectionListValue[], assignedRole?: string) =>
-  [...new Set([...(assignedRole ? [assignedRole] : []), "Kontakt", ...values.filter((value) => value.active).map((value) => value.name)])];
+export const eventContactRoleChoices = (values: SelectionListValue[], assignedRole?: string) => [
+  ...new Set([
+    ...(assignedRole ? [assignedRole] : []),
+    "Kontakt",
+    ...values.filter((value) => value.active).map((value) => value.name),
+  ]),
+];
 
 export class SelectionLists {
   constructor(private readonly adapter: SelectionListAdapter) {}
 
   list(kind: SelectionListKind, includeInactive = false) {
-    return this.adapter.load(kind).then((values) =>
-      sortValues(includeInactive ? values : values.filter((value) => value.active)),
-    );
+    return this.adapter
+      .load(kind)
+      .then((values) =>
+        sortValues(includeInactive ? values : values.filter((value) => value.active)),
+      );
   }
   create(kind: SelectionListKind, name: string) {
     return this.adapter.create(kind, normalizeName(name));
@@ -52,7 +67,7 @@ export class SelectionLists {
 
 export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
   const lists = new SelectionLists(adapter);
-  let snapshot: SelectionListSnapshot = { sports: [], eventRoles: [], loaded: false };
+  let snapshot: SelectionListSnapshot = { sports: [], eventRoles: [], services: [], loaded: false };
   const subscribers = new Set<() => void>();
   const publish = () => subscribers.forEach((subscriber) => subscriber());
   const replace = (kind: SelectionListKind, values: SelectionListValue[]) => {
@@ -62,14 +77,20 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
 
   return {
     snapshot: () => snapshot,
-    subscribe(subscriber: () => void) { subscribers.add(subscriber); return () => subscribers.delete(subscriber); },
-    active(kind: SelectionListKind) { return selectionListChoices(snapshot[kind]); },
+    subscribe(subscriber: () => void) {
+      subscribers.add(subscriber);
+      return () => subscribers.delete(subscriber);
+    },
+    active(kind: SelectionListKind) {
+      return selectionListChoices(snapshot[kind]);
+    },
     async load() {
-      const [sports, eventRoles] = await Promise.all([
+      const [sports, eventRoles, services] = await Promise.all([
         lists.list("sports", true),
         lists.list("eventRoles", true),
+        lists.list("services", true),
       ]);
-      snapshot = { sports, eventRoles, loaded: true };
+      snapshot = { sports, eventRoles, services, loaded: true };
       publish();
       return snapshot;
     },
@@ -80,7 +101,10 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
     },
     async update(kind: SelectionListKind, id: string, patch: SelectionListPatch) {
       const value = await lists.update(kind, id, patch);
-      replace(kind, snapshot[kind].map((current) => current.id === id ? value : current));
+      replace(
+        kind,
+        snapshot[kind].map((current) => (current.id === id ? value : current)),
+      );
       return value;
     },
   };

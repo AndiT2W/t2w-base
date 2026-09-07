@@ -22,6 +22,7 @@ export type CreateEventInput<TEvent extends EventRecord> = {
   teilnehmer?: number;
   teilnehmerprognose?: number | null;
   sportart?: string;
+  serviceIds?: string[];
   notizen: string;
 };
 
@@ -31,6 +32,7 @@ export type PersistedCreateEventInput<TEvent extends EventRecord> = {
   veranstalter: string;
   veranstalterId?: string;
   sportartId?: string;
+  serviceIds?: string[];
   ort: string;
   start: string;
   ende: string;
@@ -85,7 +87,17 @@ export type EventTransport<TEvent extends EventRecord> = {
   syncCommunication?(id: string): Promise<TEvent>;
   syncTime2win?(id: string): Promise<SyncResult<TEvent>>;
   outlookPlan(id: string): Promise<OutlookFolderPlan>;
-  copy?(id: string, input: { name: string; eventcode: string; start: string; ende: string; createRelationship: boolean; version?: number }): Promise<TEvent>;
+  copy?(
+    id: string,
+    input: {
+      name: string;
+      eventcode: string;
+      start: string;
+      ende: string;
+      createRelationship: boolean;
+      version?: number;
+    },
+  ): Promise<TEvent>;
   addContact?(id: string, contactId: string, role: string, version: number): Promise<TEvent>;
   removeContact?(id: string, contactId: string, role: string, version: number): Promise<TEvent>;
   updateContactRole?(
@@ -291,7 +303,17 @@ export function createEventWorkspace<TEvent extends EventRecord>(
       publish();
       return event;
     },
-    async copy(id: string, input: { name: string; eventcode: string; start: string; ende: string; createRelationship: boolean; version?: number }) {
+    async copy(
+      id: string,
+      input: {
+        name: string;
+        eventcode: string;
+        start: string;
+        ende: string;
+        createRelationship: boolean;
+        version?: number;
+      },
+    ) {
       if (!transport.copy) throw new Error("EVENT_COPY_UNAVAILABLE");
       const event = await transport.copy(id, input);
       collection = [...collection, event];

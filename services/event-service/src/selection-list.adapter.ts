@@ -1,22 +1,28 @@
-import type { SelectionListAdapter, SelectionListKind, SelectionListPatch } from "@t2w/domain/selection-lists";
+import type {
+  SelectionListAdapter,
+  SelectionListKind,
+  SelectionListPatch,
+} from "@t2w/domain/selection-lists";
 import { PrismaService } from "./prisma.service.js";
 
 export class PrismaSelectionListAdapter implements SelectionListAdapter {
   constructor(private readonly prisma: PrismaService) {}
 
   load(kind: SelectionListKind) {
-    return kind === "sports"
-      ? this.prisma.sport.findMany({ orderBy: { name: "asc" } })
-      : this.prisma.eventRoleOption.findMany({ orderBy: { name: "asc" } });
+    if (kind === "sports") return this.prisma.sport.findMany({ orderBy: { name: "asc" } });
+    if (kind === "services")
+      return this.prisma.serviceOption.findMany({ orderBy: { name: "asc" } });
+    return this.prisma.eventRoleOption.findMany({ orderBy: { name: "asc" } });
   }
   create(kind: SelectionListKind, name: string) {
-    return kind === "sports"
-      ? this.prisma.sport.create({ data: { name } })
-      : this.prisma.eventRoleOption.create({ data: { name } });
+    if (kind === "sports") return this.prisma.sport.create({ data: { name } });
+    if (kind === "services") return this.prisma.serviceOption.create({ data: { name } });
+    return this.prisma.eventRoleOption.create({ data: { name } });
   }
   update(kind: SelectionListKind, id: string, patch: SelectionListPatch) {
-    return kind === "sports"
-      ? this.prisma.sport.update({ where: { id }, data: patch })
-      : this.prisma.eventRoleOption.update({ where: { id }, data: patch });
+    if (kind === "sports") return this.prisma.sport.update({ where: { id }, data: patch });
+    if (kind === "services")
+      return this.prisma.serviceOption.update({ where: { id }, data: patch });
+    return this.prisma.eventRoleOption.update({ where: { id }, data: patch });
   }
 }

@@ -17,7 +17,7 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
   }
 
   async createEvent(data: EventMutationRecord) {
-    const { invoiceRecipientIds, ...eventData } = data;
+    const { invoiceRecipientIds, serviceIds, ...eventData } = data;
     const created = await this.prisma.event.create({
       data: eventData as Prisma.EventUncheckedCreateInput,
     });
@@ -25,6 +25,12 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
     if (recipients.length) {
       await this.prisma.eventInvoiceRecipient.createMany({
         data: recipients.map((organizerId) => ({ eventId: created.id, organizerId })),
+      });
+    }
+    const services = serviceIds as string[] | undefined;
+    if (services?.length) {
+      await this.prisma.eventService.createMany({
+        data: services.map((serviceId) => ({ eventId: created.id, serviceId })),
       });
     }
     return this.getEvent(created.id) as Promise<EventMutationRecord>;
@@ -50,6 +56,15 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
     }
   }
 
+  async replaceServices(id: string, serviceIds: string[]) {
+    await this.prisma.eventService.deleteMany({ where: { eventId: id } });
+    if (serviceIds.length) {
+      await this.prisma.eventService.createMany({
+        data: serviceIds.map((serviceId) => ({ eventId: id, serviceId })),
+      });
+    }
+  }
+
   async touchEvent(id: string, version: number | undefined) {
     const updated = await this.prisma.event.updateMany({
       where: { id, ...(version === undefined ? {} : { version }) },
@@ -71,6 +86,7 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
         files: true,
         activities: true,
         communicationMessages: { orderBy: { occurredAt: "desc" } },
+        services: { include: { service: true } },
       },
     }) as Promise<EventMutationRecord | undefined>;
   }
@@ -147,7 +163,7 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
   async copyEvent(sourceId: string, input: CopyEventMutation): Promise<EventMutationRecord> {
     const source = await this.prisma.event.findUniqueOrThrow({
       where: { id: sourceId },
-      include: { contacts: true, invoiceRecipients: true },
+      include: { contacts: true, invoiceRecipients: true, services: true },
     });
     const seriesId = input.createRelationship ? (source.seriesId ?? crypto.randomUUID()) : null;
     if (input.createRelationship && !source.seriesId) {
@@ -181,6 +197,7 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
             data: source.invoiceRecipients.map(({ organizerId }) => ({ organizerId })),
           },
         },
+        services: { createMany: { data: source.services.map(({ serviceId }) => ({ serviceId })) } },
       },
     });
     return this.getEvent(created.id) as Promise<EventMutationRecord>;

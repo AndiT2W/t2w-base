@@ -174,9 +174,30 @@ model Event {
   files                 EventFile[]
   activities            EventActivity[]
   communicationMessages EventCommunicationMessage[]
+  services              EventService[]
   @@index([seriesId, startAt])
   @@index([status, archived])
   @@index([startAt, endAt])
+}
+
+model ServiceOption {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  events    EventService[]
+
+  @@unique([name])
+}
+
+model EventService {
+  eventId   String @db.Uuid
+  serviceId String @db.Uuid
+  event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  service   ServiceOption @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@id([eventId, serviceId])
 }
 
 model EventRoleOption {

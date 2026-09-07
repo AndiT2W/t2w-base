@@ -2,9 +2,12 @@ import {
   apiCreateEventRole,
   apiCreateSport,
   apiManageEventRoles,
+  apiManageServices,
   apiManageSports,
   apiUpdateEventRole,
   apiUpdateSport,
+  apiCreateService,
+  apiUpdateService,
 } from "./api";
 import type {
   SelectionListAdapter,
@@ -17,17 +20,29 @@ import type {
 export function createHttpSelectionListAdapter(): SelectionListAdapter {
   return {
     load(kind: SelectionListKind): Promise<SelectionListValue[]> {
-      return kind === "sports" ? apiManageSports() : apiManageEventRoles();
+      return kind === "sports"
+        ? apiManageSports()
+        : kind === "services"
+          ? apiManageServices()
+          : apiManageEventRoles();
     },
     create(kind: SelectionListKind, name: string): Promise<SelectionListValue> {
-      return kind === "sports" ? apiCreateSport(name) : apiCreateEventRole(name);
+      return kind === "sports"
+        ? apiCreateSport(name)
+        : kind === "services"
+          ? apiCreateService(name)
+          : apiCreateEventRole(name);
     },
     update(
       kind: SelectionListKind,
       id: string,
       patch: SelectionListPatch,
     ): Promise<SelectionListValue> {
-      return kind === "sports" ? apiUpdateSport(id, patch) : apiUpdateEventRole(id, patch);
+      return kind === "sports"
+        ? apiUpdateSport(id, patch)
+        : kind === "services"
+          ? apiUpdateService(id, patch)
+          : apiUpdateEventRole(id, patch);
     },
   };
 }

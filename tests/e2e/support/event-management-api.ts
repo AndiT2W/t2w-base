@@ -17,6 +17,7 @@ export const event = {
   time2winLastError: null,
   time2winSnapshot: null,
   notes: "",
+  services: [] as { service: { id: string; name: string } }[],
   archived: false,
   organizer: { id: "c1", name: "Alter Veranstalter" },
   sport: null,
@@ -110,6 +111,7 @@ export async function mockEventManagementApi(
       uid: "DE1",
       contacts: [{ contact: { id: "p1" } }, { contact: { id: "p3" } }],
       events: [{ eventCode: "260820_demo_event", name: "Bestehendes Event" }],
+      payoutEvents: [{ eventCode: "260820_demo_event", name: "Bestehendes Event" }],
       personId: null,
     },
     {
@@ -135,6 +137,18 @@ export async function mockEventManagementApi(
   let eventRoles = [
     { id: "r1", name: "Anmeldung", active: true },
     { id: "r2", name: "Finanz", active: true },
+  ];
+  let services = [
+    { id: "service-1", name: "UHF", active: true },
+    { id: "service-2", name: "Active", active: true },
+    { id: "service-3", name: "Streaming", active: true },
+    { id: "service-4", name: "Foto", active: true },
+    { id: "service-5", name: "Video (iRewind)", active: true },
+    { id: "service-6", name: "GPS", active: true },
+    { id: "service-7", name: "Virtuell", active: true },
+    { id: "service-8", name: "Anmeldung (only)", active: true },
+    { id: "service-9", name: "App", active: true },
+    { id: "service-10", name: "Jörg", active: true },
   ];
   await page.route("**/api/v1/settings", async (route) => {
     const request = route.request();
@@ -326,10 +340,16 @@ export async function mockEventManagementApi(
         return route.fulfill({ status: 200, json: mockedEvent });
       }
       const sport = sports.find((candidate) => candidate.id === body.sportId);
+      const selectedServices = services.filter((candidate) =>
+        body.serviceIds?.includes(candidate.id),
+      );
       mockedEvent = {
         ...mockedEvent,
         ...body,
         sport: sport ? { id: sport.id, name: sport.name } : mockedEvent.sport,
+        services: body.serviceIds
+          ? selectedServices.map((service) => ({ service }))
+          : mockedEvent.services,
       };
       return route.fulfill({
         status: 200,
@@ -467,6 +487,27 @@ export async function mockEventManagementApi(
     if (request.method() === "PATCH" && id) {
       eventRoles = eventRoles.map((role) => (role.id === id ? { ...role, ...body } : role));
       return route.fulfill({ json: eventRoles.find((role) => role.id === id) });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/v1/services**", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: request.url().includes("includeInactive=true")
+          ? services
+          : services.filter((service) => service.active),
+      });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const service = { id: `service-${services.length + 1}`, name: body.name, active: true };
+      services = [...services, service];
+      return route.fulfill({ status: 201, json: service });
+    }
+    const id = request.url().match(/\/services\/([^/?]+)/)?.[1];
+    if (request.method() === "PATCH" && id) {
+      services = services.map((service) => (service.id === id ? { ...service, ...body } : service));
+      return route.fulfill({ json: services.find((service) => service.id === id) });
     }
     return route.continue();
   });

@@ -16,6 +16,38 @@ test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }
   await expect(page.getByLabel("Sportart Radfahren")).toBeVisible();
 });
 
+test("pflegt Services in den Auswahllisten und speichert mehrere Services beim Event", async ({
+  page,
+}) => {
+  const requests = await mockApi(page);
+  await page.goto("/einstellungen?tab=auswahllisten");
+  await expect(page.getByLabel("Service UHF")).toBeVisible();
+  await expect(page.getByLabel("Service Video (iRewind)")).toBeVisible();
+  await page.getByLabel("Neuer Service").fill("Drohne");
+  await page.getByRole("button", { name: "Hinzufügen" }).nth(1).click();
+  await expect(page.getByLabel("Service Drohne")).toBeVisible();
+
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("button", { name: "Services auswählen" }).click();
+  await page.getByRole("checkbox", { name: "UHF" }).click();
+  await page.getByRole("checkbox", { name: "Video (iRewind)" }).click();
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "PATCH" &&
+        JSON.parse(request.body ?? "{}")
+          .serviceIds?.sort()
+          .join(",") === "service-1,service-5",
+    ),
+  ).toBeTruthy();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Services auswählen" })).toContainText(
+    "UHF, Video (iRewind)",
+  );
+});
+
 test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page }) => {
   await mockApi(page);
   await page.goto("/einstellungen?tab=auswahllisten");
@@ -1001,11 +1033,15 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
   await expect(page.locator('article[data-reply="true"]')).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Vollständige Vorschau" })).toBeVisible();
   await expect(
-    page.locator('article[data-timeline-view="cards"]').getByText("Regressionstest für die aufklappbare Vorschau."),
+    page
+      .locator('article[data-timeline-view="cards"]')
+      .getByText("Regressionstest für die aufklappbare Vorschau."),
   ).not.toBeVisible();
 
   await page.getByRole("button", { name: "Vollständige Vorschau" }).click();
-  await expect(page.getByText("Regressionstest für die aufklappbare Vorschau.").first()).toBeVisible();
+  await expect(
+    page.getByText("Regressionstest für die aufklappbare Vorschau.").first(),
+  ).toBeVisible();
 
   const contactLink = page.locator('a[href="/kontakte?person=p4"]').first();
   await expect(contactLink).toHaveText("Eventkontakt · Eva Beispiel (Anmeldung)");

@@ -102,6 +102,8 @@ export type T2WEvent = {
   veranstalterId?: string;
   sportartId?: string;
   sportart?: string;
+  serviceIds?: string[];
+  services?: string[];
   t2wEventId?: number | null;
   time2winSyncStatus?: string;
   time2winLastSuccessAt?: string | null;

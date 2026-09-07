@@ -240,6 +240,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   );
   const [selectedCommunicationId, setSelectedCommunicationId] = useState<string | null>(null);
   const threadContextRef = useRef<HTMLElement | null>(null);
+  const communicationTimelineRef = useRef<HTMLDivElement | null>(null);
+  const [threadContextOffset, setThreadContextOffset] = useState(0);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(() => new Set());
   const replyMessageIds = useMemo(() => {
     const seen = new Set<string>();
@@ -264,6 +266,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     return origins;
   }, [form.kommunikation]);
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
+  const services = selectionListChoices(selectionLists.services).filter(
+    (service) => service.active || form.serviceIds?.includes(service.id),
+  );
   const communicationGroups = useMemo(() => {
     const query = communicationSearch.trim().toLocaleLowerCase("de");
     const filtered = form.kommunikation.filter((message) => {
@@ -331,7 +336,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     }, []);
   }, [communicationFilter, communicationSearch, communicationView, form.kommunikation]);
   const selectedCommunication = useMemo(
-    () => form.kommunikation.find((message) => message.id === selectedCommunicationId) ?? form.kommunikation[0],
+    () =>
+      form.kommunikation.find((message) => message.id === selectedCommunicationId) ??
+      form.kommunikation[0],
     [form.kommunikation, selectedCommunicationId],
   );
   const selectedThread = useMemo(() => {
@@ -347,7 +354,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const selectCommunication = (messageId: string) => {
     setSelectedCommunicationId(messageId);
     requestAnimationFrame(() => {
-      threadContextRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const selected = document.getElementById(`communication-${messageId}`);
+      const first = communicationTimelineRef.current?.querySelector<HTMLElement>("article");
+      if (selected && first) {
+        setThreadContextOffset(
+          Math.max(0, selected.getBoundingClientRect().top - first.getBoundingClientRect().top),
+        );
+      }
     });
   };
 
@@ -638,6 +651,52 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   onChange={(e) => set("verantwortlicher", e.target.value)}
                   className="mt-1.5"
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Services</Label>
+                <p className="mt-1 text-xs text-muted-foreground">Mehrere Services möglich.</p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      aria-label="Services auswählen"
+                      variant="outline"
+                      className="mt-2 w-full justify-start font-normal"
+                    >
+                      {form.services?.length ? form.services.join(", ") : "Services auswählen"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
+                    <div className="space-y-1" role="group" aria-label="Services">
+                      {services.map((service) => {
+                        const selected = form.serviceIds?.includes(service.id) ?? false;
+                        return (
+                          <label
+                            key={service.id}
+                            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                          >
+                            <Checkbox
+                              checked={selected}
+                              onCheckedChange={(checked) => {
+                                const current = form.serviceIds ?? [];
+                                const serviceIds = checked
+                                  ? [...current, service.id]
+                                  : current.filter((id) => id !== service.id);
+                                set("serviceIds", serviceIds);
+                                set(
+                                  "services",
+                                  services
+                                    .filter((item) => serviceIds.includes(item.id))
+                                    .map((item) => item.name),
+                                );
+                              }}
+                            />
+                            {service.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <Label htmlFor="d-forecast">Teilnehmerprognose</Label>
@@ -1413,280 +1472,324 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               {form.kommunikation.length > 0 && communicationGroups.length === 0 && (
                 <p className="text-sm text-muted-foreground">Keine Einträge für diese Auswahl.</p>
               )}
-              <div className={communicationView === "cards" ? "grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]" : "space-y-5"}>
-              <div className="space-y-5">
-                {communicationGroups.map((group) => (
-                  <section key={group.key} aria-label={`Kommunikation ${group.label}`}>
-                    {group.conversation ? (
-                      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2">
-                        <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
-                        <span className="text-xs text-muted-foreground">{group.period}</span>
-                      </div>
-                    ) : (
-                      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {group.label}
-                      </h3>
-                    )}
-                    <div
-                      className={
-                        communicationView === "compact"
-                          ? "overflow-hidden rounded-lg border border-border bg-background"
-                          : "space-y-3 border-l-2 border-border pl-4"
-                      }
-                    >
-                      {group.messages.map((message) => {
-                        const Icon =
-                          message.kanal === "E-Mail"
-                            ? Mail
-                            : message.kanal === "Telefon"
-                              ? Phone
-                              : StickyNote;
-                        const relatedEmails = emailAddresses(
-                          message.richtung === "OUTGOING"
-                            ? `${message.empfaenger ?? ""} ${message.autor}`
-                            : `${message.autor} ${message.empfaenger ?? ""}`,
-                        );
-                        const eventContact = form.kontakte.find((candidate) =>
-                          relatedEmails.includes(candidate.email.toLocaleLowerCase("de")),
-                        );
-                        const contact = personen.find((person) =>
-                          relatedEmails.includes(person.email.toLocaleLowerCase("de")),
-                        );
-                        const linkedContact = eventContact
-                          ? {
-                              id: eventContact.id,
-                              label: eventContact.name,
-                              eventRole: eventContact.rolle,
-                            }
-                          : contact
-                            ? { id: contact.id, label: personName(contact), eventRole: null }
-                            : null;
-                        const isTime2winOutgoing =
-                          message.richtung === "OUTGOING" &&
-                          emailAddresses(message.autor).includes(
-                            (
-                              form.outlookMailbox ??
-                              settings.outlookMailbox ??
-                              ""
-                            ).toLocaleLowerCase("de"),
-                          );
-                        const expanded = expandedMessages.has(message.id);
-                        const longPreview = message.text.length > 180;
-                        const isReply = replyMessageIds.has(message.id);
-                        const threadOrigin = message.conversationId
-                          ? threadOrigins.get(message.conversationId)
-                          : undefined;
-                        const viewClasses =
+              <div
+                ref={communicationTimelineRef}
+                className={
+                  communicationView === "cards"
+                    ? "grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]"
+                    : "space-y-5"
+                }
+              >
+                <div className="space-y-5">
+                  {communicationGroups.map((group) => (
+                    <section key={group.key} aria-label={`Kommunikation ${group.label}`}>
+                      {group.conversation ? (
+                        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2">
+                          <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
+                          <span className="text-xs text-muted-foreground">{group.period}</span>
+                        </div>
+                      ) : (
+                        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {group.label}
+                        </h3>
+                      )}
+                      <div
+                        className={
                           communicationView === "compact"
-                            ? "rounded-none border-0 border-b border-border p-3 shadow-none last:border-b-0"
-                            : communicationView === "conversation"
-                              ? message.richtung === "OUTGOING"
-                                ? "ml-8 rounded-2xl rounded-tr-sm p-4 shadow-sm sm:ml-24"
-                                : "mr-8 rounded-2xl rounded-tl-sm p-4 shadow-sm sm:mr-24"
-                              : "rounded-lg p-4 shadow-sm";
-                        return (
-                          <article
-                            key={message.id}
-                            id={`communication-${message.id}`}
-                            tabIndex={-1}
-                            data-timeline-view={communicationView}
-                            data-reply={isReply ? "true" : "false"}
-                            className={`relative border ${viewClasses} ${
-                              isTime2winOutgoing
-                                ? "border-primary/50 bg-primary/5"
-                                : eventContact
-                                  ? "border-sky-300 bg-sky-50/70 dark:border-sky-800 dark:bg-sky-950/25"
-                                  : "border-border bg-background"
-                            }`}
-                            onClick={() => selectCommunication(message.id)}
-                            aria-current={selectedCommunicationId === message.id ? "true" : undefined}
-                          >
-                            {communicationView !== "compact" && (
-                              <span
-                                className={`absolute -left-[1.58rem] top-5 size-3 rounded-full border-2 border-background ${
-                                  isTime2winOutgoing
-                                    ? "bg-primary"
-                                    : eventContact
-                                      ? "bg-sky-500"
-                                      : "bg-muted-foreground"
-                                }`}
-                              />
-                            )}
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div className="flex min-w-0 items-center gap-2">
-                                <Icon
-                                  className="size-4 shrink-0 text-muted-foreground"
-                                  aria-hidden="true"
+                            ? "overflow-hidden rounded-lg border border-border bg-background"
+                            : "space-y-3 border-l-2 border-border pl-4"
+                        }
+                      >
+                        {group.messages.map((message) => {
+                          const Icon =
+                            message.kanal === "E-Mail"
+                              ? Mail
+                              : message.kanal === "Telefon"
+                                ? Phone
+                                : StickyNote;
+                          const relatedEmails = emailAddresses(
+                            message.richtung === "OUTGOING"
+                              ? `${message.empfaenger ?? ""} ${message.autor}`
+                              : `${message.autor} ${message.empfaenger ?? ""}`,
+                          );
+                          const eventContact = form.kontakte.find((candidate) =>
+                            relatedEmails.includes(candidate.email.toLocaleLowerCase("de")),
+                          );
+                          const contact = personen.find((person) =>
+                            relatedEmails.includes(person.email.toLocaleLowerCase("de")),
+                          );
+                          const linkedContact = eventContact
+                            ? {
+                                id: eventContact.id,
+                                label: eventContact.name,
+                                eventRole: eventContact.rolle,
+                              }
+                            : contact
+                              ? { id: contact.id, label: personName(contact), eventRole: null }
+                              : null;
+                          const isTime2winOutgoing =
+                            message.richtung === "OUTGOING" &&
+                            emailAddresses(message.autor).includes(
+                              (
+                                form.outlookMailbox ??
+                                settings.outlookMailbox ??
+                                ""
+                              ).toLocaleLowerCase("de"),
+                            );
+                          const expanded = expandedMessages.has(message.id);
+                          const longPreview = message.text.length > 180;
+                          const isReply = replyMessageIds.has(message.id);
+                          const threadOrigin = message.conversationId
+                            ? threadOrigins.get(message.conversationId)
+                            : undefined;
+                          const viewClasses =
+                            communicationView === "compact"
+                              ? "rounded-none border-0 border-b border-border p-3 shadow-none last:border-b-0"
+                              : communicationView === "conversation"
+                                ? message.richtung === "OUTGOING"
+                                  ? "ml-8 rounded-2xl rounded-tr-sm p-4 shadow-sm sm:ml-24"
+                                  : "mr-8 rounded-2xl rounded-tl-sm p-4 shadow-sm sm:mr-24"
+                                : "rounded-lg p-4 shadow-sm";
+                          return (
+                            <article
+                              key={message.id}
+                              id={`communication-${message.id}`}
+                              tabIndex={-1}
+                              data-timeline-view={communicationView}
+                              data-reply={isReply ? "true" : "false"}
+                              className={`relative border ${viewClasses} ${
+                                isTime2winOutgoing
+                                  ? "border-primary/50 bg-primary/5"
+                                  : eventContact
+                                    ? "border-sky-300 bg-sky-50/70 dark:border-sky-800 dark:bg-sky-950/25"
+                                    : "border-border bg-background"
+                              }`}
+                              onClick={() => selectCommunication(message.id)}
+                              aria-current={
+                                selectedCommunicationId === message.id ? "true" : undefined
+                              }
+                            >
+                              {communicationView !== "compact" && (
+                                <span
+                                  className={`absolute -left-[1.58rem] top-5 size-3 rounded-full border-2 border-background ${
+                                    isTime2winOutgoing
+                                      ? "bg-primary"
+                                      : eventContact
+                                        ? "bg-sky-500"
+                                        : "bg-muted-foreground"
+                                  }`}
                                 />
-                                <h4 className="font-medium text-foreground">{message.betreff}</h4>
+                              )}
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <Icon
+                                    className="size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                  />
+                                  <h4 className="font-medium text-foreground">{message.betreff}</h4>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Badge variant="outline">{message.kanal}</Badge>
+                                  {message.richtung && (
+                                    <Badge
+                                      className={
+                                        isTime2winOutgoing
+                                          ? "border-transparent bg-primary text-primary-foreground"
+                                          : undefined
+                                      }
+                                      variant="outline"
+                                    >
+                                      {message.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}
+                                    </Badge>
+                                  )}
+                                  {isTime2winOutgoing && (
+                                    <Badge
+                                      className="size-7 shrink-0 rounded-full border-0 bg-transparent p-0"
+                                      variant="secondary"
+                                      aria-label="Von TIME2WIN gesendet"
+                                      title="Von TIME2WIN gesendet"
+                                    >
+                                      <img
+                                        className="size-7"
+                                        src="/time2win_logo_button.svg"
+                                        alt=""
+                                        aria-hidden="true"
+                                      />
+                                    </Badge>
+                                  )}
+                                  {isReply && (
+                                    <Badge className="gap-1" variant="secondary">
+                                      <CornerDownRight className="size-3" aria-hidden="true" />
+                                      Antwort
+                                    </Badge>
+                                  )}
+                                  <time dateTime={message.datum}>
+                                    {formatCommunicationTime(message.datum)}
+                                  </time>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Badge variant="outline">{message.kanal}</Badge>
-                                {message.richtung && (
+                              <p className="mt-2 text-sm text-muted-foreground">
+                                {message.richtung === "OUTGOING" ? "An" : "Von"}:{" "}
+                                {message.richtung === "OUTGOING"
+                                  ? message.empfaenger
+                                  : message.autor}
+                              </p>
+                              {linkedContact ? (
+                                <a
+                                  className="mt-2 inline-block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                  href={`/kontakte?person=${encodeURIComponent(linkedContact.id)}`}
+                                >
                                   <Badge
                                     className={
-                                      isTime2winOutgoing
-                                        ? "border-transparent bg-primary text-primary-foreground"
+                                      eventContact
+                                        ? "border-sky-300 bg-sky-100 text-sky-950 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
                                         : undefined
                                     }
-                                    variant="outline"
-                                  >
-                                    {message.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}
-                                  </Badge>
-                                )}
-                                {isTime2winOutgoing && (
-                                  <Badge
-                                    className="size-7 shrink-0 rounded-full border-0 bg-transparent p-0"
                                     variant="secondary"
-                                    aria-label="Von TIME2WIN gesendet"
-                                    title="Von TIME2WIN gesendet"
                                   >
-                                    <img
-                                      className="size-7"
-                                      src="/time2win_logo_button.svg"
-                                      alt=""
-                                      aria-hidden="true"
-                                    />
+                                    {eventContact
+                                      ? `Eventkontakt · ${linkedContact.label}${linkedContact.eventRole ? ` (${linkedContact.eventRole})` : ""}`
+                                      : `Kontakt: ${linkedContact.label}`}
                                   </Badge>
-                                )}
-                                {isReply && (
-                                  <Badge className="gap-1" variant="secondary">
-                                    <CornerDownRight className="size-3" aria-hidden="true" />
-                                    Antwort
-                                  </Badge>
-                                )}
-                                <time dateTime={message.datum}>
-                                  {formatCommunicationTime(message.datum)}
-                                </time>
-                              </div>
-                            </div>
-                            <p className="mt-2 text-sm text-muted-foreground">
-                              {message.richtung === "OUTGOING" ? "An" : "Von"}:{" "}
-                              {message.richtung === "OUTGOING" ? message.empfaenger : message.autor}
-                            </p>
-                            {linkedContact ? (
-                              <a
-                                className="mt-2 inline-block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                href={`/kontakte?person=${encodeURIComponent(linkedContact.id)}`}
-                              >
-                                <Badge
-                                  className={
-                                    eventContact
-                                      ? "border-sky-300 bg-sky-100 text-sky-950 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
-                                      : undefined
-                                  }
-                                  variant="secondary"
-                                >
-                                  {eventContact
-                                    ? `Eventkontakt · ${linkedContact.label}${linkedContact.eventRole ? ` (${linkedContact.eventRole})` : ""}`
-                                    : `Kontakt: ${linkedContact.label}`}
-                                </Badge>
-                              </a>
-                            ) : message.kanal === "E-Mail" ? (
-                              <Badge className="mt-2" variant="outline">
-                                Kein Kontakt zugeordnet
-                              </Badge>
-                            ) : null}
-                            {isReply && threadOrigin && communicationView !== "conversation" && (
-                              <button
-                                type="button"
-                                className="mt-3 flex max-w-full items-center gap-1 border-l-2 border-primary/40 pl-3 text-left text-xs font-medium text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                onClick={() => {
-                                  const original = document.getElementById(
-                                    `communication-${threadOrigin.id}`,
-                                  );
-                                  original?.scrollIntoView({ behavior: "smooth", block: "center" });
-                                  original?.focus({ preventScroll: true });
-                                }}
-                              >
-                                <CornerDownRight className="size-3 shrink-0" aria-hidden="true" />
-                                <span className="truncate">
-                                  Antwort auf „{threadOrigin.betreff}“ vom{" "}
-                                  {communicationDate(threadOrigin.datum)}
-                                </span>
-                              </button>
-                            )}
-                            <p
-                              className={`mt-3 whitespace-pre-line text-sm text-foreground/80 ${communicationView === "compact" && !expanded ? "line-clamp-2 leading-5" : "leading-6"}`}
-                            >
-                              {expanded || !longPreview
-                                ? message.text
-                                : `${message.text.slice(0, 180).trimEnd()} …`}
-                            </p>
-                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
-                              {longPreview && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary"
-                                  onClick={() =>
-                                    setExpandedMessages((current) => {
-                                      const next = new Set(current);
-                                      expanded ? next.delete(message.id) : next.add(message.id);
-                                      return next;
-                                    })
-                                  }
-                                >
-                                  {expanded ? (
-                                    <ChevronUp className="size-3" />
-                                  ) : (
-                                    <ChevronDown className="size-3" />
-                                  )}
-                                  {expanded ? "Weniger anzeigen" : "Vollständige Vorschau"}
-                                </Button>
-                              )}
-                              {message.hatAnlagen && (
-                                <span className="flex items-center gap-1 text-muted-foreground">
-                                  <Paperclip className="size-3" aria-hidden="true" /> Anlagen
-                                  vorhanden
-                                </span>
-                              )}
-                              {message.outlookWebUrl && (
-                                <a
-                                  className="font-medium text-primary hover:underline"
-                                  href={message.outlookWebUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  In Outlook öffnen
                                 </a>
+                              ) : message.kanal === "E-Mail" ? (
+                                <Badge className="mt-2" variant="outline">
+                                  Kein Kontakt zugeordnet
+                                </Badge>
+                              ) : null}
+                              {isReply && threadOrigin && communicationView !== "conversation" && (
+                                <button
+                                  type="button"
+                                  className="mt-3 flex max-w-full items-center gap-1 border-l-2 border-primary/40 pl-3 text-left text-xs font-medium text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  onClick={() => {
+                                    const original = document.getElementById(
+                                      `communication-${threadOrigin.id}`,
+                                    );
+                                    original?.scrollIntoView({
+                                      behavior: "smooth",
+                                      block: "center",
+                                    });
+                                    original?.focus({ preventScroll: true });
+                                  }}
+                                >
+                                  <CornerDownRight className="size-3 shrink-0" aria-hidden="true" />
+                                  <span className="truncate">
+                                    Antwort auf „{threadOrigin.betreff}“ vom{" "}
+                                    {communicationDate(threadOrigin.datum)}
+                                  </span>
+                                </button>
                               )}
-                            </div>
-                          </article>
-                        );
-                      })}
+                              <p
+                                className={`mt-3 whitespace-pre-line text-sm text-foreground/80 ${communicationView === "compact" && !expanded ? "line-clamp-2 leading-5" : "leading-6"}`}
+                              >
+                                {expanded || !longPreview
+                                  ? message.text
+                                  : `${message.text.slice(0, 180).trimEnd()} …`}
+                              </p>
+                              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                                {longPreview && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setExpandedMessages((current) => {
+                                        const next = new Set(current);
+                                        expanded ? next.delete(message.id) : next.add(message.id);
+                                        return next;
+                                      });
+                                    }}
+                                  >
+                                    {expanded ? (
+                                      <ChevronUp className="size-3" />
+                                    ) : (
+                                      <ChevronDown className="size-3" />
+                                    )}
+                                    {expanded ? "Weniger anzeigen" : "Vollständige Vorschau"}
+                                  </Button>
+                                )}
+                                {message.hatAnlagen && (
+                                  <span className="flex items-center gap-1 text-muted-foreground">
+                                    <Paperclip className="size-3" aria-hidden="true" /> Anlagen
+                                    vorhanden
+                                  </span>
+                                )}
+                                {message.outlookWebUrl && (
+                                  <a
+                                    className="font-medium text-primary hover:underline"
+                                    href={message.outlookWebUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    In Outlook öffnen
+                                  </a>
+                                )}
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+                {communicationView === "cards" && selectedCommunication && (
+                  <aside
+                    ref={threadContextRef}
+                    style={{ transform: `translateY(${threadContextOffset}px)` }}
+                    className={`h-fit rounded-lg border bg-muted/20 p-4 lg:sticky lg:top-4 lg:transition-transform lg:duration-200 ${selectedCommunicationId ? "border-primary/60 shadow-sm" : "border-border"}`}
+                    aria-label="Thread-Kontext"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Thread-Kontext
+                        </p>
+                        <h3 className="mt-1 font-semibold text-foreground">
+                          {selectedCommunication.betreff}
+                        </h3>
+                      </div>
+                      <Badge variant="outline">{selectedThread.length} Nachrichten</Badge>
                     </div>
-                  </section>
-                ))}
-              </div>
-              {communicationView === "cards" && selectedCommunication && (
-                <aside ref={threadContextRef} className={`h-fit rounded-lg border bg-muted/20 p-4 lg:sticky lg:top-4 ${selectedCommunicationId ? "border-primary/60 shadow-sm" : "border-border"}`} aria-label="Thread-Kontext">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Thread-Kontext</p>
-                      <h3 className="mt-1 font-semibold text-foreground">{selectedCommunication.betreff}</h3>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Badge variant="secondary">{selectedCommunication.kanal}</Badge>
+                      <Badge variant="outline">
+                        {selectedCommunication.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}
+                      </Badge>
+                      <Badge variant="outline">Rückfrage</Badge>
                     </div>
-                    <Badge variant="outline">{selectedThread.length} Nachrichten</Badge>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Badge variant="secondary">{selectedCommunication.kanal}</Badge>
-                    <Badge variant="outline">{selectedCommunication.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}</Badge>
-                    <Badge variant="outline">Rückfrage</Badge>
-                  </div>
-                  <div className="mt-4 space-y-3 border-l-2 border-border pl-3">
-                    {selectedThread.map((message) => (
-                      <button key={message.id} type="button" className={`block w-full rounded-md p-2 text-left hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${message.id === selectedCommunicationId ? "bg-background ring-1 ring-primary/30" : ""}`} onClick={() => { selectCommunication(message.id); document.getElementById(`communication-${message.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
-                        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                          <span>{message.richtung === "INCOMING" ? message.autor : "TIME2WIN"}</span>
-                          <time dateTime={message.datum}>{formatCommunicationTime(message.datum)}</time>
-                        </div>
-                        <p className="mt-1 line-clamp-2 text-sm text-foreground/80">{message.text}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-4 text-xs text-muted-foreground">Kontakt und Tags können hier künftig direkt bearbeitet werden.</p>
-                </aside>
-              )}
+                    <div className="mt-4 space-y-3 border-l-2 border-border pl-3">
+                      {selectedThread.map((message) => (
+                        <button
+                          key={message.id}
+                          type="button"
+                          className={`block w-full rounded-md p-2 text-left hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${message.id === selectedCommunicationId ? "bg-background ring-1 ring-primary/30" : ""}`}
+                          onClick={() => {
+                            selectCommunication(message.id);
+                            document
+                              .getElementById(`communication-${message.id}`)
+                              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                            <span>
+                              {message.richtung === "INCOMING" ? message.autor : "TIME2WIN"}
+                            </span>
+                            <time dateTime={message.datum}>
+                              {formatCommunicationTime(message.datum)}
+                            </time>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-sm text-foreground/80">
+                            {message.text}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-xs text-muted-foreground">
+                      Kontakt und Tags können hier künftig direkt bearbeitet werden.
+                    </p>
+                  </aside>
+                )}
               </div>
             </CardContent>
           </Card>
