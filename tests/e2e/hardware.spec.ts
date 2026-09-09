@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mockEventManagementApi } from "./support/event-management-api";
 
 test("shows central hardware cases, filters them, and links to the event", async ({ page }) => {
   await page.route("**/api/v1/settings**", (route) =>
@@ -46,4 +47,34 @@ test("shows central hardware cases, filters them, and links to the event", async
     "href",
     "/events/270821_demo_event",
   );
+});
+
+test("manages hardware from the Event detail tab", async ({ page }) => {
+  await mockEventManagementApi(page);
+  await page.route("**/api/v1/events/*/hardware", (route) => route.fulfill({ json: [] }));
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "HARDWARE" }).click();
+  await expect(page.getByText("Ausgaben und Rückläufer dieses Events verwalten.")).toBeVisible();
+  await page.getByRole("button", { name: "Hardware-Ausgabe anlegen" }).click();
+  await page.getByPlaceholder("Empfänger").fill("Max Mustermann");
+  await page.getByPlaceholder("Objekt").fill("Active Transponder");
+  await page.route("**/api/v1/events/*/hardware", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "h1",
+          recipientName: "Max Mustermann",
+          issueType: "PARTICIPANT",
+          objectName: "Active Transponder",
+          objectNumberType: "SINGLE",
+          objectNumberSingle: "T2W101",
+          quantity: 1,
+          status: "OPEN",
+          event: { eventCode: "260820_demo_event", name: "Bestehendes Event" },
+        },
+      ],
+    }),
+  );
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await expect(page.getByText("Max Mustermann")).toBeVisible();
 });
