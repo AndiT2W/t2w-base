@@ -604,7 +604,7 @@ test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", 
   expect(organizerSelect!.x).toBeGreaterThan(startInput!.x + startInput!.width);
 });
 
-test("ordnet die Archivierung kompakt beim Eventnamen ein und behält den Hinweis", async ({
+test("ordnet die Archivierung kompakt beim Eventnamen ein", async ({
   page,
 }) => {
   await mockApi(page);
@@ -619,7 +619,9 @@ test("ordnet die Archivierung kompakt beim Eventnamen ein und behält den Hinwei
   expect(Math.abs(eventName!.y - archiveBox!.y)).toBeLessThan(16);
   expect(archiveBox!.x).toBeGreaterThan(eventName!.x + eventName!.width);
   await expect(archiveToggle).toContainText("Archiviert");
-  await expect(archiveToggle).toContainText("Archivierte Events erscheinen nur im Archivfilter.");
+  await expect(
+    archiveToggle.getByText("Archivierte Events erscheinen nur im Archivfilter."),
+  ).toHaveCount(0);
   await expect(page.getByRole("switch", { name: "Event archivieren" })).toBeVisible();
 });
 

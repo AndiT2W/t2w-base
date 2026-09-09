@@ -509,12 +509,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   data-testid="event-archive-toggle"
                   className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Archiviert</p>
-                    <p className="text-xs text-muted-foreground">
-                      Archivierte Events erscheinen nur im Archivfilter.
-                    </p>
-                  </div>
+                  <p className="text-sm font-medium text-foreground">Archiviert</p>
                   <Switch
                     aria-label="Event archivieren"
                     checked={form.archiviert}
