@@ -3,7 +3,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -125,7 +124,6 @@ function HardwarePage() {
   const [event, setEvent] = useState("");
   const [overdue, setOverdue] = useState(false);
   const [events, setEvents] = useState<{ id: string; name: string; eventCode: string }[]>([]);
-  const [addOpen, setAddOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
   const [selectedHardware, setSelectedHardware] = useState<Hardware | null>(null);
   const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
@@ -238,6 +236,7 @@ function HardwarePage() {
                 <HardwareWorkspace
                   eventId={selectedEventId}
                   onSaved={() => setNewHardware(false)}
+                  showList={false}
                 />
               )}
             </div>
@@ -258,31 +257,12 @@ function HardwarePage() {
                   eventId={selectedHardware.event?.id}
                   initialEditing={selectedHardware}
                   onSaved={() => setSelectedHardware(null)}
+                  showList={false}
                 />
               </div>
             )}
           </SheetContent>
         </Sheet>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Hardware-Ausgabe anlegen</DialogTitle>
-            </DialogHeader>
-            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Event auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {events.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.name} ({e.eventCode})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedEventId && <HardwareWorkspace eventId={selectedEventId} />}
-          </DialogContent>
-        </Dialog>
         <div className="grid gap-3 sm:grid-cols-4">
           {[
             ["Offen", active.filter((i) => i.status === "OPEN").length],

@@ -51,7 +51,17 @@ function displayNumber(item: Item) {
   }
   return "—";
 }
-export function HardwareWorkspace({ eventId, initialEditing, onSaved }: { eventId?: string; initialEditing?: Partial<Item> | null; onSaved?: () => void }) {
+export function HardwareWorkspace({
+  eventId,
+  initialEditing,
+  onSaved,
+  showList = true,
+}: {
+  eventId?: string;
+  initialEditing?: Partial<Item> | null;
+  onSaved?: () => void;
+  showList?: boolean;
+}) {
   const [items, setItems] = useState<Item[]>([]);
   const [editing, setEditing] = useState<Partial<Item> | null>(null);
   const load = () =>
@@ -90,7 +100,10 @@ export function HardwareWorkspace({ eventId, initialEditing, onSaved }: { eventI
       issuedAt: editing.issuedAt || undefined,
       note: editing.note,
     };
-    const base = eventId && eventId !== "none" ? `/api/v1/events/${eventId}/hardware` : "/api/v1/events/hardware";
+    const base =
+      eventId && eventId !== "none"
+        ? `/api/v1/events/${eventId}/hardware`
+        : "/api/v1/events/hardware";
     const url = editing.id ? `${base}/${editing.id}` : base;
     await fetch(url, {
       method: editing.id ? "PATCH" : "POST",
@@ -111,15 +124,17 @@ export function HardwareWorkspace({ eventId, initialEditing, onSaved }: { eventI
   };
   return (
     <div className="space-y-3">
-      {!initialEditing && <div className="flex justify-end">
-        <Button
-          onClick={() =>
-            setEditing({ objectNumberType: "NONE", issueType: "PARTICIPANT", quantity: 1 })
-          }
-        >
-          Hardware-Ausgabe anlegen
-        </Button>
-      </div>}
+      {!initialEditing && (
+        <div className="flex justify-end">
+          <Button
+            onClick={() =>
+              setEditing({ objectNumberType: "NONE", issueType: "PARTICIPANT", quantity: 1 })
+            }
+          >
+            Hardware-Ausgabe anlegen
+          </Button>
+        </div>
+      )}
       {editing && (
         <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-3">
           <Input
@@ -256,73 +271,75 @@ export function HardwareWorkspace({ eventId, initialEditing, onSaved }: { eventI
           </div>
         </div>
       )}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left">
-              {[
-                "Empfänger",
-                "Art",
-                "Objekt",
-                "Nummer",
-                "Anzahl",
-                "Status",
-                "Due Date",
-                "Aktionen",
-              ].map((h) => (
-                <th className="p-2" key={h}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr className="border-b" key={item.id}>
-                <td className="p-2">{item.recipientName}</td>
-                <td className="p-2">{issueLabels[item.issueType] ?? item.issueType}</td>
-                <td className="p-2">{item.objectName}</td>
-                <td className="p-2 font-mono">{displayNumber(item)}</td>
-                <td className="p-2">{item.quantity}</td>
-                <td className="p-2">
-                  <Badge>{statusLabels[item.status] ?? item.status}</Badge>
-                </td>
-                <td
-                  className={`p-2 ${item.dueDate && item.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10) && item.status !== "RETURNED" && item.status !== "COMPLETED" ? "font-semibold text-destructive" : ""}`}
-                >
-                  {item.dueDate?.slice(0, 10) ?? "—"}
-                </td>
-                <td className="flex gap-1 p-2">
-                  <Button size="sm" variant="outline" onClick={() => setEditing(item)}>
-                    Bearbeiten
-                  </Button>
-                  {item.status !== "RETURNED" && item.status !== "COMPLETED" && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          void fetch(`/api/v1/events/${eventId}/hardware/${item.id}`, {
-                            method: "PATCH",
-                            credentials: "include",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ status: "RETURNED" }),
-                          }).then(load);
-                        }}
-                      >
-                        Retourniert
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => void remove(item.id)}>
-                        Löschen
-                      </Button>
-                    </>
-                  )}
-                </td>
+      {showList && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left">
+                {[
+                  "Empfänger",
+                  "Art",
+                  "Objekt",
+                  "Nummer",
+                  "Anzahl",
+                  "Status",
+                  "Due Date",
+                  "Aktionen",
+                ].map((h) => (
+                  <th className="p-2" key={h}>
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr className="border-b" key={item.id}>
+                  <td className="p-2">{item.recipientName}</td>
+                  <td className="p-2">{issueLabels[item.issueType] ?? item.issueType}</td>
+                  <td className="p-2">{item.objectName}</td>
+                  <td className="p-2 font-mono">{displayNumber(item)}</td>
+                  <td className="p-2">{item.quantity}</td>
+                  <td className="p-2">
+                    <Badge>{statusLabels[item.status] ?? item.status}</Badge>
+                  </td>
+                  <td
+                    className={`p-2 ${item.dueDate && item.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10) && item.status !== "RETURNED" && item.status !== "COMPLETED" ? "font-semibold text-destructive" : ""}`}
+                  >
+                    {item.dueDate?.slice(0, 10) ?? "—"}
+                  </td>
+                  <td className="flex gap-1 p-2">
+                    <Button size="sm" variant="outline" onClick={() => setEditing(item)}>
+                      Bearbeiten
+                    </Button>
+                    {item.status !== "RETURNED" && item.status !== "COMPLETED" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            void fetch(`/api/v1/events/${eventId}/hardware/${item.id}`, {
+                              method: "PATCH",
+                              credentials: "include",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ status: "RETURNED" }),
+                            }).then(load);
+                          }}
+                        >
+                          Retourniert
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => void remove(item.id)}>
+                          Löschen
+                        </Button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
