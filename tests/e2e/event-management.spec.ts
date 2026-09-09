@@ -24,6 +24,8 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   await expect(page.getByLabel("Service UHF")).toBeVisible();
   await expect(page.getByLabel("Service Video (iRewind)")).toBeVisible();
   await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
+  await expect(page.getByLabel("Servicesymbol: UHF").locator("option")).toHaveCount(25);
+  await expect(page.getByLabel("Servicefarbe: UHF").locator("option")).toHaveCount(20);
   await page.getByLabel("Servicesymbol: UHF").selectOption("video");
   await expect(page.getByText("Service gespeichert.").last()).toBeVisible();
   await page.getByLabel("Servicefarbe: UHF").selectOption("violet");
