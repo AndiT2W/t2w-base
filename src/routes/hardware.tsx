@@ -50,7 +50,13 @@ type InlineDraft = Pick<
   | "status"
   | "dueDate"
   | "note"
-> & { eventId: string };
+> & { eventId: string; objectNumber: string };
+const HARDWARE_OBJECTS = [
+  "Active Transponder (T2W)",
+  "GPS Tracker (T2W)",
+  "Active Transponder (Lindinger)",
+  "Active Transponder (BRV)",
+] as const;
 const labels: Record<string, string> = {
   OPEN: "Offen",
   MAIL_SEND: "Mail senden",
@@ -66,6 +72,35 @@ function number(item: Hardware) {
   if (item.objectNumberPrefix && item.objectNumberFrom != null && item.objectNumberTo != null)
     return `${item.objectNumberPrefix}${String(item.objectNumberFrom).padStart(3, "0")}–${item.objectNumberPrefix}${String(item.objectNumberTo).padStart(3, "0")}`;
   return "—";
+}
+function objectNumberChanges(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed)
+    return {
+      objectNumberType: "NONE",
+      objectNumberSingle: null,
+      objectNumberPrefix: null,
+      objectNumberFrom: null,
+      objectNumberTo: null,
+    };
+  const range = trimmed.match(/^(.*?)(\d+)\s*[–-]\s*.*?(\d+)$/);
+  if (range) {
+    return {
+      objectNumberType: "RANGE",
+      objectNumberSingle: null,
+      objectNumberPrefix: range[1],
+      objectNumberFrom: Number(range[2]),
+      objectNumberTo: Number(range[3]),
+      objectNumberPadding: range[2].length,
+    };
+  }
+  return {
+    objectNumberType: "SINGLE",
+    objectNumberSingle: trimmed,
+    objectNumberPrefix: null,
+    objectNumberFrom: null,
+    objectNumberTo: null,
+  };
 }
 function cell(item: Hardware, column: HardwareColumn): ReactNode {
   if (column === "Event")
@@ -163,6 +198,22 @@ function HardwarePage() {
       .then((value) => setItems(normalizeHardwareResponse<Hardware>(value)))
       .catch(() => setItems([]));
   }, [q, status, issueType]);
+  useEffect(() => {
+    if (!inlineEditingId) return;
+    const finishEditing = (pointerEvent: PointerEvent) => {
+      const target = pointerEvent.target;
+      if (
+        target instanceof Element &&
+        (target.closest('[data-inline-editing="true"]') ||
+          target.closest("[data-radix-popper-content-wrapper]"))
+      )
+        return;
+      setInlineEditingId(null);
+      setInlineDraft(null);
+    };
+    document.addEventListener("pointerdown", finishEditing);
+    return () => document.removeEventListener("pointerdown", finishEditing);
+  }, [inlineEditingId]);
   const today = new Date().toISOString().slice(0, 10);
   const active = items.filter(
     (i) =>
@@ -197,6 +248,7 @@ function HardwarePage() {
       status: item.status,
       dueDate: item.dueDate?.slice(0, 10),
       note: item.note,
+      objectNumber: number(item) === "—" ? "" : number(item),
     });
   };
   const saveInlineEdit = async (item: Hardware, changes: Record<string, unknown>) => {
@@ -356,11 +408,17 @@ function HardwarePage() {
                   {rows.map((i) => (
                     <tr
                       key={i.id}
+                      data-inline-editing={inlineEditingId === i.id ? "true" : undefined}
                       aria-busy={savingInline && inlineEditingId === i.id}
                       className="cursor-pointer border-b hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       tabIndex={0}
                       onClick={() => inlineEditingId !== i.id && beginInlineEdit(i)}
                       onKeyDown={(event) => {
+                        if (inlineEditingId === i.id && event.key === "Escape") {
+                          setInlineEditingId(null);
+                          setInlineDraft(null);
+                          return;
+                        }
                         if (
                           inlineEditingId !== i.id &&
                           (event.key === "Enter" || event.key === " ")
@@ -489,16 +547,53 @@ function HardwarePage() {
                         if (editing && h === "Objekt")
                           return (
                             <td className="px-2 py-1" key={h}>
-                              <Input
-                                aria-label="Objekt bearbeiten"
-                                className="h-8 min-w-36"
+                              <Select
                                 value={inlineDraft.objectName}
+                                onValueChange={(objectName) => {
+                                  setInlineDraft({ ...inlineDraft, objectName });
+                                  void saveInlineEdit(i, { objectName });
+                                }}
+                              >
+                                <SelectTrigger
+                                  aria-label="Objekt bearbeiten"
+                                  className="h-8 min-w-56"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {!HARDWARE_OBJECTS.includes(
+                                    inlineDraft.objectName as (typeof HARDWARE_OBJECTS)[number],
+                                  ) && (
+                                    <SelectItem value={inlineDraft.objectName}>
+                                      {inlineDraft.objectName}
+                                    </SelectItem>
+                                  )}
+                                  {HARDWARE_OBJECTS.map((objectName) => (
+                                    <SelectItem key={objectName} value={objectName}>
+                                      {objectName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                          );
+                        if (editing && h === "Nummer")
+                          return (
+                            <td className="px-2 py-1" key={h}>
+                              <Input
+                                aria-label="Nummer bearbeiten"
+                                className="h-8 min-w-32"
+                                value={inlineDraft.objectNumber}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) =>
-                                  setInlineDraft({ ...inlineDraft, objectName: e.target.value })
+                                  setInlineDraft({ ...inlineDraft, objectNumber: e.target.value })
                                 }
                                 onBlur={() =>
-                                  void saveInlineEdit(i, { objectName: inlineDraft.objectName })
+                                  void saveInlineEdit(
+                                    i,
+                                    objectNumberChanges(inlineDraft.objectNumber),
+                                  )
                                 }
                               />
                             </td>

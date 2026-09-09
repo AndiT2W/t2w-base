@@ -112,6 +112,12 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.getByLabel("Art bearbeiten").click();
   await page.getByRole("option", { name: "Verleih" }).click();
   await expect.poll(() => lastEventChanges.issueType).toBe("RENTAL");
+  await page.getByLabel("Objekt bearbeiten").click();
+  await page.getByRole("option", { name: "Active Transponder (Lindinger)" }).click();
+  await expect.poll(() => lastEventChanges.objectName).toBe("Active Transponder (Lindinger)");
+  await page.getByLabel("Nummer bearbeiten").fill("LINDI1066");
+  await page.getByLabel("Nummer bearbeiten").press("Tab");
+  await expect.poll(() => lastEventChanges.objectNumberSingle).toBe("LINDI1066");
   await page.getByLabel("Status bearbeiten").click();
   await page.getByRole("option", { name: "Offen" }).click();
   await expect.poll(() => lastEventChanges.status).toBe("OPEN");
@@ -124,6 +130,9 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.getByLabel("Event bearbeiten").click();
   await page.getByRole("option", { name: "Kein Event zugeordnet" }).click();
   await expect.poll(() => lastEventChanges.eventId).toBeNull();
+  await page.getByRole("heading", { name: "Hardware" }).click();
+  await expect(page.getByLabel("Telefon bearbeiten")).toHaveCount(0);
+  await expect(page.getByText("Timer XY")).toBeVisible();
   const unassignedRow = page.getByRole("row", { name: /Kein Event zugeordnet.*Ohne Event/ });
   await unassignedRow.click();
   await page.getByLabel("Empfänger bearbeiten").fill("Ohne Event aktualisiert");
