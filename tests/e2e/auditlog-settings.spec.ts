@@ -27,6 +27,12 @@ test("zeigt den Auditlog in den Einstellungen und filtert nach Entität", async 
   await expect(page.getByText("Unveränderliche Aufzeichnungen über relevante Änderungen im System.")).toBeVisible();
   await expect(page.getByText("payout-42")).toBeVisible();
   await expect(page.getByText("Andi")).toBeVisible();
+  await page.getByLabel("Auditlog durchsuchen").fill("nicht vorhanden");
+  await expect(page.getByText("Keine Auditlog-Einträge gefunden.")).toBeVisible();
+  await page.getByLabel("Auditlog durchsuchen").fill("payout-42");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Exportieren/ }).click();
+  await expect((await downloadPromise).suggestedFilename()).toMatch(/^auditlog-.*\.csv$/);
   await page.getByLabel("Auditlog nach Entität filtern").selectOption("Payout");
   await expect(page).toHaveURL(/tab=auditlog/);
 });

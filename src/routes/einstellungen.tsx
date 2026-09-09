@@ -1,6 +1,6 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ExternalLink, Plus, Trash2 } from "lucide-react";
+import { Download, ExternalLink, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,7 @@ function Einstellungen() {
   const [newService, setNewService] = useState("");
   const [auditEntries, setAuditEntries] = useState<ApiAuditLog[]>([]);
   const [auditEntity, setAuditEntity] = useState("");
+  const [auditSearch, setAuditSearch] = useState("");
   const [auditLoading, setAuditLoading] = useState(false);
   const [presentation, setPresentation] = useState<{ kind: "sports" | "eventRoles" | "services"; id: string } | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
@@ -105,6 +106,38 @@ function Einstellungen() {
       .catch(() => toast.error("Auditlog konnte nicht geladen werden."))
       .finally(() => setAuditLoading(false));
   }, [tab, auditEntity]);
+  const visibleAuditEntries = useMemo(() => {
+    const query = auditSearch.trim().toLocaleLowerCase("de-AT");
+    if (!query) return auditEntries;
+    return auditEntries.filter((entry) =>
+      [entry.entity, entry.entityId, entry.action, entry.user?.displayName, entry.user?.email, JSON.stringify(entry.details)]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("de-AT")
+        .includes(query),
+    );
+  }, [auditEntries, auditSearch]);
+  function exportAuditLog() {
+    const escape = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const rows = [
+      ["Zeitpunkt", "Entität", "Aktion", "Benutzer", "Datensatz", "Details"],
+      ...visibleAuditEntries.map((entry) => [
+        new Date(entry.createdAt).toISOString(),
+        entry.entity,
+        entry.action,
+        entry.user?.displayName ?? entry.user?.email ?? "System",
+        entry.entityId,
+        JSON.stringify(entry.details ?? {}),
+      ]),
+    ];
+    const blob = new Blob([rows.map((row) => row.map(escape).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `auditlog-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
   async function addSport() {
     const name = newSport.trim();
     if (!name) return;
@@ -570,20 +603,26 @@ function Einstellungen() {
                 <CardDescription>Unveränderliche Aufzeichnungen über relevante Änderungen im System.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="max-w-xs space-y-2">
-                  <Label htmlFor="audit-entity">Entität filtern</Label>
-                  <select
-                    id="audit-entity"
-                    aria-label="Auditlog nach Entität filtern"
-                    value={auditEntity}
-                    onChange={(event) => setAuditEntity(event.target.value)}
-                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="">Alle Entitäten</option>
-                    <option value="Event">Events</option>
-                    <option value="Payout">Auszahlungen</option>
-                    <option value="Hardware">Hardware</option>
-                  </select>
+                <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                  <div className="max-w-xs flex-1 space-y-2">
+                    <Label htmlFor="audit-search">Auditlog durchsuchen</Label>
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" />
+                      <Input id="audit-search" aria-label="Auditlog durchsuchen" value={auditSearch} onChange={(event) => setAuditSearch(event.target.value)} className="pl-9" placeholder="Aktion, Benutzer oder Datensatz …" />
+                    </div>
+                  </div>
+                  <div className="max-w-xs flex-1 space-y-2">
+                    <Label htmlFor="audit-entity">Entität filtern</Label>
+                    <select id="audit-entity" aria-label="Auditlog nach Entität filtern" value={auditEntity} onChange={(event) => setAuditEntity(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                      <option value="">Alle Entitäten</option>
+                      <option value="Event">Events</option>
+                      <option value="Payout">Auszahlungen</option>
+                      <option value="Hardware">Hardware</option>
+                    </select>
+                  </div>
+                  <Button type="button" variant="outline" onClick={exportAuditLog} disabled={auditLoading}>
+                    <Download className="size-4" /> Exportieren ({visibleAuditEntries.length})
+                  </Button>
                 </div>
                 <div className="overflow-x-auto rounded-md border">
                   <table className="w-full min-w-[42rem] text-sm">
@@ -598,7 +637,7 @@ function Einstellungen() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {auditEntries.map((entry) => (
+                      {visibleAuditEntries.map((entry) => (
                         <tr key={entry.id}>
                           <td className="whitespace-nowrap px-3 py-2">{new Date(entry.createdAt).toLocaleString("de-AT")}</td>
                           <td className="px-3 py-2">{entry.entity}</td>
@@ -609,7 +648,7 @@ function Einstellungen() {
                       ))}
                     </tbody>
                   </table>
-                  {!auditLoading && auditEntries.length === 0 && <p className="px-3 py-8 text-center text-sm text-muted-foreground">Keine Auditlog-Einträge gefunden.</p>}
+                  {!auditLoading && visibleAuditEntries.length === 0 && <p className="px-3 py-8 text-center text-sm text-muted-foreground">Keine Auditlog-Einträge gefunden.</p>}
                   {auditLoading && <p className="px-3 py-8 text-center text-sm text-muted-foreground" role="status">Auditlog wird geladen …</p>}
                 </div>
               </CardContent>
