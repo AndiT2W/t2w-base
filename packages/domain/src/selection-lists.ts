@@ -62,7 +62,9 @@ export class SelectionLists {
     return this.adapter
       .load(kind)
       .then((values) =>
-        sortValues(includeInactive ? values : values.filter((value) => value.active)),
+        sortValues(
+          includeInactive ? (values ?? []) : (values ?? []).filter((value) => value.active),
+        ),
       );
   }
   create(kind: SelectionListKind, name: string) {

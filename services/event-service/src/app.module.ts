@@ -11,6 +11,7 @@ import { SettingsController } from "./settings.controller.js";
 import { OutlookModule } from "./outlook/outlook.module.js";
 import { EventMutations } from "./event-mutations.js";
 import { PrismaEventMutationAdapter } from "./prisma-event-mutation.adapter.js";
+import { HardwareService } from "./hardware.service.js";
 import { Time2winService } from "./time2win.service.js";
 import { HttpTime2winAdapter, TIME2WIN_ADAPTER } from "./time2win.adapter.js";
 import { EventRecordRetrieval } from "./event-record-retrieval.js";
@@ -26,6 +27,7 @@ import { EventRecordRetrieval } from "./event-record-retrieval.js";
   ],
   providers: [
     PrismaService,
+    HardwareService,
     EventRecordRetrieval,
     Time2winService,
     { provide: TIME2WIN_ADAPTER, useClass: HttpTime2winAdapter },

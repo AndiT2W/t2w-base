@@ -14,6 +14,7 @@ import { Route as AngeboteRouteImport } from './routes/angebote'
 import { Route as AufgabenRouteImport } from './routes/aufgaben'
 import { Route as EinstellungenRouteImport } from './routes/einstellungen'
 import { Route as GanttRouteImport } from './routes/gantt'
+import { Route as HardwareRouteImport } from './routes/hardware'
 import { Route as KalenderRouteImport } from './routes/kalender'
 import { Route as KontakteRouteImport } from './routes/kontakte'
 import { Route as RechnungenRouteImport } from './routes/rechnungen'
@@ -44,6 +45,11 @@ const EinstellungenRoute = EinstellungenRouteImport.update({
 const GanttRoute = GanttRouteImport.update({
   id: '/gantt',
   path: '/gantt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HardwareRoute = HardwareRouteImport.update({
+  id: '/hardware',
+  path: '/hardware',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KalenderRoute = KalenderRouteImport.update({
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/aufgaben': typeof AufgabenRoute
   '/einstellungen': typeof EinstellungenRoute
   '/gantt': typeof GanttRoute
+  '/hardware': typeof HardwareRoute
   '/kalender': typeof KalenderRoute
   '/kontakte': typeof KontakteRoute
   '/rechnungen': typeof RechnungenRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/aufgaben': typeof AufgabenRoute
   '/einstellungen': typeof EinstellungenRoute
   '/gantt': typeof GanttRoute
+  '/hardware': typeof HardwareRoute
   '/kalender': typeof KalenderRoute
   '/kontakte': typeof KontakteRoute
   '/rechnungen': typeof RechnungenRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/aufgaben': typeof AufgabenRoute
   '/einstellungen': typeof EinstellungenRoute
   '/gantt': typeof GanttRoute
+  '/hardware': typeof HardwareRoute
   '/kalender': typeof KalenderRoute
   '/kontakte': typeof KontakteRoute
   '/rechnungen': typeof RechnungenRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/aufgaben'
     | '/einstellungen'
     | '/gantt'
+    | '/hardware'
     | '/kalender'
     | '/kontakte'
     | '/rechnungen'
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/aufgaben'
     | '/einstellungen'
     | '/gantt'
+    | '/hardware'
     | '/kalender'
     | '/kontakte'
     | '/rechnungen'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/aufgaben'
     | '/einstellungen'
     | '/gantt'
+    | '/hardware'
     | '/kalender'
     | '/kontakte'
     | '/rechnungen'
@@ -165,6 +177,7 @@ export interface RootRouteChildren {
   AufgabenRoute: typeof AufgabenRoute
   EinstellungenRoute: typeof EinstellungenRoute
   GanttRoute: typeof GanttRoute
+  HardwareRoute: typeof HardwareRoute
   KalenderRoute: typeof KalenderRoute
   KontakteRoute: typeof KontakteRoute
   RechnungenRoute: typeof RechnungenRoute
@@ -208,6 +221,13 @@ declare module '@tanstack/react-router' {
       path: '/gantt'
       fullPath: '/gantt'
       preLoaderRoute: typeof GanttRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hardware': {
+      id: '/hardware'
+      path: '/hardware'
+      fullPath: '/hardware'
+      preLoaderRoute: typeof HardwareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kalender': {
@@ -261,6 +281,7 @@ const rootRouteChildren: RootRouteChildren = {
   AufgabenRoute: AufgabenRoute,
   EinstellungenRoute: EinstellungenRoute,
   GanttRoute: GanttRoute,
+  HardwareRoute: HardwareRoute,
   KalenderRoute: KalenderRoute,
   KontakteRoute: KontakteRoute,
   RechnungenRoute: RechnungenRoute,

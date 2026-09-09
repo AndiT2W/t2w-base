@@ -1,5 +1,13 @@
 # Maintenance Log
 
+## 2026-09-07
+
+- Events besitzen nun eine persistente Mehrfachzuordnung zu Services. Die zentral gepflegte Liste unter **Einstellungen → Auswahllisten** startet mit UHF, Active, Streaming, Foto, Video (iRewind), GPS, Virtuell, Anmeldung (only), App und Jörg. Inaktive Werte bleiben bei bereits zugeordneten Events sichtbar. Evidenz: [Event-Service-Migration](../../services/event-service/prisma/migrations/0017_event_services/migration.sql), [Anforderung](sources/2026-09-07-user-event-services.md).
+
+## 2026-08-28
+
+- Nach Abgleich mit dem implementierten Code wurden die GitHub-Issues #23 (persistente Eventdatenquelle), #25 (Outlook-Graph-Ordner), #26 (Deutsch/Englisch) und #31 (scrollbare Kalender- und Gantt-Zeiträume) als erledigt geschlossen. #21/#22 bleiben wegen der noch fehlenden TIME2WIN-Synchronisierung offen; #27/#30 enthalten noch nicht vollständig umgesetzte CRM-/Event-Flow-Anforderungen.
+
 ## 2026-08-27
 
 - Event workspace in `@t2w/domain` vertieft: Eine gebundene Editing Session besitzt nun Draft, Validierung, Versionskonflikte und alle Detailkommandos. Persistierte Event-Snapshots werden automatisch in Collection und Session übernommen; die Event-Route koordiniert kein manuelles `accept` mehr nach Kontakt-, Aufgaben-, Datei-, Aktivitäts- oder Outlook-Kommandos.
@@ -241,23 +249,29 @@
 # 2026-08-24
 
 - CRM-Kundenzuordnung aus der Kontaktansicht repariert: Die Such-Combobox wartet den Persistenzrequest nun ab, verhindert doppelte Eingaben und zeigt Erfolg oder Fehler sichtbar an. Ein Browser-E2E-Test prüft den konkreten `PUT`, die sichtbare Verknüpfung und deren Persistenz nach Reload; beide Zuordnungsrichtungen sind grün.
+
 # 2026-08-25
 
 - Expanded the persistent Event workspace for ticket #20: event roles, tasks, file references, and manual activities now have Event-Service persistence models and detail-page actions. TIME2WIN link state is surfaced separately from the local participant forecast. Evidence: `services/event-service/prisma/migrations/0007_event_workspace/migration.sql`, `src/routes/events.$eventcode.tsx`.
+
 # 2026-08-25
 
 - Fixed ticket #30: contact function and location were collected in the UI but omitted by the HTTP CRM mapping and database model. They now persist via `Contact.function` and `Contact.location`; the customer creation form also exposes its billing address. A browser E2E test covers create, detail display, and reload persistence.
+
 # 2026-08-25
 
 - Implemented ticket #31 mobile time-navigation foundation: calendar and Gantt own bounded horizontal scroll regions, the Gantt axis includes a 90-day buffer before and after event data, and the mobile navigation trigger is sticky. Browser coverage verifies mobile scroll regions, trigger visibility, and no page-level horizontal overflow.
+
 # 2026-08-25 – Produktionsmigrationen zuverlässig ausführen
 
 - Login-Ansicht wurde durch HTTP-500-Antworten der geschützten Startabfragen ausgelöst, nicht durch ungültige Zugangsdaten.
 - Ursache: Der Deployment-Workflow aktualisierte `event-service`, baute aber den profilbasierten `event-migrate`-Container nicht neu. Dadurch fehlten die Migrationen `0007_event_workspace` und `0008_contact_function_location` in PostgreSQL.
 - Die beiden ausstehenden Migrationen wurden in Produktion eingespielt; der Workflow baut `event-migrate` nun vor dem Migrationslauf. Evidenz: [Deploy-Workflow](../.github/workflows/deploy-hostinger.yml), [Migration 0007](../services/event-service/prisma/migrations/0007_event_workspace/migration.sql), [Migration 0008](../services/event-service/prisma/migrations/0008_contact_function_location/migration.sql).
+
 # 2026-08-25
 
 - Removed the obsolete CRM customer status `In Prüfung`. The domain permits only active or inactive customers, new customer profiles start active, and legacy local-demo records with the old value are normalized to active on load.
+
 # 2026-08-25
 
 - Replaced the customer billing-address field with structured customer fields: country, city, street, postal code, and email. The Event-Service migration retains legacy address data in the existing column and seeds the new street/email fields from legacy values where empty.
@@ -306,6 +320,20 @@
 
 - Fixed persistence of a customer's primary contact: the CRM client now includes `primaryContactId` in organizer update requests. Browser coverage verifies the value after reload.
 
+# 2026-08-28
+
+- Ticket #21 umgesetzt: Der Event-Service synchronisiert TIME2WIN-Eventmetadaten und Teilnehmerzahlen pro Bewerb über eine konfigurierte Bearer-API, speichert den letzten erfolgreichen Snapshot und zeigt Sync-Status bzw. Fehler an. Lokale Sportart und Teilnehmerprognose bleiben unverändert. Der TIME2WIN-Tab erlaubt den manuellen Sync; ein täglicher Service-Job aktualisiert verknüpfte Events.
+
+- TIME2WIN-Teilnehmer-Sync korrigiert: Die Produktionsantwort für Event 1082 liefert Bewerbzahlen als `races[].participants_count` und die Sportart als `type_name`. Der Service normalisiert diese Felder nun; ein Unit-Regressionstest verwendet das reale Antwortformat und ein Browser-E2E-Test prüft die sichtbare Teilnehmerzahl nach dem manuellen Sync.
+
+- Ticket #19 ergänzt: Der Kalender verwendet nun dieselbe Archivselektion wie die Eventliste (aktive, archivierte oder alle Events). Ein Browser-E2E-Test prüft außerdem den Filterablauf und die Navigation vom Kalenderbalken in die Eventdetailseite.
+
+- Implemented [GitHub issue #34](https://github.com/AndiT2W/t2w-base/issues/34): configured role selection for existing Event contacts, Outlook folder existence feedback before and after sync, accessible overlays and table actions, mobile event cards and touch targets, overview urgency feedback, and semantic language buttons. See [Ticket #34: UI und Outlook-Sync-Rückmeldung](concepts/ticket-34-ui-and-outlook-sync-feedback.md).
+
+- Recorded the verified URL-encoded Outlook Web folder link for [Mountain Attack 2027](entities/mountain-attack-2027.md). The original, non-encoded version opened the inbox instead of the event folder.
+
+- Outlook folder sync now stores `https://outlook.cloud.microsoft` links with URL-encoded mailbox and Graph folder ID. A regression test covers Outlook folder IDs that end in `=`.
+
 # 2026-08-26
 
 - Implemented UI ticket #33: overview status dropdown and legend, simplified CRM customer columns and filters, icon-only folder links, editable action wording, and Gantt today-centering with a sticky event column. Updated affected browser assertions; unit tests pass.
@@ -329,3 +357,44 @@
 - Moved the shared sport and Event-role lifecycle into the framework-free `@t2w/domain/selection-lists` module. Prisma and browser HTTP mocks are now adapters around that lifecycle; the reusable mutable browser adapter keeps selection-list workflows covered end to end.
 
 - Removed the pass-through Nest Event mutation service. `EventMutations` is now injected directly through a Prisma-backed provider, owns fallback Event-code generation, and remains the single tested command boundary for versioned Event changes.
+
+# 2026-08-28
+
+- Fixed the Event detail **Stammdaten** form so it displays the event's selected Sportart and permits changing it through the central active-sport selection list. The existing `sportartId` now travels through the detail editing session and Event PATCH unchanged; a browser regression verifies the displayed value, submitted `sportId`, and persistence after reload.
+
+- Implemented the selected architecture improvements: TIME2WIN sync now runs through the Event workspace with explicit progress and non-blocking failure state; TIME2WIN HTTP/auth/normalization lives behind an adapter; inactive Event roles remain available only for existing assignments; and CRM mutations consistently reload and replace the authoritative snapshot. Unit, service, and browser regressions cover the new seams.
+
+# 2026-08-29
+
+- Deepened the remaining Event-detail seams: intent commands now enter through one execution interface; TIME2WIN refresh returns an explicit retained-snapshot outcome for manual and scheduled runs; selection-list route mapping is a browser adapter; and the CRM lifecycle owns person-customer input shaping behind a compatibility facade. Domain, client, and event-service regression suites pass.
+
+# 2026-08-30
+
+- Implemented issue #38 locally: Event detail can copy an Event through an editable confirmation dialog, proposes a matching weekday in the next year while preserving multi-day duration, and supports optional chronological series links. The backend copy is transactional and excludes external/live and operational records. Focused service, workspace, and browser regressions cover the workflow.
+
+- Recorded [GitHub issue #37](https://github.com/AndiT2W/t2w-base/issues/37) as the approved first Outlook communication slice: manual per-Event folder sync, a compact persisted Event timeline, no mail body or attachment storage, and no automatic Sent Items matching. See [Event Communication Knowledge Service](concepts/event-communication-knowledge-service.md).
+
+- Confirmed the Eventcode Outlook-folder convention: relevant outgoing messages are moved into the Event folder, so the same manual sync covers incoming and outgoing correspondence without separately matching Sent Items.
+
+- Implemented issue #37 locally: paginated Microsoft Graph message reads, idempotent persisted Outlook communication metadata, Event-facing Communication Hub sync, and a combined communication timeline with incoming/outgoing labels, attachment indication, Outlook deep links, repeat-sync protection, and reload persistence. Targeted unit, adapter, build, and browser regressions pass.
+
+- Repaired the complete Event browser regression suite after issue #37: the CRM filter now imports its shared `personName` projection instead of crashing the contacts route, and TIME2WIN E2E mocks now return the real `{ kind, event }` sync outcome. The full Event-management browser suite passes 41/41.
+
+# 2026-08-31
+
+- Kunden- und Kontaktdetails fassen nun doppelte Zuordnungen zu einem Event zusammen und zeigen die zugehörigen Eventrollen bzw. Kundenrollen als Chips neben dem Event. Ein Browser-Regressionstest deckt beide Detailansichten ab.
+
+# 2026-09-01
+
+- Live-Test für `270115_mountain_attack`: Die eindeutig zugeordnete Antwort **AW: Besprechung Mountain Attack 2027** vom 27.08.2026 wurde aus `Gesendete Elemente` in den Eventcode-Ordner verschoben und anschließend erfolgreich in die Event-Kommunikation synchronisiert. Die Timeline zeigt nun fünf Einträge, darunter die ausgehende Nachricht. Grundlage für eine spätere Automatisierung ist die eindeutige Graph-`conversationId`.
+
+- Automatisierte die getestete Zuordnung: Der Event-Kommunikations-Sync sucht gesendete Nachrichten anhand der Graph-`conversationId`, überspringt Unterhaltungen mit einer bereits bekannten Zuordnung zu einem anderen Event, verschiebt eindeutige Antworten in den Eventordner und liest ihn anschließend neu ein. Antworten sind in der Timeline sichtbar markiert und eingerückt; `Karten`, `Dialog` und `Kompakt` stehen als drei direkt vergleichbare Ansichten bereit. Service- und Browser-Regressionen decken die Zuordnung und Darstellung ab.
+
+# 2026-09-09
+
+- Importdefinition für die ClickUp-Liste `VERANSTALTUNGEN` ergänzt: ClickUp-Task-ID als externe Referenz, Stammdaten zuerst, Rollen danach, IBAN/BIC ausschließlich am Kunden-/Zahlungsempfänger-Stammsatz, keine automatische Kontaktanlage nur wegen einer IBAN, unsichere Matches in Reviewliste und zuerst Vorschau-/Idempotenzlauf. Siehe [ClickUp-Import Veranstaltungen](concepts/clickup-veranstaltungen-import.md).
+
+- Eventserien lassen sich nun im Eventdetail nachträglich mit einem bestehenden Event verknüpfen, auf eine andere Serie verschieben oder lösen. Die transaktionale API aktualisiert die betroffenen Events versionssicher; eine Browser-Regression prüft Verknüpfen und Persistenz nach Reload.
+- Spezifikation für Hardware-Verwaltung und Hardware-Rückläufer erstellt und als GitHub-Issue [#39](https://github.com/AndiT2W/t2w-base/issues/39) mit `enhancement` und `ready-for-agent` veröffentlicht. Die Umsetzung soll über ein frameworkfreies Hardware-Workspace-Modul, bestehende Event-Service-/Prisma-/API-Muster und Browser-E2E erfolgen.
+- Die Grill-Session zu Issue #39 abgeschlossen: Zeilenmodell, Löschschutz, Berechtigungen, Auditierung, Pagination, Standardfilter, Europe/Vienna-Kalendertag und der Verzicht auf ClickUp-Import in V1 sind als verbindliche Entscheidungen ergänzt.
+- Issue #39: Hardware-Domain, Prisma-Modell/Migration, Event-Service-CRUD mit AuditLog, zentrale Hardware-Route und Event-Hardware-Workspace ergänzt. Builds, 40 Tests und Hardware-Datei-Lint sind grün.

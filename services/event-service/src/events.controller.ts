@@ -29,6 +29,7 @@ import { EventMutationConflict, EventMutations } from "./event-mutations.js";
 import { Time2winService } from "./time2win.service.js";
 import { EventCommunicationHub } from "./outlook/event-communication.hub.js";
 import { EventRecordRetrieval } from "./event-record-retrieval.js";
+import { HardwareService } from "./hardware.service.js";
 
 export class CreateEventDto {
   @IsOptional() @IsString() eventCode?: string;
@@ -73,7 +74,52 @@ export class EventsController {
     private readonly eventMutations: EventMutations,
     private readonly time2win: Time2winService,
     private readonly communication: EventCommunicationHub,
+    private readonly hardware: HardwareService,
   ) {}
+
+  @Get("hardware") listHardware(
+    @Query("q") q?: string,
+    @Query("skip") skip = "0",
+    @Query("take") take = "100",
+    @Query("status") status?: string,
+    @Query("issueType") issueType?: string,
+  ) {
+    return this.hardware.list(
+      undefined,
+      q,
+      Number(skip),
+      Math.min(Number(take), 100),
+      status,
+      issueType,
+    );
+  }
+  @Get(":id/hardware") listEventHardware(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Query("q") q?: string,
+    @Query("skip") skip = "0",
+    @Query("take") take = "100",
+  ) {
+    return this.hardware.list(id, q, Number(skip), Math.min(Number(take), 100));
+  }
+  @Post(":id/hardware") createHardware(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.hardware.create(id, body);
+  }
+  @Patch(":id/hardware/:hardwareId") updateHardware(
+    @Param("id", ParseUUIDPipe) eventId: string,
+    @Param("hardwareId", ParseUUIDPipe) id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.hardware.update(eventId, id, body);
+  }
+  @Delete(":id/hardware/:hardwareId") deleteHardware(
+    @Param("id", ParseUUIDPipe) eventId: string,
+    @Param("hardwareId", ParseUUIDPipe) id: string,
+  ) {
+    return this.hardware.remove(eventId, id);
+  }
 
   @Post(":id/outlook-folder/sync")
   async syncOutlookFolder(
