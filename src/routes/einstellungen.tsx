@@ -311,25 +311,22 @@ function Einstellungen() {
                 {services.map((service) => (
                   <div
                     key={service.id}
-                    className="grid gap-2 rounded-md border p-3 sm:grid-cols-[minmax(9rem,1fr)_9rem_9rem_auto] sm:items-center"
+                    className="grid gap-2 rounded-md border p-3 sm:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] sm:items-center"
                   >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span aria-label={`Servicevorschau: ${service.name}`} className="shrink-0">
-                        <ServiceBadge
-                          name={service.name}
-                          icon={service.icon}
-                          color={service.color}
-                        />
-                      </span>
-                      <Input
-                        aria-label={`Service ${service.name}`}
-                        defaultValue={service.name}
-                        onBlur={(event) => {
-                          const name = event.target.value.trim();
-                          if (name && name !== service.name) void saveService(service.id, { name });
-                        }}
-                      />
-                    </div>
+                    <span
+                      aria-label={`Servicevorschau: ${service.name}`}
+                      className="flex min-w-0 items-center"
+                    >
+                      <ServiceBadge name={service.name} icon={service.icon} color={service.color} />
+                    </span>
+                    <Input
+                      aria-label={`Service ${service.name}`}
+                      defaultValue={service.name}
+                      onBlur={(event) => {
+                        const name = event.target.value.trim();
+                        if (name && name !== service.name) void saveService(service.id, { name });
+                      }}
+                    />
                     <select
                       aria-label={`Servicesymbol: ${service.name}`}
                       className="h-10 rounded-md border border-input bg-background px-3 text-sm"

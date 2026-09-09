@@ -31,6 +31,13 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   await page.reload();
   await expect(page.getByLabel("Servicesymbol: UHF")).toHaveValue("video");
   await expect(page.getByLabel("Servicefarbe: UHF")).toHaveValue("violet");
+  const uhfName = await page
+    .getByRole("textbox", { name: "Service UHF", exact: true })
+    .boundingBox();
+  const videoName = await page
+    .getByRole("textbox", { name: "Service Video (iRewind)", exact: true })
+    .boundingBox();
+  expect(uhfName?.x).toBe(videoName?.x);
   await page.getByLabel("Neuer Service").fill("Drohne");
   await page.getByRole("button", { name: "Hinzufügen" }).nth(1).click();
   await expect(page.getByLabel("Service Drohne")).toBeVisible();
