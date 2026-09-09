@@ -1,5 +1,10 @@
 # Maintenance Log
 
+## 2026-09-09
+
+- ClickUp-Liste `AUSZAHLUNGEN` geprüft: 1.013 Datensätze, Felder Veranstaltung, Status, Auszahlungsbetrag und Transaktionsbestätigung sowie Statusgruppen `erstellt`, `gesendet`, `ausbezahlt`; n8n-Versandstatus `versenden` dokumentiert.
+- Arbeitsgrundlage für monatliche Nenngeld-Auszahlungen erstellt: Event-zu-Auszahlung 1:n, globale fortlaufende Nummer, Empfängersnapshot, getrennte Mail-/Zahlungsstatus, zentrale Übersicht und idempotenter n8n-Versand. Siehe [Auszahlungs-Spezifikation](tasks/event-payouts-spec.md).
+
 ## 2026-09-07
 
 - Events besitzen nun eine persistente Mehrfachzuordnung zu Services. Die zentral gepflegte Liste unter **Einstellungen → Auswahllisten** startet mit UHF, Active, Streaming, Foto, Video (iRewind), GPS, Virtuell, Anmeldung (only), App und Jörg. Inaktive Werte bleiben bei bereits zugeordneten Events sichtbar. Evidenz: [Event-Service-Migration](../../services/event-service/prisma/migrations/0017_event_services/migration.sql), [Anforderung](sources/2026-09-07-user-event-services.md).
@@ -400,3 +405,5 @@
 - Issue #39: Hardware-Domain, Prisma-Modell/Migration, Event-Service-CRUD mit AuditLog, zentrale Hardware-Route und Event-Hardware-Workspace ergänzt. Builds, 40 Tests und Hardware-Datei-Lint sind grün.
 
 - Einstellungsseite erweitert: Die bestehenden Haupt-Tabs `Allgemein`, `Auswahllisten` und `Outlook` bleiben erhalten. Innerhalb von `Auswahllisten` gibt es nun ein seitliches Submenü für `Sportarten`, `Services` und `Eventrollen`; der aktive Unterbereich wird über den URL-Parameter `liste` gespeichert.
+
+- 2026-09-09: 18 aktuelle ClickUp-Hardwaredatensätze mit Status `BENACHRICHTIGT` in die Produktionsdatenbank importiert; `eventId` bleibt bei allen Datensätzen `NULL`.
