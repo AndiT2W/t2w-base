@@ -15,15 +15,13 @@ export type CommunicationMessage = {
 };
 
 export interface EventCommunicationRepository {
-  source(eventId: string): Promise<{ mailbox: string; folderId: string }>;
+  start(eventId: string): Promise<{ mailbox: string; folderId: string }>;
   conflictingConversationIds(
     eventId: string,
     mailbox: string,
     conversationIds: string[],
   ): Promise<string[]>;
-  begin(eventId: string): Promise<unknown>;
-  store(eventId: string, messages: CommunicationMessage[]): Promise<unknown>;
-  succeed(eventId: string, at: Date): Promise<unknown>;
+  complete(eventId: string, messages: CommunicationMessage[], at: Date): Promise<unknown>;
   fail(eventId: string, error: string): Promise<unknown>;
 }
 
@@ -63,9 +61,9 @@ export class EventCommunicationHub {
   ) {}
 
   async syncEvent(eventId: string) {
-    const source = await this.repository.source(eventId);
-    await this.repository.begin(eventId);
+    let source: { mailbox: string; folderId: string };
     try {
+      source = await this.repository.start(eventId);
       let messages = await this.graph.listMessages(source.mailbox, source.folderId);
       const conversationIds = [
         ...new Set(
@@ -96,17 +94,24 @@ export class EventCommunicationHub {
       if (candidates.length > 0) {
         messages = await this.graph.listMessages(source.mailbox, source.folderId);
       }
-      await this.repository.store(
-        eventId,
-        messages.map((message) => normalize(source.mailbox, message)),
-      );
-      return await this.repository.succeed(eventId, new Date());
+      return {
+        kind: "synced" as const,
+        event: await this.repository.complete(
+          eventId,
+          messages.map((message) => normalize(source.mailbox, message)),
+          new Date(),
+        ),
+      };
     } catch (error) {
-      await this.repository.fail(
+      const event = await this.repository.fail(
         eventId,
         error instanceof Error ? error.message : "OUTLOOK_MESSAGE_SYNC_FAILED",
       );
-      throw error;
+      return {
+        kind: "failed" as const,
+        event,
+        error: error instanceof Error ? error.message : "OUTLOOK_MESSAGE_SYNC_FAILED",
+      };
     }
   }
 }

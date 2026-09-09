@@ -65,6 +65,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
+import { projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
@@ -120,33 +121,12 @@ function formatCommunicationTime(value: string) {
   }).format(new Date(value));
 }
 
-function communicationDay(value: string) {
-  const date = new Date(value);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const key = (candidate: Date) =>
-    new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Vienna" }).format(candidate);
-  if (key(date) === key(today)) return "Heute";
-  if (key(date) === key(yesterday)) return "Gestern";
-  return new Intl.DateTimeFormat("de-AT", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
 function communicationDate(value: string) {
   return new Intl.DateTimeFormat("de-AT", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(new Date(value));
-}
-
-function emailAddresses(value: string) {
-  return value.toLocaleLowerCase("de").match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/g) ?? [];
 }
 
 export const Route = createFileRoute("/events/$eventcode")({
@@ -244,125 +224,49 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const communicationTimelineRef = useRef<HTMLDivElement | null>(null);
   const [threadContextOffset, setThreadContextOffset] = useState(0);
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(() => new Set());
-  const replyMessageIds = useMemo(() => {
-    const seen = new Set<string>();
-    const replies = new Set<string>();
-    [...form.kommunikation]
-      .filter((message) => message.kanal === "E-Mail" && message.conversationId)
-      .sort((left, right) => left.datum.localeCompare(right.datum))
-      .forEach((message) => {
-        if (seen.has(message.conversationId!)) replies.add(message.id);
-        seen.add(message.conversationId!);
-      });
-    return replies;
-  }, [form.kommunikation]);
-  const threadOrigins = useMemo(() => {
-    const origins = new Map<string, T2WEvent["kommunikation"][number]>();
-    [...form.kommunikation]
-      .filter((message) => message.kanal === "E-Mail" && message.conversationId)
-      .sort((left, right) => left.datum.localeCompare(right.datum))
-      .forEach((message) => {
-        if (!origins.has(message.conversationId!)) origins.set(message.conversationId!, message);
-      });
-    return origins;
-  }, [form.kommunikation]);
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
   const services = selectionListChoices(selectionLists.services).filter(
     (service) => service.active || form.serviceIds?.includes(service.id),
   );
-  const communicationGroups = useMemo(() => {
-    const query = communicationSearch.trim().toLocaleLowerCase("de");
-    const filtered = form.kommunikation.filter((message) => {
-      if (communicationFilter === "email" && message.kanal !== "E-Mail") return false;
-      if (communicationFilter === "activity" && message.kanal === "E-Mail") return false;
-      if (communicationContactFilter !== "all") {
-        const relatedEmails = emailAddresses(
-          message.richtung === "OUTGOING"
-            ? `${message.empfaenger ?? ""} ${message.autor}`
-            : `${message.autor} ${message.empfaenger ?? ""}`,
-        );
-        const matchingContact = form.kontakte.find((contact) =>
-          relatedEmails.includes(contact.email.toLocaleLowerCase("de")),
-        );
-        if (communicationContactFilter === "unassigned" ? matchingContact : matchingContact?.id !== communicationContactFilter) return false;
-      }
-      return (
-        !query ||
-        [message.betreff, message.autor, message.empfaenger, message.text]
-          .filter(Boolean)
-          .join(" ")
-          .toLocaleLowerCase("de")
-          .includes(query)
-      );
-    });
-    if (communicationView === "conversation") {
-      const threads = new Map<string, T2WEvent["kommunikation"]>();
-      filtered.forEach((message) => {
-        const key = message.conversationId
-          ? `conversation:${message.conversationId}`
-          : `single:${message.id}`;
-        threads.set(key, [...(threads.get(key) ?? []), message]);
-      });
-      return [...threads.entries()]
-        .map(([key, messages]) => {
-          const sorted = [...messages].sort((left, right) => left.datum.localeCompare(right.datum));
-          const first = sorted[0]!;
-          const last = sorted.at(-1)!;
-          return {
-            key,
-            label: first.betreff,
-            period:
-              communicationDate(first.datum) === communicationDate(last.datum)
-                ? communicationDate(first.datum)
-                : `${communicationDate(first.datum)} – ${communicationDate(last.datum)}`,
-            latest: last.datum,
-            messages: sorted,
-            conversation: true,
-          };
-        })
-        .sort((left, right) => right.latest.localeCompare(left.latest));
-    }
-    return filtered.reduce<
-      {
-        key: string;
-        label: string;
-        period: string;
-        latest: string;
-        messages: T2WEvent["kommunikation"];
-        conversation: boolean;
-      }[]
-    >((groups, message) => {
-      const day = communicationDay(message.datum);
-      const current = groups.at(-1);
-      if (current?.label === day) current.messages.push(message);
-      else
-        groups.push({
-          key: day,
-          label: day,
-          period: day,
-          latest: message.datum,
-          messages: [message],
-          conversation: false,
-        });
-      return groups;
-    }, []);
-  }, [communicationContactFilter, communicationFilter, communicationSearch, communicationView, form.kontakte, form.kommunikation]);
+  const communicationTimeline = useMemo(
+    () =>
+      projectCommunicationTimeline({
+        messages: form.kommunikation,
+        eventContacts: form.kontakte,
+        contacts: personen.map((person) => ({
+          id: person.id,
+          name: personName(person),
+          email: person.email,
+        })),
+        mailbox: form.outlookMailbox ?? settings.outlookMailbox,
+        criteria: {
+          kind: communicationFilter,
+          contactId: communicationContactFilter,
+          search: communicationSearch,
+          view: communicationView,
+        },
+      }),
+    [
+      communicationContactFilter,
+      communicationFilter,
+      communicationSearch,
+      communicationView,
+      form.kontakte,
+      form.kommunikation,
+      form.outlookMailbox,
+      personen,
+      settings.outlookMailbox,
+    ],
+  );
+  const communicationGroups = communicationTimeline.groups;
   const selectedCommunication = useMemo(
     () =>
-      form.kommunikation.find((message) => message.id === selectedCommunicationId) ??
-      form.kommunikation[0],
-    [form.kommunikation, selectedCommunicationId],
+      communicationTimeline.visibleMessages.find(
+        (message) => message.id === selectedCommunicationId,
+      ) ?? communicationTimeline.visibleMessages[0],
+    [communicationTimeline.visibleMessages, selectedCommunicationId],
   );
-  const selectedThread = useMemo(() => {
-    if (!selectedCommunication) return [];
-    return form.kommunikation
-      .filter((message) =>
-        selectedCommunication.conversationId
-          ? message.conversationId === selectedCommunication.conversationId
-          : message.id === selectedCommunication.id,
-      )
-      .sort((left, right) => left.datum.localeCompare(right.datum));
-  }, [form.kommunikation, selectedCommunication]);
+  const selectedThread = communicationTimeline.selectedThread(selectedCommunicationId);
   const selectCommunication = (messageId: string) => {
     setSelectedCommunicationId(messageId);
     requestAnimationFrame(() => {
@@ -1432,8 +1336,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     placeholder="Nachrichten durchsuchen …"
                   />
                 </div>
-                <Select value={communicationContactFilter} onValueChange={setCommunicationContactFilter}>
-                  <SelectTrigger aria-label="Kommunikation nach Kontakt filtern" className="w-full sm:w-56">
+                <Select
+                  value={communicationContactFilter}
+                  onValueChange={setCommunicationContactFilter}
+                >
+                  <SelectTrigger
+                    aria-label="Kommunikation nach Kontakt filtern"
+                    className="w-full sm:w-56"
+                  >
                     <SelectValue placeholder="Kontakt: Alle" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1533,17 +1443,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               : message.kanal === "Telefon"
                                 ? Phone
                                 : StickyNote;
-                          const relatedEmails = emailAddresses(
-                            message.richtung === "OUTGOING"
-                              ? `${message.empfaenger ?? ""} ${message.autor}`
-                              : `${message.autor} ${message.empfaenger ?? ""}`,
+                          const eventContact = communicationTimeline.eventContactsByMessageId.get(
+                            message.id,
                           );
-                          const eventContact = form.kontakte.find((candidate) =>
-                            relatedEmails.includes(candidate.email.toLocaleLowerCase("de")),
-                          );
-                          const contact = personen.find((person) =>
-                            relatedEmails.includes(person.email.toLocaleLowerCase("de")),
-                          );
+                          const contact = communicationTimeline.contactsByMessageId.get(message.id);
                           const linkedContact = eventContact
                             ? {
                                 id: eventContact.id,
@@ -1551,22 +1454,16 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 eventRole: eventContact.rolle,
                               }
                             : contact
-                              ? { id: contact.id, label: personName(contact), eventRole: null }
+                              ? { id: contact.id, label: contact.name, eventRole: null }
                               : null;
-                          const isTime2winOutgoing =
-                            message.richtung === "OUTGOING" &&
-                            emailAddresses(message.autor).includes(
-                              (
-                                form.outlookMailbox ??
-                                settings.outlookMailbox ??
-                                ""
-                              ).toLocaleLowerCase("de"),
-                            );
+                          const isTime2winOutgoing = communicationTimeline.time2winOutgoingIds.has(
+                            message.id,
+                          );
                           const expanded = expandedMessages.has(message.id);
                           const longPreview = message.text.length > 180;
-                          const isReply = replyMessageIds.has(message.id);
+                          const isReply = communicationTimeline.replyMessageIds.has(message.id);
                           const threadOrigin = message.conversationId
-                            ? threadOrigins.get(message.conversationId)
+                            ? communicationTimeline.visibleThreadOrigins.get(message.conversationId)
                             : undefined;
                           const viewClasses =
                             communicationView === "compact"
@@ -1759,7 +1656,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     </section>
                   ))}
                 </div>
-                {communicationView === "cards" && selectedCommunication && (
+                {communicationView === "cards" && selectedCommunication && !communicationSearch && (
                   <aside
                     ref={threadContextRef}
                     style={{ transform: `translateY(${threadContextOffset}px)` }}

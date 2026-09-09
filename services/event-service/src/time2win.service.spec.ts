@@ -26,9 +26,13 @@ describe("Time2winService", () => {
         findMany: vi.fn(),
       },
     };
-    const service = new Time2winService(prisma as never, {
-      snapshot: vi.fn().mockRejectedValue(new Error("TIME2WIN_API_KEY_NOT_CONFIGURED")),
-    });
+    const service = new Time2winService(
+      prisma as never,
+      { read: vi.fn().mockResolvedValue(event) } as never,
+      {
+        snapshot: vi.fn().mockRejectedValue(new Error("TIME2WIN_API_KEY_NOT_CONFIGURED")),
+      },
+    );
 
     await expect(service.syncEvent(event.id)).resolves.toMatchObject({
       kind: "failed",
@@ -74,14 +78,18 @@ describe("Time2winService", () => {
           json: async () => ({ data: { statistics: { registered: 128 } } }),
         }),
     );
-    const service = new Time2winService(prisma as never, {
-      snapshot: vi.fn().mockResolvedValue({
-        eventId: 42,
-        name: "Ostseeman 2027",
-        sportName: "Triathlon",
-        races: [{ id: 11, name: "Olympische Distanz", participantCount: 128 }],
-      }),
-    });
+    const service = new Time2winService(
+      prisma as never,
+      { read: vi.fn().mockResolvedValue(event) } as never,
+      {
+        snapshot: vi.fn().mockResolvedValue({
+          eventId: 42,
+          name: "Ostseeman 2027",
+          sportName: "Triathlon",
+          races: [{ id: 11, name: "Olympische Distanz", participantCount: 128 }],
+        }),
+      },
+    );
 
     await expect(service.syncEvent(event.id)).resolves.toMatchObject({ kind: "synced" });
 
@@ -128,14 +136,18 @@ describe("Time2winService", () => {
           }),
         }),
     );
-    const service = new Time2winService(prisma as never, {
-      snapshot: vi.fn().mockResolvedValue({
-        eventId: 42,
-        name: "OstseeMan Triathlon 2027",
-        sportName: "Triathlon",
-        races: [{ id: 7709, name: "OstseeMan Langdistanz", participantCount: 300 }],
-      }),
-    });
+    const service = new Time2winService(
+      prisma as never,
+      { read: vi.fn().mockResolvedValue(event) } as never,
+      {
+        snapshot: vi.fn().mockResolvedValue({
+          eventId: 42,
+          name: "OstseeMan Triathlon 2027",
+          sportName: "Triathlon",
+          races: [{ id: 7709, name: "OstseeMan Langdistanz", participantCount: 300 }],
+        }),
+      },
+    );
 
     await expect(service.syncEvent(event.id)).resolves.toMatchObject({ kind: "synced" });
 

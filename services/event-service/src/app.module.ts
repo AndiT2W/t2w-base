@@ -13,6 +13,7 @@ import { EventMutations } from "./event-mutations.js";
 import { PrismaEventMutationAdapter } from "./prisma-event-mutation.adapter.js";
 import { Time2winService } from "./time2win.service.js";
 import { HttpTime2winAdapter, TIME2WIN_ADAPTER } from "./time2win.adapter.js";
+import { EventRecordRetrieval } from "./event-record-retrieval.js";
 
 @Module({
   imports: [OutlookModule],
@@ -25,6 +26,7 @@ import { HttpTime2winAdapter, TIME2WIN_ADAPTER } from "./time2win.adapter.js";
   ],
   providers: [
     PrismaService,
+    EventRecordRetrieval,
     Time2winService,
     { provide: TIME2WIN_ADAPTER, useClass: HttpTime2winAdapter },
     AuthService,

@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { PrismaService } from "./prisma.service.js";
 import { TIME2WIN_ADAPTER, type Time2winAdapter } from "./time2win.adapter.js";
+import { EventRecordRetrieval } from "./event-record-retrieval.js";
 
 @Injectable()
 export class Time2winService implements OnModuleInit, OnModuleDestroy {
@@ -8,6 +9,7 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly records: EventRecordRetrieval,
     @Inject(TIME2WIN_ADAPTER) private readonly time2win: Time2winAdapter,
   ) {}
 
@@ -29,7 +31,7 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
           total === null || race.participantCount === null ? null : total + race.participantCount,
         0,
       );
-      const updated = await this.prisma.event.update({
+      await this.prisma.event.update({
         where: { id },
         data: {
           participantCurrent,
@@ -38,41 +40,19 @@ export class Time2winService implements OnModuleInit, OnModuleDestroy {
           time2winLastSuccessAt: new Date(),
           time2winLastError: null,
         },
-        include: {
-          organizer: true,
-          sport: true,
-          contacts: { include: { contact: true } },
-          payoutRecipient: true,
-          invoiceRecipients: { include: { organizer: true } },
-          tasks: true,
-          files: true,
-          activities: true,
-          communicationMessages: { orderBy: { occurredAt: "desc" } },
-        },
       });
-      return { kind: "synced" as const, event: updated };
+      return { kind: "synced" as const, event: await this.records.read(id) };
     } catch (error) {
-      const updated = await this.prisma.event.update({
+      await this.prisma.event.update({
         where: { id },
         data: {
           time2winSyncStatus: "ERROR",
           time2winLastError: error instanceof Error ? error.message : "TIME2WIN_SYNC_FAILED",
         },
-        include: {
-          organizer: true,
-          sport: true,
-          contacts: { include: { contact: true } },
-          payoutRecipient: true,
-          invoiceRecipients: { include: { organizer: true } },
-          tasks: true,
-          files: true,
-          activities: true,
-          communicationMessages: { orderBy: { occurredAt: "desc" } },
-        },
       });
       return {
         kind: "failed" as const,
-        event: updated,
+        event: await this.records.read(id),
         error: error instanceof Error ? error.message : "TIME2WIN_SYNC_FAILED",
       };
     }

@@ -8,11 +8,9 @@ import type { OutlookGraphClient } from "./outlook.types.js";
 describe("EventCommunicationHub", () => {
   it("synchronizes an Event folder idempotently and returns the refreshed Event", async () => {
     const repository: EventCommunicationRepository = {
-      source: vi.fn().mockResolvedValue({ mailbox: "info@time2win.at", folderId: "event-folder" }),
+      start: vi.fn().mockResolvedValue({ mailbox: "info@time2win.at", folderId: "event-folder" }),
       conflictingConversationIds: vi.fn().mockResolvedValue([]),
-      begin: vi.fn(),
-      store: vi.fn(),
-      succeed: vi.fn().mockResolvedValue({ id: "event-1", outlookMessageSyncStatus: "SUCCESS" }),
+      complete: vi.fn().mockResolvedValue({ id: "event-1", outlookMessageSyncStatus: "SUCCESS" }),
       fail: vi.fn(),
     };
     const graph: OutlookGraphClient = {
@@ -36,17 +34,24 @@ describe("EventCommunicationHub", () => {
 
     const result = await new EventCommunicationHub(repository, graph).syncEvent("event-1");
 
-    expect(repository.store).toHaveBeenCalledWith("event-1", [
-      expect.objectContaining({
-        externalId: "mail-1",
-        direction: "INCOMING",
-        author: "Eva Beispiel <eva@example.at>",
-        subject: "Startzeit bestätigt",
-        preview: "Der Start bleibt um 09:00 Uhr.",
-        hasAttachments: true,
-      }),
-    ]);
-    expect(result).toEqual({ id: "event-1", outlookMessageSyncStatus: "SUCCESS" });
+    expect(repository.complete).toHaveBeenCalledWith(
+      "event-1",
+      [
+        expect.objectContaining({
+          externalId: "mail-1",
+          direction: "INCOMING",
+          author: "Eva Beispiel <eva@example.at>",
+          subject: "Startzeit bestätigt",
+          preview: "Der Start bleibt um 09:00 Uhr.",
+          hasAttachments: true,
+        }),
+      ],
+      expect.any(Date),
+    );
+    expect(result).toMatchObject({
+      kind: "synced",
+      event: { id: "event-1", outlookMessageSyncStatus: "SUCCESS" },
+    });
   });
 
   it("moves unambiguous sent replies into the Event folder before persisting", async () => {
@@ -71,11 +76,9 @@ describe("EventCommunicationHub", () => {
       },
     ];
     const repository: EventCommunicationRepository = {
-      source: vi.fn().mockResolvedValue({ mailbox: "info@time2win.at", folderId: "event-folder" }),
+      start: vi.fn().mockResolvedValue({ mailbox: "info@time2win.at", folderId: "event-folder" }),
       conflictingConversationIds: vi.fn().mockResolvedValue([]),
-      begin: vi.fn(),
-      store: vi.fn(),
-      succeed: vi.fn().mockResolvedValue({ id: "event-1" }),
+      complete: vi.fn().mockResolvedValue({ id: "event-1" }),
       fail: vi.fn(),
     };
     const graph: OutlookGraphClient = {
@@ -107,21 +110,20 @@ describe("EventCommunicationHub", () => {
       "sent-reply-1",
       "event-folder",
     );
-    expect(repository.store).toHaveBeenCalledWith(
+    expect(repository.complete).toHaveBeenCalledWith(
       "event-1",
       expect.arrayContaining([
         expect.objectContaining({ externalId: "moved-reply-1", direction: "OUTGOING" }),
       ]),
+      expect.any(Date),
     );
   });
 
   it("does not move sent replies when the conversation belongs to another Event too", async () => {
     const repository: EventCommunicationRepository = {
-      source: vi.fn().mockResolvedValue({ mailbox: "info@time2win.at", folderId: "event-folder" }),
+      start: vi.fn().mockResolvedValue({ mailbox: "info@time2win.at", folderId: "event-folder" }),
       conflictingConversationIds: vi.fn().mockResolvedValue(["conversation-1"]),
-      begin: vi.fn(),
-      store: vi.fn(),
-      succeed: vi.fn().mockResolvedValue({ id: "event-1" }),
+      complete: vi.fn().mockResolvedValue({ id: "event-1" }),
       fail: vi.fn(),
     };
     const graph: OutlookGraphClient = {

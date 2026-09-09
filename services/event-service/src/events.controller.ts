@@ -23,11 +23,11 @@ import {
   Min,
 } from "class-validator";
 import { EventStatus } from "@prisma/client";
-import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
 import { EventMutationConflict, EventMutations } from "./event-mutations.js";
 import { Time2winService } from "./time2win.service.js";
 import { EventCommunicationHub } from "./outlook/event-communication.hub.js";
+import { EventRecordRetrieval } from "./event-record-retrieval.js";
 
 export class CreateEventDto {
   @IsOptional() @IsString() eventCode?: string;
@@ -63,7 +63,7 @@ class CopyEventDto {
 @Controller("api/v1/events")
 export class EventsController {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly records: EventRecordRetrieval,
     private readonly outlookFolders: OutlookFolderService,
     private readonly eventMutations: EventMutations,
     private readonly time2win: Time2winService,
@@ -92,52 +92,11 @@ export class EventsController {
   list(@Query("q") q?: string, @Query("limit") limit = "200", @Query("offset") offset = "0") {
     const take = Math.min(Math.max(Number(limit) || 200, 1), 1000);
     const skip = Math.max(Number(offset) || 0, 0);
-    return this.prisma.event.findMany({
-      where: {
-        archived: false,
-        ...(q
-          ? {
-              OR: [
-                { name: { contains: q, mode: "insensitive" } },
-                { eventCode: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { startAt: "asc" },
-      skip,
-      take,
-      include: {
-        organizer: true,
-        sport: true,
-        contacts: { include: { contact: true } },
-        payoutRecipient: true,
-        invoiceRecipients: { include: { organizer: true } },
-        tasks: true,
-        files: true,
-        activities: true,
-        communicationMessages: { orderBy: { occurredAt: "desc" } },
-        services: { include: { service: true } },
-      },
-    });
+    return this.records.list({ q, skip, take });
   }
 
   @Get(":id") get(@Param("id", ParseUUIDPipe) id: string) {
-    return this.prisma.event.findUniqueOrThrow({
-      where: { id },
-      include: {
-        organizer: true,
-        sport: true,
-        contacts: { include: { contact: true } },
-        payoutRecipient: true,
-        invoiceRecipients: { include: { organizer: true } },
-        tasks: true,
-        files: true,
-        activities: true,
-        communicationMessages: { orderBy: { occurredAt: "desc" } },
-        services: { include: { service: true } },
-      },
-    });
+    return this.records.read(id);
   }
 
   @Post()

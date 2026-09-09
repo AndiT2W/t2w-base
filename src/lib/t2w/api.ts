@@ -526,7 +526,13 @@ export async function apiSyncOutlookMessages(id: string) {
     credentials: "include",
   });
   if (!response.ok) throw new Error("OUTLOOK_MESSAGE_SYNC_FAILED");
-  return mapApiEvent((await response.json()) as ApiEvent);
+  const outcome = (await response.json()) as
+    | ApiEvent
+    | { kind: "synced"; event: ApiEvent }
+    | { kind: "failed"; event: ApiEvent; error: string };
+  if (!("kind" in outcome)) return mapApiEvent(outcome);
+  if (outcome.kind === "failed") throw new Error(outcome.error);
+  return mapApiEvent(outcome.event);
 }
 
 export async function apiSyncTime2win(id: string) {
