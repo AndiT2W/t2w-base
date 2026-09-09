@@ -212,6 +212,7 @@ export function servicePresentation(service: {
     service.color && service.color in colorClasses ? (service.color as ColorKey) : fallback.color;
   return { Icon: icons[icon], className: colorClasses[color], icon, color };
 }
+export const selectionPresentation = servicePresentation;
 export function ServiceBadge({
   name,
   icon,
@@ -221,7 +222,11 @@ export function ServiceBadge({
   icon?: string | null;
   color?: string | null;
 }) {
-  const presentation = servicePresentation({ name, icon, color });
+  const presentation = servicePresentation({
+    name,
+    ...(icon === undefined ? {} : { icon }),
+    ...(color === undefined ? {} : { color }),
+  });
   const Icon = presentation.Icon;
   return (
     <Badge className={`gap-1.5 border ${presentation.className}`} variant="outline">
@@ -230,3 +235,5 @@ export function ServiceBadge({
     </Badge>
   );
 }
+
+export const SelectionBadge = ServiceBadge;

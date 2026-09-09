@@ -349,7 +349,7 @@ export async function apiCreateEvent(input: {
   });
 }
 
-export type ApiSport = { id: string; name: string };
+export type ApiSport = { id: string; name: string; active?: boolean; icon?: string | null; color?: string | null };
 export async function apiSports(): Promise<ApiSport[]> {
   const response = await fetch("/api/v1/sports", { credentials: "include" });
   if (!response.ok) throw new Error("Sportarten konnten nicht geladen werden");
@@ -370,7 +370,7 @@ export async function apiCreateSport(name: string) {
   if (!response.ok) throw new Error("Sportart konnte nicht angelegt werden");
   return response.json() as Promise<ApiSport & { active: boolean }>;
 }
-export async function apiUpdateSport(id: string, patch: { name?: string; active?: boolean }) {
+export async function apiUpdateSport(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null }) {
   const response = await fetch(`/api/v1/sports/${id}`, {
     method: "PATCH",
     credentials: "include",
@@ -415,7 +415,7 @@ export async function apiUpdateService(
   if (!response.ok) throw new Error("Service konnte nicht gespeichert werden");
   return response.json() as Promise<ApiService>;
 }
-export type ApiEventRole = { id: string; name: string; active: boolean };
+export type ApiEventRole = { id: string; name: string; active: boolean; icon?: string | null; color?: string | null };
 export async function apiEventRoles(): Promise<ApiEventRole[]> {
   const response = await fetch("/api/v1/event-roles", { credentials: "include" });
   if (!response.ok) throw new Error("Eventrollen konnten nicht geladen werden");
@@ -438,7 +438,7 @@ export async function apiCreateEventRole(name: string) {
   if (!response.ok) throw new Error("Eventrolle konnte nicht angelegt werden");
   return response.json() as Promise<ApiEventRole>;
 }
-export async function apiUpdateEventRole(id: string, patch: { name?: string; active?: boolean }) {
+export async function apiUpdateEventRole(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null }) {
   const response = await fetch(`/api/v1/event-roles/${id}`, {
     method: "PATCH",
     credentials: "include",

@@ -18,9 +18,11 @@ import { useT2W } from "@/lib/t2w/store";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import {
   ServiceBadge,
+  SelectionBadge,
   SERVICE_COLOR_OPTIONS,
   SERVICE_ICON_OPTIONS,
   servicePresentation,
+  selectionPresentation,
 } from "@/components/t2w/ServiceBadge";
 import { apiOutlookStatus } from "@/lib/t2w/api";
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
@@ -68,7 +70,7 @@ function Einstellungen() {
   const [newEventRole, setNewEventRole] = useState("");
   const services = selectionLists.services;
   const [newService, setNewService] = useState("");
-  const [presentationServiceId, setPresentationServiceId] = useState<string | null>(null);
+  const [presentation, setPresentation] = useState<{ kind: "sports" | "eventRoles" | "services"; id: string } | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
     workspace.subscribe,
     workspace.snapshot,
@@ -86,7 +88,7 @@ function Einstellungen() {
   const setSites = (next: typeof sites | ((current: typeof sites) => typeof sites)) =>
     workspace.update({ jahresSites: typeof next === "function" ? next(sites) : next });
   const setMailbox = (next: string) => workspace.update({ outlookMailbox: next });
-  const presentationService = services.find((service) => service.id === presentationServiceId);
+  const presentationValue = presentation ? selectionLists[presentation.kind].find((value) => value.id === presentation.id) : undefined;
 
   useEffect(() => {
     workspace.acceptLoaded(settings);
@@ -102,7 +104,7 @@ function Einstellungen() {
       toast.error("Sportart konnte nicht angelegt werden.");
     }
   }
-  async function saveSport(id: string, patch: { name?: string; active?: boolean }) {
+  async function saveSport(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null }) {
     try {
       await updateSelectionValue("sports", id, patch);
       toast.success("Sportart gespeichert.");
@@ -121,13 +123,18 @@ function Einstellungen() {
       toast.error("Eventrolle konnte nicht angelegt werden.");
     }
   }
-  async function saveEventRole(id: string, patch: { name?: string; active?: boolean }) {
+  async function saveEventRole(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null }) {
     try {
       await updateSelectionValue("eventRoles", id, patch);
       toast.success("Eventrolle gespeichert.");
     } catch {
       toast.error("Eventrolle konnte nicht gespeichert werden.");
     }
+  }
+  async function savePresentation(patch: { icon?: string | null; color?: string | null }) {
+    if (!presentation) return;
+    const save = presentation.kind === "sports" ? saveSport : presentation.kind === "eventRoles" ? saveEventRole : saveService;
+    await save(presentation.id, patch);
   }
   async function addService() {
     const name = newService.trim();
@@ -306,7 +313,8 @@ function Einstellungen() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {sports.map((sport) => (
-                        <div key={sport.id} className="flex items-center gap-2">
+                        <div key={sport.id} className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center">
+                          <span aria-label={`Sportartvorschau: ${sport.name}`} className="flex min-w-0 items-center"><SelectionBadge {...sport} /></span>
                           <Input
                             aria-label={`Sportart ${sport.name}`}
                             defaultValue={sport.name}
@@ -315,6 +323,9 @@ function Einstellungen() {
                               if (name && name !== sport.name) void saveSport(sport.id, { name });
                             }}
                           />
+                          <Button type="button" variant="outline" aria-label={`Darstellung für Sportart ${sport.name}`} onClick={() => setPresentation({ kind: "sports", id: sport.id })}>
+                            <span className={`size-3 rounded-full border ${selectionPresentation(sport).className}`} aria-hidden="true" /> Darstellung
+                          </Button>
                           <Button
                             type="button"
                             variant={sport.active ? "outline" : "secondary"}
@@ -377,7 +388,7 @@ function Einstellungen() {
                             variant="outline"
                             className="justify-start"
                             aria-label={`Darstellung für Service ${service.name}`}
-                            onClick={() => setPresentationServiceId(service.id)}
+                            onClick={() => setPresentation({ kind: "services", id: service.id })}
                           >
                             <span
                               className={`size-3 rounded-full border ${servicePresentation(service).className}`}
@@ -412,14 +423,14 @@ function Einstellungen() {
                   </Card>
                 )}
                 <Dialog
-                  open={presentationService !== undefined}
-                  onOpenChange={(open) => !open && setPresentationServiceId(null)}
+                  open={presentationValue !== undefined}
+                  onOpenChange={(open) => !open && setPresentation(null)}
                 >
                   <DialogContent className="max-w-2xl">
-                    {presentationService && (
+                    {presentationValue && presentation && (
                       <>
                         <DialogHeader>
-                          <DialogTitle>Darstellung: {presentationService.name}</DialogTitle>
+                          <DialogTitle>Darstellung: {presentationValue.name}</DialogTitle>
                           <DialogDescription>
                             Symbol und Farbe direkt visuell auswählen.
                           </DialogDescription>
@@ -431,12 +442,12 @@ function Einstellungen() {
                             </h3>
                             <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
                               {SERVICE_ICON_OPTIONS.map((option) => {
-                                const Icon = servicePresentation({
-                                  name: presentationService.name,
+                                const Icon = selectionPresentation({
+                                  name: presentationValue.name,
                                   icon: option.value,
                                 }).Icon;
                                 const selected =
-                                  servicePresentation(presentationService).icon === option.value;
+                                  selectionPresentation(presentationValue).icon === option.value;
                                 return (
                                   <button
                                     key={option.value}
@@ -446,9 +457,7 @@ function Einstellungen() {
                                     title={option.label}
                                     className={`grid min-h-11 place-items-center rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary bg-primary/10 text-primary" : "border-border"}`}
                                     onClick={() =>
-                                      void saveService(presentationService.id, {
-                                        icon: option.value,
-                                      })
+                                      void savePresentation({ icon: option.value })
                                     }
                                   >
                                     <Icon className="size-5" aria-hidden="true" />
@@ -464,7 +473,7 @@ function Einstellungen() {
                             <div className="flex flex-wrap gap-2">
                               {SERVICE_COLOR_OPTIONS.map((option) => {
                                 const selected =
-                                  servicePresentation(presentationService).color === option.value;
+                                  selectionPresentation(presentationValue).color === option.value;
                                 return (
                                   <button
                                     key={option.value}
@@ -474,13 +483,11 @@ function Einstellungen() {
                                     title={option.label}
                                     className={`size-11 rounded-full border-2 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary" : "border-transparent"}`}
                                     onClick={() =>
-                                      void saveService(presentationService.id, {
-                                        color: option.value,
-                                      })
+                                      void savePresentation({ color: option.value })
                                     }
                                   >
                                     <span
-                                      className={`block size-full rounded-full border ${servicePresentation({ name: presentationService.name, color: option.value }).className}`}
+                                      className={`block size-full rounded-full border ${selectionPresentation({ name: presentationValue.name, color: option.value }).className}`}
                                       aria-hidden="true"
                                     />
                                   </button>
@@ -503,7 +510,8 @@ function Einstellungen() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {eventRoles.map((role) => (
-                        <div key={role.id} className="flex items-center gap-2">
+                        <div key={role.id} className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center">
+                          <span aria-label={`Eventrollenvorschau: ${role.name}`} className="flex min-w-0 items-center"><SelectionBadge {...role} /></span>
                           <Input
                             aria-label={`Eventrolle ${role.name}`}
                             defaultValue={role.name}
@@ -512,6 +520,9 @@ function Einstellungen() {
                               if (name && name !== role.name) void saveEventRole(role.id, { name });
                             }}
                           />
+                          <Button type="button" variant="outline" aria-label={`Darstellung für Eventrolle ${role.name}`} onClick={() => setPresentation({ kind: "eventRoles", id: role.id })}>
+                            <span className={`size-3 rounded-full border ${selectionPresentation(role).className}`} aria-hidden="true" /> Darstellung
+                          </Button>
                           <Button
                             type="button"
                             variant={role.active ? "outline" : "secondary"}

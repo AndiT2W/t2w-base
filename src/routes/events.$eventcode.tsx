@@ -71,7 +71,7 @@ import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
-import { ServiceBadge } from "@/components/t2w/ServiceBadge";
+import { ServiceBadge, SelectionBadge } from "@/components/t2w/ServiceBadge";
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
   const address = [
@@ -624,7 +624,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       <SelectContent>
                         {sportarten.map((sport) => (
                           <SelectItem key={sport.id} value={sport.id}>
-                            {sport.name}
+                            <SelectionBadge {...sport} />
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1165,7 +1165,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       {eventContactRoleChoices(selectionLists.eventRoles, detail.contactRole).map(
                         (role) => (
                           <SelectItem key={role} value={role}>
-                            {role}
+                            <SelectionBadge {...(selectionLists.eventRoles.find((item) => item.name === role) ?? { name: role })} />
                           </SelectItem>
                         ),
                       )}
@@ -1214,7 +1214,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 {eventContactRoleChoices(selectionLists.eventRoles, k.rolle).map(
                                   (role) => (
                                     <SelectItem key={role} value={role}>
-                                      {role}
+                                      <SelectionBadge {...(selectionLists.eventRoles.find((item) => item.name === role) ?? { name: role })} />
                                     </SelectItem>
                                   ),
                                 )}

@@ -6,15 +6,21 @@ test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }
   await page.goto("/einstellungen?tab=auswahllisten&liste=sportarten");
   await expect(page.getByRole("link", { name: "Auswahllisten", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Sportarten", exact: true })).toBeVisible();
-  await expect(page.getByLabel("Sportart Triathlon")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Sportart Triathlon" })).toBeVisible();
+  await expect(page.getByLabel("Sportartvorschau: Triathlon")).toContainText("Triathlon");
+  await page.getByRole("button", { name: "Darstellung für Sportart Triathlon" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Kamera" }).click();
+  await expect(page.getByText("Sportart gespeichert.").last()).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.getByLabel("Neue Sportart").fill("Radfahren");
   await page.getByRole("button", { name: "Hinzufügen" }).first().click();
   await expect(page.getByText("Sportart angelegt.")).toBeVisible();
-  await expect(page.getByLabel("Sportart Radfahren")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Sportart Radfahren" })).toBeVisible();
   await page.getByRole("button", { name: "Deaktivieren" }).first().click();
   await expect(page.getByRole("button", { name: "Aktivieren" }).first()).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel("Sportart Radfahren")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Sportart Radfahren" })).toBeVisible();
 });
 
 test("pflegt Services in den Auswahllisten und speichert mehrere Services beim Event", async ({
@@ -72,11 +78,17 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
 test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page }) => {
   await mockApi(page);
   await page.goto("/einstellungen?tab=auswahllisten&liste=eventrollen");
-  await expect(page.getByLabel("Eventrolle Anmeldung")).toBeVisible();
-  await expect(page.getByLabel("Eventrolle Finanz")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Eventrolle Anmeldung" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Eventrolle Finanz" })).toBeVisible();
+  await expect(page.getByLabel("Eventrollenvorschau: Anmeldung")).toContainText("Anmeldung");
+  await page.getByRole("button", { name: "Darstellung für Eventrolle Anmeldung" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Rot" }).click();
+  await expect(page.getByText("Eventrolle gespeichert.").last()).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.getByLabel("Neue Eventrolle").fill("Presse");
   await page.getByRole("button", { name: "Hinzufügen" }).last().click();
-  await expect(page.getByLabel("Eventrolle Presse")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Eventrolle Presse" })).toBeVisible();
   await page.goto("/events/260820_demo_event");
   await page.getByRole("tab", { name: "KONTAKTE" }).click();
   await page.getByLabel("Eventrolle").click();

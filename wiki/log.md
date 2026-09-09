@@ -408,4 +408,9 @@
 
 - 2026-09-09: 18 aktuelle ClickUp-Hardwaredatensätze mit Status `BENACHRICHTIGT` in die Produktionsdatenbank importiert; `eventId` bleibt bei allen Datensätzen `NULL`.
 
+# 2026-09-09
+
+- Variante E der Einstellungsnavigation in `t2w-base` umgesetzt: aufgeklappter Einstellungen-Bereich im globalen Sidebar-Menü; Auswahllisten-Kategorien als Segmente im Inhaltsbereich. Build und Browser-Regressionstest für Sportarten erfolgreich.
 - 2026-09-09: Die Eventdetail-Stammdaten wurden im bestehenden TIME2WIN-Stil verdichtet: Eventname über die volle Breite, darunter zwei fachlich gruppierte Spalten mit Inline-Labels am Desktop; Services/Status, Archivierung und Notizen bleiben vollständig erhalten. Ein Browser-E2E-Test sichert Gruppierung und Desktop-Raster ab. Quelle: Nutzerentscheidung für Layoutvariante B vom 2026-09-09 und `src/routes/events.$eventcode.tsx`.
+- 2026-09-09: Die Archivierung steht nun als kompakter Schalter direkt beim Eventnamen; der Hinweis „Archivierte Events erscheinen nur im Archivfilter.“ bleibt sichtbar. Ein Browser-E2E-Test sichert die Desktop-Position und den Hinweis. Quelle: Nutzeranfrage vom 2026-09-09 und `src/routes/events.$eventcode.tsx`.
+- 2026-09-09: Sportarten und Eventrollen unterstützen nun wie Services eine persistierte Symbol-/Farbdarstellung. Einstellungen bieten Vorschau und Auswahl; die Darstellung wird auch in den Event-Auswahllisten verwendet. Quelle: Nutzeranfrage vom 2026-09-09, `src/components/t2w/ServiceBadge.tsx`, `services/event-service/prisma/migrations/0019_selection_list_presentation/migration.sql`.

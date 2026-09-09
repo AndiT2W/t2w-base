@@ -1,0 +1,4 @@
+ALTER TABLE "Sport" ADD COLUMN "icon" TEXT;
+ALTER TABLE "Sport" ADD COLUMN "color" TEXT;
+ALTER TABLE "EventRoleOption" ADD COLUMN "icon" TEXT;
+ALTER TABLE "EventRoleOption" ADD COLUMN "color" TEXT;

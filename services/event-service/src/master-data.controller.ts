@@ -98,7 +98,7 @@ export class MasterDataController {
   }
   @Patch("sports/:id") updateSport(
     @Param("id", ParseUUIDPipe) id: string,
-    @Body() body: { name?: string; active?: boolean },
+    @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
     return this.selectionLists.update("sports", id, body);
   }
@@ -127,7 +127,7 @@ export class MasterDataController {
   }
   @Patch("event-roles/:id") updateEventRole(
     @Param("id", ParseUUIDPipe) id: string,
-    @Body() body: { name?: string; active?: boolean },
+    @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
     return this.selectionLists.update("eventRoles", id, body);
   }
