@@ -284,6 +284,11 @@ export function createEventWorkspace<TEvent extends EventRecord>(
       collection = [...events];
       publish();
     },
+    apply(events: TEvent[]) {
+      const byId = new Map(events.map((event) => [event.id, event]));
+      collection = collection.map((event) => byId.get(event.id) ?? event);
+      publish();
+    },
     async create(input: CreateEventInput<TEvent>): Promise<TEvent> {
       const event = await transport.create({
         name: input.name,

@@ -215,4 +215,18 @@ describe("Event mutation module", () => {
       activities: [],
     });
   });
+
+  it("links an existing Event to another Event's series and can remove it again", async () => {
+    const persistence = adapter();
+    persistence.events.set("e1", { id: "e1", version: 1, name: "Race 2026" });
+    persistence.events.set("e2", { id: "e2", version: 3, name: "Race 2027" });
+    const mutations = new EventMutations(persistence);
+
+    const linked = await mutations.updateSeries("e1", { targetEventId: "e2", version: 1 });
+    expect(linked).toHaveLength(2);
+    expect(persistence.events.get("e1")?.seriesId).toBe(persistence.events.get("e2")?.seriesId);
+
+    await mutations.updateSeries("e1", { version: 2 });
+    expect(persistence.events.get("e1")?.seriesId).toBeNull();
+  });
 });

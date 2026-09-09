@@ -55,6 +55,14 @@ export async function mockEventManagementApi(
 ) {
   const requests: { method: string; url: string; body?: string }[] = [];
   let mockedEvent = { ...event, ...eventOverride };
+  let relatedEvent = {
+    ...event,
+    id: "33333333-3333-4333-8333-333333333333",
+    eventCode: "270821_demo_event",
+    name: "Folgetermin",
+    startAt: "2027-08-21T00:00:00.000Z",
+    endAt: "2027-08-21T00:00:00.000Z",
+  };
   let copiedEvents: (typeof mockedEvent)[] = [];
   let settings = {
     outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }],
@@ -196,7 +204,7 @@ export async function mockEventManagementApi(
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([mockedEvent, ...copiedEvents]),
+        body: JSON.stringify([mockedEvent, relatedEvent, ...copiedEvents]),
       });
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
@@ -325,6 +333,19 @@ export async function mockEventManagementApi(
     }
     if (request.method() === "PATCH") {
       const body = JSON.parse(request.postData() ?? "{}");
+      if (request.url().endsWith("/series")) {
+        const targetSeriesId = relatedEvent.seriesId ?? "series-1";
+        relatedEvent = { ...relatedEvent, seriesId: targetSeriesId };
+        mockedEvent = {
+          ...mockedEvent,
+          seriesId: body.targetEventId ? targetSeriesId : null,
+          version: (mockedEvent.version ?? 0) + 1,
+        };
+        return route.fulfill({
+          status: 200,
+          json: body.targetEventId ? [mockedEvent, relatedEvent] : [mockedEvent],
+        });
+      }
       const eventContact = request.url().match(/\/events\/[^/]+\/contacts\/([^/]+)\/([^/?]+)$/);
       if (eventContact) {
         const contactId = eventContact[1];

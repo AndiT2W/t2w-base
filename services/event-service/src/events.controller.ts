@@ -19,6 +19,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   Min,
 } from "class-validator";
@@ -56,6 +57,10 @@ class CopyEventDto {
   @IsDateString() startAt!: string;
   @IsDateString() endAt!: string;
   @IsOptional() @IsBoolean() createRelationship?: boolean;
+  @IsOptional() @IsInt() version?: number;
+}
+class EventSeriesDto {
+  @IsOptional() @IsUUID() targetEventId?: string;
   @IsOptional() @IsInt() version?: number;
 }
 
@@ -117,6 +122,15 @@ export class EventsController {
     @Body() dto: Partial<CreateEventDto> & { version?: number },
   ) {
     return this.eventMutations.update(id, dto).catch((error: unknown) => {
+      if (error instanceof EventMutationConflict)
+        throw new ConflictException("EVENT_VERSION_CONFLICT");
+      throw error;
+    });
+  }
+
+  @Patch(":id/series")
+  updateSeries(@Param("id", ParseUUIDPipe) id: string, @Body() dto: EventSeriesDto) {
+    return this.eventMutations.updateSeries(id, dto).catch((error: unknown) => {
       if (error instanceof EventMutationConflict)
         throw new ConflictException("EVENT_VERSION_CONFLICT");
       throw error;

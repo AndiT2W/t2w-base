@@ -30,6 +30,10 @@ export type CopyEventMutation = {
   createRelationship: boolean;
   version?: number;
 };
+export type EventSeriesMutation = {
+  targetEventId?: string;
+  version?: number;
+};
 export type EventMutationRecord = Record<string, unknown>;
 
 export interface EventMutationAdapter {
@@ -111,6 +115,41 @@ export class EventMutations {
 
   copy(sourceId: string, input: CopyEventMutation) {
     return this.persistence.transaction((adapter) => adapter.copyEvent(sourceId, input));
+  }
+
+  updateSeries(id: string, input: EventSeriesMutation) {
+    return this.persistence.transaction(async (adapter) => {
+      const current = await adapter.getEvent(id);
+      if (!current) throw new EventMutationConflict();
+      if (!input.targetEventId) {
+        if (!(await adapter.updateEvent(id, input.version, { seriesId: null })))
+          throw new EventMutationConflict();
+        const event = await adapter.getEvent(id);
+        if (!event) throw new EventMutationConflict();
+        return [event];
+      }
+      if (input.targetEventId === id) return [current];
+      const target = await adapter.getEvent(input.targetEventId);
+      if (!target) throw new Error("SERIES_TARGET_NOT_FOUND");
+      const targetSeriesId = (target.seriesId as string | null | undefined) ?? crypto.randomUUID();
+      const updatedEvents: EventMutationRecord[] = [];
+      if (!target.seriesId) {
+        if (
+          !(await adapter.updateEvent(input.targetEventId, target.version as number | undefined, {
+            seriesId: targetSeriesId,
+          }))
+        )
+          throw new EventMutationConflict();
+        const updatedTarget = await adapter.getEvent(input.targetEventId);
+        if (!updatedTarget) throw new EventMutationConflict();
+        updatedEvents.push(updatedTarget);
+      }
+      if (!(await adapter.updateEvent(id, input.version, { seriesId: targetSeriesId })))
+        throw new EventMutationConflict();
+      const event = await adapter.getEvent(id);
+      if (!event) throw new EventMutationConflict();
+      return [event, ...updatedEvents];
+    });
   }
 
   update(id: string, input: UpdateEventMutation) {

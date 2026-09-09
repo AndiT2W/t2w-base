@@ -68,6 +68,7 @@ import {
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
+import { apiUpdateEventSeries } from "@/lib/t2w/api";
 import { useCrm } from "@/lib/crm/store";
 import { eventContactRoleChoices, selectionListChoices } from "@/lib/t2w/selection-list-workspace";
 import { useI18n } from "@/lib/i18n";
@@ -253,7 +254,8 @@ function EventDetail() {
 }
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
-  const { openEventSession, settings, selectionLists, events, kopiereEvent } = useT2W();
+  const { openEventSession, settings, selectionLists, events, kopiereEvent, uebernehmeEvents } =
+    useT2W();
   const { personen, kunden, neuLaden } = useCrm();
   const { t } = useI18n();
   const [detailWorkspace] = useState(() =>
@@ -271,6 +273,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const { form } = detail;
   const [quartalsDialog, setQuartalsDialog] = useState(false);
   const [copyDialog, setCopyDialog] = useState(false);
+  const [seriesDialog, setSeriesDialog] = useState(false);
+  const [seriesTargetEventId, setSeriesTargetEventId] = useState("");
   const initialCopy = copyDateSuggestion(event.start, event.ende);
   const [copyStart, setCopyStart] = useState(initialCopy.start);
   const [copyEnde, setCopyEnde] = useState(initialCopy.ende);
@@ -409,6 +413,25 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       toast.error("Event konnte nicht kopiert werden. Der Eventcode muss eindeutig sein.");
     }
   }
+  const seriesCandidates = events
+    .filter((item) => item.id !== event.id)
+    .sort((left, right) => left.start.localeCompare(right.start));
+  async function updateSeries(targetEventId?: string) {
+    try {
+      const changed = await apiUpdateEventSeries(event.id, {
+        ...(targetEventId ? { targetEventId } : {}),
+        version: form.version,
+      });
+      uebernehmeEvents(changed);
+      const updated = changed.find((item) => item.id === event.id);
+      if (updated) detailWorkspace.accept(updated, personen, kunden);
+      setSeriesDialog(false);
+      setSeriesTargetEventId("");
+      toast.success(targetEventId ? "Eventserie gespeichert." : "Event aus der Serie entfernt.");
+    } catch {
+      toast.error("Eventserie konnte nicht gespeichert werden. Bitte neu laden.");
+    }
+  }
   const seriesEvents = form.seriesId
     ? events
         .filter((item) => item.seriesId === form.seriesId)
@@ -507,6 +530,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setSeriesDialog(true)}>
+            Eventserie verwalten
+          </Button>
           <Button variant="outline" onClick={() => setCopyDialog(true)}>
             Event kopieren
           </Button>
@@ -1892,6 +1918,59 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               }}
             >
               Kopie speichern
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={seriesDialog} onOpenChange={setSeriesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eventserie verwalten</AlertDialogTitle>
+            <AlertDialogDescription>
+              Verknüpfen Sie dieses Event mit einem bestehenden Termin. Es werden nur die
+              Serienbeziehung und keine Eventdaten, Dateien oder TIME2WIN-Verknüpfungen geändert.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-3">
+            <div>
+              <Label htmlFor="series-target">Mit Event verknüpfen</Label>
+              <select
+                id="series-target"
+                aria-label="Mit Event verknüpfen"
+                className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={seriesTargetEventId}
+                onChange={(e) => setSeriesTargetEventId(e.target.value)}
+              >
+                <option value="">Event auswählen</option>
+                {seriesCandidates.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} · {formatDatum(item.start)} · {item.eventcode}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {form.seriesId && (
+              <p className="text-sm text-muted-foreground">
+                Dieses Event ist aktuell mit {seriesEvents.length - 1} weiteren Termin(en)
+                verknüpft. Eine neue Auswahl verschiebt nur dieses Event in die gewählte Serie.
+              </p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            {form.seriesId && (
+              <Button variant="outline" onClick={() => void updateSeries()}>
+                Aus Serie entfernen
+              </Button>
+            )}
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!seriesTargetEventId}
+              onClick={(e) => {
+                e.preventDefault();
+                void updateSeries(seriesTargetEventId);
+              }}
+            >
+              Verknüpfung speichern
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -577,6 +577,14 @@ export async function apiCopyEvent(
   }).then(mapApiEvent);
 }
 
+export const apiUpdateEventSeries = (
+  id: string,
+  input: { targetEventId?: string; version?: number },
+) =>
+  eventAction<ApiEvent[]>(`/api/v1/events/${id}/series`, "PATCH", input).then((events) =>
+    events.map(mapApiEvent),
+  );
+
 /** The HTTP adapter for the Event workspace seam. */
 export function createHttpEventTransport(): EventTransport<T2WEvent> {
   return {

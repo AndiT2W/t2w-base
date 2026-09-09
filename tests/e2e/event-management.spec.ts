@@ -134,6 +134,31 @@ test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) =>
   await expect(page.locator("table").getByText("Alter Veranstalter")).toBeVisible();
 });
 
+test("verknüpft ein bestehendes Event nachträglich mit einer Eventserie und behält sie nach Reload", async ({
+  page,
+}) => {
+  const requests = await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("button", { name: "Eventserie verwalten" }).click();
+  await page
+    .getByLabel("Mit Event verknüpfen")
+    .selectOption("33333333-3333-4333-8333-333333333333");
+  await page.getByRole("button", { name: "Verknüpfung speichern" }).click();
+  await expect(page.getByText("Eventserie gespeichert.")).toBeVisible();
+  await expect(page.getByTestId("event-series-navigation")).toContainText("Folgetermin");
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "PATCH" &&
+        request.url.endsWith("/api/v1/events/11111111-1111-4111-8111-111111111111/series") &&
+        request.body?.includes('"targetEventId":"33333333-3333-4333-8333-333333333333"'),
+    ),
+  ).toBeTruthy();
+
+  await page.reload();
+  await expect(page.getByTestId("event-series-navigation")).toContainText("Folgetermin");
+});
+
 test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) => {
   await mockApi(page);
   await page.goto("/veranstaltungen");
