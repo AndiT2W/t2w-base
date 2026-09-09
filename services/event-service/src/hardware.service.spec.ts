@@ -40,12 +40,14 @@ describe("HardwareService inline updates", () => {
       status: current.status,
       dueDate: "2026-09-09",
       note: "Gerät gibt ihn zurück",
+      eventId: null,
     });
 
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           dueDate: expect.any(Date),
+          eventId: null,
           note: "Gerät gibt ihn zurück",
         }),
       }),

@@ -69,6 +69,7 @@ export class HardwareService {
       input.objectName || input.objectNumberType
         ? normalizeHardwareInput({ ...current, ...input })
         : input;
+    const changesEvent = Object.prototype.hasOwnProperty.call(input, "eventId");
     const {
       id: _id,
       eventId: _eventId,
@@ -76,6 +77,7 @@ export class HardwareService {
       updatedAt: _updatedAt,
       ...data
     } = normalizedInput;
+    if (changesEvent) data.eventId = input.eventId || null;
     for (const key of ["issuedAt", "dueDate", "returnedAt"])
       if (data[key]) data[key] = new Date(data[key]);
     if (input.status === "RETURNED" && !data.returnedAt) data.returnedAt = new Date();

@@ -41,8 +41,16 @@ type Hardware = {
 };
 type InlineDraft = Pick<
   Hardware,
-  "recipientName" | "email" | "objectName" | "quantity" | "status" | "dueDate" | "note"
->;
+  | "recipientName"
+  | "email"
+  | "phone"
+  | "issueType"
+  | "objectName"
+  | "quantity"
+  | "status"
+  | "dueDate"
+  | "note"
+> & { eventId: string };
 const labels: Record<string, string> = {
   OPEN: "Offen",
   MAIL_SEND: "Mail senden",
@@ -179,8 +187,11 @@ function HardwarePage() {
     setInlineError(null);
     setInlineEditingId(item.id);
     setInlineDraft({
+      eventId: item.event?.id ?? "none",
       recipientName: item.recipientName,
       email: item.email,
+      phone: item.phone,
+      issueType: item.issueType,
       objectName: item.objectName,
       quantity: item.quantity,
       status: item.status,
@@ -188,8 +199,7 @@ function HardwarePage() {
       note: item.note,
     });
   };
-  const saveInlineEdit = async (item: Hardware, draft = inlineDraft) => {
-    if (!draft) return;
+  const saveInlineEdit = async (item: Hardware, changes: Record<string, unknown>) => {
     setSavingInline(true);
     try {
       const baseUrl = item.event?.id
@@ -199,7 +209,7 @@ function HardwarePage() {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify(changes),
       });
       if (!response.ok) {
         setInlineError("Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.");
@@ -362,6 +372,36 @@ function HardwarePage() {
                     >
                       {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => {
                         const editing = inlineEditingId === i.id && inlineDraft;
+                        if (editing && h === "Event")
+                          return (
+                            <td className="px-2 py-1" key={h}>
+                              <Select
+                                value={inlineDraft.eventId}
+                                onValueChange={(eventId) => {
+                                  setInlineDraft({ ...inlineDraft, eventId });
+                                  void saveInlineEdit(i, {
+                                    eventId: eventId === "none" ? null : eventId,
+                                  });
+                                }}
+                              >
+                                <SelectTrigger
+                                  aria-label="Event bearbeiten"
+                                  className="h-8 min-w-44"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Kein Event zugeordnet</SelectItem>
+                                  {events.map((event) => (
+                                    <SelectItem key={event.id} value={event.id}>
+                                      {event.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                          );
                         if (editing && h === "Empfänger")
                           return (
                             <td className="px-2 py-1" key={h}>
@@ -373,7 +413,11 @@ function HardwarePage() {
                                 onChange={(e) =>
                                   setInlineDraft({ ...inlineDraft, recipientName: e.target.value })
                                 }
-                                onBlur={() => void saveInlineEdit(i)}
+                                onBlur={() =>
+                                  void saveInlineEdit(i, {
+                                    recipientName: inlineDraft.recipientName,
+                                  })
+                                }
                               />
                             </td>
                           );
@@ -389,8 +433,57 @@ function HardwarePage() {
                                 onChange={(e) =>
                                   setInlineDraft({ ...inlineDraft, email: e.target.value })
                                 }
-                                onBlur={() => void saveInlineEdit(i)}
+                                onBlur={() =>
+                                  void saveInlineEdit(i, { email: inlineDraft.email ?? null })
+                                }
                               />
+                            </td>
+                          );
+                        if (editing && h === "Telefon")
+                          return (
+                            <td className="px-2 py-1" key={h}>
+                              <Input
+                                aria-label="Telefon bearbeiten"
+                                className="h-8 min-w-36"
+                                type="tel"
+                                value={inlineDraft.phone ?? ""}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) =>
+                                  setInlineDraft({ ...inlineDraft, phone: e.target.value })
+                                }
+                                onBlur={() =>
+                                  void saveInlineEdit(i, { phone: inlineDraft.phone ?? null })
+                                }
+                              />
+                            </td>
+                          );
+                        if (editing && h === "Art")
+                          return (
+                            <td className="px-2 py-1" key={h}>
+                              <Select
+                                value={inlineDraft.issueType}
+                                onValueChange={(issueType) => {
+                                  setInlineDraft({ ...inlineDraft, issueType });
+                                  void saveInlineEdit(i, { issueType });
+                                }}
+                              >
+                                <SelectTrigger
+                                  aria-label="Art bearbeiten"
+                                  className="h-8 min-w-32"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Object.entries(labels)
+                                    .slice(5)
+                                    .map(([value, label]) => (
+                                      <SelectItem key={value} value={value}>
+                                        {label}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
                             </td>
                           );
                         if (editing && h === "Objekt")
@@ -404,7 +497,9 @@ function HardwarePage() {
                                 onChange={(e) =>
                                   setInlineDraft({ ...inlineDraft, objectName: e.target.value })
                                 }
-                                onBlur={() => void saveInlineEdit(i)}
+                                onBlur={() =>
+                                  void saveInlineEdit(i, { objectName: inlineDraft.objectName })
+                                }
                               />
                             </td>
                           );
@@ -424,7 +519,9 @@ function HardwarePage() {
                                     quantity: Number(e.target.value),
                                   })
                                 }
-                                onBlur={() => void saveInlineEdit(i)}
+                                onBlur={() =>
+                                  void saveInlineEdit(i, { quantity: inlineDraft.quantity })
+                                }
                               />
                             </td>
                           );
@@ -434,9 +531,8 @@ function HardwarePage() {
                               <Select
                                 value={inlineDraft.status}
                                 onValueChange={(status) => {
-                                  const next = { ...inlineDraft, status };
-                                  setInlineDraft(next);
-                                  void saveInlineEdit(i, next);
+                                  setInlineDraft({ ...inlineDraft, status });
+                                  void saveInlineEdit(i, { status });
                                 }}
                               >
                                 <SelectTrigger
@@ -473,7 +569,9 @@ function HardwarePage() {
                                     dueDate: e.target.value || undefined,
                                   })
                                 }
-                                onBlur={() => void saveInlineEdit(i)}
+                                onBlur={() =>
+                                  void saveInlineEdit(i, { dueDate: inlineDraft.dueDate ?? null })
+                                }
                               />
                             </td>
                           );
@@ -488,7 +586,9 @@ function HardwarePage() {
                                 onChange={(e) =>
                                   setInlineDraft({ ...inlineDraft, note: e.target.value })
                                 }
-                                onBlur={() => void saveInlineEdit(i)}
+                                onBlur={() =>
+                                  void saveInlineEdit(i, { note: inlineDraft.note ?? null })
+                                }
                               />
                             </td>
                           );

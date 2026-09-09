@@ -87,9 +87,11 @@ test("shows central hardware cases, filters them, and links to the event", async
   });
   await page.goto("/hardware");
   await expect(page.getByRole("heading", { name: "Hardware" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", {
-    name: "TIME2WIN",
-  })).toHaveAttribute("href", "/");
+  await expect(
+    page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", {
+      name: "TIME2WIN",
+    }),
+  ).toHaveAttribute("href", "/");
   await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await expect(page.getByText("max@example.com")).toBeVisible();
@@ -104,9 +106,24 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.getByLabel("E-Mail bearbeiten").fill("neu@example.com");
   await page.getByLabel("E-Mail bearbeiten").press("Tab");
   await expect.poll(() => lastEventChanges.email).toBe("neu@example.com");
+  await page.getByLabel("Telefon bearbeiten").fill("+43 660 999999");
+  await page.getByLabel("Telefon bearbeiten").press("Tab");
+  await expect.poll(() => lastEventChanges.phone).toBe("+43 660 999999");
+  await page.getByLabel("Art bearbeiten").click();
+  await page.getByRole("option", { name: "Verleih" }).click();
+  await expect.poll(() => lastEventChanges.issueType).toBe("RENTAL");
+  await page.getByLabel("Status bearbeiten").click();
+  await page.getByRole("option", { name: "Offen" }).click();
+  await expect.poll(() => lastEventChanges.status).toBe("OPEN");
+  await page.getByLabel("Fälligkeit bearbeiten").fill("2026-09-30");
+  await page.getByLabel("Fälligkeit bearbeiten").press("Tab");
+  await expect.poll(() => lastEventChanges.dueDate).toBe("2026-09-30");
   await page.getByLabel("Kommentar bearbeiten").fill("Vor Ausgabe vollständig laden");
   await page.getByLabel("Kommentar bearbeiten").press("Tab");
   await expect.poll(() => lastEventChanges.note).toBe("Vor Ausgabe vollständig laden");
+  await page.getByLabel("Event bearbeiten").click();
+  await page.getByRole("option", { name: "Kein Event zugeordnet" }).click();
+  await expect.poll(() => lastEventChanges.eventId).toBeNull();
   const unassignedRow = page.getByRole("row", { name: /Kein Event zugeordnet.*Ohne Event/ });
   await unassignedRow.click();
   await page.getByLabel("Empfänger bearbeiten").fill("Ohne Event aktualisiert");
