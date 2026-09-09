@@ -1,9 +1,20 @@
 export type SelectionListKind = "sports" | "eventRoles" | "services";
-export type SelectionListValue = { id: string; name: string; active: boolean };
+export type SelectionListValue = {
+  id: string;
+  name: string;
+  active: boolean;
+  icon?: string | null;
+  color?: string | null;
+};
 export type SelectionListSnapshot = Record<SelectionListKind, SelectionListValue[]> & {
   loaded: boolean;
 };
-export type SelectionListPatch = { name?: string; active?: boolean };
+export type SelectionListPatch = {
+  name?: string;
+  active?: boolean;
+  icon?: string | null;
+  color?: string | null;
+};
 
 export const SELECTION_LIST_KINDS: readonly SelectionListKind[] = [
   "sports",

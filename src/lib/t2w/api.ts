@@ -380,7 +380,13 @@ export async function apiUpdateSport(id: string, patch: { name?: string; active?
   if (!response.ok) throw new Error("Sportart konnte nicht gespeichert werden");
   return response.json() as Promise<ApiSport & { active: boolean }>;
 }
-export type ApiService = { id: string; name: string; active: boolean };
+export type ApiService = {
+  id: string;
+  name: string;
+  active: boolean;
+  icon?: string | null;
+  color?: string | null;
+};
 export async function apiManageServices(): Promise<ApiService[]> {
   const response = await fetch("/api/v1/services?includeInactive=true", { credentials: "include" });
   if (!response.ok) throw new Error("Services konnten nicht geladen werden");
@@ -396,7 +402,10 @@ export async function apiCreateService(name: string) {
   if (!response.ok) throw new Error("Service konnte nicht angelegt werden");
   return response.json() as Promise<ApiService>;
 }
-export async function apiUpdateService(id: string, patch: { name?: string; active?: boolean }) {
+export async function apiUpdateService(
+  id: string,
+  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+) {
   const response = await fetch(`/api/v1/services/${id}`, {
     method: "PATCH",
     credentials: "include",

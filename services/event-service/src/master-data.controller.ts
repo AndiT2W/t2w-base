@@ -114,7 +114,7 @@ export class MasterDataController {
   }
   @Patch("services/:id") updateService(
     @Param("id", ParseUUIDPipe) id: string,
-    @Body() body: { name?: string; active?: boolean },
+    @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
     return this.selectionLists.update("services", id, body);
   }

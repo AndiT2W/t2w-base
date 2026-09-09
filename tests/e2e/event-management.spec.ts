@@ -23,6 +23,14 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   await page.goto("/einstellungen?tab=auswahllisten");
   await expect(page.getByLabel("Service UHF")).toBeVisible();
   await expect(page.getByLabel("Service Video (iRewind)")).toBeVisible();
+  await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
+  await page.getByLabel("Servicesymbol: UHF").selectOption("video");
+  await expect(page.getByText("Service gespeichert.").last()).toBeVisible();
+  await page.getByLabel("Servicefarbe: UHF").selectOption("violet");
+  await expect(page.getByText("Service gespeichert.").last()).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Servicesymbol: UHF")).toHaveValue("video");
+  await expect(page.getByLabel("Servicefarbe: UHF")).toHaveValue("violet");
   await page.getByLabel("Neuer Service").fill("Drohne");
   await page.getByRole("button", { name: "Hinzufügen" }).nth(1).click();
   await expect(page.getByLabel("Service Drohne")).toBeVisible();

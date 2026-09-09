@@ -9,6 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT2W } from "@/lib/t2w/store";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import {
+  ServiceBadge,
+  SERVICE_COLOR_OPTIONS,
+  SERVICE_ICON_OPTIONS,
+  servicePresentation,
+} from "@/components/t2w/ServiceBadge";
 import { apiOutlookStatus } from "@/lib/t2w/api";
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 
@@ -121,7 +127,10 @@ function Einstellungen() {
       toast.error("Service konnte nicht angelegt werden.");
     }
   }
-  async function saveService(id: string, patch: { name?: string; active?: boolean }) {
+  async function saveService(
+    id: string,
+    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  ) {
     try {
       await updateSelectionValue("services", id, patch);
       toast.success("Service gespeichert.");
@@ -300,15 +309,55 @@ function Einstellungen() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {services.map((service) => (
-                  <div key={service.id} className="flex items-center gap-2">
-                    <Input
-                      aria-label={`Service ${service.name}`}
-                      defaultValue={service.name}
-                      onBlur={(event) => {
-                        const name = event.target.value.trim();
-                        if (name && name !== service.name) void saveService(service.id, { name });
-                      }}
-                    />
+                  <div
+                    key={service.id}
+                    className="grid gap-2 rounded-md border p-3 sm:grid-cols-[minmax(9rem,1fr)_9rem_9rem_auto] sm:items-center"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span aria-label={`Servicevorschau: ${service.name}`} className="shrink-0">
+                        <ServiceBadge
+                          name={service.name}
+                          icon={service.icon}
+                          color={service.color}
+                        />
+                      </span>
+                      <Input
+                        aria-label={`Service ${service.name}`}
+                        defaultValue={service.name}
+                        onBlur={(event) => {
+                          const name = event.target.value.trim();
+                          if (name && name !== service.name) void saveService(service.id, { name });
+                        }}
+                      />
+                    </div>
+                    <select
+                      aria-label={`Servicesymbol: ${service.name}`}
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={servicePresentation(service).icon}
+                      onChange={(event) =>
+                        void saveService(service.id, { icon: event.target.value })
+                      }
+                    >
+                      {SERVICE_ICON_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label={`Servicefarbe: ${service.name}`}
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={servicePresentation(service).color}
+                      onChange={(event) =>
+                        void saveService(service.id, { color: event.target.value })
+                      }
+                    >
+                      {SERVICE_COLOR_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                     <Button
                       type="button"
                       variant={service.active ? "outline" : "secondary"}
