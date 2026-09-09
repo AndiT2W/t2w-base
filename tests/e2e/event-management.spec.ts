@@ -43,9 +43,10 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
     ),
   ).toBeTruthy();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Services auswählen" })).toContainText(
-    "UHF, Video (iRewind)",
-  );
+  const selectedServices = page.getByRole("button", { name: "Services auswählen" });
+  await expect(selectedServices).toContainText("UHF");
+  await expect(selectedServices).toContainText("Video (iRewind)");
+  await expect(selectedServices.locator("svg")).toHaveCount(2);
 });
 
 test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page }) => {

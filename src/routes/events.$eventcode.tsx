@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  Activity,
+  Camera,
   CheckCircle2,
+  ClipboardList,
   ChevronDown,
   ChevronUp,
   CornerDownRight,
@@ -11,6 +14,7 @@ import {
   HelpCircle,
   Link2,
   Mail,
+  MapPin,
   MessageSquare,
   Paperclip,
   Phone,
@@ -18,6 +22,11 @@ import {
   Rows3,
   StickyNote,
   PanelsTopLeft,
+  Radio,
+  Smartphone,
+  UserRound,
+  Video,
+  type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -69,6 +78,73 @@ import { projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
+
+const SERVICE_PRESENTATIONS: Record<string, { Icon: LucideIcon; className: string }> = {
+  UHF: {
+    Icon: Radio,
+    className:
+      "border-sky-300 bg-sky-50 text-sky-950 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100",
+  },
+  Active: {
+    Icon: Activity,
+    className:
+      "border-lime-300 bg-lime-50 text-lime-950 dark:border-lime-800 dark:bg-lime-950/40 dark:text-lime-100",
+  },
+  Streaming: {
+    Icon: Radio,
+    className:
+      "border-violet-300 bg-violet-50 text-violet-950 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100",
+  },
+  Foto: {
+    Icon: Camera,
+    className:
+      "border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100",
+  },
+  "Video (iRewind)": {
+    Icon: Video,
+    className:
+      "border-rose-300 bg-rose-50 text-rose-950 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100",
+  },
+  GPS: {
+    Icon: MapPin,
+    className:
+      "border-orange-300 bg-orange-50 text-orange-950 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-100",
+  },
+  Virtuell: {
+    Icon: PanelsTopLeft,
+    className:
+      "border-indigo-300 bg-indigo-50 text-indigo-950 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-100",
+  },
+  "Anmeldung (only)": {
+    Icon: ClipboardList,
+    className:
+      "border-teal-300 bg-teal-50 text-teal-950 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100",
+  },
+  App: {
+    Icon: Smartphone,
+    className:
+      "border-cyan-300 bg-cyan-50 text-cyan-950 dark:border-cyan-800 dark:bg-cyan-950/40 dark:text-cyan-100",
+  },
+  Jörg: {
+    Icon: UserRound,
+    className:
+      "border-fuchsia-300 bg-fuchsia-50 text-fuchsia-950 dark:border-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-100",
+  },
+};
+
+function ServiceBadge({ name }: { name: string }) {
+  const presentation = SERVICE_PRESENTATIONS[name] ?? {
+    Icon: PanelsTopLeft,
+    className: "border-border bg-muted text-foreground",
+  };
+  const { Icon } = presentation;
+  return (
+    <Badge variant="outline" className={`gap-1.5 py-1 ${presentation.className}`}>
+      <Icon aria-hidden="true" className="size-3.5" />
+      {name}
+    </Badge>
+  );
+}
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
   const address = [
@@ -578,13 +654,26 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       variant="outline"
                       className="mt-2 w-full justify-start font-normal"
                     >
-                      {form.services?.length ? form.services.join(", ") : "Services auswählen"}
+                      {form.services?.length ? (
+                        <span className="flex flex-wrap gap-1.5">
+                          {form.services.map((service) => (
+                            <ServiceBadge key={service} name={service} />
+                          ))}
+                        </span>
+                      ) : (
+                        "Services auswählen"
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
                     <div className="space-y-1" role="group" aria-label="Services">
                       {services.map((service) => {
                         const selected = form.serviceIds?.includes(service.id) ?? false;
+                        const presentation = SERVICE_PRESENTATIONS[service.name] ?? {
+                          Icon: PanelsTopLeft,
+                          className: "text-muted-foreground",
+                        };
+                        const { Icon } = presentation;
                         return (
                           <label
                             key={service.id}
@@ -606,7 +695,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 );
                               }}
                             />
-                            {service.name}
+                            <Icon
+                              aria-hidden="true"
+                              className={`size-4 ${presentation.className}`}
+                            />
+                            <span>{service.name}</span>
                           </label>
                         );
                       })}
