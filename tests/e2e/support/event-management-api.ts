@@ -142,6 +142,12 @@ export async function mockEventManagementApi(
     { id: "s1", name: "Triathlon", active: true },
     { id: "s2", name: "Laufen", active: true },
   ];
+  let hardwareObjects = [
+    { id: "hardware-1", name: "Active Transponder (T2W)", active: true },
+    { id: "hardware-2", name: "GPS Tracker (T2W)", active: true },
+    { id: "hardware-3", name: "Active Transponder (Lindinger)", active: true },
+    { id: "hardware-4", name: "Active Transponder (BRV)", active: true },
+  ];
   let eventRoles = [
     { id: "r1", name: "Anmeldung", active: true },
     { id: "r2", name: "Finanz", active: true },
@@ -487,6 +493,33 @@ export async function mockEventManagementApi(
     if (request.method() === "PATCH" && id) {
       sports = sports.map((sport) => (sport.id === id ? { ...sport, ...body } : sport));
       return route.fulfill({ json: sports.find((sport) => sport.id === id) });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/v1/hardware-objects**", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: request.url().includes("includeInactive=true")
+          ? hardwareObjects
+          : hardwareObjects.filter((value) => value.active),
+      });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const value = {
+        id: `hardware-${hardwareObjects.length + 1}`,
+        name: body.name,
+        active: true,
+      };
+      hardwareObjects = [...hardwareObjects, value];
+      return route.fulfill({ status: 201, json: value });
+    }
+    const id = request.url().match(/\/hardware-objects\/([^/?]+)/)?.[1];
+    if (request.method() === "PATCH" && id) {
+      hardwareObjects = hardwareObjects.map((value) =>
+        value.id === id ? { ...value, ...body } : value,
+      );
+      return route.fulfill({ json: hardwareObjects.find((value) => value.id === id) });
     }
     return route.continue();
   });

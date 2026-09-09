@@ -10,11 +10,16 @@ import {
 const values = {
   sports: [{ id: "s1", name: "Triathlon", active: true }],
   eventRoles: [{ id: "r1", name: "Finanz", active: false }],
+  services: [],
+  hardwareObjects: [{ id: "h1", name: "GPS Tracker (T2W)", active: true }],
 };
 const adapter = (): SelectionListAdapter => ({
   load: vi.fn(async (kind) => values[kind]),
   create: vi.fn(async (_kind, name) => ({ id: "new", name, active: true })),
-  update: vi.fn(async (kind, id, patch) => ({ ...values[kind].find((value) => value.id === id)!, ...patch })),
+  update: vi.fn(async (kind, id, patch) => ({
+    ...values[kind].find((value) => value.id === id)!,
+    ...patch,
+  })),
 });
 
 describe("Selection lists", () => {

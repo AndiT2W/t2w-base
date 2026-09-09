@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
+import { useT2W } from "@/lib/t2w/store";
 
 type Item = {
   id: string;
@@ -43,6 +44,7 @@ const issueLabels: Record<string, string> = {
   RENTAL: "Verleih",
   OTHER: "Sonstige",
 };
+const validEmail = (value: string) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 function displayNumber(item: Item) {
   if (item.objectNumberSingle) return item.objectNumberSingle;
   if (item.objectNumberPrefix && item.objectNumberFrom != null && item.objectNumberTo != null) {
@@ -62,8 +64,13 @@ export function HardwareWorkspace({
   onSaved?: () => void;
   showList?: boolean;
 }) {
+  const { selectionLists } = useT2W();
   const [items, setItems] = useState<Item[]>([]);
   const [editing, setEditing] = useState<Partial<Item> | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const hardwareObjectNames = selectionLists.hardwareObjects
+    .filter((value) => value.active || value.name === editing?.objectName)
+    .map((value) => value.name);
   const load = () =>
     fetch(eventId ? `/api/v1/events/${eventId}/hardware` : "/api/v1/events/hardware", {
       credentials: "include",
@@ -81,6 +88,11 @@ export function HardwareWorkspace({
   }, [initialEditing]);
   const save = async () => {
     if (!editing) return;
+    const email = editing.email?.trim() ?? "";
+    if (!validEmail(email)) {
+      setEmailError("Bitte eine gültige E-Mail-Adresse angeben.");
+      return;
+    }
     const payload = {
       recipientName: editing.recipientName ?? "",
       issueType: editing.issueType ?? "PARTICIPANT",
@@ -94,7 +106,7 @@ export function HardwareWorkspace({
       objectNumberPadding:
         editing.objectNumberPadding == null ? undefined : Number(editing.objectNumberPadding),
       quantity: editing.quantity == null ? 1 : Number(editing.quantity),
-      email: editing.email,
+      email: email || undefined,
       phone: editing.phone,
       dueDate: editing.dueDate || undefined,
       issuedAt: editing.issuedAt || undefined,
@@ -144,20 +156,51 @@ export function HardwareWorkspace({
           />
           <Input
             placeholder="E-Mail"
+            aria-label="E-Mail"
+            aria-describedby={emailError ? "hardware-form-email-error" : undefined}
+            aria-invalid={emailError ? "true" : undefined}
             type="email"
             value={editing.email ?? ""}
-            onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+            onChange={(e) => {
+              setEmailError(null);
+              setEditing({ ...editing, email: e.target.value });
+            }}
+            onBlur={() => {
+              const email = editing.email?.trim() ?? "";
+              setEmailError(
+                validEmail(email) ? null : "Bitte eine gültige E-Mail-Adresse angeben.",
+              );
+            }}
           />
+          {emailError && (
+            <p
+              id="hardware-form-email-error"
+              className="text-xs text-destructive sm:col-span-3"
+              role="alert"
+            >
+              {emailError}
+            </p>
+          )}
           <Input
             placeholder="Telefon"
             value={editing.phone ?? ""}
             onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
           />
-          <Input
-            placeholder="Objekt"
+          <Select
             value={editing.objectName ?? ""}
-            onChange={(e) => setEditing({ ...editing, objectName: e.target.value })}
-          />
+            onValueChange={(objectName) => setEditing({ ...editing, objectName })}
+          >
+            <SelectTrigger aria-label="Objekt">
+              <SelectValue placeholder="Objekt auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {hardwareObjectNames.map((objectName) => (
+                <SelectItem key={objectName} value={objectName}>
+                  {objectName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             placeholder="Notiz"
             value={editing.note ?? ""}

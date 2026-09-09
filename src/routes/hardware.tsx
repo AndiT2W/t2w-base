@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
+import { useT2W } from "@/lib/t2w/store";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,12 +52,7 @@ type InlineDraft = Pick<
   | "dueDate"
   | "note"
 > & { eventId: string; objectNumber: string };
-const HARDWARE_OBJECTS = [
-  "Active Transponder (T2W)",
-  "GPS Tracker (T2W)",
-  "Active Transponder (Lindinger)",
-  "Active Transponder (BRV)",
-] as const;
+const validEmail = (value: string) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const labels: Record<string, string> = {
   OPEN: "Offen",
   MAIL_SEND: "Mail senden",
@@ -165,6 +161,7 @@ const HARDWARE_TABLE_COLUMNS = HARDWARE_COLUMNS.map((key) => ({
 }[];
 export const Route = createFileRoute("/hardware")({ component: HardwarePage });
 function HardwarePage() {
+  const { selectionLists } = useT2W();
   const [items, setItems] = useState<Hardware[]>([]);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("active");
@@ -177,6 +174,7 @@ function HardwarePage() {
   const [inlineDraft, setInlineDraft] = useState<InlineDraft | null>(null);
   const [savingInline, setSavingInline] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [inlineEmailError, setInlineEmailError] = useState<string | null>(null);
   const [newHardware, setNewHardware] = useState(false);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const pendingSaves = useRef(0);
@@ -236,8 +234,12 @@ function HardwarePage() {
         )),
   );
   const rows = useMemo(() => table.rows(active), [active, table]);
+  const hardwareObjectNames = selectionLists.hardwareObjects
+    .filter((value) => value.active)
+    .map((value) => value.name);
   const beginInlineEdit = (item: Hardware) => {
     setInlineError(null);
+    setInlineEmailError(null);
     setInlineEditingId(item.id);
     setInlineDraft({
       eventId: item.event?.id ?? "none",
@@ -494,17 +496,39 @@ function HardwarePage() {
                             <td className="px-2 py-1" key={h}>
                               <Input
                                 aria-label="E-Mail bearbeiten"
+                                aria-describedby={
+                                  inlineEmailError ? "hardware-email-error" : undefined
+                                }
+                                aria-invalid={inlineEmailError ? "true" : undefined}
                                 className="h-8 min-w-48"
                                 type="email"
                                 value={inlineDraft.email ?? ""}
                                 onClick={(e) => e.stopPropagation()}
-                                onChange={(e) =>
-                                  setInlineDraft({ ...inlineDraft, email: e.target.value })
-                                }
-                                onBlur={() =>
-                                  void saveInlineEdit(i, { email: inlineDraft.email ?? null })
-                                }
+                                onChange={(e) => {
+                                  setInlineEmailError(null);
+                                  setInlineDraft({ ...inlineDraft, email: e.target.value });
+                                }}
+                                onBlur={() => {
+                                  const email = inlineDraft.email?.trim() ?? "";
+                                  if (!validEmail(email)) {
+                                    setInlineEmailError(
+                                      "Bitte eine gültige E-Mail-Adresse angeben.",
+                                    );
+                                    return;
+                                  }
+                                  setInlineEmailError(null);
+                                  void saveInlineEdit(i, { email: email || null });
+                                }}
                               />
+                              {inlineEmailError && (
+                                <p
+                                  id="hardware-email-error"
+                                  className="mt-1 text-xs text-destructive"
+                                  role="alert"
+                                >
+                                  {inlineEmailError}
+                                </p>
+                              )}
                             </td>
                           );
                         if (editing && h === "Telefon")
@@ -572,14 +596,12 @@ function HardwarePage() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {!HARDWARE_OBJECTS.includes(
-                                    inlineDraft.objectName as (typeof HARDWARE_OBJECTS)[number],
-                                  ) && (
+                                  {!hardwareObjectNames.includes(inlineDraft.objectName) && (
                                     <SelectItem value={inlineDraft.objectName}>
                                       {inlineDraft.objectName}
                                     </SelectItem>
                                   )}
-                                  {HARDWARE_OBJECTS.map((objectName) => (
+                                  {hardwareObjectNames.map((objectName) => (
                                     <SelectItem key={objectName} value={objectName}>
                                       {objectName}
                                     </SelectItem>

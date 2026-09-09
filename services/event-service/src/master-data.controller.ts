@@ -119,6 +119,19 @@ export class MasterDataController {
     return this.selectionLists.update("services", id, body);
   }
 
+  @Get("hardware-objects") hardwareObjects(@Query("includeInactive") includeInactive?: string) {
+    return this.selectionLists.list("hardwareObjects", includeInactive === "true");
+  }
+  @Post("hardware-objects") hardwareObject(@Body() body: { name: string }) {
+    return this.selectionLists.create("hardwareObjects", body.name);
+  }
+  @Patch("hardware-objects/:id") updateHardwareObject(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; active?: boolean },
+  ) {
+    return this.selectionLists.update("hardwareObjects", id, body);
+  }
+
   @Get("event-roles") eventRoles(@Query("includeInactive") includeInactive?: string) {
     return this.selectionLists.list("eventRoles", includeInactive === "true");
   }

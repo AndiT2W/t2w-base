@@ -35,7 +35,9 @@ export const Route = createFileRoute("/einstellungen")({
         ? search.tab
         : ("allgemein" as const),
     liste:
-      search.liste === "sportarten" || search.liste === "eventrollen"
+      search.liste === "sportarten" ||
+      search.liste === "eventrollen" ||
+      search.liste === "hardwareobjekte"
         ? search.liste
         : ("services" as const),
   }),
@@ -71,11 +73,16 @@ function Einstellungen() {
   const [newEventRole, setNewEventRole] = useState("");
   const services = selectionLists.services;
   const [newService, setNewService] = useState("");
+  const hardwareObjects = selectionLists.hardwareObjects;
+  const [newHardwareObject, setNewHardwareObject] = useState("");
   const [auditEntries, setAuditEntries] = useState<ApiAuditLog[]>([]);
   const [auditEntity, setAuditEntity] = useState("");
   const [auditSearch, setAuditSearch] = useState("");
   const [auditLoading, setAuditLoading] = useState(false);
-  const [presentation, setPresentation] = useState<{ kind: "sports" | "eventRoles" | "services"; id: string } | null>(null);
+  const [presentation, setPresentation] = useState<{
+    kind: "sports" | "eventRoles" | "services";
+    id: string;
+  } | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
     workspace.subscribe,
     workspace.snapshot,
@@ -93,7 +100,9 @@ function Einstellungen() {
   const setSites = (next: typeof sites | ((current: typeof sites) => typeof sites)) =>
     workspace.update({ jahresSites: typeof next === "function" ? next(sites) : next });
   const setMailbox = (next: string) => workspace.update({ outlookMailbox: next });
-  const presentationValue = presentation ? selectionLists[presentation.kind].find((value) => value.id === presentation.id) : undefined;
+  const presentationValue = presentation
+    ? selectionLists[presentation.kind].find((value) => value.id === presentation.id)
+    : undefined;
 
   useEffect(() => {
     workspace.acceptLoaded(settings);
@@ -110,7 +119,14 @@ function Einstellungen() {
     const query = auditSearch.trim().toLocaleLowerCase("de-AT");
     if (!query) return auditEntries;
     return auditEntries.filter((entry) =>
-      [entry.entity, entry.entityId, entry.action, entry.user?.displayName, entry.user?.email, JSON.stringify(entry.details)]
+      [
+        entry.entity,
+        entry.entityId,
+        entry.action,
+        entry.user?.displayName,
+        entry.user?.email,
+        JSON.stringify(entry.details),
+      ]
         .filter(Boolean)
         .join(" ")
         .toLocaleLowerCase("de-AT")
@@ -130,7 +146,9 @@ function Einstellungen() {
         JSON.stringify(entry.details ?? {}),
       ]),
     ];
-    const blob = new Blob([rows.map((row) => row.map(escape).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([rows.map((row) => row.map(escape).join(",")).join("\r\n")], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -149,7 +167,10 @@ function Einstellungen() {
       toast.error("Sportart konnte nicht angelegt werden.");
     }
   }
-  async function saveSport(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null }) {
+  async function saveSport(
+    id: string,
+    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  ) {
     try {
       await updateSelectionValue("sports", id, patch);
       toast.success("Sportart gespeichert.");
@@ -168,7 +189,10 @@ function Einstellungen() {
       toast.error("Eventrolle konnte nicht angelegt werden.");
     }
   }
-  async function saveEventRole(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null }) {
+  async function saveEventRole(
+    id: string,
+    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  ) {
     try {
       await updateSelectionValue("eventRoles", id, patch);
       toast.success("Eventrolle gespeichert.");
@@ -178,7 +202,12 @@ function Einstellungen() {
   }
   async function savePresentation(patch: { icon?: string | null; color?: string | null }) {
     if (!presentation) return;
-    const save = presentation.kind === "sports" ? saveSport : presentation.kind === "eventRoles" ? saveEventRole : saveService;
+    const save =
+      presentation.kind === "sports"
+        ? saveSport
+        : presentation.kind === "eventRoles"
+          ? saveEventRole
+          : saveService;
     await save(presentation.id, patch);
   }
   async function addService() {
@@ -201,6 +230,25 @@ function Einstellungen() {
       toast.success("Service gespeichert.");
     } catch {
       toast.error("Service konnte nicht gespeichert werden.");
+    }
+  }
+  async function addHardwareObject() {
+    const name = newHardwareObject.trim();
+    if (!name) return;
+    try {
+      await createSelectionValue("hardwareObjects", name);
+      setNewHardwareObject("");
+      toast.success("Hardware-Objekt angelegt.");
+    } catch {
+      toast.error("Hardware-Objekt konnte nicht angelegt werden.");
+    }
+  }
+  async function saveHardwareObject(id: string, patch: { name?: string; active?: boolean }) {
+    try {
+      await updateSelectionValue("hardwareObjects", id, patch);
+      toast.success("Hardware-Objekt gespeichert.");
+    } catch {
+      toast.error("Hardware-Objekt konnte nicht gespeichert werden.");
     }
   }
 
@@ -226,7 +274,10 @@ function Einstellungen() {
           onValueChange={(nextTab) =>
             void navigate({
               search: {
-                tab: nextTab === "outlook" || nextTab === "auswahllisten" || nextTab === "auditlog" ? nextTab : "allgemein",
+                tab:
+                  nextTab === "outlook" || nextTab === "auswahllisten" || nextTab === "auditlog"
+                    ? nextTab
+                    : "allgemein",
                 liste,
               },
             })
@@ -324,26 +375,31 @@ function Einstellungen() {
             <div className="space-y-5">
               <Card>
                 <CardContent className="p-2">
-                  <div className="flex flex-wrap gap-1" role="tablist" aria-label="Auswahllisten Kategorien">
-                  {[
-                    ["sportarten", "Sportarten"],
-                    ["services", "Services"],
-                    ["eventrollen", "Eventrollen"],
-                  ].map(([value, label]) => (
-                    <Button
-                      key={value}
-                      type="button"
-                      variant={liste === value ? "secondary" : "ghost"}
-                      className="min-h-10 flex-1 justify-center sm:flex-none"
-                      role="tab"
-                      aria-selected={liste === value}
-                      onClick={() =>
-                        void navigate({ search: { tab: "auswahllisten", liste: value } })
-                      }
-                    >
-                      {label}
-                    </Button>
-                  ))}
+                  <div
+                    className="flex flex-wrap gap-1"
+                    role="tablist"
+                    aria-label="Auswahllisten Kategorien"
+                  >
+                    {[
+                      ["sportarten", "Sportarten"],
+                      ["services", "Services"],
+                      ["eventrollen", "Eventrollen"],
+                      ["hardwareobjekte", "Hardware-Objekte"],
+                    ].map(([value, label]) => (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant={liste === value ? "secondary" : "ghost"}
+                        className="min-h-10 flex-1 justify-center sm:flex-none"
+                        role="tab"
+                        aria-selected={liste === value}
+                        onClick={() =>
+                          void navigate({ search: { tab: "auswahllisten", liste: value } })
+                        }
+                      >
+                        {label}
+                      </Button>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -358,8 +414,16 @@ function Einstellungen() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {sports.map((sport) => (
-                        <div key={sport.id} className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center">
-                          <span aria-label={`Sportartvorschau: ${sport.name}`} className="flex min-w-0 items-center"><SelectionBadge {...sport} /></span>
+                        <div
+                          key={sport.id}
+                          className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center"
+                        >
+                          <span
+                            aria-label={`Sportartvorschau: ${sport.name}`}
+                            className="flex min-w-0 items-center"
+                          >
+                            <SelectionBadge {...sport} />
+                          </span>
                           <Input
                             aria-label={`Sportart ${sport.name}`}
                             defaultValue={sport.name}
@@ -368,8 +432,17 @@ function Einstellungen() {
                               if (name && name !== sport.name) void saveSport(sport.id, { name });
                             }}
                           />
-                          <Button type="button" variant="outline" aria-label={`Darstellung für Sportart ${sport.name}`} onClick={() => setPresentation({ kind: "sports", id: sport.id })}>
-                            <span className={`size-3 rounded-full border ${selectionPresentation(sport).className}`} aria-hidden="true" /> Darstellung
+                          <Button
+                            type="button"
+                            variant="outline"
+                            aria-label={`Darstellung für Sportart ${sport.name}`}
+                            onClick={() => setPresentation({ kind: "sports", id: sport.id })}
+                          >
+                            <span
+                              className={`size-3 rounded-full border ${selectionPresentation(sport).className}`}
+                              aria-hidden="true"
+                            />{" "}
+                            Darstellung
                           </Button>
                           <Button
                             type="button"
@@ -467,6 +540,61 @@ function Einstellungen() {
                     </CardContent>
                   </Card>
                 )}
+                {liste === "hardwareobjekte" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Hardware-Objekte</CardTitle>
+                      <CardDescription>
+                        Verfügbare Geräte und Transponder für Hardware-Ausgaben.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {hardwareObjects.map((hardwareObject) => (
+                        <div
+                          key={hardwareObject.id}
+                          className="grid gap-2 rounded-md border p-3 lg:grid-cols-[minmax(12rem,1fr)_9rem] lg:items-center"
+                        >
+                          <Input
+                            aria-label={`Hardware-Objekt ${hardwareObject.name}`}
+                            defaultValue={hardwareObject.name}
+                            onBlur={(event) => {
+                              const name = event.target.value.trim();
+                              if (name && name !== hardwareObject.name)
+                                void saveHardwareObject(hardwareObject.id, { name });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant={hardwareObject.active ? "outline" : "secondary"}
+                            onClick={() =>
+                              void saveHardwareObject(hardwareObject.id, {
+                                active: !hardwareObject.active,
+                              })
+                            }
+                          >
+                            {hardwareObject.active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="flex gap-2 pt-2">
+                        <Input
+                          aria-label="Neues Hardware-Objekt"
+                          value={newHardwareObject}
+                          onChange={(event) => setNewHardwareObject(event.target.value)}
+                          placeholder="Hardware-Objekt hinzufügen"
+                        />
+                        <Button
+                          type="button"
+                          aria-label="Hardware-Objekt hinzufügen"
+                          onClick={() => void addHardwareObject()}
+                        >
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
                 <Dialog
                   open={presentationValue !== undefined}
                   onOpenChange={(open) => !open && setPresentation(null)}
@@ -486,7 +614,10 @@ function Einstellungen() {
                               Symbol
                             </h3>
                             <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
-                              {(presentation.kind === "sports" ? SPORT_ICON_OPTIONS : SERVICE_ICON_OPTIONS).map((option) => {
+                              {(presentation.kind === "sports"
+                                ? SPORT_ICON_OPTIONS
+                                : SERVICE_ICON_OPTIONS
+                              ).map((option) => {
                                 const Icon = selectionPresentation({
                                   name: presentationValue.name,
                                   icon: option.value,
@@ -501,9 +632,7 @@ function Einstellungen() {
                                     aria-pressed={selected}
                                     title={option.label}
                                     className={`grid min-h-11 place-items-center rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary bg-primary/10 text-primary" : "border-border"}`}
-                                    onClick={() =>
-                                      void savePresentation({ icon: option.value })
-                                    }
+                                    onClick={() => void savePresentation({ icon: option.value })}
                                   >
                                     <Icon className="size-5" aria-hidden="true" />
                                   </button>
@@ -527,9 +656,7 @@ function Einstellungen() {
                                     aria-pressed={selected}
                                     title={option.label}
                                     className={`size-11 rounded-full border-2 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary" : "border-transparent"}`}
-                                    onClick={() =>
-                                      void savePresentation({ color: option.value })
-                                    }
+                                    onClick={() => void savePresentation({ color: option.value })}
                                   >
                                     <span
                                       className={`block size-full rounded-full border ${selectionPresentation({ name: presentationValue.name, color: option.value }).className}`}
@@ -555,8 +682,16 @@ function Einstellungen() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {eventRoles.map((role) => (
-                        <div key={role.id} className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center">
-                          <span aria-label={`Eventrollenvorschau: ${role.name}`} className="flex min-w-0 items-center"><SelectionBadge {...role} /></span>
+                        <div
+                          key={role.id}
+                          className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center"
+                        >
+                          <span
+                            aria-label={`Eventrollenvorschau: ${role.name}`}
+                            className="flex min-w-0 items-center"
+                          >
+                            <SelectionBadge {...role} />
+                          </span>
                           <Input
                             aria-label={`Eventrolle ${role.name}`}
                             defaultValue={role.name}
@@ -565,8 +700,17 @@ function Einstellungen() {
                               if (name && name !== role.name) void saveEventRole(role.id, { name });
                             }}
                           />
-                          <Button type="button" variant="outline" aria-label={`Darstellung für Eventrolle ${role.name}`} onClick={() => setPresentation({ kind: "eventRoles", id: role.id })}>
-                            <span className={`size-3 rounded-full border ${selectionPresentation(role).className}`} aria-hidden="true" /> Darstellung
+                          <Button
+                            type="button"
+                            variant="outline"
+                            aria-label={`Darstellung für Eventrolle ${role.name}`}
+                            onClick={() => setPresentation({ kind: "eventRoles", id: role.id })}
+                          >
+                            <span
+                              className={`size-3 rounded-full border ${selectionPresentation(role).className}`}
+                              aria-hidden="true"
+                            />{" "}
+                            Darstellung
                           </Button>
                           <Button
                             type="button"
@@ -600,27 +744,50 @@ function Einstellungen() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Auditlog</CardTitle>
-                <CardDescription>Unveränderliche Aufzeichnungen über relevante Änderungen im System.</CardDescription>
+                <CardDescription>
+                  Unveränderliche Aufzeichnungen über relevante Änderungen im System.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end">
                   <div className="max-w-xs flex-1 space-y-2">
                     <Label htmlFor="audit-search">Auditlog durchsuchen</Label>
                     <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" aria-hidden="true" />
-                      <Input id="audit-search" aria-label="Auditlog durchsuchen" value={auditSearch} onChange={(event) => setAuditSearch(event.target.value)} className="pl-9" placeholder="Aktion, Benutzer oder Datensatz …" />
+                      <Search
+                        className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                      <Input
+                        id="audit-search"
+                        aria-label="Auditlog durchsuchen"
+                        value={auditSearch}
+                        onChange={(event) => setAuditSearch(event.target.value)}
+                        className="pl-9"
+                        placeholder="Aktion, Benutzer oder Datensatz …"
+                      />
                     </div>
                   </div>
                   <div className="max-w-xs flex-1 space-y-2">
                     <Label htmlFor="audit-entity">Entität filtern</Label>
-                    <select id="audit-entity" aria-label="Auditlog nach Entität filtern" value={auditEntity} onChange={(event) => setAuditEntity(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <select
+                      id="audit-entity"
+                      aria-label="Auditlog nach Entität filtern"
+                      value={auditEntity}
+                      onChange={(event) => setAuditEntity(event.target.value)}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
                       <option value="">Alle Entitäten</option>
                       <option value="Event">Events</option>
                       <option value="Payout">Auszahlungen</option>
                       <option value="Hardware">Hardware</option>
                     </select>
                   </div>
-                  <Button type="button" variant="outline" onClick={exportAuditLog} disabled={auditLoading}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={exportAuditLog}
+                    disabled={auditLoading}
+                  >
                     <Download className="size-4" /> Exportieren ({visibleAuditEntries.length})
                   </Button>
                 </div>
@@ -639,17 +806,37 @@ function Einstellungen() {
                     <tbody className="divide-y">
                       {visibleAuditEntries.map((entry) => (
                         <tr key={entry.id}>
-                          <td className="whitespace-nowrap px-3 py-2">{new Date(entry.createdAt).toLocaleString("de-AT")}</td>
+                          <td className="whitespace-nowrap px-3 py-2">
+                            {new Date(entry.createdAt).toLocaleString("de-AT")}
+                          </td>
                           <td className="px-3 py-2">{entry.entity}</td>
                           <td className="px-3 py-2 font-medium">{entry.action}</td>
-                          <td className="px-3 py-2">{entry.user?.displayName ?? entry.user?.email ?? "System"}</td>
-                          <td className="max-w-[16rem] truncate px-3 py-2 font-mono text-xs" title={entry.entityId}>{entry.entityId}</td>
+                          <td className="px-3 py-2">
+                            {entry.user?.displayName ?? entry.user?.email ?? "System"}
+                          </td>
+                          <td
+                            className="max-w-[16rem] truncate px-3 py-2 font-mono text-xs"
+                            title={entry.entityId}
+                          >
+                            {entry.entityId}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {!auditLoading && visibleAuditEntries.length === 0 && <p className="px-3 py-8 text-center text-sm text-muted-foreground">Keine Auditlog-Einträge gefunden.</p>}
-                  {auditLoading && <p className="px-3 py-8 text-center text-sm text-muted-foreground" role="status">Auditlog wird geladen …</p>}
+                  {!auditLoading && visibleAuditEntries.length === 0 && (
+                    <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                      Keine Auditlog-Einträge gefunden.
+                    </p>
+                  )}
+                  {auditLoading && (
+                    <p
+                      className="px-3 py-8 text-center text-sm text-muted-foreground"
+                      role="status"
+                    >
+                      Auditlog wird geladen …
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

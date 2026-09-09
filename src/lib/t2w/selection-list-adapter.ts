@@ -8,6 +8,9 @@ import {
   apiUpdateSport,
   apiCreateService,
   apiUpdateService,
+  apiManageHardwareObjects,
+  apiCreateHardwareObject,
+  apiUpdateHardwareObject,
 } from "./api";
 import type {
   SelectionListAdapter,
@@ -24,14 +27,18 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
         ? apiManageSports()
         : kind === "services"
           ? apiManageServices()
-          : apiManageEventRoles();
+          : kind === "hardwareObjects"
+            ? apiManageHardwareObjects()
+            : apiManageEventRoles();
     },
     create(kind: SelectionListKind, name: string): Promise<SelectionListValue> {
       return kind === "sports"
         ? apiCreateSport(name)
         : kind === "services"
           ? apiCreateService(name)
-          : apiCreateEventRole(name);
+          : kind === "hardwareObjects"
+            ? apiCreateHardwareObject(name)
+            : apiCreateEventRole(name);
     },
     update(
       kind: SelectionListKind,
@@ -42,7 +49,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
         ? apiUpdateSport(id, patch)
         : kind === "services"
           ? apiUpdateService(id, patch)
-          : apiUpdateEventRole(id, patch);
+          : kind === "hardwareObjects"
+            ? apiUpdateHardwareObject(id, patch)
+            : apiUpdateEventRole(id, patch);
     },
   };
 }

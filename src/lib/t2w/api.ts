@@ -363,7 +363,13 @@ export async function apiDeleteEvent(id: string) {
   if (!response.ok) throw new Error("Event konnte nicht gelöscht werden");
 }
 
-export type ApiSport = { id: string; name: string; active?: boolean; icon?: string | null; color?: string | null };
+export type ApiSport = {
+  id: string;
+  name: string;
+  active?: boolean;
+  icon?: string | null;
+  color?: string | null;
+};
 export async function apiSports(): Promise<ApiSport[]> {
   const response = await fetch("/api/v1/sports", { credentials: "include" });
   if (!response.ok) throw new Error("Sportarten konnten nicht geladen werden");
@@ -384,7 +390,10 @@ export async function apiCreateSport(name: string) {
   if (!response.ok) throw new Error("Sportart konnte nicht angelegt werden");
   return response.json() as Promise<ApiSport & { active: boolean }>;
 }
-export async function apiUpdateSport(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null }) {
+export async function apiUpdateSport(
+  id: string,
+  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+) {
   const response = await fetch(`/api/v1/sports/${id}`, {
     method: "PATCH",
     credentials: "include",
@@ -429,7 +438,44 @@ export async function apiUpdateService(
   if (!response.ok) throw new Error("Service konnte nicht gespeichert werden");
   return response.json() as Promise<ApiService>;
 }
-export type ApiEventRole = { id: string; name: string; active: boolean; icon?: string | null; color?: string | null };
+
+export async function apiManageHardwareObjects(): Promise<ApiService[]> {
+  const response = await fetch("/api/v1/hardware-objects?includeInactive=true", {
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Hardware-Objekte konnten nicht geladen werden");
+  return response.json() as Promise<ApiService[]>;
+}
+export async function apiCreateHardwareObject(name: string) {
+  const response = await fetch("/api/v1/hardware-objects", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error("Hardware-Objekt konnte nicht angelegt werden");
+  return response.json() as Promise<ApiService>;
+}
+export async function apiUpdateHardwareObject(
+  id: string,
+  patch: { name?: string; active?: boolean },
+) {
+  const response = await fetch(`/api/v1/hardware-objects/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) throw new Error("Hardware-Objekt konnte nicht gespeichert werden");
+  return response.json() as Promise<ApiService>;
+}
+export type ApiEventRole = {
+  id: string;
+  name: string;
+  active: boolean;
+  icon?: string | null;
+  color?: string | null;
+};
 export async function apiEventRoles(): Promise<ApiEventRole[]> {
   const response = await fetch("/api/v1/event-roles", { credentials: "include" });
   if (!response.ok) throw new Error("Eventrollen konnten nicht geladen werden");
@@ -452,7 +498,10 @@ export async function apiCreateEventRole(name: string) {
   if (!response.ok) throw new Error("Eventrolle konnte nicht angelegt werden");
   return response.json() as Promise<ApiEventRole>;
 }
-export async function apiUpdateEventRole(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null }) {
+export async function apiUpdateEventRole(
+  id: string,
+  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+) {
   const response = await fetch(`/api/v1/event-roles/${id}`, {
     method: "PATCH",
     credentials: "include",
@@ -500,7 +549,9 @@ export async function apiAuditLog(filters?: { entity?: string; entityId?: string
   const params = new URLSearchParams();
   if (filters?.entity) params.set("entity", filters.entity);
   if (filters?.entityId) params.set("entityId", filters.entityId);
-  const response = await fetch(`/api/v1/audit-log?${params.toString()}`, { credentials: "include" });
+  const response = await fetch(`/api/v1/audit-log?${params.toString()}`, {
+    credentials: "include",
+  });
   if (!response.ok) throw new Error("Auditlog konnte nicht geladen werden");
   return response.json() as Promise<ApiAuditLog[]>;
 }

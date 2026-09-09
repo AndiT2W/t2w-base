@@ -23,6 +23,20 @@ test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }
   await expect(page.getByRole("textbox", { name: "Sportart Radfahren" })).toBeVisible();
 });
 
+test("pflegt Hardware-Objekte als persistente Auswahlliste", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/einstellungen?tab=auswahllisten&liste=hardwareobjekte");
+  await expect(page.getByRole("tab", { name: "Hardware-Objekte" })).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Hardware-Objekt Active Transponder (T2W)" }),
+  ).toBeVisible();
+  await page.getByLabel("Neues Hardware-Objekt").fill("Decoder");
+  await page.getByRole("button", { name: "Hardware-Objekt hinzufügen" }).click();
+  await expect(page.getByRole("textbox", { name: "Hardware-Objekt Decoder" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("textbox", { name: "Hardware-Objekt Decoder" })).toBeVisible();
+});
+
 test("pflegt Services in den Auswahllisten und speichert mehrere Services beim Event", async ({
   page,
 }) => {
@@ -607,9 +621,7 @@ test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", 
   expect(organizerSelect!.x).toBeGreaterThan(startInput!.x + startInput!.width);
 });
 
-test("ordnet die Archivierung kompakt beim Eventnamen ein", async ({
-  page,
-}) => {
+test("ordnet die Archivierung kompakt beim Eventnamen ein", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
 

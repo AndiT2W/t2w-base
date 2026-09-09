@@ -3,10 +3,24 @@ import { mockEventManagementApi } from "./support/event-management-api";
 
 test("shows central hardware cases, filters them, and links to the event", async ({ page }) => {
   let lastEventChanges: Record<string, unknown> = {};
+  const eventChanges: Record<string, unknown>[] = [];
   let lastUnassignedChanges: Record<string, unknown> = {};
   await page.route("**/api/v1/settings**", (route) =>
     route.fulfill({ json: { outlookJahresordner: [], jahresSites: [], outlookMailbox: null } }),
   );
+  await page.route("**/api/v1/hardware-objects**", (route) =>
+    route.fulfill({
+      json: [
+        { id: "hardware-1", name: "Active Transponder (T2W)", active: true },
+        { id: "hardware-2", name: "GPS Tracker (T2W)", active: true },
+        { id: "hardware-3", name: "Active Transponder (Lindinger)", active: true },
+        { id: "hardware-4", name: "Active Transponder (BRV)", active: true },
+      ],
+    }),
+  );
+  for (const endpoint of ["sports", "event-roles", "services"]) {
+    await page.route(`**/api/v1/${endpoint}**`, (route) => route.fulfill({ json: [] }));
+  }
   await page.route("**/api/v1/events**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/v1/events/hardware**", (route) =>
     route.fulfill({
@@ -53,6 +67,7 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.route("**/api/v1/events/event-1/hardware/h1", async (route) => {
     const changes = route.request().postDataJSON() as Record<string, unknown>;
     lastEventChanges = changes;
+    eventChanges.push(changes);
     await route.fulfill({
       json: {
         id: "h1",
@@ -106,6 +121,20 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.getByLabel("E-Mail bearbeiten").fill("neu@example.com");
   await page.getByLabel("E-Mail bearbeiten").press("Tab");
   await expect.poll(() => lastEventChanges.email).toBe("neu@example.com");
+  const emailRequestsBeforeInvalidEmail = eventChanges.filter(
+    (changes) => "email" in changes,
+  ).length;
+  await page.getByLabel("E-Mail bearbeiten").fill("keine-mail");
+  await page.getByLabel("E-Mail bearbeiten").press("Tab");
+  await expect(page.getByText("Bitte eine gültige E-Mail-Adresse angeben.")).toBeVisible();
+  await expect(page.getByLabel("E-Mail bearbeiten")).toHaveAttribute("aria-invalid", "true");
+  await page.waitForTimeout(100);
+  expect(eventChanges.filter((changes) => "email" in changes)).toHaveLength(
+    emailRequestsBeforeInvalidEmail,
+  );
+  await page.getByLabel("E-Mail bearbeiten").fill("gueltig@example.com");
+  await page.getByLabel("E-Mail bearbeiten").press("Tab");
+  await expect.poll(() => lastEventChanges.email).toBe("gueltig@example.com");
   await page.getByLabel("Telefon bearbeiten").fill("+43 660 999999");
   await page.getByLabel("Telefon bearbeiten").press("Tab");
   await expect.poll(() => lastEventChanges.phone).toBe("+43 660 999999");
@@ -176,7 +205,8 @@ test("manages hardware from the Event detail tab", async ({ page }) => {
   await expect(page.getByText("Ausgaben und Rückläufer dieses Events verwalten.")).toBeVisible();
   await page.getByRole("button", { name: "Hardware-Ausgabe anlegen" }).click();
   await page.getByPlaceholder("Empfänger").fill("Max Mustermann");
-  await page.getByPlaceholder("Objekt").fill("Active Transponder");
+  await page.getByLabel("Objekt", { exact: true }).click();
+  await page.getByRole("option", { name: "Active Transponder (T2W)" }).click();
   await page.route("**/api/v1/events/*/hardware", (route) =>
     route.fulfill({
       json: [

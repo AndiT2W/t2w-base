@@ -1,4 +1,4 @@
-export type SelectionListKind = "sports" | "eventRoles" | "services";
+export type SelectionListKind = "sports" | "eventRoles" | "services" | "hardwareObjects";
 export type SelectionListValue = {
   id: string;
   name: string;
@@ -20,6 +20,7 @@ export const SELECTION_LIST_KINDS: readonly SelectionListKind[] = [
   "sports",
   "eventRoles",
   "services",
+  "hardwareObjects",
 ];
 
 export interface SelectionListAdapter {
@@ -80,7 +81,13 @@ export class SelectionLists {
 
 export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
   const lists = new SelectionLists(adapter);
-  let snapshot: SelectionListSnapshot = { sports: [], eventRoles: [], services: [], loaded: false };
+  let snapshot: SelectionListSnapshot = {
+    sports: [],
+    eventRoles: [],
+    services: [],
+    hardwareObjects: [],
+    loaded: false,
+  };
   const subscribers = new Set<() => void>();
   const publish = () => subscribers.forEach((subscriber) => subscriber());
   const replace = (kind: SelectionListKind, values: SelectionListValue[]) => {
@@ -98,12 +105,13 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
       return selectionListChoices(snapshot[kind]);
     },
     async load() {
-      const [sports, eventRoles, services] = await Promise.all([
+      const [sports, eventRoles, services, hardwareObjects] = await Promise.all([
         lists.list("sports", true),
         lists.list("eventRoles", true),
         lists.list("services", true),
+        lists.list("hardwareObjects", true),
       ]);
-      snapshot = { sports, eventRoles, services, loaded: true };
+      snapshot = { sports, eventRoles, services, hardwareObjects, loaded: true };
       publish();
       return snapshot;
     },
