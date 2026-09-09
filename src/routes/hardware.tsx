@@ -40,7 +40,7 @@ type Hardware = {
 };
 type InlineDraft = Pick<
   Hardware,
-  "recipientName" | "objectName" | "quantity" | "status" | "dueDate"
+  "recipientName" | "email" | "objectName" | "quantity" | "status" | "dueDate"
 >;
 const labels: Record<string, string> = {
   OPEN: "Offen",
@@ -65,6 +65,7 @@ function cell(item: Hardware, column: HardwareColumn): ReactNode {
         className="text-primary hover:underline"
         to="/events/$eventcode"
         params={{ eventcode: item.event.eventCode }}
+        onClick={(event) => event.stopPropagation()}
       >
         {item.event.name}
       </Link>
@@ -175,14 +176,15 @@ function HardwarePage() {
     setInlineEditingId(item.id);
     setInlineDraft({
       recipientName: item.recipientName,
+      email: item.email,
       objectName: item.objectName,
       quantity: item.quantity,
       status: item.status,
       dueDate: item.dueDate?.slice(0, 10),
     });
   };
-  const saveInlineEdit = async (item: Hardware) => {
-    if (!inlineDraft) return;
+  const saveInlineEdit = async (item: Hardware, draft = inlineDraft) => {
+    if (!draft) return;
     setSavingInline(true);
     try {
       const baseUrl = item.event?.id
@@ -192,7 +194,7 @@ function HardwarePage() {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(inlineDraft),
+        body: JSON.stringify(draft),
       });
       if (!response.ok) {
         setInlineError("Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.");
@@ -200,8 +202,6 @@ function HardwarePage() {
       }
       const updated = (await response.json()) as Hardware;
       setItems((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
-      setInlineEditingId(null);
-      setInlineDraft(null);
     } finally {
       setSavingInline(false);
     }
@@ -340,6 +340,7 @@ function HardwarePage() {
                   {rows.map((i) => (
                     <tr
                       key={i.id}
+                      aria-busy={savingInline && inlineEditingId === i.id}
                       className="cursor-pointer border-b hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       tabIndex={0}
                       onClick={() => inlineEditingId !== i.id && beginInlineEdit(i)}
@@ -366,6 +367,23 @@ function HardwarePage() {
                                 onChange={(e) =>
                                   setInlineDraft({ ...inlineDraft, recipientName: e.target.value })
                                 }
+                                onBlur={() => void saveInlineEdit(i)}
+                              />
+                            </td>
+                          );
+                        if (editing && h === "E-Mail")
+                          return (
+                            <td className="px-2 py-1" key={h}>
+                              <Input
+                                aria-label="E-Mail bearbeiten"
+                                className="h-8 min-w-48"
+                                type="email"
+                                value={inlineDraft.email ?? ""}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) =>
+                                  setInlineDraft({ ...inlineDraft, email: e.target.value })
+                                }
+                                onBlur={() => void saveInlineEdit(i)}
                               />
                             </td>
                           );
@@ -380,6 +398,7 @@ function HardwarePage() {
                                 onChange={(e) =>
                                   setInlineDraft({ ...inlineDraft, objectName: e.target.value })
                                 }
+                                onBlur={() => void saveInlineEdit(i)}
                               />
                             </td>
                           );
@@ -399,6 +418,7 @@ function HardwarePage() {
                                     quantity: Number(e.target.value),
                                   })
                                 }
+                                onBlur={() => void saveInlineEdit(i)}
                               />
                             </td>
                           );
@@ -407,9 +427,11 @@ function HardwarePage() {
                             <td className="px-2 py-1" key={h}>
                               <Select
                                 value={inlineDraft.status}
-                                onValueChange={(status) =>
-                                  setInlineDraft({ ...inlineDraft, status })
-                                }
+                                onValueChange={(status) => {
+                                  const next = { ...inlineDraft, status };
+                                  setInlineDraft(next);
+                                  void saveInlineEdit(i, next);
+                                }}
                               >
                                 <SelectTrigger
                                   aria-label="Status bearbeiten"
@@ -445,6 +467,7 @@ function HardwarePage() {
                                     dueDate: e.target.value || undefined,
                                   })
                                 }
+                                onBlur={() => void saveInlineEdit(i)}
                               />
                             </td>
                           );
@@ -454,32 +477,6 @@ function HardwarePage() {
                           </td>
                         );
                       })}
-                      {inlineEditingId === i.id && (
-                        <td className="px-2 py-1">
-                          <div
-                            className="flex justify-end gap-1"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <Button
-                              size="sm"
-                              onClick={() => void saveInlineEdit(i)}
-                              disabled={savingInline}
-                            >
-                              Speichern
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setInlineEditingId(null);
-                                setInlineDraft(null);
-                              }}
-                            >
-                              Abbrechen
-                            </Button>
-                          </div>
-                        </td>
-                      )}
                     </tr>
                   ))}
                 </tbody>

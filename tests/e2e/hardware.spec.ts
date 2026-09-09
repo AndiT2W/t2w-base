@@ -2,6 +2,8 @@ import { test, expect } from "@playwright/test";
 import { mockEventManagementApi } from "./support/event-management-api";
 
 test("shows central hardware cases, filters them, and links to the event", async ({ page }) => {
+  let lastEventChanges: Record<string, unknown> = {};
+  let lastUnassignedChanges: Record<string, unknown> = {};
   await page.route("**/api/v1/settings**", (route) =>
     route.fulfill({ json: { outlookJahresordner: [], jahresSites: [], outlookMailbox: null } }),
   );
@@ -47,33 +49,40 @@ test("shows central hardware cases, filters them, and links to the event", async
       ],
     }),
   );
-  await page.route("**/api/v1/events/event-1/hardware/h1", (route) =>
-    route.fulfill({
+  await page.route("**/api/v1/events/event-1/hardware/h1", async (route) => {
+    const changes = route.request().postDataJSON() as Record<string, unknown>;
+    lastEventChanges = changes;
+    await route.fulfill({
       json: {
         id: "h1",
-        recipientName: "Max Mustermann aktualisiert",
+        recipientName: "Max Mustermann",
+        email: "max@example.com",
         issueType: "PARTICIPANT",
         objectName: "Active Transponder",
         quantity: 1,
         status: "NOTIFIED",
         dueDate: "2026-09-12",
         event: { id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" },
+        ...changes,
       },
-    }),
-  );
-  await page.route("**/api/v1/events/hardware/h3", (route) =>
-    route.fulfill({
+    });
+  });
+  await page.route("**/api/v1/events/hardware/h3", async (route) => {
+    const changes = route.request().postDataJSON() as Record<string, unknown>;
+    lastUnassignedChanges = changes;
+    await route.fulfill({
       json: {
         id: "h3",
-        recipientName: "Ohne Event aktualisiert",
+        recipientName: "Ohne Event",
         issueType: "OTHER",
         objectName: "Unbekanntes Gerät",
         quantity: 1,
         status: "OPEN",
         event: null,
+        ...changes,
       },
-    }),
-  );
+    });
+  });
   await page.goto("/hardware");
   await expect(page.getByRole("heading", { name: "Hardware" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();
@@ -84,13 +93,16 @@ test("shows central hardware cases, filters them, and links to the event", async
   await hardwareRow.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByLabel("Empfänger bearbeiten").fill("Max Mustermann aktualisiert");
-  await page.getByRole("button", { name: "Speichern" }).click();
-  await expect(page.getByText("Max Mustermann aktualisiert")).toBeVisible();
+  await page.getByLabel("Empfänger bearbeiten").press("Tab");
+  await expect.poll(() => lastEventChanges.recipientName).toBe("Max Mustermann aktualisiert");
+  await page.getByLabel("E-Mail bearbeiten").fill("neu@example.com");
+  await page.getByLabel("E-Mail bearbeiten").press("Tab");
+  await expect.poll(() => lastEventChanges.email).toBe("neu@example.com");
   const unassignedRow = page.getByRole("row", { name: /Kein Event zugeordnet.*Ohne Event/ });
   await unassignedRow.click();
   await page.getByLabel("Empfänger bearbeiten").fill("Ohne Event aktualisiert");
-  await page.getByRole("button", { name: "Speichern" }).click();
-  await expect(page.getByText("Ohne Event aktualisiert")).toBeVisible();
+  await page.getByLabel("Empfänger bearbeiten").press("Tab");
+  await expect.poll(() => lastUnassignedChanges.recipientName).toBe("Ohne Event aktualisiert");
   await page.getByRole("textbox", { name: "Suche" }).first().fill("max@example.com");
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await page.getByRole("textbox", { name: "Suche" }).first().fill("");
