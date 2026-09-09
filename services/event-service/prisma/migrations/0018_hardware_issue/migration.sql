@@ -2,7 +2,7 @@ CREATE TYPE "HardwareIssueType" AS ENUM ('PARTICIPANT', 'RENTAL', 'OTHER');
 CREATE TYPE "HardwareStatus" AS ENUM ('OPEN', 'MAIL_SEND', 'NOTIFIED', 'RETURNED', 'COMPLETED');
 CREATE TYPE "ObjectNumberType" AS ENUM ('SINGLE', 'RANGE', 'NONE');
 CREATE TABLE "HardwareIssue" (
-  "id" UUID NOT NULL DEFAULT uuid_generate_v4(), "eventId" UUID NOT NULL, "recipientName" TEXT NOT NULL,
+  "id" UUID NOT NULL DEFAULT gen_random_uuid(), "eventId" UUID NOT NULL, "recipientName" TEXT NOT NULL,
   "issueType" "HardwareIssueType" NOT NULL, "objectName" TEXT NOT NULL, "objectNumberType" "ObjectNumberType" NOT NULL,
   "objectNumberSingle" TEXT, "objectNumberPrefix" TEXT, "objectNumberFrom" INTEGER, "objectNumberTo" INTEGER,
   "objectNumberPadding" INTEGER, "quantity" INTEGER NOT NULL, "status" "HardwareStatus" NOT NULL DEFAULT 'OPEN',
