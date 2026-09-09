@@ -39,6 +39,7 @@ export type EventMutationRecord = Record<string, unknown>;
 export interface EventMutationAdapter {
   transaction<T>(work: (adapter: EventMutationAdapter) => Promise<T>): Promise<T>;
   createEvent(data: EventMutationRecord): Promise<EventMutationRecord>;
+  deleteEvent(id: string): Promise<boolean>;
   updateEvent(
     id: string,
     version: number | undefined,
@@ -110,6 +111,12 @@ export class EventMutations {
         payoutRecipientId: input.payoutRecipientId ?? organizerId,
         invoiceRecipientIds,
       });
+    });
+  }
+
+  remove(id: string) {
+    return this.persistence.transaction(async (adapter) => {
+      if (!(await adapter.deleteEvent(id))) throw new EventMutationConflict();
     });
   }
 

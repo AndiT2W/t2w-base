@@ -67,6 +67,23 @@ describe("Event workspace", () => {
     expect(snapshots.at(-1)).toEqual([event, created]);
   });
 
+  it("removes an Event only after the backend confirms deletion", async () => {
+    const transport = {
+      create: vi.fn(),
+      save: vi.fn(),
+      remove: vi.fn().mockResolvedValue(undefined),
+      syncOutlook: vi.fn(),
+      outlookPlan: vi.fn(),
+    };
+    const workspace = createEventWorkspace(transport);
+    workspace.load([event]);
+
+    await workspace.remove(event.id);
+
+    expect(transport.remove).toHaveBeenCalledWith(event.id);
+    expect(workspace.events()).toEqual([]);
+  });
+
   it("normalizes dates and returns the persisted Event before callers announce success", async () => {
     const saved = { ...event, version: 4, ende: "2026-08-23" };
     const transport = {

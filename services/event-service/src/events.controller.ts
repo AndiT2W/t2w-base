@@ -174,6 +174,13 @@ export class EventsController {
     });
   }
 
+  @Delete(":id") remove(@Param("id", ParseUUIDPipe) id: string) {
+    return this.eventMutations.remove(id).catch((error: unknown) => {
+      if (error instanceof EventMutationConflict) throw new ConflictException("EVENT_NOT_FOUND");
+      throw error;
+    });
+  }
+
   @Patch(":id/series")
   updateSeries(@Param("id", ParseUUIDPipe) id: string, @Body() dto: EventSeriesDto) {
     return this.eventMutations.updateSeries(id, dto).catch((error: unknown) => {

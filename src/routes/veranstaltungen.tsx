@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, GanttChartSquare, List, Mail, Pencil, Plus, Share2 } from "lucide-react";
+import { CalendarDays, GanttChartSquare, List, Mail, Pencil, Plus, Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -88,7 +88,7 @@ const EVENT_TABLE_COLUMNS = [
 
 function Veranstaltungen() {
   const { q, ansicht } = Route.useSearch();
-  const { events, settings } = useT2W();
+  const { events, settings, loescheEvent } = useT2W();
   const [suche, setSuche] = useState(q);
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [zeitraum, setZeitraum] = useState<Zeitraum>("alle");
@@ -112,6 +112,10 @@ function Veranstaltungen() {
   }, [events, suche, status, zeitraum, archiv, heute]);
   const sortiere = table.sortBy;
   const zeilen = table.rows(gefiltert);
+  const deleteEvent = async (event: T2WEvent) => {
+    if (!window.confirm(`Event „${event.name}“ wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.`)) return;
+    await loescheEvent(event.id);
+  };
 
   if (ansicht === "kalender") return <KalenderSeite veranstaltungsmenue />;
   if (ansicht === "gantt") return <GanttSeite veranstaltungsmenue />;
@@ -211,6 +215,7 @@ function Veranstaltungen() {
           events={zeilen}
           settings={settings}
           emptyText="Keine Events für die aktuelle Filterauswahl."
+          onDelete={(event) => void deleteEvent(event)}
         />
         <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface md:block">
           <table className="w-full min-w-[54rem] border-collapse text-xs">
@@ -370,6 +375,9 @@ function Veranstaltungen() {
                       >
                         <Pencil className="size-4" />
                       </Link>
+                      <button type="button" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded p-1 text-destructive hover:bg-destructive/10 sm:min-h-0 sm:min-w-0" title="Event löschen" aria-label={`Event löschen: ${e.name}`} onClick={() => void deleteEvent(e)}>
+                        <Trash2 className="size-4" />
+                      </button>
                     </td>
                   </tr>
                 );

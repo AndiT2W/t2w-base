@@ -34,6 +34,7 @@ type Ctx = State & {
   bereit: boolean;
   ladefehler: string | null;
   neuesEvent: (input: CreateEventInput) => Promise<T2WEvent>;
+  loescheEvent: (id: string) => Promise<void>;
   kopiereEvent: (
     id: string,
     input: {
@@ -106,6 +107,10 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     (id, input) => workspace.copy(id, input),
     [workspace],
   );
+  const loescheEvent: Ctx["loescheEvent"] = useCallback(
+    (id) => workspace.remove(id),
+    [workspace],
+  );
   const uebernehmeEvents: Ctx["uebernehmeEvents"] = useCallback(
     (changedEvents) => workspace.apply(changedEvents),
     [workspace],
@@ -124,6 +129,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       bereit,
       ladefehler,
       neuesEvent,
+      loescheEvent,
       kopiereEvent,
       uebernehmeEvents,
       openEventSession: workspace.openSession,
@@ -143,6 +149,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       bereit,
       ladefehler,
       neuesEvent,
+      loescheEvent,
       kopiereEvent,
       uebernehmeEvents,
       setSettings,

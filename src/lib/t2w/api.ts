@@ -349,6 +349,14 @@ export async function apiCreateEvent(input: {
   });
 }
 
+export async function apiDeleteEvent(id: string) {
+  const response = await fetch(`/api/v1/events/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Event konnte nicht gelöscht werden");
+}
+
 export type ApiSport = { id: string; name: string; active?: boolean; icon?: string | null; color?: string | null };
 export async function apiSports(): Promise<ApiSport[]> {
   const response = await fetch("/api/v1/sports", { credentials: "include" });
@@ -470,6 +478,25 @@ export async function apiOutlookStatus(): Promise<boolean> {
   const response = await fetch("/api/v1/settings/outlook/status", { credentials: "include" });
   if (!response.ok) return false;
   return ((await response.json()) as { connected?: boolean }).connected === true;
+}
+
+export type ApiAuditLog = {
+  id: string;
+  entity: string;
+  entityId: string;
+  action: string;
+  details: unknown;
+  createdAt: string;
+  user?: { id: string; displayName: string | null; email: string | null } | null;
+};
+
+export async function apiAuditLog(filters?: { entity?: string; entityId?: string }) {
+  const params = new URLSearchParams();
+  if (filters?.entity) params.set("entity", filters.entity);
+  if (filters?.entityId) params.set("entityId", filters.entityId);
+  const response = await fetch(`/api/v1/audit-log?${params.toString()}`, { credentials: "include" });
+  if (!response.ok) throw new Error("Auditlog konnte nicht geladen werden");
+  return response.json() as Promise<ApiAuditLog[]>;
 }
 
 export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
@@ -598,6 +625,7 @@ export const apiUpdateEventSeries = (
 export function createHttpEventTransport(): EventTransport<T2WEvent> {
   return {
     create: apiCreateEvent,
+    remove: apiDeleteEvent,
     save: apiUpdateEvent,
     syncOutlook: apiSyncOutlookFolder,
     syncCommunication: apiSyncOutlookMessages,

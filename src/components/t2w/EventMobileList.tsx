@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { CalendarDays, CheckSquare } from "lucide-react";
+import { CalendarDays, CheckSquare, Trash2 } from "lucide-react";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { formatZeitraum } from "@/lib/t2w/format";
@@ -10,10 +10,12 @@ export function EventMobileList({
   events,
   settings,
   emptyText,
+  onDelete,
 }: {
   events: T2WEvent[];
   settings: Settings;
   emptyText: string;
+  onDelete?: (event: T2WEvent) => void;
 }) {
   if (!events.length) {
     return (
@@ -41,7 +43,10 @@ export function EventMobileList({
                 </Link>
                 <p className="truncate text-sm text-muted-foreground">{event.veranstalter}</p>
               </div>
-              <StatusBadge status={event.status} />
+              <div className="flex items-center gap-1">
+                <StatusBadge status={event.status} />
+                {onDelete && <button type="button" className="rounded p-2 text-destructive hover:bg-destructive/10" aria-label={`Event löschen: ${event.name}`} onClick={() => onDelete(event)}><Trash2 className="size-4" /></button>}
+              </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">

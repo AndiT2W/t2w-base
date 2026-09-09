@@ -82,6 +82,7 @@ export type EventDetailCommand =
 
 export type EventTransport<TEvent extends EventRecord> = {
   create(input: PersistedCreateEventInput<TEvent>): Promise<TEvent>;
+  remove(id: string): Promise<void>;
   save(id: string, patch: Partial<TEvent>): Promise<TEvent>;
   syncOutlook(id: string): Promise<TEvent>;
   syncCommunication?(id: string): Promise<TEvent>;
@@ -307,6 +308,12 @@ export function createEventWorkspace<TEvent extends EventRecord>(
       collection = [...collection, event];
       publish();
       return event;
+    },
+    async remove(id: string): Promise<void> {
+      if (!find(id)) throw new Error("EVENT_NOT_FOUND");
+      await transport.remove(id);
+      collection = collection.filter((event) => event.id !== id);
+      publish();
     },
     async copy(
       id: string,

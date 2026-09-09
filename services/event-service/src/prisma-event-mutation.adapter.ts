@@ -37,6 +37,11 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
     return this.getEvent(created.id) as Promise<EventMutationRecord>;
   }
 
+  async deleteEvent(id: string) {
+    const result = await this.prisma.event.deleteMany({ where: { id } });
+    return result.count === 1;
+  }
+
   async updateEvent(id: string, version: number | undefined, changes: EventMutationRecord) {
     const updated = await this.prisma.event.updateMany({
       where: { id, ...(version === undefined ? {} : { version }) },
