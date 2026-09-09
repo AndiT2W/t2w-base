@@ -200,19 +200,24 @@ function HardwarePage() {
   }, [q, status, issueType]);
   useEffect(() => {
     if (!inlineEditingId) return;
-    const finishEditing = (clickEvent: MouseEvent) => {
-      const target = clickEvent.target;
+    const finishEditing = (pointerEvent: PointerEvent) => {
+      const target = pointerEvent.target;
       if (
         target instanceof Element &&
         (target.closest('[data-inline-editing="true"]') ||
           target.closest("[data-radix-popper-content-wrapper]"))
       )
         return;
-      setInlineEditingId(null);
-      setInlineDraft(null);
+      window.setTimeout(() => {
+        setInlineEditingId((current) => {
+          if (current !== inlineEditingId) return current;
+          setInlineDraft(null);
+          return null;
+        });
+      }, 0);
     };
-    document.addEventListener("click", finishEditing);
-    return () => document.removeEventListener("click", finishEditing);
+    document.addEventListener("pointerdown", finishEditing);
+    return () => document.removeEventListener("pointerdown", finishEditing);
   }, [inlineEditingId]);
   const today = new Date().toISOString().slice(0, 10);
   const active = items.filter(
