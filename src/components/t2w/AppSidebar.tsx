@@ -56,6 +56,7 @@ const ENGLISH_NAV = {
   "nav.events": "Events",
   "nav.tasks": "Tasks",
   "nav.contacts": "Contacts",
+  "nav.hardware": "Hardware",
   "nav.offers": "Offers",
   "nav.invoices": "Invoices",
   "nav.settings": "Settings",

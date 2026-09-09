@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
+import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,6 +52,15 @@ function HardwarePage() {
   const [issueType, setIssueType] = useState("all");
   const [event, setEvent] = useState("");
   const [overdue, setOverdue] = useState(false);
+  const [events, setEvents] = useState<{ id: string; name: string; eventCode: string }[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState("");
+  useEffect(() => {
+    fetch("/api/v1/events?limit=1000", { credentials: "include" })
+      .then((r) => r.json())
+      .then((value) => setEvents(normalizeHardwareResponse(value)))
+      .catch(() => setEvents([]));
+  }, []);
   useEffect(() => {
     const params = new URLSearchParams({ q });
     if (status !== "active") params.set("status", status);
@@ -73,10 +85,25 @@ function HardwarePage() {
   );
   return (
     <div className="space-y-6 py-6">
-      <div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
         <h1 className="text-2xl font-semibold">Hardware</h1>
         <p className="text-sm text-muted-foreground">Eventübergreifende Rückgabeübersicht</p>
+        </div>
+        <Button onClick={() => setAddOpen(true)}>Hardware-Ausgabe anlegen</Button>
       </div>
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader><DialogTitle>Hardware-Ausgabe anlegen</DialogTitle></DialogHeader>
+          <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+            <SelectTrigger><SelectValue placeholder="Event auswählen" /></SelectTrigger>
+            <SelectContent>
+              {events.map((e) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.eventCode})</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {selectedEventId && <HardwareWorkspace eventId={selectedEventId} />}
+        </DialogContent>
+      </Dialog>
       <div className="grid gap-3 sm:grid-cols-4">
         {[
           ["Offen", active.filter((i) => i.status === "OPEN").length],

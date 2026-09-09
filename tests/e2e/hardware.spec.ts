@@ -38,6 +38,9 @@ test("shows central hardware cases, filters them, and links to the event", async
   );
   await page.goto("/hardware");
   await expect(page.getByRole("heading", { name: "Hardware" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();
+  await page.getByRole("button", { name: "Hardware-Ausgabe anlegen" }).click();
+  await expect(page.getByText("Hardware-Ausgabe anlegen", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await expect(page.getByText("Timer XY")).toBeVisible();
   await page.getByPlaceholder("Event filtern …").fill("Zweites");
