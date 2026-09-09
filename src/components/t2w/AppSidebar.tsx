@@ -11,6 +11,7 @@ import {
   Ruler,
   Settings2,
   Users,
+  Package,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ export const HAUPT_NAV = [
   },
   { to: "/aufgaben", label: "Aufgaben", icon: CheckSquare, exact: false, available: false },
   { to: "/kontakte", label: "Kontakte & Kunden", icon: Users, exact: false, available: true },
+  { to: "/hardware", label: "Hardware", icon: Package, exact: false, available: true },
   { to: "/angebote", label: "Angebote", icon: FileText, exact: false, available: false },
   { to: "/rechnungen", label: "Rechnungen", icon: Receipt, exact: false, available: false },
   { to: "/einstellungen", label: "Einstellungen", icon: Settings2, exact: false, available: true },
@@ -39,6 +41,7 @@ const HAUPT_NAV_KEYS = {
   "/veranstaltungen": "nav.events",
   "/aufgaben": "nav.tasks",
   "/kontakte": "nav.contactsCustomers",
+  "/hardware": "nav.hardware",
   "/angebote": "nav.offers",
   "/rechnungen": "nav.invoices",
   "/einstellungen": "nav.settings",

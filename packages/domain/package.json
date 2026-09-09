@@ -15,6 +15,10 @@
     "./selection-lists": {
       "types": "./dist/selection-lists.d.ts",
       "import": "./dist/selection-lists.js"
+    },
+    "./hardware": {
+      "types": "./dist/hardware.d.ts",
+      "import": "./dist/hardware.js"
     }
   },
   "files": ["dist"],

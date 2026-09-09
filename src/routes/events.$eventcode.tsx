@@ -70,6 +70,7 @@ import { projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
+import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { ServiceBadge } from "@/components/t2w/ServiceBadge";
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
@@ -488,6 +489,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <TabsTrigger value="aufgaben">AUFGABEN</TabsTrigger>
           <TabsTrigger value="dateien">DATEIEN</TabsTrigger>
           <TabsTrigger value="kommunikation">KOMMUNIKATION</TabsTrigger>
+          <TabsTrigger value="hardware">HARDWARE</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stammdaten" className="space-y-4">
@@ -1307,6 +1309,17 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </Card>
         </TabsContent>
 
+        <TabsContent value="hardware">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Hardware</CardTitle>
+              <CardDescription>Ausgaben und Rückläufer dieses Events verwalten.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <HardwareWorkspace eventId={event.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="kommunikation">
           <Card>
             <CardHeader>
