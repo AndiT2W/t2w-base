@@ -52,6 +52,7 @@ services:
       TIME2WIN_API_BASE_URL: ${TIME2WIN_API_BASE_URL:-https://time2win.at/api/1.1}
     depends_on:
       event-db: { condition: service_started }
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
     networks: [event_internal, traefik_proxy]
     labels:
       - traefik.enable=true
