@@ -42,6 +42,14 @@ const issueLabels: Record<string, string> = {
   RENTAL: "Verleih",
   OTHER: "Sonstige",
 };
+function displayNumber(item: Item) {
+  if (item.objectNumberSingle) return item.objectNumberSingle;
+  if (item.objectNumberPrefix && item.objectNumberFrom != null && item.objectNumberTo != null) {
+    const padding = item.objectNumberPadding ?? 3;
+    return `${item.objectNumberPrefix}${String(item.objectNumberFrom).padStart(padding, "0")}–${item.objectNumberPrefix}${String(item.objectNumberTo).padStart(padding, "0")}`;
+  }
+  return "—";
+}
 export function HardwareWorkspace({ eventId }: { eventId?: string }) {
   const [items, setItems] = useState<Item[]>([]);
   const [editing, setEditing] = useState<Partial<Item> | null>(null);
@@ -248,13 +256,20 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-left">
-              {["Empfänger", "Art", "Objekt", "Anzahl", "Status", "Due Date", "Aktionen"].map(
-                (h) => (
-                  <th className="p-2" key={h}>
-                    {h}
-                  </th>
-                ),
-              )}
+              {[
+                "Empfänger",
+                "Art",
+                "Objekt",
+                "Nummer",
+                "Anzahl",
+                "Status",
+                "Due Date",
+                "Aktionen",
+              ].map((h) => (
+                <th className="p-2" key={h}>
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -263,11 +278,16 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
                 <td className="p-2">{item.recipientName}</td>
                 <td className="p-2">{issueLabels[item.issueType] ?? item.issueType}</td>
                 <td className="p-2">{item.objectName}</td>
+                <td className="p-2 font-mono">{displayNumber(item)}</td>
                 <td className="p-2">{item.quantity}</td>
                 <td className="p-2">
                   <Badge>{statusLabels[item.status] ?? item.status}</Badge>
                 </td>
-                <td className="p-2">{item.dueDate?.slice(0, 10) ?? "—"}</td>
+                <td
+                  className={`p-2 ${item.dueDate && item.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10) && item.status !== "RETURNED" && item.status !== "COMPLETED" ? "font-semibold text-destructive" : ""}`}
+                >
+                  {item.dueDate?.slice(0, 10) ?? "—"}
+                </td>
                 <td className="flex gap-1 p-2">
                   <Button size="sm" variant="outline" onClick={() => setEditing(item)}>
                     Bearbeiten
