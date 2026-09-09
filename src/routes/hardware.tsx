@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
@@ -178,6 +178,8 @@ function HardwarePage() {
   const [savingInline, setSavingInline] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [newHardware, setNewHardware] = useState(false);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const pendingSaves = useRef(0);
   const table = useTableBehavior<Hardware, HardwareColumn>({
     storageKey: "t2w-hardware-table-columns",
     columns: HARDWARE_TABLE_COLUMNS,
@@ -251,9 +253,10 @@ function HardwarePage() {
       objectNumber: number(item) === "—" ? "" : number(item),
     });
   };
-  const saveInlineEdit = async (item: Hardware, changes: Record<string, unknown>) => {
+  const saveInlineEdit = (item: Hardware, changes: Record<string, unknown>) => {
+    pendingSaves.current += 1;
     setSavingInline(true);
-    try {
+    const persist = async () => {
       const baseUrl = item.event?.id
         ? `/api/v1/events/${item.event.id}/hardware`
         : "/api/v1/events/hardware";
@@ -269,9 +272,16 @@ function HardwarePage() {
       }
       const updated = (await response.json()) as Hardware;
       setItems((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
-    } finally {
-      setSavingInline(false);
-    }
+    };
+    const request = saveQueue.current.then(persist, persist);
+    const settled = request.catch(() => {
+      setInlineError("Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.");
+    });
+    saveQueue.current = settled;
+    return settled.finally(() => {
+      pendingSaves.current -= 1;
+      if (pendingSaves.current === 0) setSavingInline(false);
+    });
   };
   return (
     <div>
