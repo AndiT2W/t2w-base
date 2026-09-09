@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/t2w/PageHeader";
+import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
 import {
   Select,
   SelectContent,
@@ -26,6 +28,8 @@ type Hardware = {
   quantity: number;
   status: string;
   dueDate?: string;
+  email?: string;
+  phone?: string;
   event: { eventCode: string; name: string } | null;
 };
 const labels: Record<string, string> = {
@@ -44,6 +48,32 @@ function number(item: Hardware) {
     return `${item.objectNumberPrefix}${String(item.objectNumberFrom).padStart(3, "0")}–${item.objectNumberPrefix}${String(item.objectNumberTo).padStart(3, "0")}`;
   return "—";
 }
+function cell(item: Hardware, column: HardwareColumn): ReactNode {
+  if (column === "Event") return item.event ? <Link className="text-primary hover:underline" to="/events/$eventcode" params={{ eventcode: item.event.eventCode }}>{item.event.name}</Link> : <span className="text-muted-foreground">Kein Event zugeordnet</span>;
+  if (column === "Empfänger") return item.recipientName;
+  if (column === "E-Mail") return item.email ?? "—";
+  if (column === "Telefon") return item.phone ?? "—";
+  if (column === "Art") return labels[item.issueType] ?? item.issueType;
+  if (column === "Objekt") return item.objectName;
+  if (column === "Nummer") return number(item);
+  if (column === "Anzahl") return item.quantity;
+  if (column === "Status") return <Badge>{labels[item.status] ?? item.status}</Badge>;
+  return item.dueDate?.slice(0, 10) ?? "—";
+}
+const HARDWARE_COLUMNS = ["Event", "Empfänger", "E-Mail", "Telefon", "Art", "Objekt", "Nummer", "Anzahl", "Status", "Fälligkeit"] as const;
+type HardwareColumn = (typeof HARDWARE_COLUMNS)[number];
+const HARDWARE_TABLE_COLUMNS = HARDWARE_COLUMNS.map((key) => ({
+  key,
+  sortValue: (item: Hardware) => {
+    const values: Record<HardwareColumn, string | number> = {
+      Event: item.event?.name ?? "", Empfänger: item.recipientName, "E-Mail": item.email ?? "",
+      Telefon: item.phone ?? "", Art: labels[item.issueType] ?? item.issueType, Objekt: item.objectName,
+      Nummer: number(item), Anzahl: item.quantity, Status: labels[item.status] ?? item.status,
+      Fälligkeit: item.dueDate ?? "",
+    };
+    return values[key];
+  },
+})) as unknown as readonly { key: HardwareColumn; sortValue: (item: Hardware) => string | number }[];
 export const Route = createFileRoute("/hardware")({ component: HardwarePage });
 function HardwarePage() {
   const [items, setItems] = useState<Hardware[]>([]);
@@ -55,6 +85,7 @@ function HardwarePage() {
   const [events, setEvents] = useState<{ id: string; name: string; eventCode: string }[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
+  const table = useTableBehavior<Hardware, HardwareColumn>({ storageKey: "t2w-hardware-table-columns", columns: HARDWARE_TABLE_COLUMNS, initialSort: { key: "Event", direction: "asc" } });
   useEffect(() => {
     fetch("/api/v1/events?limit=1000", { credentials: "include" })
       .then((r) => r.json())
@@ -73,6 +104,11 @@ function HardwarePage() {
   const today = new Date().toISOString().slice(0, 10);
   const active = items.filter(
     (i) =>
+      (!q || [i.recipientName, i.email, i.phone, i.objectName, number(i), i.event?.name]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(q.toLowerCase())) &&
       (status !== "active" || (i.status !== "RETURNED" && i.status !== "COMPLETED")) &&
       (!event || i.event?.name.toLowerCase().includes(event.toLowerCase())) &&
       (!overdue ||
@@ -83,15 +119,11 @@ function HardwarePage() {
           i.status !== "COMPLETED",
         )),
   );
+  const rows = useMemo(() => table.rows(active), [active, table]);
   return (
-    <div className="space-y-6 py-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-        <h1 className="text-2xl font-semibold">Hardware</h1>
-        <p className="text-sm text-muted-foreground">Eventübergreifende Rückgabeübersicht</p>
-        </div>
-        <Button onClick={() => setAddOpen(true)}>Hardware-Ausgabe anlegen</Button>
-      </div>
+    <div>
+      <PageHeader titel="Hardware" beschreibung="Eventübergreifende Rückgabeübersicht" suche={{ value: q, onChange: setQ, placeholder: "Empfänger, E-Mail, Telefon oder Objektnummer …" }} aktion={<Button onClick={() => setAddOpen(true)}>Hardware-Ausgabe anlegen</Button>} />
+      <div className="space-y-6">
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader><DialogTitle>Hardware-Ausgabe anlegen</DialogTitle></DialogHeader>
@@ -121,11 +153,6 @@ function HardwarePage() {
       </div>
       <Card>
         <CardHeader>
-          <Input
-            placeholder="Empfänger, E-Mail oder Objektnummer suchen …"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
           <div className="mt-3 grid gap-2 sm:grid-cols-4">
             <Input
               placeholder="Event filtern …"
@@ -164,6 +191,7 @@ function HardwarePage() {
               />{" "}
               Überfällig
             </label>
+            <ColumnPicker columns={HARDWARE_COLUMNS} visibleColumns={table.visibleColumns} toggleColumn={table.toggleColumn} />
           </div>
         </CardHeader>
         <CardContent>
@@ -171,47 +199,13 @@ function HardwarePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left">
-                  {[
-                    "Event",
-                    "Empfänger",
-                    "Art",
-                    "Objekt",
-                    "Nummer",
-                    "Anzahl",
-                    "Status",
-                    "Due Date",
-                  ].map((h) => (
-                    <th className="p-2" key={h}>
-                      {h}
-                    </th>
-                  ))}
+                  {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => <th className="px-2 py-1.5" key={h}><SortHeader label={h} active={table.sort.key === h} direction={table.sort.direction} onSort={() => table.sortBy(h)} /></th>)}
                 </tr>
               </thead>
               <tbody>
-                {active.map((i) => (
+                {rows.map((i) => (
                   <tr key={i.id} className="border-b">
-                    <td className="p-2">
-                      {i.event ? (
-                        <Link
-                          className="text-primary hover:underline"
-                          to="/events/$eventcode"
-                          params={{ eventcode: i.event.eventCode }}
-                        >
-                          {i.event.name}
-                        </Link>
-                      ) : (
-                        <span className="text-muted-foreground">Kein Event zugeordnet</span>
-                      )}
-                    </td>
-                    <td className="p-2">{i.recipientName}</td>
-                    <td className="p-2">{labels[i.issueType] ?? i.issueType}</td>
-                    <td className="p-2">{i.objectName}</td>
-                    <td className="p-2 font-mono">{number(i)}</td>
-                    <td className="p-2">{i.quantity}</td>
-                    <td className="p-2">
-                      <Badge>{labels[i.status] ?? i.status}</Badge>
-                    </td>
-                    <td className="p-2">{i.dueDate?.slice(0, 10) ?? "—"}</td>
+                    {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => <td className="px-2 py-1" key={h}>{cell(i, h)}</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -219,6 +213,7 @@ function HardwarePage() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

@@ -43,7 +43,7 @@ const HAUPT_NAV_KEYS = {
   "/veranstaltungen": "nav.events",
   "/aufgaben": "nav.tasks",
   "/kontakte": "nav.contactsCustomers",
-  "/hardware": "nav.hardware",
+  "/hardware": "Hardware",
   "/auszahlungen": "nav.payouts",
   "/angebote": "nav.offers",
   "/rechnungen": "nav.invoices",

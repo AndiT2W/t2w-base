@@ -18,6 +18,8 @@ test("shows central hardware cases, filters them, and links to the event", async
           quantity: 1,
           status: "NOTIFIED",
           dueDate: "2026-09-12",
+          email: "max@example.com",
+          phone: "+43 660 123456",
           event: { eventCode: "260820_demo_event", name: "Demo Event" },
         },
         {
@@ -48,9 +50,15 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.goto("/hardware");
   await expect(page.getByRole("heading", { name: "Hardware" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();
-  await page.getByRole("button", { name: "Hardware-Ausgabe anlegen" }).click();
-  await expect(page.getByText("Hardware-Ausgabe anlegen", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("Max Mustermann")).toBeVisible();
+  await expect(page.getByText("max@example.com")).toBeVisible();
+  await expect(page.getByText("+43 660 123456")).toBeVisible();
+  await page.getByRole("textbox", { name: "Suche" }).first().fill("max@example.com");
+  await expect(page.getByText("Max Mustermann")).toBeVisible();
+  await page.getByRole("textbox", { name: "Suche" }).first().fill("");
+  await page.getByRole("button", { name: "Spalten auswählen" }).click();
+  await page.locator("label").filter({ hasText: "Telefon" }).click();
+  await expect(page.getByRole("columnheader", { name: "Telefon sortieren" })).toHaveCount(0);
   await expect(page.getByText("Timer XY")).toBeVisible();
   await expect(page.getByText("Kein Event zugeordnet")).toBeVisible();
   await page.getByPlaceholder("Event filtern …").fill("Zweites");
