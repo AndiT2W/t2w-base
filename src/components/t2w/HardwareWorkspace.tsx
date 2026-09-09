@@ -26,6 +26,8 @@ type Item = {
   email?: string;
   phone?: string;
   dueDate?: string;
+  issuedAt?: string;
+  note?: string;
   event?: { eventCode: string; name: string };
 };
 const statusLabels: Record<string, string> = {
@@ -73,6 +75,8 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
       email: editing.email,
       phone: editing.phone,
       dueDate: editing.dueDate || undefined,
+      issuedAt: editing.issuedAt || undefined,
+      note: editing.note,
     };
     const url = editing.id
       ? `/api/v1/events/${eventId}/hardware/${editing.id}`
@@ -112,9 +116,31 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
             onChange={(e) => setEditing({ ...editing, recipientName: e.target.value })}
           />
           <Input
+            placeholder="E-Mail"
+            type="email"
+            value={editing.email ?? ""}
+            onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+          />
+          <Input
+            placeholder="Telefon"
+            value={editing.phone ?? ""}
+            onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
+          />
+          <Input
             placeholder="Objekt"
             value={editing.objectName ?? ""}
             onChange={(e) => setEditing({ ...editing, objectName: e.target.value })}
+          />
+          <Input
+            placeholder="Notiz"
+            value={editing.note ?? ""}
+            onChange={(e) => setEditing({ ...editing, note: e.target.value })}
+          />
+          <Input
+            type="date"
+            aria-label="Ausgabedatum"
+            value={editing.issuedAt?.slice(0, 10) ?? ""}
+            onChange={(e) => setEditing({ ...editing, issuedAt: e.target.value })}
           />
           <Select
             value={editing.issueType}
@@ -193,6 +219,23 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
             value={editing.dueDate?.slice(0, 10) ?? ""}
             onChange={(e) => setEditing({ ...editing, dueDate: e.target.value })}
           />
+          {editing.id && (
+            <Select
+              value={editing.status}
+              onValueChange={(v) => setEditing({ ...editing, status: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(statusLabels).map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <div className="flex gap-2 sm:col-span-3">
             <Button onClick={() => void save()}>Speichern</Button>
             <Button variant="outline" onClick={() => setEditing(null)}>
