@@ -26,7 +26,7 @@ type Hardware = {
   quantity: number;
   status: string;
   dueDate?: string;
-  event: { eventCode: string; name: string };
+  event: { eventCode: string; name: string } | null;
 };
 const labels: Record<string, string> = {
   OPEN: "Offen",
@@ -74,7 +74,7 @@ function HardwarePage() {
   const active = items.filter(
     (i) =>
       (status !== "active" || (i.status !== "RETURNED" && i.status !== "COMPLETED")) &&
-      (!event || i.event.name.toLowerCase().includes(event.toLowerCase())) &&
+      (!event || i.event?.name.toLowerCase().includes(event.toLowerCase())) &&
       (!overdue ||
         Boolean(
           i.dueDate &&
@@ -191,13 +191,17 @@ function HardwarePage() {
                 {active.map((i) => (
                   <tr key={i.id} className="border-b">
                     <td className="p-2">
-                      <Link
-                        className="text-primary hover:underline"
-                        to="/events/$eventcode"
-                        params={{ eventcode: i.event.eventCode }}
-                      >
-                        {i.event.name}
-                      </Link>
+                      {i.event ? (
+                        <Link
+                          className="text-primary hover:underline"
+                          to="/events/$eventcode"
+                          params={{ eventcode: i.event.eventCode }}
+                        >
+                          {i.event.name}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">Kein Event zugeordnet</span>
+                      )}
                     </td>
                     <td className="p-2">{i.recipientName}</td>
                     <td className="p-2">{labels[i.issueType] ?? i.issueType}</td>

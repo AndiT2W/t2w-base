@@ -33,6 +33,15 @@ test("shows central hardware cases, filters them, and links to the event", async
           dueDate: "2026-09-20",
           event: { eventCode: "270821_demo_event", name: "Zweites Event" },
         },
+        {
+          id: "h3",
+          recipientName: "Ohne Event",
+          issueType: "OTHER",
+          objectName: "Unbekanntes Gerät",
+          quantity: 1,
+          status: "OPEN",
+          event: null,
+        },
       ],
     }),
   );
@@ -43,6 +52,7 @@ test("shows central hardware cases, filters them, and links to the event", async
   await expect(page.getByText("Hardware-Ausgabe anlegen", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await expect(page.getByText("Timer XY")).toBeVisible();
+  await expect(page.getByText("Kein Event zugeordnet")).toBeVisible();
   await page.getByPlaceholder("Event filtern …").fill("Zweites");
   await expect(page.getByText("Timer XY")).toBeVisible();
   await expect(page.getByText("Max Mustermann")).not.toBeVisible();
