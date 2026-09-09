@@ -70,6 +70,7 @@ model Organizer {
   person       Contact?    @relation("CustomerPerson", fields: [personId], references: [id], onDelete: SetNull)
   primaryContact Contact?  @relation("OrganizerPrimaryContact", fields: [primaryContactId], references: [id], onDelete: SetNull)
   payoutEvents Event[]     @relation("EventPayoutRecipient")
+  payouts Payout[]
   invoiceRecipients EventInvoiceRecipient[]
   @@index([name])
 }
@@ -178,9 +179,69 @@ model Event {
   communicationMessages EventCommunicationMessage[]
   services              EventService[]
   hardwareIssues        HardwareIssue[]
+  payouts               Payout[]
   @@index([seriesId, startAt])
   @@index([status, archived])
   @@index([startAt, endAt])
+}
+
+enum PayoutMailStatus {
+  ENTWURF
+  VERSENDEN
+  GESENDET
+}
+enum PayoutPaymentStatus {
+  OFFEN
+  AUSBEZAHLT
+  STORNIERT
+}
+
+model PayoutNumberSequence {
+  year Int @id
+  nextValue Int @default(1)
+}
+
+model Payout {
+  id String @id @default(uuid()) @db.Uuid
+  payoutNumber String @unique
+  year Int
+  eventId String? @db.Uuid
+  recipientId String? @db.Uuid
+  recipientSnapshot Json?
+  amount Decimal @db.Decimal(18, 2)
+  currency String @default("EUR")
+  mailStatus PayoutMailStatus @default(ENTWURF)
+  paymentStatus PayoutPaymentStatus @default(OFFEN)
+  transactionReference String?
+  paidAt DateTime?
+  mailSentAt DateTime?
+  mailRecipient String?
+  n8nCorrelationId String?
+  externalMessageId String?
+  automationWorkflowId String?
+  automationClaimedAt DateTime?
+  automationRetryCount Int @default(0)
+  automationLastError String?
+  clickUpId String? @unique
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  recipient Organizer? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+  @@index([eventId, paymentStatus])
+  @@index([year, mailStatus])
+  @@index([recipientId])
+}
+
+model AutomationClaim {
+  id String @id @default(uuid()) @db.Uuid
+  domain String
+  recordId String
+  idempotencyKey String @unique
+  workflowId String?
+  claimedAt DateTime @default(now())
+  completedAt DateTime?
+  @@index([domain, recordId])
 }
 
 enum HardwareIssueType {

@@ -19,6 +19,14 @@
     "./hardware": {
       "types": "./dist/hardware.d.ts",
       "import": "./dist/hardware.js"
+    },
+    "./payout": {
+      "types": "./dist/payout.d.ts",
+      "import": "./dist/payout.js"
+    },
+    "./automation": {
+      "types": "./dist/automation.d.ts",
+      "import": "./dist/automation.js"
     }
   },
   "files": ["dist"],

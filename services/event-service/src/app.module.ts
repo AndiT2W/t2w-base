@@ -15,6 +15,11 @@ import { HardwareService } from "./hardware.service.js";
 import { Time2winService } from "./time2win.service.js";
 import { HttpTime2winAdapter, TIME2WIN_ADAPTER } from "./time2win.adapter.js";
 import { EventRecordRetrieval } from "./event-record-retrieval.js";
+import { AuditService } from "./audit.service.js";
+import { PayoutService } from "./payout.service.js";
+import { PayoutController, AutomationController } from "./payout.controller.js";
+import { PayoutImportService } from "./payout-import.service.js";
+import { AutomationService } from "./automation.service.js";
 
 @Module({
   imports: [OutlookModule],
@@ -24,11 +29,17 @@ import { EventRecordRetrieval } from "./event-record-retrieval.js";
     AuthController,
     MasterDataController,
     SettingsController,
+    PayoutController,
+    AutomationController,
   ],
   providers: [
     PrismaService,
     HardwareService,
     EventRecordRetrieval,
+    AuditService,
+    PayoutService,
+    PayoutImportService,
+    AutomationService,
     Time2winService,
     { provide: TIME2WIN_ADAPTER, useClass: HttpTime2winAdapter },
     AuthService,

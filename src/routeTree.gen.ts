@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AngeboteRouteImport } from './routes/angebote'
 import { Route as AufgabenRouteImport } from './routes/aufgaben'
+import { Route as AuszahlungenRouteImport } from './routes/auszahlungen'
 import { Route as EinstellungenRouteImport } from './routes/einstellungen'
 import { Route as GanttRouteImport } from './routes/gantt'
 import { Route as HardwareRouteImport } from './routes/hardware'
@@ -35,6 +36,11 @@ const AngeboteRoute = AngeboteRouteImport.update({
 const AufgabenRoute = AufgabenRouteImport.update({
   id: '/aufgaben',
   path: '/aufgaben',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuszahlungenRoute = AuszahlungenRouteImport.update({
+  id: '/auszahlungen',
+  path: '/auszahlungen',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EinstellungenRoute = EinstellungenRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/angebote': typeof AngeboteRoute
   '/aufgaben': typeof AufgabenRoute
+  '/auszahlungen': typeof AuszahlungenRoute
   '/einstellungen': typeof EinstellungenRoute
   '/gantt': typeof GanttRoute
   '/hardware': typeof HardwareRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/angebote': typeof AngeboteRoute
   '/aufgaben': typeof AufgabenRoute
+  '/auszahlungen': typeof AuszahlungenRoute
   '/einstellungen': typeof EinstellungenRoute
   '/gantt': typeof GanttRoute
   '/hardware': typeof HardwareRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/angebote': typeof AngeboteRoute
   '/aufgaben': typeof AufgabenRoute
+  '/auszahlungen': typeof AuszahlungenRoute
   '/einstellungen': typeof EinstellungenRoute
   '/gantt': typeof GanttRoute
   '/hardware': typeof HardwareRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/'
     | '/angebote'
     | '/aufgaben'
+    | '/auszahlungen'
     | '/einstellungen'
     | '/gantt'
     | '/hardware'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/angebote'
     | '/aufgaben'
+    | '/auszahlungen'
     | '/einstellungen'
     | '/gantt'
     | '/hardware'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/angebote'
     | '/aufgaben'
+    | '/auszahlungen'
     | '/einstellungen'
     | '/gantt'
     | '/hardware'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AngeboteRoute: typeof AngeboteRoute
   AufgabenRoute: typeof AufgabenRoute
+  AuszahlungenRoute: typeof AuszahlungenRoute
   EinstellungenRoute: typeof EinstellungenRoute
   GanttRoute: typeof GanttRoute
   HardwareRoute: typeof HardwareRoute
@@ -207,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/aufgaben'
       fullPath: '/aufgaben'
       preLoaderRoute: typeof AufgabenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auszahlungen': {
+      id: '/auszahlungen'
+      path: '/auszahlungen'
+      fullPath: '/auszahlungen'
+      preLoaderRoute: typeof AuszahlungenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/einstellungen': {
@@ -279,6 +299,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AngeboteRoute: AngeboteRoute,
   AufgabenRoute: AufgabenRoute,
+  AuszahlungenRoute: AuszahlungenRoute,
   EinstellungenRoute: EinstellungenRoute,
   GanttRoute: GanttRoute,
   HardwareRoute: HardwareRoute,

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useT2W } from "@/lib/t2w/store";
 import { useCrm } from "@/lib/crm/store";
+import { selectionListChoices } from "@/lib/t2w/selection-list-workspace";
 import { buildEventcode } from "@/lib/t2w/eventcode";
 import { STATUS_ORDER, STATUS_LABEL, type EventStatus } from "@/lib/t2w/types";
 
@@ -36,7 +37,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
   const [veranstalterId, setVeranstalterId] = useState<string | undefined>();
   const [veranstalterSuche, setVeranstalterSuche] = useState("");
   const [sportartId, setSportartId] = useState<string | undefined>();
-  const sportarten = selectionLists.sports.filter((sport) => sport.active);
+  const sportarten = selectionListChoices(selectionLists.sports);
   const [ort, setOrt] = useState("");
   const [start, setStart] = useState("");
   const [eventcode, setEventcode] = useState("");

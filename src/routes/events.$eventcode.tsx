@@ -71,6 +71,7 @@ import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
+import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
 import { ServiceBadge, SelectionBadge } from "@/components/t2w/ServiceBadge";
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
@@ -835,6 +836,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   Öffnet den konkreten Ordner direkt in Outlook Web.
                 </p>
               </div>
+              <PayoutsPanel eventId={event.id} recipientId={detail.payoutRecipientId} recipientEmail={detail.payoutRecipient?.email} />
               <div>
                 <Label htmlFor="d-sp">SharePoint-Ordner</Label>
                 <Input
@@ -1039,6 +1041,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   </div>
                 )}
               </div>
+              <PayoutsPanel
+                eventId={event.id}
+                recipientId={detail.payoutRecipientId}
+                recipientEmail={detail.payoutRecipient?.email}
+              />
             </CardContent>
           </Card>
         </TabsContent>
