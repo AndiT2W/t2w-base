@@ -498,13 +498,29 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <CardTitle className="text-base">{t("detail.basicData")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+              <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)_minmax(15rem,auto)] lg:items-center lg:gap-3">
                 <Label htmlFor="d-name">Eventname</Label>
                 <Input
                   id="d-name"
                   value={form.name}
                   onChange={(e) => set("name", e.target.value)}
                 />
+                <div
+                  data-testid="event-archive-toggle"
+                  className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Archiviert</p>
+                    <p className="text-xs text-muted-foreground">
+                      Archivierte Events erscheinen nur im Archivfilter.
+                    </p>
+                  </div>
+                  <Switch
+                    aria-label="Event archivieren"
+                    checked={form.archiviert}
+                    onCheckedChange={(v) => set("archiviert", v)}
+                  />
+                </div>
               </div>
               <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                 <section aria-labelledby="event-identity-period" className="space-y-3">
@@ -711,15 +727,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Archiviert</p>
-                  <p className="text-xs text-muted-foreground">
-                    Archivierte Events erscheinen nur im Archivfilter.
-                  </p>
-                </div>
-                <Switch checked={form.archiviert} onCheckedChange={(v) => set("archiviert", v)} />
               </div>
               <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-start lg:gap-3">
                 <Label htmlFor="d-notizen">Notizen</Label>

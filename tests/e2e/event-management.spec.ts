@@ -592,6 +592,25 @@ test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", 
   expect(organizerSelect!.x).toBeGreaterThan(startInput!.x + startInput!.width);
 });
 
+test("ordnet die Archivierung kompakt beim Eventnamen ein und behält den Hinweis", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+
+  const eventName = await page.locator("#d-name").boundingBox();
+  const archiveToggle = page.getByTestId("event-archive-toggle");
+  const archiveBox = await archiveToggle.boundingBox();
+
+  expect(eventName).not.toBeNull();
+  expect(archiveBox).not.toBeNull();
+  expect(Math.abs(eventName!.y - archiveBox!.y)).toBeLessThan(16);
+  expect(archiveBox!.x).toBeGreaterThan(eventName!.x + eventName!.width);
+  await expect(archiveToggle).toContainText("Archiviert");
+  await expect(archiveToggle).toContainText("Archivierte Events erscheinen nur im Archivfilter.");
+  await expect(page.getByRole("switch", { name: "Event archivieren" })).toBeVisible();
+});
+
 test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/kontakte");
