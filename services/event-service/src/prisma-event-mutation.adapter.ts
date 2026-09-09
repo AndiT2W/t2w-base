@@ -182,6 +182,8 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
         responsible: source.responsible,
         participantForecast: source.participantForecast,
         notes: source.notes,
+        financeNotes: source.financeNotes,
+        contactsNotes: source.contactsNotes,
         archived: source.archived,
         seriesId,
         contacts: {

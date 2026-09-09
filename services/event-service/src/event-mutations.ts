@@ -14,6 +14,8 @@ export type CreateEventMutation = {
   t2wEventId?: number;
   archived?: boolean;
   notes?: string;
+  financeNotes?: string;
+  contactsNotes?: string;
   outlookFolder?: string;
   outlookWebUrl?: string;
   sharepointFolder?: string;

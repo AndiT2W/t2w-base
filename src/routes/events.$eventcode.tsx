@@ -181,8 +181,15 @@ function EventDetail() {
 }
 
 function DetailInhalt({ event }: { event: T2WEvent }) {
-  const { openEventSession, settings, selectionLists, events, kopiereEvent, uebernehmeEvents } =
-    useT2W();
+  const {
+    openEventSession,
+    settings,
+    selectionLists,
+    events,
+    kopiereEvent,
+    loescheEvent,
+    uebernehmeEvents,
+  } = useT2W();
   const { personen, kunden, neuLaden } = useCrm();
   const { t } = useI18n();
   const [detailWorkspace] = useState(() =>
@@ -201,6 +208,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [quartalsDialog, setQuartalsDialog] = useState(false);
   const [copyDialog, setCopyDialog] = useState(false);
   const [seriesDialog, setSeriesDialog] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState(false);
   const [seriesTargetEventId, setSeriesTargetEventId] = useState("");
   const initialCopy = copyDateSuggestion(event.start, event.ende);
   const [copyStart, setCopyStart] = useState(initialCopy.start);
@@ -322,6 +330,15 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   async function kommunikationSynchronisieren() {
     const outcome = await detailWorkspace.execute("sync-communication");
     outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
+  }
+  async function eventLoeschen() {
+    try {
+      await loescheEvent(event.id);
+      toast.success("Event gelöscht.");
+      window.location.assign("/");
+    } catch {
+      toast.error("Event konnte nicht gelöscht werden. Bitte neu laden.");
+    }
   }
   async function copyEvent() {
     try {
@@ -962,9 +979,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 hinterlegt.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div>
-                <Label>Auszahlungsempfänger</Label>
+            <CardContent className="space-y-6">
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+              <section aria-labelledby="auszahlungsempfaenger-heading" className="rounded-lg border border-border bg-muted/20 p-4">
+                <div className="mb-3">
+                  <h3 id="auszahlungsempfaenger-heading" className="font-medium text-foreground">Auszahlungsempfänger</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Genau ein Empfänger für Auszahlungen.</p>
+                </div>
                 <Select
                   value={detail.payoutRecipientId ?? undefined}
                   onValueChange={(id) => set("auszahlungsempfaengerId", id)}
@@ -985,10 +1006,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     <RecipientMasterData recipient={detail.payoutRecipient} />
                   </div>
                 )}
-              </div>
-              <div>
-                <Label>Rechnungsempfänger</Label>
-                <p className="mt-1 text-xs text-muted-foreground">Mehrere Empfänger möglich.</p>
+              </section>
+              <section aria-labelledby="rechnungsempfaenger-heading" className="rounded-lg border border-border bg-muted/20 p-4">
+                <div className="mb-3">
+                  <h3 id="rechnungsempfaenger-heading" className="font-medium text-foreground">Rechnungsempfänger</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">Mehrere Empfänger möglich.</p>
+                </div>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -1039,12 +1062,26 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     ))}
                   </div>
                 )}
+              </section>
               </div>
               <PayoutsPanel
                 eventId={event.id}
                 recipientId={detail.payoutRecipientId}
                 recipientEmail={detail.payoutRecipient?.email}
               />
+              <section aria-labelledby="finanz-notizen-heading" className="border-t border-border pt-5">
+                <h3 id="finanz-notizen-heading" className="font-medium text-foreground">Finanznotizen</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Zusätzliche Informationen zu Auszahlungen und Rechnungsempfängern.
+                </p>
+                <Textarea
+                  aria-label="Finanznotizen"
+                  className="mt-3 min-h-24"
+                  value={form.finanzNotizen ?? ""}
+                  onChange={(e) => set("finanzNotizen", e.target.value)}
+                  placeholder="z. B. Abweichende Zahlungsvereinbarungen …"
+                />
+              </section>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1249,6 +1286,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   </table>
                 </div>
               )}
+              <section aria-labelledby="kontakte-notizen-heading" className="border-t border-border pt-5">
+                <h3 id="kontakte-notizen-heading" className="font-medium text-foreground">Kontaktnotizen</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Zusätzliche Informationen zur Kontaktorganisation dieses Events.
+                </p>
+                <Textarea
+                  aria-label="Kontaktnotizen"
+                  className="mt-3 min-h-24"
+                  value={form.kontakteNotizen ?? ""}
+                  onChange={(e) => set("kontakteNotizen", e.target.value)}
+                  placeholder="z. B. bevorzugte Ansprechpartner oder Erreichbarkeit …"
+                />
+              </section>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1800,6 +1850,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         </TabsContent>
       </Tabs>
 
+      <section className="rounded-lg border border-destructive/30 bg-destructive/5 p-5" aria-labelledby="event-delete-heading">
+        <h2 id="event-delete-heading" className="text-base font-semibold text-destructive">Gefahrenbereich</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Das Event und die zugehörigen Daten dauerhaft löschen.</p>
+        <Button variant="destructive" className="mt-4" onClick={() => setDeleteDialog(true)}>
+          Event löschen
+        </Button>
+      </section>
+
       <AlertDialog open={copyDialog} onOpenChange={setCopyDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1956,6 +2014,22 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               }}
             >
               Verschiebung bestätigen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Event endgültig löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              „{event.name}“ wird dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={(e) => { e.preventDefault(); void eventLoeschen(); }}>
+              Endgültig löschen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

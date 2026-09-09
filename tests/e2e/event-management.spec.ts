@@ -882,6 +882,7 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
   await expect(invoiceDetails).toContainText("Nordwerk GmbH");
   await expect(invoiceDetails).toContainText("Jonas Feld");
   await expect(invoiceDetails).toContainText("BKAUATWW");
+  await page.getByLabel("Finanznotizen").fill("Zahlung nach Freigabe durch den Veranstalter.");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -889,7 +890,8 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
       (request) =>
         request.method === "PATCH" &&
         request.body?.includes('"payoutRecipientId":"c2"') &&
-        request.body.includes('"invoiceRecipientIds":["c1","c2"]'),
+        request.body.includes('"invoiceRecipientIds":["c1","c2"]') &&
+        request.body.includes('"financeNotes":"Zahlung nach Freigabe durch den Veranstalter."'),
     ),
   ).toBeTruthy();
 });
@@ -907,12 +909,22 @@ test("zeigt Veranstalterkontakte und übernimmt sie als Eventkontakt", async ({ 
     .click();
   await expect(page.getByRole("button", { name: "Bereits Eventkontakt" })).toBeVisible();
   await expect(page.getByText("Marion Kessler", { exact: true })).toHaveCount(2);
+  await page.getByLabel("Kontaktnotizen").fill("Kontakt bevorzugt per E-Mail.");
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
     requests.some(
       (request) =>
         request.method === "POST" &&
         request.url.includes(`/api/v1/events/${event.id}/contacts/p1`) &&
         request.body?.includes('"role":"Kontakt"'),
+    ),
+  ).toBeTruthy();
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "PATCH" &&
+        request.body?.includes('"contactsNotes":"Kontakt bevorzugt per E-Mail."'),
     ),
   ).toBeTruthy();
 });

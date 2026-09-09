@@ -37,7 +37,7 @@ test("legt eine Auszahlung im Event-Finanzreiter an und lädt sie nach Reload", 
   await expect(page.getByText("125.50 CHF")).toBeVisible();
   await page.getByRole("button", { name: "Für Mail markieren" }).click();
   await expect(page.getByText("Mail versenden").last()).toBeVisible();
-  await page.getByLabel("T260001 Status").selectOption("AUSBEZAHLT");
+  await page.getByRole("button", { name: "Als ausgezahlt markieren" }).click();
   await expect(page.getByText("Ausbezahlt").last()).toBeVisible();
   page.on("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Löschen" }).click();

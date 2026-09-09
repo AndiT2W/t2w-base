@@ -125,6 +125,8 @@ export type T2WEvent = {
   teilnehmerwerte?: Teilnehmerwerte;
   archiviert: boolean;
   notizen: string;
+  finanzNotizen?: string;
+  kontakteNotizen?: string;
   outlookOrdner: string | null;
   outlookWebUrl: string | null;
   outlookMailbox?: string | null;

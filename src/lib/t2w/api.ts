@@ -16,6 +16,8 @@ type ApiEvent = {
   participantForecast: number | null;
   participantCurrent: number | null;
   notes: string | null;
+  financeNotes?: string | null;
+  contactsNotes?: string | null;
   outlookFolder: string | null;
   outlookWebUrl: string | null;
   outlookMailbox?: string | null;
@@ -114,6 +116,8 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     },
     archiviert: event.archived,
     notizen: event.notes ?? "",
+    finanzNotizen: event.financeNotes ?? "",
+    kontakteNotizen: event.contactsNotes ?? "",
     outlookOrdner: event.outlookFolder,
     outlookWebUrl: event.outlookWebUrl,
     outlookMailbox: event.outlookMailbox,
@@ -335,6 +339,8 @@ export async function apiCreateEvent(input: {
       responsible: input.verantwortlicher,
       participantForecast: input.teilnehmerprognose,
       notes: input.notizen,
+      financeNotes: input.finanzNotizen,
+      contactsNotes: input.kontakteNotizen,
       status,
     }),
   });
@@ -512,6 +518,8 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       responsible: patch.verantwortlicher,
       participantForecast: patch.teilnehmerwerte?.prognose ?? patch.teilnehmer,
       notes: patch.notizen,
+      financeNotes: patch.finanzNotizen,
+      contactsNotes: patch.kontakteNotizen,
       organizerId: patch.veranstalterId,
       sportId: patch.sportartId,
       serviceIds: patch.serviceIds,

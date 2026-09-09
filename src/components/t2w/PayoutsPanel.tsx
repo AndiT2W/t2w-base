@@ -30,6 +30,13 @@ function label(p: P) {
   if (p.mailStatus === "VERSENDEN") return "Mail versenden";
   return "Offen";
 }
+function statusClasses(p: P) {
+  if (p.paymentStatus === "AUSBEZAHLT") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (p.paymentStatus === "STORNIERT") return "border-red-200 bg-red-50 text-red-700";
+  if (p.mailStatus === "GESENDET") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (p.mailStatus === "VERSENDEN") return "border-amber-200 bg-amber-50 text-amber-700";
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
 export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
   const [items, setItems] = useState<P[]>([]);
   const [amount, setAmount] = useState("");
@@ -73,8 +80,15 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
     await load();
   }
   return (
-    <section aria-label="Auszahlungen" className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+    <section aria-label="Auszahlungen" className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 className="font-medium text-foreground">Auszahlungen</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Neue Auszahlungen anlegen und den Versandstatus bearbeiten.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
         <input
           aria-label="Auszahlungsbetrag"
           value={amount}
@@ -93,6 +107,7 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
           <option>USD</option>
         </select>
         <Button onClick={() => void create()}>Auszahlung anlegen</Button>
+        </div>
       </div>
       <div className="overflow-x-auto rounded border">
         <table className="w-full text-sm">
@@ -109,7 +124,7 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
           </thead>
           <tbody>
             {items.map((p) => (
-              <tr key={p.id} className="border-t">
+              <tr key={p.id} className="border-t align-middle">
                 <td className="px-2 py-1 font-mono">{p.payoutNumber}</td>
                 <td className="px-2 py-1">
                   {p.recipient?.name ?? p.mailRecipient ?? recipientEmail ?? "—"}
@@ -117,38 +132,14 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
                 <td className="px-2 py-1">
                   {p.amount} {p.currency}
                 </td>
-                <td className="px-2 py-1">
-                  <select
-                    aria-label={`${p.payoutNumber} Mailstatus`}
-                    value={p.mailStatus}
-                    onChange={(e) => void update(p.id, { mailStatus: e.target.value })}
-                  >
-                    <option value="ENTWURF">Entwurf</option>
-                    <option value="VERSENDEN">Mail versenden</option>
-                    <option value="GESENDET">Mail gesendet</option>
-                  </select>
-                  <select
-                    aria-label={`${p.payoutNumber} Status`}
-                    value={p.paymentStatus}
-                    onChange={(e) =>
-                      void update(p.id, {
-                        paymentStatus: e.target.value,
-                        paidAt:
-                          e.target.value === "AUSBEZAHLT"
-                            ? (p.paidAt ?? new Date().toISOString())
-                            : p.paidAt,
-                      })
-                    }
-                  >
-                    <option value="OFFEN">{label({ ...p, paymentStatus: "OFFEN" })}</option>
-                    <option value="AUSBEZAHLT">Ausbezahlt</option>
-                    <option value="STORNIERT">Storniert</option>
-                  </select>
-                  <span className="ml-2">{label(p)}</span>
+                <td className="px-2 py-2">
+                  <span aria-label={`${p.payoutNumber} Status`} className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClasses(p)}`}>
+                    {label(p)}
+                  </span>
                 </td>
                 <td className="px-2 py-1">{p.mailSentAt?.slice(0, 10) ?? "—"}</td>
                 <td className="px-2 py-1">{p.paidAt?.slice(0, 10) ?? "—"}</td>
-                <td className="px-2 py-1">
+                <td className="px-2 py-2">
                   <Button
                     size="sm"
                     variant="outline"
@@ -156,6 +147,15 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
                   >
                     Für Mail markieren
                   </Button>
+                  {p.paymentStatus === "OFFEN" && p.mailStatus === "GESENDET" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void update(p.id, { paymentStatus: "AUSBEZAHLT", paidAt: new Date().toISOString() })}
+                    >
+                      Als ausgezahlt markieren
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" onClick={() => void remove(p.id)}>
                     Löschen
                   </Button>
