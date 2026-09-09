@@ -31,6 +31,10 @@ export const Route = createFileRoute("/einstellungen")({
       search.tab === "outlook" || search.tab === "auswahllisten"
         ? search.tab
         : ("allgemein" as const),
+    liste:
+      search.liste === "sportarten" || search.liste === "eventrollen"
+        ? search.liste
+        : ("services" as const),
   }),
   head: () => ({
     meta: [
@@ -53,7 +57,7 @@ export const Route = createFileRoute("/einstellungen")({
 function Einstellungen() {
   const { settings, setSettings, selectionLists, createSelectionValue, updateSelectionValue } =
     useT2W();
-  const { tab } = Route.useSearch();
+  const { tab, liste } = Route.useSearch();
   const navigate = useNavigate();
   const [workspace] = useState(() =>
     createSettingsWorkspace({ save: setSettings, checkOutlook: apiOutlookStatus }, settings),
@@ -171,6 +175,7 @@ function Einstellungen() {
             void navigate({
               search: {
                 tab: nextTab === "outlook" || nextTab === "auswahllisten" ? nextTab : "allgemein",
+                liste,
               },
             })
           }
@@ -270,7 +275,33 @@ function Einstellungen() {
           </TabsContent>
 
           <TabsContent value="auswahllisten" className="space-y-5">
-            <Card>
+            <div className="grid gap-5 md:grid-cols-[11rem_minmax(0,1fr)] md:items-start">
+              <Card className="md:sticky md:top-5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Auswahllisten</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-1 p-2">
+                  {[
+                    ["sportarten", "Sportarten"],
+                    ["services", "Services"],
+                    ["eventrollen", "Eventrollen"],
+                  ].map(([value, label]) => (
+                    <Button
+                      key={value}
+                      type="button"
+                      variant={liste === value ? "secondary" : "ghost"}
+                      className="justify-start"
+                      onClick={() =>
+                        void navigate({ search: { tab: "auswahllisten", liste: value } })
+                      }
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </CardContent>
+              </Card>
+              <div className="space-y-5">
+            {liste === "sportarten" && <Card>
               <CardHeader>
                 <CardTitle className="text-base">Sportarten</CardTitle>
                 <CardDescription>
@@ -310,8 +341,8 @@ function Einstellungen() {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
-            <Card>
+            </Card>}
+            {liste === "services" && <Card>
               <CardHeader>
                 <CardTitle className="text-base">Services</CardTitle>
                 <CardDescription>Mehrfach auswählbare Leistungen eines Events.</CardDescription>
@@ -371,7 +402,7 @@ function Einstellungen() {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
+            </Card>}
             <Dialog
               open={presentationService !== undefined}
               onOpenChange={(open) => !open && setPresentationServiceId(null)}
@@ -450,7 +481,7 @@ function Einstellungen() {
                 )}
               </DialogContent>
             </Dialog>
-            <Card>
+            {liste === "eventrollen" && <Card>
               <CardHeader>
                 <CardTitle className="text-base">Eventrollen</CardTitle>
                 <CardDescription>
@@ -490,7 +521,9 @@ function Einstellungen() {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
+            </Card>}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="outlook" className="space-y-5">

@@ -398,3 +398,5 @@
 - Spezifikation für Hardware-Verwaltung und Hardware-Rückläufer erstellt und als GitHub-Issue [#39](https://github.com/AndiT2W/t2w-base/issues/39) mit `enhancement` und `ready-for-agent` veröffentlicht. Die Umsetzung soll über ein frameworkfreies Hardware-Workspace-Modul, bestehende Event-Service-/Prisma-/API-Muster und Browser-E2E erfolgen.
 - Die Grill-Session zu Issue #39 abgeschlossen: Zeilenmodell, Löschschutz, Berechtigungen, Auditierung, Pagination, Standardfilter, Europe/Vienna-Kalendertag und der Verzicht auf ClickUp-Import in V1 sind als verbindliche Entscheidungen ergänzt.
 - Issue #39: Hardware-Domain, Prisma-Modell/Migration, Event-Service-CRUD mit AuditLog, zentrale Hardware-Route und Event-Hardware-Workspace ergänzt. Builds, 40 Tests und Hardware-Datei-Lint sind grün.
+
+- Einstellungsseite erweitert: Die bestehenden Haupt-Tabs `Allgemein`, `Auswahllisten` und `Outlook` bleiben erhalten. Innerhalb von `Auswahllisten` gibt es nun ein seitliches Submenü für `Sportarten`, `Services` und `Eventrollen`; der aktive Unterbereich wird über den URL-Parameter `liste` gespeichert.
