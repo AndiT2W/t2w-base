@@ -102,11 +102,12 @@ jobs:
             echo "docker-compose.yml fehlt im Release-Archiv"
             exit 1
           fi
-          docker compose -f "$deploy_path/docker-compose.yml" up -d --build app nginx event-db event-service event-backup
+          docker compose -f "$deploy_path/docker-compose.yml" up -d event-db
           docker compose -f "$deploy_path/docker-compose.yml" --profile migrate build event-migrate
           docker compose -f "$deploy_path/docker-compose.yml" --profile migrate run --rm -T event-migrate npx prisma migrate resolve --rolled-back 0018_hardware_issue
           docker compose -f "$deploy_path/docker-compose.yml" --profile migrate run --rm -T event-migrate npx prisma migrate deploy
           docker compose -f "$deploy_path/docker-compose.yml" --profile migrate run --rm -T event-migrate npx prisma migrate status
+          docker compose -f "$deploy_path/docker-compose.yml" up -d --build app nginx event-service event-backup
           docker compose -f "$deploy_path/docker-compose.yml" ps
           event_router_containers=$(docker ps -q \
             --filter label=traefik.http.routers.t2w-events.rule)
