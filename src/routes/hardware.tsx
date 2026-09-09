@@ -214,6 +214,7 @@ function HardwarePage() {
   return (
     <div>
       <PageHeader
+        krumen={[{ label: "TIME2WIN", to: "/" }]}
         titel="Hardware"
         beschreibung="Eventübergreifende Rückgabeübersicht"
         suche={{

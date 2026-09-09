@@ -87,6 +87,9 @@ test("shows central hardware cases, filters them, and links to the event", async
   });
   await page.goto("/hardware");
   await expect(page.getByRole("heading", { name: "Hardware" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", {
+    name: "TIME2WIN",
+  })).toHaveAttribute("href", "/");
   await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await expect(page.getByText("max@example.com")).toBeVisible();
