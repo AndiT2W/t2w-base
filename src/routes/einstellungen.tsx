@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Download, ExternalLink, Plus, Search, Trash2 } from "lucide-react";
+import { Download, ExternalLink, GripVertical, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,12 +75,13 @@ function Einstellungen() {
   const [newService, setNewService] = useState("");
   const hardwareObjects = selectionLists.hardwareObjects;
   const [newHardwareObject, setNewHardwareObject] = useState("");
+  const [dragged, setDragged] = useState<{ kind: "sports" | "eventRoles" | "services" | "hardwareObjects"; id: string } | null>(null);
   const [auditEntries, setAuditEntries] = useState<ApiAuditLog[]>([]);
   const [auditEntity, setAuditEntity] = useState("");
   const [auditSearch, setAuditSearch] = useState("");
   const [auditLoading, setAuditLoading] = useState(false);
   const [presentation, setPresentation] = useState<{
-    kind: "sports" | "eventRoles" | "services";
+    kind: "sports" | "eventRoles" | "services" | "hardwareObjects";
     id: string;
   } | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
@@ -207,7 +208,9 @@ function Einstellungen() {
         ? saveSport
         : presentation.kind === "eventRoles"
           ? saveEventRole
-          : saveService;
+          : presentation.kind === "services"
+            ? saveService
+            : saveHardwareObject;
     await save(presentation.id, patch);
   }
   async function addService() {
@@ -243,13 +246,26 @@ function Einstellungen() {
       toast.error("Hardware-Objekt konnte nicht angelegt werden.");
     }
   }
-  async function saveHardwareObject(id: string, patch: { name?: string; active?: boolean }) {
+  async function saveHardwareObject(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number }) {
     try {
       await updateSelectionValue("hardwareObjects", id, patch);
       toast.success("Hardware-Objekt gespeichert.");
     } catch {
       toast.error("Hardware-Objekt konnte nicht gespeichert werden.");
     }
+  }
+  async function reorder(kind: "sports" | "eventRoles" | "services" | "hardwareObjects", id: string) {
+    if (!dragged || dragged.kind !== kind || dragged.id === id) return;
+    const values = selectionLists[kind];
+    const from = values.findIndex((value) => value.id === dragged.id);
+    const to = values.findIndex((value) => value.id === id);
+    if (from < 0 || to < 0) return;
+    const next = [...values];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    await Promise.all(next.map((value, index) => updateSelectionValue(kind, value.id, { sortOrder: index })));
+    setDragged(null);
+    toast.success("Reihenfolge gespeichert.");
   }
 
   async function speichern() {
@@ -413,11 +429,20 @@ function Einstellungen() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      <div className="flex gap-2 pt-2">
+                        <Input aria-label="Neue Sportart" value={newSport} onChange={(event) => setNewSport(event.target.value)} placeholder="Sportart hinzufügen" />
+                        <Button type="button" onClick={() => void addSport()}><Plus className="size-4" />Hinzufügen</Button>
+                      </div>
                       {sports.map((sport) => (
                         <div
                           key={sport.id}
+                          draggable
+                          onDragStart={() => setDragged({ kind: "sports", id: sport.id })}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => void reorder("sports", sport.id)}
                           className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center"
                         >
+                          <GripVertical className="size-4 cursor-grab text-muted-foreground" aria-label="Zum Sortieren ziehen" />
                           <span
                             aria-label={`Sportartvorschau: ${sport.name}`}
                             className="flex min-w-0 items-center"
@@ -477,9 +502,17 @@ function Einstellungen() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      <div className="flex gap-2 pt-2">
+                        <Input aria-label="Neuer Service" value={newService} onChange={(event) => setNewService(event.target.value)} placeholder="Service hinzufügen" />
+                        <Button type="button" onClick={() => void addService()}><Plus className="size-4" />Hinzufügen</Button>
+                      </div>
                       {services.map((service) => (
                         <div
                           key={service.id}
+                          draggable
+                          onDragStart={() => setDragged({ kind: "services", id: service.id })}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => void reorder("services", service.id)}
                           className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
                         >
                           <span
@@ -549,11 +582,21 @@ function Einstellungen() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      <div className="flex gap-2 pt-2">
+                        <Input aria-label="Neues Hardware-Objekt" value={newHardwareObject} onChange={(event) => setNewHardwareObject(event.target.value)} placeholder="Hardware-Objekt hinzufügen" />
+                        <Button type="button" aria-label="Hardware-Objekt hinzufügen" onClick={() => void addHardwareObject()}><Plus className="size-4" />Hinzufügen</Button>
+                      </div>
                       {hardwareObjects.map((hardwareObject) => (
                         <div
                           key={hardwareObject.id}
+                          draggable
+                          onDragStart={() => setDragged({ kind: "hardwareObjects", id: hardwareObject.id })}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => void reorder("hardwareObjects", hardwareObject.id)}
                           className="grid gap-2 rounded-md border p-3 lg:grid-cols-[minmax(12rem,1fr)_9rem] lg:items-center"
                         >
+                          <GripVertical className="size-4 cursor-grab text-muted-foreground" aria-label="Zum Sortieren ziehen" />
+                          <span className="flex items-center"><SelectionBadge {...hardwareObject} /></span>
                           <Input
                             aria-label={`Hardware-Objekt ${hardwareObject.name}`}
                             defaultValue={hardwareObject.name}
@@ -563,6 +606,9 @@ function Einstellungen() {
                                 void saveHardwareObject(hardwareObject.id, { name });
                             }}
                           />
+                          <Button type="button" variant="outline" aria-label={`Darstellung für Hardware-Objekt ${hardwareObject.name}`} onClick={() => setPresentation({ kind: "hardwareObjects", id: hardwareObject.id })}>
+                            <span className={`size-3 rounded-full border ${selectionPresentation(hardwareObject).className}`} aria-hidden="true" /> Darstellung
+                          </Button>
                           <Button
                             type="button"
                             variant={hardwareObject.active ? "outline" : "secondary"}
@@ -681,9 +727,17 @@ function Einstellungen() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      <div className="flex gap-2 pt-2">
+                        <Input aria-label="Neue Eventrolle" value={newEventRole} onChange={(event) => setNewEventRole(event.target.value)} placeholder="Eventrolle hinzufügen" />
+                        <Button type="button" onClick={() => void addEventRole()}><Plus className="size-4" />Hinzufügen</Button>
+                      </div>
                       {eventRoles.map((role) => (
                         <div
                           key={role.id}
+                          draggable
+                          onDragStart={() => setDragged({ kind: "eventRoles", id: role.id })}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => void reorder("eventRoles", role.id)}
                           className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center"
                         >
                           <span

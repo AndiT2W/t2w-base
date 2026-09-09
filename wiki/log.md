@@ -466,3 +466,5 @@
 - Finanz- und Kontakte-Reiter um je ein persistentes, tab-spezifisches Notizfeld ergänzt (`financeNotes`, `contactsNotes`), inklusive Prisma-Migration und Browser-Regression für Speicherung.
 - Event-Löschen ergänzt: bestätigte Löschaktion in Desktop- und Mobilliste, `DELETE /api/v1/events/:id` mit serverseitigem Aufräumen abhängiger Daten sowie Regressionstest im Event-Workspace.
 - 2026-09-09: Auditlog als eigene Einstellungsseite mit Entitätsfilter, zentraler API-Anbindung und Browser-Regressionstest ergänzt.
+- 2026-09-09: Deploy-Reihenfolge korrigiert: Event-Service startet erst nach erfolgreichem Prisma-Migrationslauf, damit neue Prisma-Clients während des Deployments keine 500er wegen fehlender Datenbankspalten ausliefern.
+ - 2026-09-09: Auswahllisten erweitert: Hinzufügen steht oberhalb der Einträge, Reihenfolge per Drag & Drop mit sortOrder speicherbar; Hardware nutzt nun ebenfalls Symbol- und Farbdarstellung.

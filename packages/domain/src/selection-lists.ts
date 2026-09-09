@@ -5,6 +5,7 @@ export type SelectionListValue = {
   active: boolean;
   icon?: string | null;
   color?: string | null;
+  sortOrder?: number;
 };
 export type SelectionListSnapshot = Record<SelectionListKind, SelectionListValue[]> & {
   loaded: boolean;
@@ -14,6 +15,7 @@ export type SelectionListPatch = {
   active?: boolean;
   icon?: string | null;
   color?: string | null;
+  sortOrder?: number;
 };
 
 export const SELECTION_LIST_KINDS: readonly SelectionListKind[] = [
@@ -39,7 +41,11 @@ const normalizeName = (name: string) => {
   return normalized;
 };
 const sortValues = (values: SelectionListValue[]) =>
-  [...values].sort((left, right) => left.name.localeCompare(right.name, "de"));
+  [...values].sort((left, right) =>
+    left.sortOrder !== undefined && right.sortOrder !== undefined
+      ? left.sortOrder - right.sortOrder
+      : left.sortOrder !== undefined ? -1 : right.sortOrder !== undefined ? 1 : left.name.localeCompare(right.name, "de"),
+  );
 
 /**
  * Returns selectable values while preserving an already assigned inactive value.

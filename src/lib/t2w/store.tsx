@@ -55,7 +55,7 @@ type Ctx = State & {
   updateSelectionValue: (
     kind: SelectionListKind,
     id: string,
-    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
   ) => Promise<void>;
 };
 

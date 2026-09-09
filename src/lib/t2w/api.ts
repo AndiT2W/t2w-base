@@ -369,6 +369,7 @@ export type ApiSport = {
   active?: boolean;
   icon?: string | null;
   color?: string | null;
+  sortOrder?: number;
 };
 export async function apiSports(): Promise<ApiSport[]> {
   const response = await fetch("/api/v1/sports", { credentials: "include" });
@@ -392,7 +393,7 @@ export async function apiCreateSport(name: string) {
 }
 export async function apiUpdateSport(
   id: string,
-  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
 ) {
   const response = await fetch(`/api/v1/sports/${id}`, {
     method: "PATCH",
@@ -409,6 +410,7 @@ export type ApiService = {
   active: boolean;
   icon?: string | null;
   color?: string | null;
+  sortOrder?: number;
 };
 export async function apiManageServices(): Promise<ApiService[]> {
   const response = await fetch("/api/v1/services?includeInactive=true", { credentials: "include" });
@@ -427,7 +429,7 @@ export async function apiCreateService(name: string) {
 }
 export async function apiUpdateService(
   id: string,
-  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
 ) {
   const response = await fetch(`/api/v1/services/${id}`, {
     method: "PATCH",
@@ -458,7 +460,7 @@ export async function apiCreateHardwareObject(name: string) {
 }
 export async function apiUpdateHardwareObject(
   id: string,
-  patch: { name?: string; active?: boolean },
+  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
 ) {
   const response = await fetch(`/api/v1/hardware-objects/${id}`, {
     method: "PATCH",
@@ -475,6 +477,7 @@ export type ApiEventRole = {
   active: boolean;
   icon?: string | null;
   color?: string | null;
+  sortOrder?: number;
 };
 export async function apiEventRoles(): Promise<ApiEventRole[]> {
   const response = await fetch("/api/v1/event-roles", { credentials: "include" });
@@ -500,7 +503,7 @@ export async function apiCreateEventRole(name: string) {
 }
 export async function apiUpdateEventRole(
   id: string,
-  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
 ) {
   const response = await fetch(`/api/v1/event-roles/${id}`, {
     method: "PATCH",

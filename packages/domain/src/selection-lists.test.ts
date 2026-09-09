@@ -58,4 +58,15 @@ describe("Selection lists", () => {
     expect(persistence.create).toHaveBeenCalledWith("sports", "Laufen");
     expect(workspace.snapshot().sports.map((value) => value.name)).toEqual(["Laufen", "Triathlon"]);
   });
+
+  it("keeps an explicitly configured dropdown order", async () => {
+    const lists = new SelectionLists({
+      ...adapter(),
+      load: vi.fn(async () => [
+        { id: "b", name: "Beta", active: true, sortOrder: 1 },
+        { id: "a", name: "Alpha", active: true, sortOrder: 0 },
+      ]),
+    });
+    await expect(lists.list("sports")).resolves.toMatchObject([{ id: "a" }, { id: "b" }]);
+  });
 });
