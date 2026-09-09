@@ -1,15 +1,19 @@
 import {
   Activity,
+  Bike,
   Bell,
   Calendar,
   Camera,
   CircleCheck,
   ClipboardList,
   Cloud,
+  Euro,
+  Footprints,
   Headphones,
   Laptop,
   Mail,
   MapPin,
+  Mountain,
   Monitor,
   Music,
   Package,
@@ -20,9 +24,11 @@ import {
   Smartphone,
   Star,
   Tag,
+  Trophy,
   UserRound,
   Video,
   Wifi,
+  Waves,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -53,7 +59,13 @@ type IconKey =
   | "star"
   | "tag"
   | "wifi"
-  | "zap";
+  | "zap"
+  | "euro"
+  | "bike"
+  | "footprints"
+  | "mountain"
+  | "trophy"
+  | "waves";
 type ColorKey =
   | "sky"
   | "lime"
@@ -103,6 +115,12 @@ const icons: Record<IconKey, LucideIcon> = {
   tag: Tag,
   wifi: Wifi,
   zap: Zap,
+  euro: Euro,
+  bike: Bike,
+  footprints: Footprints,
+  mountain: Mountain,
+  trophy: Trophy,
+  waves: Waves,
 };
 const colorClasses: Record<ColorKey, string> = {
   sky: "border-sky-300 bg-sky-100 text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100",
@@ -175,6 +193,17 @@ export const SERVICE_ICON_OPTIONS: { value: IconKey; label: string }[] = [
   { value: "tag", label: "Tag" },
   { value: "wifi", label: "WLAN" },
   { value: "zap", label: "Blitz" },
+  { value: "euro", label: "Euro" },
+];
+export const SPORT_ICON_OPTIONS: { value: IconKey; label: string }[] = [
+  { value: "footprints", label: "Laufen" },
+  { value: "bike", label: "Radfahren" },
+  { value: "waves", label: "Schwimmen" },
+  { value: "mountain", label: "Bergsport" },
+  { value: "trophy", label: "Wettkampf" },
+  { value: "activity", label: "Sport" },
+  { value: "calendar", label: "Veranstaltung" },
+  { value: "euro", label: "Euro" },
 ];
 export const SERVICE_COLOR_OPTIONS: { value: ColorKey; label: string }[] = [
   { value: "sky", label: "Blau" },

@@ -10,7 +10,7 @@ test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }
   await expect(page.getByLabel("Sportartvorschau: Triathlon")).toContainText("Triathlon");
   await page.getByRole("button", { name: "Darstellung für Sportart Triathlon" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "Kamera" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Radfahren" }).click();
   await expect(page.getByText("Sportart gespeichert.").last()).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByLabel("Neue Sportart").fill("Radfahren");
@@ -84,6 +84,9 @@ test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page })
   await page.getByRole("button", { name: "Darstellung für Eventrolle Anmeldung" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Rot" }).click();
+  await expect(page.getByText("Eventrolle gespeichert.").last()).toBeVisible();
+  await page.getByRole("button", { name: "Darstellung für Eventrolle Anmeldung" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Euro" }).click();
   await expect(page.getByText("Eventrolle gespeichert.").last()).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByLabel("Neue Eventrolle").fill("Presse");

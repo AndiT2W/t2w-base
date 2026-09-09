@@ -836,7 +836,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   Öffnet den konkreten Ordner direkt in Outlook Web.
                 </p>
               </div>
-              <PayoutsPanel eventId={event.id} recipientId={detail.payoutRecipientId} recipientEmail={detail.payoutRecipient?.email} />
               <div>
                 <Label htmlFor="d-sp">SharePoint-Ordner</Label>
                 <Input
