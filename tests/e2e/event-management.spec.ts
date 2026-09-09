@@ -3,8 +3,9 @@ import { event, mockEventManagementApi as mockApi } from "./support/event-manage
 
 test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/einstellungen?tab=auswahllisten");
-  await expect(page.getByRole("tab", { name: "Auswahllisten" })).toBeVisible();
+  await page.goto("/einstellungen?tab=auswahllisten&liste=sportarten");
+  await expect(page.getByRole("link", { name: "Auswahllisten", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Sportarten", exact: true })).toBeVisible();
   await expect(page.getByLabel("Sportart Triathlon")).toBeVisible();
   await page.getByLabel("Neue Sportart").fill("Radfahren");
   await page.getByRole("button", { name: "Hinzufügen" }).first().click();
@@ -20,7 +21,7 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   page,
 }) => {
   const requests = await mockApi(page);
-  await page.goto("/einstellungen?tab=auswahllisten");
+  await page.goto("/einstellungen?tab=auswahllisten&liste=services");
   await expect(page.getByRole("textbox", { name: "Service UHF", exact: true })).toBeVisible();
   await expect(
     page.getByRole("textbox", { name: "Service Video (iRewind)", exact: true }),
@@ -70,7 +71,7 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
 
 test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page }) => {
   await mockApi(page);
-  await page.goto("/einstellungen?tab=auswahllisten");
+  await page.goto("/einstellungen?tab=auswahllisten&liste=eventrollen");
   await expect(page.getByLabel("Eventrolle Anmeldung")).toBeVisible();
   await expect(page.getByLabel("Eventrolle Finanz")).toBeVisible();
   await page.getByLabel("Neue Eventrolle").fill("Presse");

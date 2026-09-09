@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useT2W } from "@/lib/t2w/store";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import {
@@ -181,12 +181,6 @@ function Einstellungen() {
           }
           className="space-y-5"
         >
-          <TabsList>
-            <TabsTrigger value="allgemein">Allgemein</TabsTrigger>
-            <TabsTrigger value="auswahllisten">Auswahllisten</TabsTrigger>
-            <TabsTrigger value="outlook">Outlook</TabsTrigger>
-          </TabsList>
-
           <TabsContent value="allgemein" className="space-y-5">
             <Card>
               <CardHeader>
@@ -275,12 +269,10 @@ function Einstellungen() {
           </TabsContent>
 
           <TabsContent value="auswahllisten" className="space-y-5">
-            <div className="grid gap-5 md:grid-cols-[11rem_minmax(0,1fr)] md:items-start">
-              <Card className="md:sticky md:top-5">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Auswahllisten</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-1 p-2">
+            <div className="space-y-5">
+              <Card>
+                <CardContent className="p-2">
+                  <div className="flex flex-wrap gap-1" role="tablist" aria-label="Auswahllisten Kategorien">
                   {[
                     ["sportarten", "Sportarten"],
                     ["services", "Services"],
@@ -290,7 +282,9 @@ function Einstellungen() {
                       key={value}
                       type="button"
                       variant={liste === value ? "secondary" : "ghost"}
-                      className="justify-start"
+                      className="min-h-10 flex-1 justify-center sm:flex-none"
+                      role="tab"
+                      aria-selected={liste === value}
                       onClick={() =>
                         void navigate({ search: { tab: "auswahllisten", liste: value } })
                       }
@@ -298,6 +292,7 @@ function Einstellungen() {
                       {label}
                     </Button>
                   ))}
+                  </div>
                 </CardContent>
               </Card>
               <div className="space-y-5">

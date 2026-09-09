@@ -12,6 +12,7 @@ import {
   Settings2,
   Users,
   Package,
+  ChevronDown,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,7 @@ const linkClass =
 function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
   const { locale, setLocale, t } = useI18n();
   const { pathname } = useLocation();
+  const einstellungenAktiv = pathname.startsWith("/einstellungen");
   return (
     <div className="flex h-full flex-col gap-6 bg-nav px-3 py-4 text-nav-foreground">
       <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-2">
@@ -114,6 +116,12 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             >
               <item.icon className="size-4 shrink-0" />
               {t(HAUPT_NAV_KEYS[item.to])}
+              {item.to === "/einstellungen" && (
+                <ChevronDown
+                  className={cn("ml-auto size-4 transition-transform", einstellungenAktiv && "rotate-180")}
+                  aria-hidden="true"
+                />
+              )}
             </Link>
           ) : (
             <span
@@ -129,6 +137,30 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
               <span className="sr-only">{t("nav.inPreparation")}</span>
             </span>
           ),
+        )}
+
+        {einstellungenAktiv && (
+          <div className="ml-3 border-l border-nav-active pl-2" aria-label="Einstellungen Untermenü">
+            {[
+              ["allgemein", "Allgemein"],
+              ["auswahllisten", "Auswahllisten"],
+              ["outlook", "Outlook"],
+            ].map(([value, label]) => (
+              <Link
+                key={value}
+                to="/einstellungen"
+                search={{ tab: value as "allgemein" | "auswahllisten" | "outlook", liste: "services" }}
+                onClick={onNavigate}
+                className={cn(
+                  linkClass,
+                  "py-1.5 text-xs",
+                  "data-[status=active]:bg-nav-active data-[status=active]:text-nav-foreground",
+                )}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
         )}
 
         <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
