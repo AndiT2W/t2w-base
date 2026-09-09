@@ -125,10 +125,10 @@ function HardwarePage() {
   const [overdue, setOverdue] = useState(false);
   const [events, setEvents] = useState<{ id: string; name: string; eventCode: string }[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
-  const [selectedHardware, setSelectedHardware] = useState<Hardware | null>(null);
   const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
   const [inlineDraft, setInlineDraft] = useState<InlineDraft | null>(null);
   const [savingInline, setSavingInline] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
   const [newHardware, setNewHardware] = useState(false);
   const table = useTableBehavior<Hardware, HardwareColumn>({
     storageKey: "t2w-hardware-table-columns",
@@ -171,6 +171,7 @@ function HardwarePage() {
   );
   const rows = useMemo(() => table.rows(active), [active, table]);
   const beginInlineEdit = (item: Hardware) => {
+    setInlineError(null);
     setInlineEditingId(item.id);
     setInlineDraft({
       recipientName: item.recipientName,
@@ -190,7 +191,10 @@ function HardwarePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(inlineDraft),
       });
-      if (!response.ok) return;
+      if (!response.ok) {
+        setInlineError("Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.");
+        return;
+      }
       const updated = (await response.json()) as Hardware;
       setItems((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
       setInlineEditingId(null);
@@ -240,27 +244,6 @@ function HardwarePage() {
                 />
               )}
             </div>
-          </SheetContent>
-        </Sheet>
-        <Sheet
-          open={Boolean(selectedHardware)}
-          onOpenChange={(open) => !open && setSelectedHardware(null)}
-        >
-          <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
-            <SheetHeader>
-              <SheetTitle>Hardware bearbeiten</SheetTitle>
-              <SheetDescription>Ausgabe- und Rückgabedaten bearbeiten.</SheetDescription>
-            </SheetHeader>
-            {selectedHardware && (
-              <div className="mt-5">
-                <HardwareWorkspace
-                  eventId={selectedHardware.event?.id}
-                  initialEditing={selectedHardware}
-                  onSaved={() => setSelectedHardware(null)}
-                  showList={false}
-                />
-              </div>
-            )}
           </SheetContent>
         </Sheet>
         <div className="grid gap-3 sm:grid-cols-4">
@@ -326,6 +309,14 @@ function HardwarePage() {
             </div>
           </CardHeader>
           <CardContent>
+            {inlineError && (
+              <p
+                className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                role="alert"
+              >
+                {inlineError}
+              </p>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -347,11 +338,7 @@ function HardwarePage() {
                 </thead>
                 <tbody>
                   {rows.map((i) => (
-                    <tr
-                      key={i.id}
-                      className="cursor-pointer border-b hover:bg-accent/50"
-                      onClick={() => inlineEditingId !== i.id && setSelectedHardware(i)}
-                    >
+                    <tr key={i.id} className="border-b hover:bg-accent/50">
                       {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => {
                         const editing = inlineEditingId === i.id && inlineDraft;
                         if (editing && h === "Empfänger")

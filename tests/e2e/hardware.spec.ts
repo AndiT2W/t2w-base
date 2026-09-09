@@ -67,10 +67,10 @@ test("shows central hardware cases, filters them, and links to the event", async
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await expect(page.getByText("max@example.com")).toBeVisible();
   await expect(page.getByText("+43 660 123456")).toBeVisible();
-  await page
-    .getByRole("row", { name: /Demo Event.*Max Mustermann/ })
-    .getByRole("button", { name: "Inline bearbeiten" })
-    .click();
+  const hardwareRow = page.getByRole("row", { name: /Demo Event.*Max Mustermann/ });
+  await hardwareRow.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await hardwareRow.getByRole("button", { name: "Inline bearbeiten" }).click();
   await page.getByLabel("Empfänger bearbeiten").fill("Max Mustermann aktualisiert");
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("Max Mustermann aktualisiert")).toBeVisible();
