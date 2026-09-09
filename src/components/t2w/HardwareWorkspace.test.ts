@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeHardwareResponse } from "./HardwareWorkspace";
+import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 
 describe("normalizeHardwareResponse", () => {
   it("accepts the legacy array response", () => {

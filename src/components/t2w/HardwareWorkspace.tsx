@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 
 type Item = {
   id: string;
@@ -30,14 +31,6 @@ type Item = {
   note?: string;
   event?: { eventCode: string; name: string };
 };
-export function normalizeHardwareResponse(value: unknown): Item[] {
-  if (Array.isArray(value)) return value as Item[];
-  if (value && typeof value === "object" && "items" in value) {
-    const items = (value as { items?: unknown }).items;
-    return Array.isArray(items) ? (items as Item[]) : [];
-  }
-  return [];
-}
 const statusLabels: Record<string, string> = {
   OPEN: "Offen",
   MAIL_SEND: "Mail senden",
@@ -66,7 +59,7 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
       credentials: "include",
     })
       .then((r) => r.json())
-      .then((value) => setItems(normalizeHardwareResponse(value)))
+      .then((value) => setItems(normalizeHardwareResponse<Item>(value)))
       .catch(() => setItems([]));
   useEffect(() => {
     void load();

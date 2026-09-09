@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ function HardwarePage() {
     if (issueType !== "all") params.set("issueType", issueType);
     fetch(`/api/v1/events/hardware?${params}`, { credentials: "include" })
       .then((r) => r.json())
-      .then(setItems)
+      .then((value) => setItems(normalizeHardwareResponse<Hardware>(value)))
       .catch(() => setItems([]));
   }, [q, status, issueType]);
   const today = new Date().toISOString().slice(0, 10);

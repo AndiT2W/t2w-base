@@ -49,6 +49,17 @@ test("shows central hardware cases, filters them, and links to the event", async
   );
 });
 
+test("keeps the event detail page usable when hardware API returns an error payload", async ({ page }) => {
+  await mockEventManagementApi(page);
+  await page.route("**/api/v1/events/*/hardware", (route) =>
+    route.fulfill({ status: 500, json: { message: "Database unavailable" } }),
+  );
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "HARDWARE" }).click();
+  await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();
+  await expect(page.getByText("Diese Seite konnte nicht geladen werden")).not.toBeVisible();
+});
+
 test("manages hardware from the Event detail tab", async ({ page }) => {
   await mockEventManagementApi(page);
   await page.route("**/api/v1/events/*/hardware", (route) => route.fulfill({ json: [] }));

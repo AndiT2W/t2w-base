@@ -37,6 +37,11 @@ jobs:
           npm test --workspace t2w-event-service
           npm run build --workspace t2w-event-service
 
+      - name: Verify browser workflows
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+
   deploy:
     needs: verify
     runs-on: ubuntu-latest
