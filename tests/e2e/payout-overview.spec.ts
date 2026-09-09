@@ -68,6 +68,10 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
   await page.getByLabel("Status filtern").selectOption("GESENDET");
   await page.getByLabel("T260002 auswählen").check();
   await expect(page.getByRole("button", { name: /Für Mailversand markieren/ })).toBeEnabled();
+  await page.getByLabel("T260002 Mailstatus").selectOption("ENTWURF");
+  await expect
+    .poll(() => requestsForPayouts.some((request) => request.method() === "PATCH"))
+    .toBe(true);
   await page.getByLabel("T260002 Transaktionsbestätigung").fill("TX-42");
   await page.getByLabel("T260002 Transaktionsbestätigung").blur();
   await expect

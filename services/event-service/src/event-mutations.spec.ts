@@ -24,6 +24,9 @@ function adapter(): EventMutationAdapter & { events: Map<string, Record<string, 
       events.set(id, { ...current, ...changes, version: Number(current.version) + 1 });
       return true;
     },
+    async deleteEvent(id) {
+      return events.delete(id);
+    },
     async replaceInvoiceRecipients(id, organizerIds) {
       events.set(id, { ...events.get(id), invoiceRecipientIds: organizerIds });
     },

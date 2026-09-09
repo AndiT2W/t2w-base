@@ -256,6 +256,15 @@ function Auszahlungen() {
                 </td>
                 <td className="px-3 py-2">
                   <select
+                    aria-label={`${p.payoutNumber} Mailstatus`}
+                    value={p.mailStatus}
+                    onChange={(e) => void update(p.id, { mailStatus: e.target.value })}
+                  >
+                    <option value="ENTWURF">Entwurf</option>
+                    <option value="VERSENDEN">Mail versenden</option>
+                    <option value="GESENDET">Mail gesendet</option>
+                  </select>
+                  <select
                     aria-label={`${p.payoutNumber} Zahlungsstatus`}
                     value={p.paymentStatus}
                     onChange={(e) => void update(p.id, { paymentStatus: e.target.value })}

@@ -21,13 +21,12 @@ describe("PayoutService status rules", () => {
     );
   });
 
-  it("does not allow CRUD to fake a successful mail send", async () => {
+  it("allows manually setting every mail status", async () => {
+    const update = vi.fn().mockResolvedValue({ ...payout, mailStatus: "GESENDET" });
     const service = new PayoutService(
-      { payout: { findUnique: vi.fn().mockResolvedValue(payout) }, auditLog: {} } as any,
+      { payout: { findUnique: vi.fn().mockResolvedValue(payout), update }, auditLog: {} } as any,
       { append: vi.fn() } as any,
     );
-    await expect(service.update("p1", { mailStatus: "GESENDET" })).rejects.toThrow(
-      "MAIL_STATUS_REQUIRES_AUTOMATION_RESULT",
-    );
+    await expect(service.update("p1", { mailStatus: "GESENDET" })).resolves.toBeDefined();
   });
 });

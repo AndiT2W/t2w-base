@@ -2,6 +2,8 @@
 
 ## 2026-09-09
 
+- Neues vorgeschlagenes Berechtigungsmodell aufgenommen: Systembenutzer mit `Admin`/`User`, serverseitiger Autorisierung, Einladungsworkflow und Deaktivierung statt Löschung; getrennt von fachlichen Eventrollen.
+
 - ClickUp-Liste `AUSZAHLUNGEN` geprüft: 1.013 Datensätze, Felder Veranstaltung, Status, Auszahlungsbetrag und Transaktionsbestätigung sowie Statusgruppen `erstellt`, `gesendet`, `ausbezahlt`; n8n-Versandstatus `versenden` dokumentiert.
 - Arbeitsgrundlage für monatliche Nenngeld-Auszahlungen erstellt: Event-zu-Auszahlung 1:n, globale fortlaufende Nummer, Empfängersnapshot, getrennte Mail-/Zahlungsstatus, zentrale Übersicht und idempotenter n8n-Versand. Siehe [Auszahlungs-Spezifikation](tasks/event-payouts-spec.md).
 
@@ -414,6 +416,7 @@
 - 2026-09-09: Die Eventdetail-Stammdaten wurden im bestehenden TIME2WIN-Stil verdichtet: Eventname über die volle Breite, darunter zwei fachlich gruppierte Spalten mit Inline-Labels am Desktop; Services/Status, Archivierung und Notizen bleiben vollständig erhalten. Ein Browser-E2E-Test sichert Gruppierung und Desktop-Raster ab. Quelle: Nutzerentscheidung für Layoutvariante B vom 2026-09-09 und `src/routes/events.$eventcode.tsx`.
 - 2026-09-09: Die Archivierung steht nun als kompakter Schalter direkt beim Eventnamen. Ein Browser-E2E-Test sichert die Desktop-Position. Quelle: Nutzeranfrage vom 2026-09-09 und `src/routes/events.$eventcode.tsx`.
 - 2026-09-09: Sportarten und Eventrollen unterstützen nun wie Services eine persistierte Symbol-/Farbdarstellung. Einstellungen bieten Vorschau und Auswahl; die Darstellung wird auch in den Event-Auswahllisten verwendet. Quelle: Nutzeranfrage vom 2026-09-09, `src/components/t2w/ServiceBadge.tsx`, `services/event-service/prisma/migrations/0019_selection_list_presentation/migration.sql`.
+
 ## 2026-09-09
 
 - Auszahlungsslice begonnen: Prisma-Modelle für Payout, globalen Jahresnummernkreis und AutomationClaim ergänzt; AuditService sowie geschützte CRUD-/Claim-/Result-Endpunkte angelegt.
@@ -429,6 +432,7 @@
 - Echter Service-Smoke-Test gegen PostgreSQL erfolgreich: historische Auszahlung mit `eventId = null`, CHF und `T260001` angelegt, anschließend dauerhaft gelöscht; CREATE- und DELETE-Audit-Einträge wurden gelesen.
 - Echter n8n-Flow gegen PostgreSQL erfolgreich: `VERSENDEN` markiert, atomar geclaimt, gleicher Idempotenzschlüssel wiederholt und Erfolg callbackt; beide Claims referenzierten denselben Datensatz und der Status wurde `GESENDET`.
 - Gemeinsame Domain-Projektion für Gesamtstatus, Decimal-Normalisierung und `T260001` ergänzt. UI, Import und vollständige E2E-Abnahme stehen noch aus.
+
 ## 2026-09-09
 
 - Auszahlungsübersicht um zentrale Statusänderung und dauerhafte Löschung erweitert; beide Aktionen verwenden die bestehenden Auditlog-Pfade.
@@ -452,3 +456,8 @@
 - Zentraler geschützter Audit-Leseendpunkt `/api/v1/audit-log` ergänzt; Filter nach Entität und Datensatz sind möglich.
 - Zentrale Auszahlungsliste erlaubt nun Inline-Bearbeitung von Betrag und Transaktionsbestätigung; E2E prüft die PATCH-Persistenz.
 - Statusinvarianten mit eigenem `payout.service.spec.ts` abgesichert: automatische `paidAt`-Vergabe und Schutz vor gefälschtem `GESENDET`-CRUD-Übergang.
+- 2026-09-09: Hardware-Seite gegen `event = null` abgesichert. Ursache war ein direkter Zugriff auf `i.event.eventCode` bei verwaisten Hardware-Datensätzen; Regressionstest in `tests/e2e/hardware.spec.ts` ergänzt, relevante Playwright-Tests bestanden.
+- 2026-09-09: Mail- und Zahlungsstatus von Auszahlungen sind in Event-Finanzreiter und zentraler Übersicht unabhängig manuell auswählbar; der bisherige CRUD-Schutz für `GESENDET` wurde entfernt. Service- und Browser-Regression ergänzt.
+# 2026-09-09
+
+- Event-Löschen ergänzt: bestätigte Löschaktion in Desktop- und Mobilliste, `DELETE /api/v1/events/:id` mit serverseitigem Aufräumen abhängiger Daten sowie Regressionstest im Event-Workspace.

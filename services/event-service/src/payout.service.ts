@@ -102,11 +102,6 @@ export class PayoutService {
   async update(id: string, input: any) {
     const old = await this.prisma.payout.findUnique({ where: { id } });
     if (!old) throw new NotFoundException();
-    if (
-      input.mailStatus === PayoutMailStatus.GESENDET &&
-      old.mailStatus !== PayoutMailStatus.GESENDET
-    )
-      throw new BadRequestException("MAIL_STATUS_REQUIRES_AUTOMATION_RESULT");
     const data: any = { ...input };
     for (const k of ["userId", "id", "payoutNumber", "createdAt", "updatedAt"]) delete data[k];
     for (const k of ["paidAt", "mailSentAt"]) if (data[k]) data[k] = new Date(data[k]);

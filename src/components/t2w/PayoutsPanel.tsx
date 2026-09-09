@@ -119,6 +119,15 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
                 </td>
                 <td className="px-2 py-1">
                   <select
+                    aria-label={`${p.payoutNumber} Mailstatus`}
+                    value={p.mailStatus}
+                    onChange={(e) => void update(p.id, { mailStatus: e.target.value })}
+                  >
+                    <option value="ENTWURF">Entwurf</option>
+                    <option value="VERSENDEN">Mail versenden</option>
+                    <option value="GESENDET">Mail gesendet</option>
+                  </select>
+                  <select
                     aria-label={`${p.payoutNumber} Status`}
                     value={p.paymentStatus}
                     onChange={(e) =>
