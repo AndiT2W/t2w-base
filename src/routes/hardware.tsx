@@ -200,8 +200,8 @@ function HardwarePage() {
   }, [q, status, issueType]);
   useEffect(() => {
     if (!inlineEditingId) return;
-    const finishEditing = (pointerEvent: PointerEvent) => {
-      const target = pointerEvent.target;
+    const finishEditing = (clickEvent: MouseEvent) => {
+      const target = clickEvent.target;
       if (
         target instanceof Element &&
         (target.closest('[data-inline-editing="true"]') ||
@@ -211,8 +211,8 @@ function HardwarePage() {
       setInlineEditingId(null);
       setInlineDraft(null);
     };
-    document.addEventListener("pointerdown", finishEditing);
-    return () => document.removeEventListener("pointerdown", finishEditing);
+    document.addEventListener("click", finishEditing);
+    return () => document.removeEventListener("click", finishEditing);
   }, [inlineEditingId]);
   const today = new Date().toISOString().slice(0, 10);
   const active = items.filter(

@@ -165,7 +165,7 @@ test("shows central hardware cases, filters them, and links to the event", async
   const unassignedRow = page.getByRole("row", { name: /Kein Event zugeordnet.*Ohne Event/ });
   await unassignedRow.click();
   await page.getByLabel("Empfänger bearbeiten").fill("Ohne Event aktualisiert");
-  await page.getByLabel("Empfänger bearbeiten").press("Tab");
+  await page.getByRole("heading", { name: "Hardware" }).click();
   await expect.poll(() => lastUnassignedChanges.recipientName).toBe("Ohne Event aktualisiert");
   await page.getByRole("textbox", { name: "Suche" }).first().fill("max@example.com");
   await expect(page.getByText("Max Mustermann")).toBeVisible();
