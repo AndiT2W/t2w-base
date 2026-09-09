@@ -25,13 +25,13 @@ import {
   servicePresentation,
   selectionPresentation,
 } from "@/components/t2w/ServiceBadge";
-import { apiOutlookStatus } from "@/lib/t2w/api";
+import { apiAuditLog, apiOutlookStatus, type ApiAuditLog } from "@/lib/t2w/api";
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 
 export const Route = createFileRoute("/einstellungen")({
   validateSearch: (search) => ({
     tab:
-      search.tab === "outlook" || search.tab === "auswahllisten"
+      search.tab === "outlook" || search.tab === "auswahllisten" || search.tab === "auditlog"
         ? search.tab
         : ("allgemein" as const),
     liste:
@@ -71,6 +71,9 @@ function Einstellungen() {
   const [newEventRole, setNewEventRole] = useState("");
   const services = selectionLists.services;
   const [newService, setNewService] = useState("");
+  const [auditEntries, setAuditEntries] = useState<ApiAuditLog[]>([]);
+  const [auditEntity, setAuditEntity] = useState("");
+  const [auditLoading, setAuditLoading] = useState(false);
   const [presentation, setPresentation] = useState<{ kind: "sports" | "eventRoles" | "services"; id: string } | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
     workspace.subscribe,
@@ -94,6 +97,14 @@ function Einstellungen() {
   useEffect(() => {
     workspace.acceptLoaded(settings);
   }, [settings, workspace]);
+  useEffect(() => {
+    if (tab !== "auditlog") return;
+    setAuditLoading(true);
+    void apiAuditLog({ entity: auditEntity || undefined })
+      .then(setAuditEntries)
+      .catch(() => toast.error("Auditlog konnte nicht geladen werden."))
+      .finally(() => setAuditLoading(false));
+  }, [tab, auditEntity]);
   async function addSport() {
     const name = newSport.trim();
     if (!name) return;
@@ -182,7 +193,7 @@ function Einstellungen() {
           onValueChange={(nextTab) =>
             void navigate({
               search: {
-                tab: nextTab === "outlook" || nextTab === "auswahllisten" ? nextTab : "allgemein",
+                tab: nextTab === "outlook" || nextTab === "auswahllisten" || nextTab === "auditlog" ? nextTab : "allgemein",
                 liste,
               },
             })
@@ -550,6 +561,59 @@ function Einstellungen() {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="auditlog" className="space-y-5">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Auditlog</CardTitle>
+                <CardDescription>Unveränderliche Aufzeichnungen über relevante Änderungen im System.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="max-w-xs space-y-2">
+                  <Label htmlFor="audit-entity">Entität filtern</Label>
+                  <select
+                    id="audit-entity"
+                    aria-label="Auditlog nach Entität filtern"
+                    value={auditEntity}
+                    onChange={(event) => setAuditEntity(event.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">Alle Entitäten</option>
+                    <option value="Event">Events</option>
+                    <option value="Payout">Auszahlungen</option>
+                    <option value="Hardware">Hardware</option>
+                  </select>
+                </div>
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="w-full min-w-[42rem] text-sm">
+                    <caption className="sr-only">Auditlog-Einträge</caption>
+                    <thead className="bg-muted/50 text-left text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Zeitpunkt</th>
+                        <th className="px-3 py-2 font-medium">Entität</th>
+                        <th className="px-3 py-2 font-medium">Aktion</th>
+                        <th className="px-3 py-2 font-medium">Benutzer</th>
+                        <th className="px-3 py-2 font-medium">Datensatz</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {auditEntries.map((entry) => (
+                        <tr key={entry.id}>
+                          <td className="whitespace-nowrap px-3 py-2">{new Date(entry.createdAt).toLocaleString("de-AT")}</td>
+                          <td className="px-3 py-2">{entry.entity}</td>
+                          <td className="px-3 py-2 font-medium">{entry.action}</td>
+                          <td className="px-3 py-2">{entry.user?.displayName ?? entry.user?.email ?? "System"}</td>
+                          <td className="max-w-[16rem] truncate px-3 py-2 font-mono text-xs" title={entry.entityId}>{entry.entityId}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!auditLoading && auditEntries.length === 0 && <p className="px-3 py-8 text-center text-sm text-muted-foreground">Keine Auditlog-Einträge gefunden.</p>}
+                  {auditLoading && <p className="px-3 py-8 text-center text-sm text-muted-foreground" role="status">Auditlog wird geladen …</p>}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="outlook" className="space-y-5">

@@ -148,11 +148,12 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
               ["allgemein", "Allgemein"],
               ["auswahllisten", "Auswahllisten"],
               ["outlook", "Outlook"],
+              ["auditlog", "Auditlog"],
             ].map(([value, label]) => (
               <Link
                 key={value}
                 to="/einstellungen"
-                search={{ tab: value as "allgemein" | "auswahllisten" | "outlook", liste: "services" }}
+                search={{ tab: value as "allgemein" | "auswahllisten" | "outlook" | "auditlog", liste: "services" }}
                 onClick={onNavigate}
                 className={cn(
                   linkClass,
