@@ -20,7 +20,7 @@ test("shows central hardware cases, filters them, and links to the event", async
           dueDate: "2026-09-12",
           email: "max@example.com",
           phone: "+43 660 123456",
-          event: { eventCode: "260820_demo_event", name: "Demo Event" },
+          event: { id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" },
         },
         {
           id: "h2",
@@ -47,12 +47,33 @@ test("shows central hardware cases, filters them, and links to the event", async
       ],
     }),
   );
+  await page.route("**/api/v1/events/event-1/hardware/h1", (route) =>
+    route.fulfill({
+      json: {
+        id: "h1",
+        recipientName: "Max Mustermann aktualisiert",
+        issueType: "PARTICIPANT",
+        objectName: "Active Transponder",
+        quantity: 1,
+        status: "NOTIFIED",
+        dueDate: "2026-09-12",
+        event: { id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" },
+      },
+    }),
+  );
   await page.goto("/hardware");
   await expect(page.getByRole("heading", { name: "Hardware" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await expect(page.getByText("max@example.com")).toBeVisible();
   await expect(page.getByText("+43 660 123456")).toBeVisible();
+  await page
+    .getByRole("row", { name: /Demo Event.*Max Mustermann/ })
+    .getByRole("button", { name: "Inline bearbeiten" })
+    .click();
+  await page.getByLabel("Empfänger bearbeiten").fill("Max Mustermann aktualisiert");
+  await page.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText("Max Mustermann aktualisiert")).toBeVisible();
   await page.getByRole("textbox", { name: "Suche" }).first().fill("max@example.com");
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await page.getByRole("textbox", { name: "Suche" }).first().fill("");
@@ -70,7 +91,9 @@ test("shows central hardware cases, filters them, and links to the event", async
   );
 });
 
-test("keeps the event detail page usable when hardware API returns an error payload", async ({ page }) => {
+test("keeps the event detail page usable when hardware API returns an error payload", async ({
+  page,
+}) => {
   await mockEventManagementApi(page);
   await page.route("**/api/v1/events/*/hardware", (route) =>
     route.fulfill({ status: 500, json: { message: "Database unavailable" } }),
