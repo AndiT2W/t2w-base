@@ -770,6 +770,8 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
   await expect(recipientDetails).toContainText("Hauptstraße 4, 1010 Wien, Österreich");
   await expect(recipientDetails).toContainText("AT611904300234573201");
   await expect(recipientDetails).toContainText("BKAUATWW");
+  await expect(recipientDetails.locator("dl > div")).toHaveCount(4);
+  await expect(recipientDetails.getByText("IBAN / BIC", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Rechnungsempfänger auswählen" }).click();
   await page.getByLabel("Rechnungsempfänger suchen").fill("Jonas");
   await page.getByText("Jonas Feld", { exact: true }).last().click();

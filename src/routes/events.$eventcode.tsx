@@ -176,12 +176,14 @@ function RecipientMasterData({ recipient }: { recipient: Kunde }) {
         <dd>{recipient.uid || "—"}</dd>
       </div>
       <div>
-        <dt className="text-xs text-muted-foreground">IBAN</dt>
-        <dd>{recipient.iban || "—"}</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-muted-foreground">BIC</dt>
-        <dd>{recipient.bic || "—"}</dd>
+        <dt className="text-xs text-muted-foreground">IBAN / BIC</dt>
+        <dd>
+          {recipient.iban || "—"}
+          <span className="px-1.5 text-muted-foreground" aria-hidden="true">
+            ·
+          </span>
+          {recipient.bic || "—"}
+        </dd>
       </div>
     </dl>
   );
