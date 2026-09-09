@@ -168,7 +168,7 @@ function Einstellungen() {
         titel="Einstellungen"
         beschreibung="Outlook- und SharePoint-Ordnerkonventionen zentral verwalten."
       />
-      <div className="max-w-3xl space-y-5">
+      <div className="max-w-5xl space-y-5">
         <Tabs
           value={tab}
           onValueChange={(nextTab) =>
@@ -301,227 +301,246 @@ function Einstellungen() {
                 </CardContent>
               </Card>
               <div className="space-y-5">
-            {liste === "sportarten" && <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Sportarten</CardTitle>
-                <CardDescription>
-                  Werte für die Sportart-Auswahl beim Anlegen und Bearbeiten eines Events.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {sports.map((sport) => (
-                  <div key={sport.id} className="flex items-center gap-2">
-                    <Input
-                      aria-label={`Sportart ${sport.name}`}
-                      defaultValue={sport.name}
-                      onBlur={(event) => {
-                        const name = event.target.value.trim();
-                        if (name && name !== sport.name) void saveSport(sport.id, { name });
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant={sport.active ? "outline" : "secondary"}
-                      onClick={() => void saveSport(sport.id, { active: !sport.active })}
-                    >
-                      {sport.active ? "Deaktivieren" : "Aktivieren"}
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex gap-2 pt-2">
-                  <Input
-                    aria-label="Neue Sportart"
-                    value={newSport}
-                    onChange={(event) => setNewSport(event.target.value)}
-                    placeholder="Sportart hinzufügen"
-                  />
-                  <Button type="button" onClick={() => void addSport()}>
-                    <Plus className="size-4" />
-                    Hinzufügen
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>}
-            {liste === "services" && <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Services</CardTitle>
-                <CardDescription>Mehrfach auswählbare Leistungen eines Events.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {services.map((service) => (
-                  <div
-                    key={service.id}
-                    className="grid gap-2 rounded-md border p-3 sm:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] sm:items-center"
-                  >
-                    <span
-                      aria-label={`Servicevorschau: ${service.name}`}
-                      className="flex min-w-0 items-center"
-                    >
-                      <ServiceBadge name={service.name} icon={service.icon} color={service.color} />
-                    </span>
-                    <Input
-                      aria-label={`Service ${service.name}`}
-                      defaultValue={service.name}
-                      onBlur={(event) => {
-                        const name = event.target.value.trim();
-                        if (name && name !== service.name) void saveService(service.id, { name });
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="justify-start"
-                      aria-label={`Darstellung für Service ${service.name}`}
-                      onClick={() => setPresentationServiceId(service.id)}
-                    >
-                      <span
-                        className={`size-3 rounded-full border ${servicePresentation(service).className}`}
-                        aria-hidden="true"
-                      />
-                      Darstellung
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={service.active ? "outline" : "secondary"}
-                      onClick={() => void saveService(service.id, { active: !service.active })}
-                    >
-                      {service.active ? "Deaktivieren" : "Aktivieren"}
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex gap-2 pt-2">
-                  <Input
-                    aria-label="Neuer Service"
-                    value={newService}
-                    onChange={(event) => setNewService(event.target.value)}
-                    placeholder="Service hinzufügen"
-                  />
-                  <Button type="button" onClick={() => void addService()}>
-                    <Plus className="size-4" />
-                    Hinzufügen
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>}
-            <Dialog
-              open={presentationService !== undefined}
-              onOpenChange={(open) => !open && setPresentationServiceId(null)}
-            >
-              <DialogContent className="max-w-2xl">
-                {presentationService && (
-                  <>
-                    <DialogHeader>
-                      <DialogTitle>Darstellung: {presentationService.name}</DialogTitle>
-                      <DialogDescription>
-                        Symbol und Farbe direkt visuell auswählen.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-5">
-                      <section aria-labelledby="service-icon-heading">
-                        <h3 id="service-icon-heading" className="mb-2 text-sm font-medium">
-                          Symbol
-                        </h3>
-                        <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
-                          {SERVICE_ICON_OPTIONS.map((option) => {
-                            const Icon = servicePresentation({
-                              name: presentationService.name,
-                              icon: option.value,
-                            }).Icon;
-                            const selected =
-                              servicePresentation(presentationService).icon === option.value;
-                            return (
-                              <button
-                                key={option.value}
-                                type="button"
-                                aria-label={option.label}
-                                aria-pressed={selected}
-                                title={option.label}
-                                className={`grid min-h-11 place-items-center rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary bg-primary/10 text-primary" : "border-border"}`}
-                                onClick={() =>
-                                  void saveService(presentationService.id, { icon: option.value })
-                                }
-                              >
-                                <Icon className="size-5" aria-hidden="true" />
-                              </button>
-                            );
-                          })}
+                {liste === "sportarten" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Sportarten</CardTitle>
+                      <CardDescription>
+                        Werte für die Sportart-Auswahl beim Anlegen und Bearbeiten eines Events.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {sports.map((sport) => (
+                        <div key={sport.id} className="flex items-center gap-2">
+                          <Input
+                            aria-label={`Sportart ${sport.name}`}
+                            defaultValue={sport.name}
+                            onBlur={(event) => {
+                              const name = event.target.value.trim();
+                              if (name && name !== sport.name) void saveSport(sport.id, { name });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant={sport.active ? "outline" : "secondary"}
+                            onClick={() => void saveSport(sport.id, { active: !sport.active })}
+                          >
+                            {sport.active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
                         </div>
-                      </section>
-                      <section aria-labelledby="service-color-heading">
-                        <h3 id="service-color-heading" className="mb-2 text-sm font-medium">
-                          Farbe
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {SERVICE_COLOR_OPTIONS.map((option) => {
-                            const selected =
-                              servicePresentation(presentationService).color === option.value;
-                            return (
-                              <button
-                                key={option.value}
-                                type="button"
-                                aria-label={option.label}
-                                aria-pressed={selected}
-                                title={option.label}
-                                className={`size-11 rounded-full border-2 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary" : "border-transparent"}`}
-                                onClick={() =>
-                                  void saveService(presentationService.id, { color: option.value })
-                                }
-                              >
-                                <span
-                                  className={`block size-full rounded-full border ${servicePresentation({ name: presentationService.name, color: option.value }).className}`}
-                                  aria-hidden="true"
-                                />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </section>
-                    </div>
-                  </>
+                      ))}
+                      <div className="flex gap-2 pt-2">
+                        <Input
+                          aria-label="Neue Sportart"
+                          value={newSport}
+                          onChange={(event) => setNewSport(event.target.value)}
+                          placeholder="Sportart hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addSport()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
-              </DialogContent>
-            </Dialog>
-            {liste === "eventrollen" && <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Eventrollen</CardTitle>
-                <CardDescription>
-                  Vorgegebene Rollen für Eventkontakte, z. B. Anmeldung oder Finanz.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {eventRoles.map((role) => (
-                  <div key={role.id} className="flex items-center gap-2">
-                    <Input
-                      aria-label={`Eventrolle ${role.name}`}
-                      defaultValue={role.name}
-                      onBlur={(event) => {
-                        const name = event.target.value.trim();
-                        if (name && name !== role.name) void saveEventRole(role.id, { name });
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant={role.active ? "outline" : "secondary"}
-                      onClick={() => void saveEventRole(role.id, { active: !role.active })}
-                    >
-                      {role.active ? "Deaktivieren" : "Aktivieren"}
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex gap-2 pt-2">
-                  <Input
-                    aria-label="Neue Eventrolle"
-                    value={newEventRole}
-                    onChange={(event) => setNewEventRole(event.target.value)}
-                    placeholder="Eventrolle hinzufügen"
-                  />
-                  <Button type="button" onClick={() => void addEventRole()}>
-                    <Plus className="size-4" />
-                    Hinzufügen
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>}
+                {liste === "services" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Services</CardTitle>
+                      <CardDescription>
+                        Mehrfach auswählbare Leistungen eines Events.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {services.map((service) => (
+                        <div
+                          key={service.id}
+                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
+                        >
+                          <span
+                            aria-label={`Servicevorschau: ${service.name}`}
+                            className="flex min-w-0 items-center"
+                          >
+                            <ServiceBadge
+                              name={service.name}
+                              icon={service.icon}
+                              color={service.color}
+                            />
+                          </span>
+                          <Input
+                            aria-label={`Service ${service.name}`}
+                            defaultValue={service.name}
+                            onBlur={(event) => {
+                              const name = event.target.value.trim();
+                              if (name && name !== service.name)
+                                void saveService(service.id, { name });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="justify-start"
+                            aria-label={`Darstellung für Service ${service.name}`}
+                            onClick={() => setPresentationServiceId(service.id)}
+                          >
+                            <span
+                              className={`size-3 rounded-full border ${servicePresentation(service).className}`}
+                              aria-hidden="true"
+                            />
+                            Darstellung
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={service.active ? "outline" : "secondary"}
+                            onClick={() =>
+                              void saveService(service.id, { active: !service.active })
+                            }
+                          >
+                            {service.active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="flex gap-2 pt-2">
+                        <Input
+                          aria-label="Neuer Service"
+                          value={newService}
+                          onChange={(event) => setNewService(event.target.value)}
+                          placeholder="Service hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addService()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                <Dialog
+                  open={presentationService !== undefined}
+                  onOpenChange={(open) => !open && setPresentationServiceId(null)}
+                >
+                  <DialogContent className="max-w-2xl">
+                    {presentationService && (
+                      <>
+                        <DialogHeader>
+                          <DialogTitle>Darstellung: {presentationService.name}</DialogTitle>
+                          <DialogDescription>
+                            Symbol und Farbe direkt visuell auswählen.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-5">
+                          <section aria-labelledby="service-icon-heading">
+                            <h3 id="service-icon-heading" className="mb-2 text-sm font-medium">
+                              Symbol
+                            </h3>
+                            <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+                              {SERVICE_ICON_OPTIONS.map((option) => {
+                                const Icon = servicePresentation({
+                                  name: presentationService.name,
+                                  icon: option.value,
+                                }).Icon;
+                                const selected =
+                                  servicePresentation(presentationService).icon === option.value;
+                                return (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    aria-label={option.label}
+                                    aria-pressed={selected}
+                                    title={option.label}
+                                    className={`grid min-h-11 place-items-center rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary bg-primary/10 text-primary" : "border-border"}`}
+                                    onClick={() =>
+                                      void saveService(presentationService.id, {
+                                        icon: option.value,
+                                      })
+                                    }
+                                  >
+                                    <Icon className="size-5" aria-hidden="true" />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </section>
+                          <section aria-labelledby="service-color-heading">
+                            <h3 id="service-color-heading" className="mb-2 text-sm font-medium">
+                              Farbe
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {SERVICE_COLOR_OPTIONS.map((option) => {
+                                const selected =
+                                  servicePresentation(presentationService).color === option.value;
+                                return (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    aria-label={option.label}
+                                    aria-pressed={selected}
+                                    title={option.label}
+                                    className={`size-11 rounded-full border-2 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary" : "border-transparent"}`}
+                                    onClick={() =>
+                                      void saveService(presentationService.id, {
+                                        color: option.value,
+                                      })
+                                    }
+                                  >
+                                    <span
+                                      className={`block size-full rounded-full border ${servicePresentation({ name: presentationService.name, color: option.value }).className}`}
+                                      aria-hidden="true"
+                                    />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </section>
+                        </div>
+                      </>
+                    )}
+                  </DialogContent>
+                </Dialog>
+                {liste === "eventrollen" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Eventrollen</CardTitle>
+                      <CardDescription>
+                        Vorgegebene Rollen für Eventkontakte, z. B. Anmeldung oder Finanz.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {eventRoles.map((role) => (
+                        <div key={role.id} className="flex items-center gap-2">
+                          <Input
+                            aria-label={`Eventrolle ${role.name}`}
+                            defaultValue={role.name}
+                            onBlur={(event) => {
+                              const name = event.target.value.trim();
+                              if (name && name !== role.name) void saveEventRole(role.id, { name });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant={role.active ? "outline" : "secondary"}
+                            onClick={() => void saveEventRole(role.id, { active: !role.active })}
+                          >
+                            {role.active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="flex gap-2 pt-2">
+                        <Input
+                          aria-label="Neue Eventrolle"
+                          value={newEventRole}
+                          onChange={(event) => setNewEventRole(event.target.value)}
+                          placeholder="Eventrolle hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addEventRole()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
           </TabsContent>
