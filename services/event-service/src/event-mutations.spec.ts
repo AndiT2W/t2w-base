@@ -18,6 +18,9 @@ function adapter(): EventMutationAdapter & { events: Map<string, Record<string, 
       events.set("e1", created);
       return created;
     },
+    async deleteEvent(id) {
+      return events.delete(id);
+    },
     async updateEvent(id, version, changes) {
       const current = events.get(id);
       if (!current || (version !== undefined && current.version !== version)) return false;
