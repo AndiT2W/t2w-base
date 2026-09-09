@@ -61,6 +61,19 @@ test("shows central hardware cases, filters them, and links to the event", async
       },
     }),
   );
+  await page.route("**/api/v1/events/hardware/h3", (route) =>
+    route.fulfill({
+      json: {
+        id: "h3",
+        recipientName: "Ohne Event aktualisiert",
+        issueType: "OTHER",
+        objectName: "Unbekanntes Gerät",
+        quantity: 1,
+        status: "OPEN",
+        event: null,
+      },
+    }),
+  );
   await page.goto("/hardware");
   await expect(page.getByRole("heading", { name: "Hardware" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();
@@ -70,10 +83,14 @@ test("shows central hardware cases, filters them, and links to the event", async
   const hardwareRow = page.getByRole("row", { name: /Demo Event.*Max Mustermann/ });
   await hardwareRow.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await hardwareRow.getByRole("button", { name: "Inline bearbeiten" }).click();
   await page.getByLabel("Empfänger bearbeiten").fill("Max Mustermann aktualisiert");
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("Max Mustermann aktualisiert")).toBeVisible();
+  const unassignedRow = page.getByRole("row", { name: /Kein Event zugeordnet.*Ohne Event/ });
+  await unassignedRow.click();
+  await page.getByLabel("Empfänger bearbeiten").fill("Ohne Event aktualisiert");
+  await page.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText("Ohne Event aktualisiert")).toBeVisible();
   await page.getByRole("textbox", { name: "Suche" }).first().fill("max@example.com");
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await page.getByRole("textbox", { name: "Suche" }).first().fill("");

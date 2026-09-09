@@ -182,10 +182,13 @@ function HardwarePage() {
     });
   };
   const saveInlineEdit = async (item: Hardware) => {
-    if (!item.event?.id || !inlineDraft) return;
+    if (!inlineDraft) return;
     setSavingInline(true);
     try {
-      const response = await fetch(`/api/v1/events/${item.event.id}/hardware/${item.id}`, {
+      const baseUrl = item.event?.id
+        ? `/api/v1/events/${item.event.id}/hardware`
+        : "/api/v1/events/hardware";
+      const response = await fetch(`${baseUrl}/${item.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -331,14 +334,25 @@ function HardwarePage() {
                         />
                       </th>
                     ))}
-                    <th className="px-2 py-1.5">
-                      <span className="sr-only">Aktionen</span>
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((i) => (
-                    <tr key={i.id} className="border-b hover:bg-accent/50">
+                    <tr
+                      key={i.id}
+                      className="cursor-pointer border-b hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      tabIndex={0}
+                      onClick={() => inlineEditingId !== i.id && beginInlineEdit(i)}
+                      onKeyDown={(event) => {
+                        if (
+                          inlineEditingId !== i.id &&
+                          (event.key === "Enter" || event.key === " ")
+                        ) {
+                          event.preventDefault();
+                          beginInlineEdit(i);
+                        }
+                      }}
+                    >
                       {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => {
                         const editing = inlineEditingId === i.id && inlineDraft;
                         if (editing && h === "Empfänger")
@@ -440,16 +454,16 @@ function HardwarePage() {
                           </td>
                         );
                       })}
-                      <td
-                        className="whitespace-nowrap px-2 py-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {inlineEditingId === i.id ? (
-                          <span className="flex gap-1">
+                      {inlineEditingId === i.id && (
+                        <td className="px-2 py-1">
+                          <div
+                            className="flex justify-end gap-1"
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             <Button
                               size="sm"
                               onClick={() => void saveInlineEdit(i)}
-                              disabled={savingInline || !i.event?.id}
+                              disabled={savingInline}
                             >
                               Speichern
                             </Button>
@@ -463,18 +477,9 @@ function HardwarePage() {
                             >
                               Abbrechen
                             </Button>
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => beginInlineEdit(i)}
-                            disabled={!i.event?.id}
-                          >
-                            Inline bearbeiten
-                          </Button>
-                        )}
-                      </td>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
