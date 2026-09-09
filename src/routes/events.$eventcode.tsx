@@ -878,6 +878,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </div>
             </CardContent>
           </Card>
+          <section
+            className="rounded-lg border border-destructive/30 bg-destructive/5 p-5"
+            aria-labelledby="event-delete-heading"
+          >
+            <h2 id="event-delete-heading" className="text-base font-semibold text-destructive">
+              Gefahrenbereich
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Das Event und die zugehörigen Daten dauerhaft löschen.
+            </p>
+            <Button variant="destructive" className="mt-4" onClick={() => setDeleteDialog(true)}>
+              Event löschen
+            </Button>
+          </section>
         </TabsContent>
 
         <TabsContent value="time2win">
@@ -1849,14 +1863,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </Card>
         </TabsContent>
       </Tabs>
-
-      <section className="rounded-lg border border-destructive/30 bg-destructive/5 p-5" aria-labelledby="event-delete-heading">
-        <h2 id="event-delete-heading" className="text-base font-semibold text-destructive">Gefahrenbereich</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Das Event und die zugehörigen Daten dauerhaft löschen.</p>
-        <Button variant="destructive" className="mt-4" onClick={() => setDeleteDialog(true)}>
-          Event löschen
-        </Button>
-      </section>
 
       <AlertDialog open={copyDialog} onOpenChange={setCopyDialog}>
         <AlertDialogContent>
