@@ -22,6 +22,7 @@ test("shows central hardware cases, filters them, and links to the event", async
           dueDate: "2026-09-12",
           email: "max@example.com",
           phone: "+43 660 123456",
+          note: "Akkupack mitgeben",
           event: { id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" },
         },
         {
@@ -62,6 +63,7 @@ test("shows central hardware cases, filters them, and links to the event", async
         quantity: 1,
         status: "NOTIFIED",
         dueDate: "2026-09-12",
+        note: "Akkupack mitgeben",
         event: { id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" },
         ...changes,
       },
@@ -89,6 +91,7 @@ test("shows central hardware cases, filters them, and links to the event", async
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await expect(page.getByText("max@example.com")).toBeVisible();
   await expect(page.getByText("+43 660 123456")).toBeVisible();
+  await expect(page.getByText("Akkupack mitgeben")).toBeVisible();
   const hardwareRow = page.getByRole("row", { name: /Demo Event.*Max Mustermann/ });
   await hardwareRow.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -98,6 +101,9 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.getByLabel("E-Mail bearbeiten").fill("neu@example.com");
   await page.getByLabel("E-Mail bearbeiten").press("Tab");
   await expect.poll(() => lastEventChanges.email).toBe("neu@example.com");
+  await page.getByLabel("Kommentar bearbeiten").fill("Vor Ausgabe vollständig laden");
+  await page.getByLabel("Kommentar bearbeiten").press("Tab");
+  await expect.poll(() => lastEventChanges.note).toBe("Vor Ausgabe vollständig laden");
   const unassignedRow = page.getByRole("row", { name: /Kein Event zugeordnet.*Ohne Event/ });
   await unassignedRow.click();
   await page.getByLabel("Empfänger bearbeiten").fill("Ohne Event aktualisiert");

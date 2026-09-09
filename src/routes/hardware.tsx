@@ -36,11 +36,12 @@ type Hardware = {
   dueDate?: string;
   email?: string;
   phone?: string;
+  note?: string;
   event: { id?: string; eventCode: string; name: string } | null;
 };
 type InlineDraft = Pick<
   Hardware,
-  "recipientName" | "email" | "objectName" | "quantity" | "status" | "dueDate"
+  "recipientName" | "email" | "objectName" | "quantity" | "status" | "dueDate" | "note"
 >;
 const labels: Record<string, string> = {
   OPEN: "Offen",
@@ -80,6 +81,7 @@ function cell(item: Hardware, column: HardwareColumn): ReactNode {
   if (column === "Nummer") return number(item);
   if (column === "Anzahl") return item.quantity;
   if (column === "Status") return <Badge>{labels[item.status] ?? item.status}</Badge>;
+  if (column === "Kommentar") return item.note ?? "—";
   return item.dueDate?.slice(0, 10) ?? "—";
 }
 const HARDWARE_COLUMNS = [
@@ -93,6 +95,7 @@ const HARDWARE_COLUMNS = [
   "Anzahl",
   "Status",
   "Fälligkeit",
+  "Kommentar",
 ] as const;
 type HardwareColumn = (typeof HARDWARE_COLUMNS)[number];
 const HARDWARE_TABLE_COLUMNS = HARDWARE_COLUMNS.map((key) => ({
@@ -109,6 +112,7 @@ const HARDWARE_TABLE_COLUMNS = HARDWARE_COLUMNS.map((key) => ({
       Anzahl: item.quantity,
       Status: labels[item.status] ?? item.status,
       Fälligkeit: item.dueDate ?? "",
+      Kommentar: item.note ?? "",
     };
     return values[key];
   },
@@ -155,7 +159,7 @@ function HardwarePage() {
   const active = items.filter(
     (i) =>
       (!q ||
-        [i.recipientName, i.email, i.phone, i.objectName, number(i), i.event?.name]
+        [i.recipientName, i.email, i.phone, i.objectName, i.note, number(i), i.event?.name]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
@@ -181,6 +185,7 @@ function HardwarePage() {
       quantity: item.quantity,
       status: item.status,
       dueDate: item.dueDate?.slice(0, 10),
+      note: item.note,
     });
   };
   const saveInlineEdit = async (item: Hardware, draft = inlineDraft) => {
@@ -466,6 +471,21 @@ function HardwarePage() {
                                     ...inlineDraft,
                                     dueDate: e.target.value || undefined,
                                   })
+                                }
+                                onBlur={() => void saveInlineEdit(i)}
+                              />
+                            </td>
+                          );
+                        if (editing && h === "Kommentar")
+                          return (
+                            <td className="px-2 py-1" key={h}>
+                              <Input
+                                aria-label="Kommentar bearbeiten"
+                                className="h-8 min-w-56"
+                                value={inlineDraft.note ?? ""}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) =>
+                                  setInlineDraft({ ...inlineDraft, note: e.target.value })
                                 }
                                 onBlur={() => void saveInlineEdit(i)}
                               />
