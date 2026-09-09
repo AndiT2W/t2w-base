@@ -175,9 +175,9 @@ test("verknüpft ein bestehendes Event nachträglich mit einer Eventserie und be
   const requests = await mockApi(page);
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Eventserie verwalten" }).click();
-  await page
-    .getByLabel("Mit Event verknüpfen")
-    .selectOption("33333333-3333-4333-8333-333333333333");
+  await page.getByLabel("Mit Event verknüpfen").click();
+  await page.getByLabel("Event suchen").fill("Folgetermin");
+  await page.getByRole("button", { name: /Folgetermin/ }).click();
   await page.getByRole("button", { name: "Verknüpfung speichern" }).click();
   await expect(page.getByText("Eventserie gespeichert.")).toBeVisible();
   await expect(page.getByTestId("event-series-navigation")).toContainText("Folgetermin");

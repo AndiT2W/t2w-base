@@ -210,6 +210,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [seriesDialog, setSeriesDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [seriesTargetEventId, setSeriesTargetEventId] = useState("");
+  const [seriesSearch, setSeriesSearch] = useState("");
+  const [seriesPickerOpen, setSeriesPickerOpen] = useState(false);
   const initialCopy = copyDateSuggestion(event.start, event.ende);
   const [copyStart, setCopyStart] = useState(initialCopy.start);
   const [copyEnde, setCopyEnde] = useState(initialCopy.ende);
@@ -360,6 +362,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const seriesCandidates = events
     .filter((item) => item.id !== event.id)
     .sort((left, right) => left.start.localeCompare(right.start));
+  const visibleSeriesCandidates = seriesCandidates.filter((item) => {
+    const query = seriesSearch.trim().toLocaleLowerCase();
+    if (!query) return true;
+    return `${item.name} ${item.eventcode} ${formatDatum(item.start)}`
+      .toLocaleLowerCase()
+      .includes(query);
+  });
   async function updateSeries(targetEventId?: string) {
     try {
       const changed = await apiUpdateEventSeries(event.id, {
@@ -994,8 +1003,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <section aria-labelledby="finanz-notizen-heading" className="border-b border-border pb-5">
-                <h3 id="finanz-notizen-heading" className="font-medium text-foreground">Finanznotizen</h3>
+              <section
+                aria-labelledby="finanz-notizen-heading"
+                className="border-b border-border pb-5"
+              >
+                <h3 id="finanz-notizen-heading" className="font-medium text-foreground">
+                  Finanznotizen
+                </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Zusätzliche Informationen zu Auszahlungen und Rechnungsempfängern.
                 </p>
@@ -1008,88 +1022,100 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 />
               </section>
               <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <section aria-labelledby="auszahlungsempfaenger-heading" className="rounded-lg border border-border bg-muted/20 p-4">
-                <div className="mb-3">
-                  <h3 id="auszahlungsempfaenger-heading" className="font-medium text-foreground">Auszahlungsempfänger</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">Genau ein Empfänger für Auszahlungen.</p>
-                </div>
-                <Select
-                  value={detail.payoutRecipientId ?? undefined}
-                  onValueChange={(id) => set("auszahlungsempfaengerId", id)}
+                <section
+                  aria-labelledby="auszahlungsempfaenger-heading"
+                  className="rounded-lg border border-border bg-muted/20 p-4"
                 >
-                  <SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5">
-                    <SelectValue placeholder="Veranstalter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {kunden.map((kunde) => (
-                      <SelectItem key={kunde.id} value={kunde.id}>
-                        {kunde.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {detail.payoutRecipient && (
-                  <div aria-label="Stammdaten Auszahlungsempfänger" className="mt-3">
-                    <RecipientMasterData recipient={detail.payoutRecipient} />
+                  <div className="mb-3">
+                    <h3 id="auszahlungsempfaenger-heading" className="font-medium text-foreground">
+                      Auszahlungsempfänger
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Genau ein Empfänger für Auszahlungen.
+                    </p>
                   </div>
-                )}
-              </section>
-              <section aria-labelledby="rechnungsempfaenger-heading" className="rounded-lg border border-border bg-muted/20 p-4">
-                <div className="mb-3">
-                  <h3 id="rechnungsempfaenger-heading" className="font-medium text-foreground">Rechnungsempfänger</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">Mehrere Empfänger möglich.</p>
-                </div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      aria-label="Rechnungsempfänger auswählen"
-                      variant="outline"
-                      className="mt-2 w-full justify-start font-normal"
-                    >
-                      {detail.invoiceRecipients.length
-                        ? detail.invoiceRecipients.map((kunde) => kunde.name).join(", ")
-                        : "Rechnungsempfänger auswählen"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
-                    <Input
-                      aria-label="Rechnungsempfänger suchen"
-                      placeholder="Rechnungsempfänger suchen …"
-                      value={detail.invoiceRecipientSearch}
-                      onChange={(e) =>
-                        detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)
-                      }
-                    />
-                    <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                      {detail.visibleInvoiceRecipients.length ? (
-                        detail.visibleInvoiceRecipients.map((kunde) => (
-                          <label
-                            key={kunde.id}
-                            className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
-                          >
-                            <Checkbox
-                              checked={detail.invoiceRecipientIds.includes(kunde.id)}
-                              onCheckedChange={() =>
-                                detailWorkspace.toggleInvoiceRecipient(kunde.id)
-                              }
-                            />
-                            {kunde.name}
-                          </label>
-                        ))
-                      ) : (
-                        <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
-                      )}
+                  <Select
+                    value={detail.payoutRecipientId ?? undefined}
+                    onValueChange={(id) => set("auszahlungsempfaengerId", id)}
+                  >
+                    <SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5">
+                      <SelectValue placeholder="Veranstalter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kunden.map((kunde) => (
+                        <SelectItem key={kunde.id} value={kunde.id}>
+                          {kunde.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {detail.payoutRecipient && (
+                    <div aria-label="Stammdaten Auszahlungsempfänger" className="mt-3">
+                      <RecipientMasterData recipient={detail.payoutRecipient} />
                     </div>
-                  </PopoverContent>
-                </Popover>
-                {detail.invoiceRecipients.length > 0 && (
-                  <div aria-label="Stammdaten Rechnungsempfänger" className="mt-3 space-y-3">
-                    {detail.invoiceRecipients.map((kunde) => (
-                      <RecipientMasterData key={kunde.id} recipient={kunde} />
-                    ))}
+                  )}
+                </section>
+                <section
+                  aria-labelledby="rechnungsempfaenger-heading"
+                  className="rounded-lg border border-border bg-muted/20 p-4"
+                >
+                  <div className="mb-3">
+                    <h3 id="rechnungsempfaenger-heading" className="font-medium text-foreground">
+                      Rechnungsempfänger
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">Mehrere Empfänger möglich.</p>
                   </div>
-                )}
-              </section>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        aria-label="Rechnungsempfänger auswählen"
+                        variant="outline"
+                        className="mt-2 w-full justify-start font-normal"
+                      >
+                        {detail.invoiceRecipients.length
+                          ? detail.invoiceRecipients.map((kunde) => kunde.name).join(", ")
+                          : "Rechnungsempfänger auswählen"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
+                      <Input
+                        aria-label="Rechnungsempfänger suchen"
+                        placeholder="Rechnungsempfänger suchen …"
+                        value={detail.invoiceRecipientSearch}
+                        onChange={(e) =>
+                          detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)
+                        }
+                      />
+                      <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                        {detail.visibleInvoiceRecipients.length ? (
+                          detail.visibleInvoiceRecipients.map((kunde) => (
+                            <label
+                              key={kunde.id}
+                              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                            >
+                              <Checkbox
+                                checked={detail.invoiceRecipientIds.includes(kunde.id)}
+                                onCheckedChange={() =>
+                                  detailWorkspace.toggleInvoiceRecipient(kunde.id)
+                                }
+                              />
+                              {kunde.name}
+                            </label>
+                          ))
+                        ) : (
+                          <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  {detail.invoiceRecipients.length > 0 && (
+                    <div aria-label="Stammdaten Rechnungsempfänger" className="mt-3 space-y-3">
+                      {detail.invoiceRecipients.map((kunde) => (
+                        <RecipientMasterData key={kunde.id} recipient={kunde} />
+                      ))}
+                    </div>
+                  )}
+                </section>
               </div>
               <PayoutsPanel
                 eventId={event.id}
@@ -1106,8 +1132,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <CardTitle className="text-base">{t("nav.contacts")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <section aria-labelledby="kontakte-notizen-heading" className="border-b border-border pb-5">
-                <h3 id="kontakte-notizen-heading" className="font-medium text-foreground">Kontaktnotizen</h3>
+              <section
+                aria-labelledby="kontakte-notizen-heading"
+                className="border-b border-border pb-5"
+              >
+                <h3 id="kontakte-notizen-heading" className="font-medium text-foreground">
+                  Kontaktnotizen
+                </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Zusätzliche Informationen zur Kontaktorganisation dieses Events.
                 </p>
@@ -1230,7 +1261,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       {eventContactRoleChoices(selectionLists.eventRoles, detail.contactRole).map(
                         (role) => (
                           <SelectItem key={role} value={role}>
-                            <SelectionBadge {...(selectionLists.eventRoles.find((item) => item.name === role) ?? { name: role })} />
+                            <SelectionBadge
+                              {...(selectionLists.eventRoles.find((item) => item.name === role) ?? {
+                                name: role,
+                              })}
+                            />
                           </SelectItem>
                         ),
                       )}
@@ -1279,7 +1314,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 {eventContactRoleChoices(selectionLists.eventRoles, k.rolle).map(
                                   (role) => (
                                     <SelectItem key={role} value={role}>
-                                      <SelectionBadge {...(selectionLists.eventRoles.find((item) => item.name === role) ?? { name: role })} />
+                                      <SelectionBadge
+                                        {...(selectionLists.eventRoles.find(
+                                          (item) => item.name === role,
+                                        ) ?? { name: role })}
+                                      />
                                     </SelectItem>
                                   ),
                                 )}
@@ -1947,7 +1986,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={seriesDialog} onOpenChange={setSeriesDialog}>
+      <AlertDialog
+        open={seriesDialog}
+        onOpenChange={(open) => {
+          setSeriesDialog(open);
+          if (!open) setSeriesSearch("");
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eventserie verwalten</AlertDialogTitle>
@@ -1959,20 +2004,57 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <div className="grid gap-3">
             <div>
               <Label htmlFor="series-target">Mit Event verknüpfen</Label>
-              <select
-                id="series-target"
-                aria-label="Mit Event verknüpfen"
-                className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={seriesTargetEventId}
-                onChange={(e) => setSeriesTargetEventId(e.target.value)}
-              >
-                <option value="">Event auswählen</option>
-                {seriesCandidates.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · {formatDatum(item.start)} · {item.eventcode}
-                  </option>
-                ))}
-              </select>
+              <Popover open={seriesPickerOpen} onOpenChange={setSeriesPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="series-target"
+                    variant="outline"
+                    className="mt-1.5 h-10 w-full justify-start font-normal"
+                    aria-label="Mit Event verknüpfen"
+                  >
+                    {seriesTargetEventId
+                      ? (() => {
+                          const selected = seriesCandidates.find(
+                            (item) => item.id === seriesTargetEventId,
+                          );
+                          return selected
+                            ? `${selected.name} · ${formatDatum(selected.start)} · ${selected.eventcode}`
+                            : "Event auswählen";
+                        })()
+                      : "Event auswählen"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[min(36rem,calc(100vw-2rem))] p-2">
+                  <Input
+                    aria-label="Event suchen"
+                    placeholder="Event suchen …"
+                    value={seriesSearch}
+                    onChange={(e) => setSeriesSearch(e.target.value)}
+                  />
+                  <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                    {visibleSeriesCandidates.length ? (
+                      visibleSeriesCandidates.map((item) => (
+                        <button
+                          type="button"
+                          key={item.id}
+                          className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
+                          onClick={() => {
+                            setSeriesTargetEventId(item.id);
+                            setSeriesPickerOpen(false);
+                          }}
+                        >
+                          {item.name}
+                          <span className="ml-2 text-muted-foreground">
+                            {formatDatum(item.start)} · {item.eventcode}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             {form.seriesId && (
               <p className="text-sm text-muted-foreground">
@@ -2029,12 +2111,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Event endgültig löschen?</AlertDialogTitle>
             <AlertDialogDescription>
-              „{event.name}“ wird dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.
+              „{event.name}“ wird dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht
+              werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={(e) => { e.preventDefault(); void eventLoeschen(); }}>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                void eventLoeschen();
+              }}
+            >
               Endgültig löschen
             </AlertDialogAction>
           </AlertDialogFooter>
