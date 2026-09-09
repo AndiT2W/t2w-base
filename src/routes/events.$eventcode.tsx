@@ -648,7 +648,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </div>
               <div className="sm:col-span-2">
                 <Label>Services</Label>
-                <p className="mt-1 text-xs text-muted-foreground">Mehrere Services möglich.</p>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
