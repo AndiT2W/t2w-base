@@ -56,25 +56,29 @@ export class HardwareService {
     return result;
   }
   async update(eventId: string | undefined, id: string, input: any) {
-    const current = await this.prisma.hardwareIssue.findFirstOrThrow({ where: { id, ...(eventId ? { eventId } : {}) } });
+    const current = await this.prisma.hardwareIssue.findFirstOrThrow({
+      where: { id, ...(eventId ? { eventId } : {}) },
+    });
     if (
       (current.status === "RETURNED" || current.status === "COMPLETED") &&
       input.status &&
       input.status !== current.status
     )
       throw new Error("HARDWARE_CLOSED");
+    const normalizedInput =
+      input.objectName || input.objectNumberType
+        ? normalizeHardwareInput({ ...current, ...input })
+        : input;
     const {
       id: _id,
       eventId: _eventId,
       createdAt: _createdAt,
       updatedAt: _updatedAt,
       ...data
-    } = input;
+    } = normalizedInput;
     for (const key of ["issuedAt", "dueDate", "returnedAt"])
       if (data[key]) data[key] = new Date(data[key]);
     if (input.status === "RETURNED" && !data.returnedAt) data.returnedAt = new Date();
-    if (input.objectName || input.objectNumberType)
-      Object.assign(data, normalizeHardwareInput({ ...current, ...input }));
     const result = await this.prisma.hardwareIssue.update({
       where: { id },
       data,
