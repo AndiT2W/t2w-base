@@ -241,6 +241,11 @@ model AutomationClaim {
   workflowId String?
   claimedAt DateTime @default(now())
   completedAt DateTime?
+  resultStatus String?
+  error String?
+  retryCount Int @default(0)
+  externalId String?
+  updatedAt DateTime @updatedAt
   @@index([domain, recordId])
 }
 

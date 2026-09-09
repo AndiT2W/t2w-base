@@ -412,5 +412,43 @@
 
 - Variante E der Einstellungsnavigation in `t2w-base` umgesetzt: aufgeklappter Einstellungen-Bereich im globalen Sidebar-Menü; Auswahllisten-Kategorien als Segmente im Inhaltsbereich. Build und Browser-Regressionstest für Sportarten erfolgreich.
 - 2026-09-09: Die Eventdetail-Stammdaten wurden im bestehenden TIME2WIN-Stil verdichtet: Eventname über die volle Breite, darunter zwei fachlich gruppierte Spalten mit Inline-Labels am Desktop; Services/Status, Archivierung und Notizen bleiben vollständig erhalten. Ein Browser-E2E-Test sichert Gruppierung und Desktop-Raster ab. Quelle: Nutzerentscheidung für Layoutvariante B vom 2026-09-09 und `src/routes/events.$eventcode.tsx`.
-- 2026-09-09: Die Archivierung steht nun als kompakter Schalter direkt beim Eventnamen; der Hinweis „Archivierte Events erscheinen nur im Archivfilter.“ bleibt sichtbar. Ein Browser-E2E-Test sichert die Desktop-Position und den Hinweis. Quelle: Nutzeranfrage vom 2026-09-09 und `src/routes/events.$eventcode.tsx`.
+- 2026-09-09: Die Archivierung steht nun als kompakter Schalter direkt beim Eventnamen. Ein Browser-E2E-Test sichert die Desktop-Position. Quelle: Nutzeranfrage vom 2026-09-09 und `src/routes/events.$eventcode.tsx`.
 - 2026-09-09: Sportarten und Eventrollen unterstützen nun wie Services eine persistierte Symbol-/Farbdarstellung. Einstellungen bieten Vorschau und Auswahl; die Darstellung wird auch in den Event-Auswahllisten verwendet. Quelle: Nutzeranfrage vom 2026-09-09, `src/components/t2w/ServiceBadge.tsx`, `services/event-service/prisma/migrations/0019_selection_list_presentation/migration.sql`.
+## 2026-09-09
+
+- Auszahlungsslice begonnen: Prisma-Modelle für Payout, globalen Jahresnummernkreis und AutomationClaim ergänzt; AuditService sowie geschützte CRUD-/Claim-/Result-Endpunkte angelegt.
+- Zentrale Auszahlungsliste um Suche, Statusfilter, währungsgetrennte Summen, Auswahl und bestätigungspflichtige Sammelmarkierung erweitert; Browser-E2E ergänzt und erfolgreich ausgeführt.
+- Generischer Automation-Claim-/Result-Vertrag mit stabilen Idempotenzschlüsseln, Retry-Projektion sowie domänenneutralen Claim-/Complete-Endpunkten ergänzt; Domain-Regressionen bleiben grün.
+- ClickUp-Import wiederholbar gemacht: vorhandene `clickUpId`-Datensätze werden übersprungen statt als Fehler dupliziert; Service-Test ergänzt.
+- Event-Finanzreiter-Regression erweitert: Mailmarkierung, Ausbezahlt-Status, Datumsbelegung und dauerhafte Löschung werden im Browserpfad geprüft.
+- Automation-Service-Regression ergänzt: idempotente Wiederholung eines Claims sowie Completion für Payout- und Hardware-Domänen werden an der Servicegrenze geprüft.
+- PayoutService fachlich gehärtet: Importstatus werden beim Erstellen übernommen, Beträge validiert/auf zwei Dezimalstellen normalisiert und Sammelmarkierungen prüfen Storno, Betrag und Mailadresse mit Einzelgründen.
+- AuditLog als append-only verstärkt: PostgreSQL-Trigger verweigern UPDATE und DELETE; strukturierter AuditService-Test ergänzt.
+- Echte PostgreSQL-Prüfung ausgeführt: Migration 0020 angewendet, Payout/AuditLog/AutomationClaim vorhanden; der AuditLog-Trigger weist eine UPDATE-Mutation in einer Rollback-Transaktion zurück.
+- Payout-Mutationen reichen die authentifizierte Benutzer-ID bis in CREATE/UPDATE/DELETE und Sammelaktionen weiter; Service-Build und 34 Regressionstests bleiben grün.
+- Echter Service-Smoke-Test gegen PostgreSQL erfolgreich: historische Auszahlung mit `eventId = null`, CHF und `T260001` angelegt, anschließend dauerhaft gelöscht; CREATE- und DELETE-Audit-Einträge wurden gelesen.
+- Echter n8n-Flow gegen PostgreSQL erfolgreich: `VERSENDEN` markiert, atomar geclaimt, gleicher Idempotenzschlüssel wiederholt und Erfolg callbackt; beide Claims referenzierten denselben Datensatz und der Status wurde `GESENDET`.
+- Gemeinsame Domain-Projektion für Gesamtstatus, Decimal-Normalisierung und `T260001` ergänzt. UI, Import und vollständige E2E-Abnahme stehen noch aus.
+## 2026-09-09
+
+- Auszahlungsübersicht um zentrale Statusänderung und dauerhafte Löschung erweitert; beide Aktionen verwenden die bestehenden Auditlog-Pfade.
+- Dedizierte Auszahlung-Claim-Reservation gegen parallele n8n-Worker abgesichert; Event-Ansicht enthält das Auszahlungspanel nur noch im Finanzreiter.
+- Verifiziert: Event-Service 35 Tests, Frontend 43 Tests, Event-Service-Build und Produktionsbuild erfolgreich. Lint bleibt wegen bereits vorhandener, breit verteilter Prettier-Verstöße außerhalb dieses Slices rot; die gezielten Auszahlung-E2E-Suites waren zuvor erfolgreich, ein erneuter Lauf wurde wegen eines bereits belegten Preview-Ports nicht gestartet.
+- Generische Automation um Ergebnis-Callback (`SUCCESS`/`FAILED`, Fehler, Retry-Zähler, externe ID und Zeitstempel) erweitert; Prisma-Migration `0021_automation_claim_results` ergänzt.
+- Zentrale Auszahlungsliste um explizite Filterparameter für Event, Jahr und Empfänger sowie die Spalte Transaktionsbestätigung ergänzt; Route formatiert und separat geprüft.
+- Filter als echte Event-/Empfänger-Auswahllisten umgesetzt; E2E verifiziert die Jahresfilter-Anfrage.
+- Zentrale Neuanlage mit Eventauswahl, Währung und Empfänger-Mailvorbelegung ergänzt; Produktionsbuild erfolgreich.
+- E2E-Fixture auf vollständige Eventprojektion umgestellt; zentrale Neuanlage und beide Auszahlungsszenarien laufen wieder erfolgreich.
+- Generischer Hardware-Claim reserviert `MAIL_SEND` atomar als `NOTIFIED`; Fehler-Callback setzt auf `MAIL_SEND` zurück und aktualisiert Claim-Ergebnis/Retry-Daten.
+- Auch der generische Auszahlung-Claim reserviert nun per konditionalem Update; fehlgeschlagene Claim-Erstellung gibt die Reservation zurück.
+- Statusregeln verschärft: `AUSBEZAHLT` erhält automatisch ein `paidAt`; `GESENDET` kann nur noch über den bestätigten Automation-Ergebnisweg gesetzt werden.
+- ClickUp-Import löst nun stabile Eventcodes gegen lokale Events auf; unbekannte Codes bleiben reproduzierbar mit `eventId = null` und Review-Markierung. Regressionstest ergänzt.
+- Reproduzierbares CLI-Importwerkzeug für ClickUp-JSON ergänzt; Vorschau ist Standard, Produktivlauf erfordert explizit `--commit`. Kein echter Export war im Repository vorhanden.
+- Versandfreigabe aktualisiert Empfängersnapshot und tatsächliche Mailadresse nochmals aus den aktuellen Stammdaten; damit ist der Snapshot spätestens bei `VERSENDEN` aktuell.
+- Vollständiger Auszahlungstestlauf erneut verifiziert: beide Browser-E2E-Szenarien bestanden, Event-Service 37 Tests bestanden; Issues #41–#48 bleiben bewusst offen, da Produktivimport/Abnahme noch nicht vollständig belegt sind.
+- Event-Finanzreiter zeigt den tatsächlichen Empfängernamen aus dem gespeicherten Auszahlungssnapshot; Event-E2E und Service-Suite erneut erfolgreich.
+- Generischer Claim-Vertrag explizit für die Domäne `invoice` getestet; weitere Domänen können ohne Schemaänderung über denselben Idempotenzschlüssel verarbeitet werden.
+- ClickUp-Betragsnormalisierung unterstützt nun deutsche und internationale Tausender-/Dezimaltrennzeichen; zwei Regressionen ergänzt.
+- Zentraler geschützter Audit-Leseendpunkt `/api/v1/audit-log` ergänzt; Filter nach Entität und Datensatz sind möglich.
+- Zentrale Auszahlungsliste erlaubt nun Inline-Bearbeitung von Betrag und Transaktionsbestätigung; E2E prüft die PATCH-Persistenz.
+- Statusinvarianten mit eigenem `payout.service.spec.ts` abgesichert: automatische `paidAt`-Vergabe und Schutz vor gefälschtem `GESENDET`-CRUD-Übergang.

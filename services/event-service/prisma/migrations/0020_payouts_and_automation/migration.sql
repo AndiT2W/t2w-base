@@ -18,3 +18,10 @@ CREATE INDEX "Payout_recipientId_idx" ON "Payout"("recipientId");
 CREATE INDEX "AutomationClaim_domain_recordId_idx" ON "AutomationClaim"("domain", "recordId");
 ALTER TABLE "Payout" ADD CONSTRAINT "Payout_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "Payout" ADD CONSTRAINT "Payout_recipientId_fkey" FOREIGN KEY ("recipientId") REFERENCES "Organizer"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+CREATE OR REPLACE FUNCTION "audit_log_append_only"() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'AuditLog is append-only';
+END;
+$$;
+CREATE TRIGGER "AuditLog_append_only_update" BEFORE UPDATE ON "AuditLog" FOR EACH ROW EXECUTE FUNCTION "audit_log_append_only"();
+CREATE TRIGGER "AuditLog_append_only_delete" BEFORE DELETE ON "AuditLog" FOR EACH ROW EXECUTE FUNCTION "audit_log_append_only"();
