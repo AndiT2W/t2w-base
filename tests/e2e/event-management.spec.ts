@@ -21,18 +21,20 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
 }) => {
   const requests = await mockApi(page);
   await page.goto("/einstellungen?tab=auswahllisten");
-  await expect(page.getByLabel("Service UHF")).toBeVisible();
-  await expect(page.getByLabel("Service Video (iRewind)")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Service UHF", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "Service Video (iRewind)", exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
-  await expect(page.getByLabel("Servicesymbol: UHF").locator("option")).toHaveCount(25);
-  await expect(page.getByLabel("Servicefarbe: UHF").locator("option")).toHaveCount(20);
-  await page.getByLabel("Servicesymbol: UHF").selectOption("video");
+  await page.getByRole("button", { name: "Darstellung für Service UHF" }).click();
+  await expect(page.getByRole("dialog").getByRole("button")).toHaveCount(46);
+  await page.getByRole("dialog").getByRole("button", { name: "Video" }).click();
   await expect(page.getByText("Service gespeichert.").last()).toBeVisible();
-  await page.getByLabel("Servicefarbe: UHF").selectOption("violet");
+  await page.getByRole("dialog").getByRole("button", { name: "Violett" }).click();
   await expect(page.getByText("Service gespeichert.").last()).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.reload();
-  await expect(page.getByLabel("Servicesymbol: UHF")).toHaveValue("video");
-  await expect(page.getByLabel("Servicefarbe: UHF")).toHaveValue("violet");
+  await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
   const uhfName = await page
     .getByRole("textbox", { name: "Service UHF", exact: true })
     .boundingBox();
@@ -42,7 +44,7 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   expect(uhfName?.x).toBe(videoName?.x);
   await page.getByLabel("Neuer Service").fill("Drohne");
   await page.getByRole("button", { name: "Hinzufügen" }).nth(1).click();
-  await expect(page.getByLabel("Service Drohne")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Service Drohne", exact: true })).toBeVisible();
 
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Services auswählen" }).click();

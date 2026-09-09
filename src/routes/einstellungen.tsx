@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT2W } from "@/lib/t2w/store";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -57,6 +64,7 @@ function Einstellungen() {
   const [newEventRole, setNewEventRole] = useState("");
   const services = selectionLists.services;
   const [newService, setNewService] = useState("");
+  const [presentationServiceId, setPresentationServiceId] = useState<string | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
     workspace.subscribe,
     workspace.snapshot,
@@ -74,6 +82,7 @@ function Einstellungen() {
   const setSites = (next: typeof sites | ((current: typeof sites) => typeof sites)) =>
     workspace.update({ jahresSites: typeof next === "function" ? next(sites) : next });
   const setMailbox = (next: string) => workspace.update({ outlookMailbox: next });
+  const presentationService = services.find((service) => service.id === presentationServiceId);
 
   useEffect(() => {
     workspace.acceptLoaded(settings);
@@ -327,34 +336,19 @@ function Einstellungen() {
                         if (name && name !== service.name) void saveService(service.id, { name });
                       }}
                     />
-                    <select
-                      aria-label={`Servicesymbol: ${service.name}`}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={servicePresentation(service).icon}
-                      onChange={(event) =>
-                        void saveService(service.id, { icon: event.target.value })
-                      }
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="justify-start"
+                      aria-label={`Darstellung für Service ${service.name}`}
+                      onClick={() => setPresentationServiceId(service.id)}
                     >
-                      {SERVICE_ICON_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      aria-label={`Servicefarbe: ${service.name}`}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                      value={servicePresentation(service).color}
-                      onChange={(event) =>
-                        void saveService(service.id, { color: event.target.value })
-                      }
-                    >
-                      {SERVICE_COLOR_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                      <span
+                        className={`size-3 rounded-full border ${servicePresentation(service).className}`}
+                        aria-hidden="true"
+                      />
+                      Darstellung
+                    </Button>
                     <Button
                       type="button"
                       variant={service.active ? "outline" : "secondary"}
@@ -378,6 +372,84 @@ function Einstellungen() {
                 </div>
               </CardContent>
             </Card>
+            <Dialog
+              open={presentationService !== undefined}
+              onOpenChange={(open) => !open && setPresentationServiceId(null)}
+            >
+              <DialogContent className="max-w-2xl">
+                {presentationService && (
+                  <>
+                    <DialogHeader>
+                      <DialogTitle>Darstellung: {presentationService.name}</DialogTitle>
+                      <DialogDescription>
+                        Symbol und Farbe direkt visuell auswählen.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-5">
+                      <section aria-labelledby="service-icon-heading">
+                        <h3 id="service-icon-heading" className="mb-2 text-sm font-medium">
+                          Symbol
+                        </h3>
+                        <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+                          {SERVICE_ICON_OPTIONS.map((option) => {
+                            const Icon = servicePresentation({
+                              name: presentationService.name,
+                              icon: option.value,
+                            }).Icon;
+                            const selected =
+                              servicePresentation(presentationService).icon === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                aria-label={option.label}
+                                aria-pressed={selected}
+                                title={option.label}
+                                className={`grid min-h-11 place-items-center rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary bg-primary/10 text-primary" : "border-border"}`}
+                                onClick={() =>
+                                  void saveService(presentationService.id, { icon: option.value })
+                                }
+                              >
+                                <Icon className="size-5" aria-hidden="true" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                      <section aria-labelledby="service-color-heading">
+                        <h3 id="service-color-heading" className="mb-2 text-sm font-medium">
+                          Farbe
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {SERVICE_COLOR_OPTIONS.map((option) => {
+                            const selected =
+                              servicePresentation(presentationService).color === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                aria-label={option.label}
+                                aria-pressed={selected}
+                                title={option.label}
+                                className={`size-11 rounded-full border-2 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary" : "border-transparent"}`}
+                                onClick={() =>
+                                  void saveService(presentationService.id, { color: option.value })
+                                }
+                              >
+                                <span
+                                  className={`block size-full rounded-full border ${servicePresentation({ name: presentationService.name, color: option.value }).className}`}
+                                  aria-hidden="true"
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    </div>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Eventrollen</CardTitle>
