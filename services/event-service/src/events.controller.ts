@@ -93,6 +93,18 @@ export class EventsController {
       issueType,
     );
   }
+  @Post("hardware")
+  createUnassignedHardware(@Body() body: Record<string, unknown>) {
+    return this.hardware.create(undefined, body);
+  }
+  @Patch("hardware/:hardwareId")
+  updateUnassignedHardware(@Param("hardwareId", ParseUUIDPipe) id: string, @Body() body: Record<string, unknown>) {
+    return this.hardware.update(undefined, id, body);
+  }
+  @Delete("hardware/:hardwareId")
+  removeUnassignedHardware(@Param("hardwareId", ParseUUIDPipe) id: string) {
+    return this.hardware.remove(undefined, id);
+  }
   @Get(":id/hardware") listEventHardware(
     @Param("id", ParseUUIDPipe) id: string,
     @Query("q") q?: string,

@@ -51,7 +51,7 @@ function displayNumber(item: Item) {
   }
   return "—";
 }
-export function HardwareWorkspace({ eventId }: { eventId?: string }) {
+export function HardwareWorkspace({ eventId, initialEditing, onSaved }: { eventId?: string; initialEditing?: Partial<Item> | null; onSaved?: () => void }) {
   const [items, setItems] = useState<Item[]>([]);
   const [editing, setEditing] = useState<Partial<Item> | null>(null);
   const load = () =>
@@ -66,6 +66,9 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
     // The loader is scoped to the current event.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
+  useEffect(() => {
+    if (initialEditing) setEditing(initialEditing);
+  }, [initialEditing]);
   const save = async () => {
     if (!editing) return;
     const payload = {
@@ -87,9 +90,8 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
       issuedAt: editing.issuedAt || undefined,
       note: editing.note,
     };
-    const url = editing.id
-      ? `/api/v1/events/${eventId}/hardware/${editing.id}`
-      : `/api/v1/events/${eventId}/hardware`;
+    const base = eventId && eventId !== "none" ? `/api/v1/events/${eventId}/hardware` : "/api/v1/events/hardware";
+    const url = editing.id ? `${base}/${editing.id}` : base;
     await fetch(url, {
       method: editing.id ? "PATCH" : "POST",
       credentials: "include",
@@ -98,6 +100,7 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
     });
     setEditing(null);
     await load();
+    onSaved?.();
   };
   const remove = async (id: string) => {
     await fetch(`/api/v1/events/${eventId}/hardware/${id}`, {
@@ -108,7 +111,7 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
   };
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
+      {!initialEditing && <div className="flex justify-end">
         <Button
           onClick={() =>
             setEditing({ objectNumberType: "NONE", issueType: "PARTICIPANT", quantity: 1 })
@@ -116,7 +119,7 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
         >
           Hardware-Ausgabe anlegen
         </Button>
-      </div>
+      </div>}
       {editing && (
         <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-3">
           <Input

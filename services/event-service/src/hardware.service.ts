@@ -33,13 +33,13 @@ export class HardwareService {
       orderBy: { dueDate: "asc" },
     });
   }
-  async create(eventId: string, input: any) {
+  async create(eventId: string | undefined, input: any) {
     const data = normalizeHardwareInput(input);
     const result = await this.prisma.hardwareIssue.create({
       data: {
         ...data,
         recipientName: input.recipientName?.trim() ?? "",
-        eventId,
+        eventId: eventId || undefined,
         issuedAt: input.issuedAt ? new Date(input.issuedAt) : undefined,
         dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
       },
@@ -50,13 +50,13 @@ export class HardwareService {
         action: "CREATE",
         entity: "HardwareIssue",
         entityId: result.id,
-        details: { eventId },
+        details: { eventId: eventId ?? null },
       },
     });
     return result;
   }
-  async update(eventId: string, id: string, input: any) {
-    const current = await this.prisma.hardwareIssue.findFirstOrThrow({ where: { id, eventId } });
+  async update(eventId: string | undefined, id: string, input: any) {
+    const current = await this.prisma.hardwareIssue.findFirstOrThrow({ where: { id, ...(eventId ? { eventId } : {}) } });
     if (
       (current.status === "RETURNED" || current.status === "COMPLETED") &&
       input.status &&
@@ -90,9 +90,9 @@ export class HardwareService {
     });
     return result;
   }
-  async remove(eventId: string, id: string) {
+  async remove(eventId: string | undefined, id: string) {
     const result = await this.prisma.hardwareIssue.deleteMany({
-      where: { id, eventId, status: { notIn: ["RETURNED", "COMPLETED"] } },
+      where: { id, ...(eventId ? { eventId } : {}), status: { notIn: ["RETURNED", "COMPLETED"] } },
     });
     if (result.count)
       await this.prisma.auditLog.create({

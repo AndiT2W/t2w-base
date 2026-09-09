@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -30,7 +31,7 @@ type Hardware = {
   dueDate?: string;
   email?: string;
   phone?: string;
-  event: { eventCode: string; name: string } | null;
+  event: { id?: string; eventCode: string; name: string } | null;
 };
 const labels: Record<string, string> = {
   OPEN: "Offen",
@@ -85,6 +86,8 @@ function HardwarePage() {
   const [events, setEvents] = useState<{ id: string; name: string; eventCode: string }[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedHardware, setSelectedHardware] = useState<Hardware | null>(null);
+  const [newHardware, setNewHardware] = useState(false);
   const table = useTableBehavior<Hardware, HardwareColumn>({ storageKey: "t2w-hardware-table-columns", columns: HARDWARE_TABLE_COLUMNS, initialSort: { key: "Event", direction: "asc" } });
   useEffect(() => {
     fetch("/api/v1/events?limit=1000", { credentials: "include" })
@@ -122,8 +125,20 @@ function HardwarePage() {
   const rows = useMemo(() => table.rows(active), [active, table]);
   return (
     <div>
-      <PageHeader titel="Hardware" beschreibung="Eventübergreifende Rückgabeübersicht" suche={{ value: q, onChange: setQ, placeholder: "Empfänger, E-Mail, Telefon oder Objektnummer …" }} aktion={<Button onClick={() => setAddOpen(true)}>Hardware-Ausgabe anlegen</Button>} />
+      <PageHeader titel="Hardware" beschreibung="Eventübergreifende Rückgabeübersicht" suche={{ value: q, onChange: setQ, placeholder: "Empfänger, E-Mail, Telefon oder Objektnummer …" }} aktion={<Button onClick={() => setNewHardware(true)}>Hardware-Ausgabe anlegen</Button>} />
       <div className="space-y-6">
+      <Sheet open={newHardware} onOpenChange={setNewHardware}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+          <SheetHeader><SheetTitle>Hardware-Ausgabe anlegen</SheetTitle><SheetDescription>Neue Ausgabe für ein Event erfassen.</SheetDescription></SheetHeader>
+          <div className="mt-5 space-y-4"><Select value={selectedEventId} onValueChange={setSelectedEventId}><SelectTrigger><SelectValue placeholder="Event (optional)" /></SelectTrigger><SelectContent><SelectItem value="none">Ohne Event (externer Verleih)</SelectItem>{events.map((e) => <SelectItem key={e.id} value={e.id}>{e.name} ({e.eventCode})</SelectItem>)}</SelectContent></Select>{selectedEventId && <HardwareWorkspace eventId={selectedEventId} onSaved={() => setNewHardware(false)} />}</div>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={Boolean(selectedHardware)} onOpenChange={(open) => !open && setSelectedHardware(null)}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+          <SheetHeader><SheetTitle>Hardware bearbeiten</SheetTitle><SheetDescription>Ausgabe- und Rückgabedaten bearbeiten.</SheetDescription></SheetHeader>
+          {selectedHardware && <div className="mt-5"><HardwareWorkspace eventId={selectedHardware.event?.id} initialEditing={selectedHardware} onSaved={() => setSelectedHardware(null)} /></div>}
+        </SheetContent>
+      </Sheet>
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader><DialogTitle>Hardware-Ausgabe anlegen</DialogTitle></DialogHeader>
@@ -204,7 +219,7 @@ function HardwarePage() {
               </thead>
               <tbody>
                 {rows.map((i) => (
-                  <tr key={i.id} className="border-b">
+                  <tr key={i.id} className="cursor-pointer border-b hover:bg-accent/50" onClick={() => setSelectedHardware(i)}>
                     {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => <td className="px-2 py-1" key={h}>{cell(i, h)}</td>)}
                   </tr>
                 ))}
