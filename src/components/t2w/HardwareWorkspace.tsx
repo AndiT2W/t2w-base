@@ -30,6 +30,14 @@ type Item = {
   note?: string;
   event?: { eventCode: string; name: string };
 };
+export function normalizeHardwareResponse(value: unknown): Item[] {
+  if (Array.isArray(value)) return value as Item[];
+  if (value && typeof value === "object" && "items" in value) {
+    const items = (value as { items?: unknown }).items;
+    return Array.isArray(items) ? (items as Item[]) : [];
+  }
+  return [];
+}
 const statusLabels: Record<string, string> = {
   OPEN: "Offen",
   MAIL_SEND: "Mail senden",
@@ -58,7 +66,7 @@ export function HardwareWorkspace({ eventId }: { eventId?: string }) {
       credentials: "include",
     })
       .then((r) => r.json())
-      .then(setItems)
+      .then((value) => setItems(normalizeHardwareResponse(value)))
       .catch(() => setItems([]));
   useEffect(() => {
     void load();
