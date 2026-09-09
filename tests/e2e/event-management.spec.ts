@@ -570,6 +570,28 @@ test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) 
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
 });
 
+test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+
+  await expect(page.getByRole("heading", { name: "Identität & Zeitraum" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Organisation & Einordnung" })).toBeVisible();
+
+  const eventcodeLabel = await page.getByText("Eventcode", { exact: false }).first().boundingBox();
+  const eventcodeInput = await page.locator("#d-code").boundingBox();
+  const startInput = await page.locator("#d-start").boundingBox();
+  const organizerSelect = await page.getByLabel("Veranstalter aus Stammdaten").boundingBox();
+
+  expect(eventcodeLabel).not.toBeNull();
+  expect(eventcodeInput).not.toBeNull();
+  expect(startInput).not.toBeNull();
+  expect(organizerSelect).not.toBeNull();
+  expect(Math.abs(eventcodeLabel!.y - eventcodeInput!.y)).toBeLessThan(12);
+  expect(organizerSelect!.x).toBeGreaterThan(startInput!.x + startInput!.width);
+});
+
 test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/kontakte");

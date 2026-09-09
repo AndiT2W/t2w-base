@@ -497,201 +497,222 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <CardHeader>
               <CardTitle className="text-base">{t("detail.basicData")}</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+            <CardContent className="space-y-4">
+              <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
                 <Label htmlFor="d-name">Eventname</Label>
                 <Input
                   id="d-name"
                   value={form.name}
                   onChange={(e) => set("name", e.target.value)}
-                  className="mt-1.5"
                 />
               </div>
-              <div>
-                <Label htmlFor="d-code">
-                  Eventcode{" "}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    (unveränderlich)
-                  </span>
-                </Label>
-                <Input
-                  id="d-code"
-                  value={form.eventcode}
-                  readOnly
-                  disabled
-                  className="mt-1.5 font-mono"
-                />
-              </div>
-              <div>
-                <Label htmlFor="d-ver">Veranstalter</Label>
-                <Select
-                  value={form.veranstalterId}
-                  onValueChange={(id) => {
-                    const customer = kunden.find((item) => item.id === id);
-                    if (customer) {
-                      set("veranstalterId", customer.id);
-                      set("veranstalter", customer.name);
-                    }
-                  }}
-                >
-                  <SelectTrigger aria-label="Veranstalter aus Stammdaten" className="mt-1.5">
-                    <SelectValue placeholder="Kunde aus Stammdaten auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {kunden.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="d-start">Startdatum *</Label>
-                <Input
-                  id="d-start"
-                  type="date"
-                  value={form.start}
-                  onChange={(e) => set("start", e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Sportart</Label>
-                <Select value={form.sportartId} onValueChange={(id) => set("sportartId", id)}>
-                  <SelectTrigger aria-label="Sportart" className="mt-1.5">
-                    <SelectValue placeholder="Sportart auswählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sportarten.map((sport) => (
-                      <SelectItem key={sport.id} value={sport.id}>
-                        {sport.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="d-ende">Enddatum</Label>
-                <Input
-                  id="d-ende"
-                  type="date"
-                  value={form.ende}
-                  onChange={(e) => set("ende", e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="d-ort">Ort</Label>
-                <Input
-                  id="d-ort"
-                  value={form.ort}
-                  onChange={(e) => set("ort", e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="d-resp">Hauptverantwortlich</Label>
-                <Input
-                  id="d-resp"
-                  value={form.verantwortlicher}
-                  onChange={(e) => set("verantwortlicher", e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Label>Services</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      aria-label="Services auswählen"
-                      variant="outline"
-                      className="mt-2 w-full justify-start font-normal"
-                    >
-                      {form.services?.length ? (
-                        <span className="flex flex-wrap gap-1.5">
-                          {form.serviceIds?.map((serviceId) => {
-                            const service = services.find((item) => item.id === serviceId);
-                            return service ? <ServiceBadge key={service.id} {...service} /> : null;
-                          })}
-                        </span>
-                      ) : (
-                        "Services auswählen"
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    className="max-h-[min(24rem,calc(100vh-2rem))] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto p-2"
+              <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
+                <section aria-labelledby="event-identity-period" className="space-y-3">
+                  <h3
+                    id="event-identity-period"
+                    className="border-b border-border pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
                   >
-                    <div className="space-y-1" role="group" aria-label="Services">
-                      {services.map((service) => {
-                        const selected = form.serviceIds?.includes(service.id) ?? false;
-                        return (
-                          <label
-                            key={service.id}
-                            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                          >
-                            <Checkbox
-                              checked={selected}
-                              onCheckedChange={(checked) => {
-                                const current = form.serviceIds ?? [];
-                                const serviceIds = checked
-                                  ? [...current, service.id]
-                                  : current.filter((id) => id !== service.id);
-                                set("serviceIds", serviceIds);
-                                set(
-                                  "services",
-                                  services
-                                    .filter((item) => serviceIds.includes(item.id))
-                                    .map((item) => item.name),
-                                );
-                              }}
-                            />
-                            <ServiceBadge {...service} />
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    Identität &amp; Zeitraum
+                  </h3>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-code">
+                      Eventcode{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        (unveränderlich)
+                      </span>
+                    </Label>
+                    <Input
+                      id="d-code"
+                      value={form.eventcode}
+                      readOnly
+                      disabled
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-start">Startdatum *</Label>
+                    <Input
+                      id="d-start"
+                      type="date"
+                      value={form.start}
+                      onChange={(e) => set("start", e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-ende">Enddatum</Label>
+                    <Input
+                      id="d-ende"
+                      type="date"
+                      value={form.ende}
+                      onChange={(e) => set("ende", e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-forecast">Teilnehmerprognose</Label>
+                    <Input
+                      id="d-forecast"
+                      type="number"
+                      min="0"
+                      value={form.teilnehmerwerte?.prognose ?? form.teilnehmer}
+                      onChange={(e) =>
+                        set("teilnehmerwerte", {
+                          ...(form.teilnehmerwerte ?? {
+                            aktuell: null,
+                            aktuellQuelle: null,
+                            aktuellSynchronisiertAm: null,
+                          }),
+                          prognose: e.target.value === "" ? null : Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </section>
+
+                <section aria-labelledby="event-organization" className="space-y-3">
+                  <h3
+                    id="event-organization"
+                    className="border-b border-border pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  >
+                    Organisation &amp; Einordnung
+                  </h3>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-ver">Veranstalter</Label>
+                    <Select
+                      value={form.veranstalterId}
+                      onValueChange={(id) => {
+                        const customer = kunden.find((item) => item.id === id);
+                        if (customer) {
+                          set("veranstalterId", customer.id);
+                          set("veranstalter", customer.name);
+                        }
+                      }}
+                    >
+                      <SelectTrigger aria-label="Veranstalter aus Stammdaten">
+                        <SelectValue placeholder="Kunde aus Stammdaten auswählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {kunden.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            {customer.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label>Sportart</Label>
+                    <Select value={form.sportartId} onValueChange={(id) => set("sportartId", id)}>
+                      <SelectTrigger aria-label="Sportart">
+                        <SelectValue placeholder="Sportart auswählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sportarten.map((sport) => (
+                          <SelectItem key={sport.id} value={sport.id}>
+                            {sport.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-ort">Ort</Label>
+                    <Input
+                      id="d-ort"
+                      value={form.ort}
+                      onChange={(e) => set("ort", e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-resp">Hauptverantwortlich</Label>
+                    <Input
+                      id="d-resp"
+                      value={form.verantwortlicher}
+                      onChange={(e) => set("verantwortlicher", e.target.value)}
+                    />
+                  </div>
+                </section>
               </div>
-              <div>
-                <Label htmlFor="d-forecast">Teilnehmerprognose</Label>
-                <Input
-                  id="d-forecast"
-                  type="number"
-                  min="0"
-                  value={form.teilnehmerwerte?.prognose ?? form.teilnehmer}
-                  onChange={(e) =>
-                    set("teilnehmerwerte", {
-                      ...(form.teilnehmerwerte ?? {
-                        aktuell: null,
-                        aktuellQuelle: null,
-                        aktuellSynchronisiertAm: null,
-                      }),
-                      prognose: e.target.value === "" ? null : Number(e.target.value),
-                    })
-                  }
-                  className="mt-1.5"
-                />
+
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-6">
+                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                  <Label>Services</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        aria-label="Services auswählen"
+                        variant="outline"
+                        className="h-auto min-h-9 w-full justify-start font-normal"
+                      >
+                        {form.services?.length ? (
+                          <span className="flex flex-wrap gap-1.5">
+                            {form.serviceIds?.map((serviceId) => {
+                              const service = services.find((item) => item.id === serviceId);
+                              return service ? (
+                                <ServiceBadge key={service.id} {...service} />
+                              ) : null;
+                            })}
+                          </span>
+                        ) : (
+                          "Services auswählen"
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      className="max-h-[min(24rem,calc(100vh-2rem))] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto p-2"
+                    >
+                      <div className="space-y-1" role="group" aria-label="Services">
+                        {services.map((service) => {
+                          const selected = form.serviceIds?.includes(service.id) ?? false;
+                          return (
+                            <label
+                              key={service.id}
+                              className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                            >
+                              <Checkbox
+                                checked={selected}
+                                onCheckedChange={(checked) => {
+                                  const current = form.serviceIds ?? [];
+                                  const serviceIds = checked
+                                    ? [...current, service.id]
+                                    : current.filter((id) => id !== service.id);
+                                  set("serviceIds", serviceIds);
+                                  set(
+                                    "services",
+                                    services
+                                      .filter((item) => serviceIds.includes(item.id))
+                                      .map((item) => item.name),
+                                  );
+                                }}
+                              />
+                              <ServiceBadge {...service} />
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                  <Label>Status</Label>
+                  <Select
+                    value={form.status}
+                    onValueChange={(v) => set("status", v as EventStatus)}
+                  >
+                    <SelectTrigger aria-label="Status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_ORDER.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {STATUS_LABEL[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={(v) => set("status", v as EventStatus)}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_ORDER.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {STATUS_LABEL[s]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 sm:col-span-2">
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
                 <div>
                   <p className="text-sm font-medium text-foreground">Archiviert</p>
                   <p className="text-xs text-muted-foreground">
@@ -700,14 +721,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 </div>
                 <Switch checked={form.archiviert} onCheckedChange={(v) => set("archiviert", v)} />
               </div>
-              <div className="sm:col-span-2">
+              <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-start lg:gap-3">
                 <Label htmlFor="d-notizen">Notizen</Label>
                 <Textarea
                   id="d-notizen"
                   rows={4}
                   value={form.notizen}
                   onChange={(e) => set("notizen", e.target.value)}
-                  className="mt-1.5"
                 />
               </div>
             </CardContent>

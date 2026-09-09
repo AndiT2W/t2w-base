@@ -407,3 +407,5 @@
 - Einstellungsseite erweitert: Die bestehenden Haupt-Tabs `Allgemein`, `Auswahllisten` und `Outlook` bleiben erhalten. Innerhalb von `Auswahllisten` gibt es nun ein seitliches Submenü für `Sportarten`, `Services` und `Eventrollen`; der aktive Unterbereich wird über den URL-Parameter `liste` gespeichert.
 
 - 2026-09-09: 18 aktuelle ClickUp-Hardwaredatensätze mit Status `BENACHRICHTIGT` in die Produktionsdatenbank importiert; `eventId` bleibt bei allen Datensätzen `NULL`.
+
+- 2026-09-09: Die Eventdetail-Stammdaten wurden im bestehenden TIME2WIN-Stil verdichtet: Eventname über die volle Breite, darunter zwei fachlich gruppierte Spalten mit Inline-Labels am Desktop; Services/Status, Archivierung und Notizen bleiben vollständig erhalten. Ein Browser-E2E-Test sichert Gruppierung und Desktop-Raster ab. Quelle: Nutzerentscheidung für Layoutvariante B vom 2026-09-09 und `src/routes/events.$eventcode.tsx`.
