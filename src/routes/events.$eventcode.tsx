@@ -516,6 +516,15 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <CardTitle className="text-base">{t("detail.basicData")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-start lg:gap-3">
+                <Label htmlFor="d-notizen">Notizen</Label>
+                <Textarea
+                  id="d-notizen"
+                  rows={4}
+                  value={form.notizen}
+                  onChange={(e) => set("notizen", e.target.value)}
+                />
+              </div>
               <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)_minmax(15rem,auto)] lg:items-center lg:gap-3">
                 <Label htmlFor="d-name">Eventname</Label>
                 <Input
@@ -740,15 +749,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-start lg:gap-3">
-                <Label htmlFor="d-notizen">Notizen</Label>
-                <Textarea
-                  id="d-notizen"
-                  rows={4}
-                  value={form.notizen}
-                  onChange={(e) => set("notizen", e.target.value)}
-                />
               </div>
             </CardContent>
           </Card>
@@ -994,6 +994,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <section aria-labelledby="finanz-notizen-heading" className="border-b border-border pb-5">
+                <h3 id="finanz-notizen-heading" className="font-medium text-foreground">Finanznotizen</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Zusätzliche Informationen zu Auszahlungen und Rechnungsempfängern.
+                </p>
+                <Textarea
+                  aria-label="Finanznotizen"
+                  className="mt-3 min-h-24"
+                  value={form.finanzNotizen ?? ""}
+                  onChange={(e) => set("finanzNotizen", e.target.value)}
+                  placeholder="z. B. Abweichende Zahlungsvereinbarungen …"
+                />
+              </section>
               <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
               <section aria-labelledby="auszahlungsempfaenger-heading" className="rounded-lg border border-border bg-muted/20 p-4">
                 <div className="mb-3">
@@ -1083,19 +1096,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 recipientId={detail.payoutRecipientId}
                 recipientEmail={detail.payoutRecipient?.email}
               />
-              <section aria-labelledby="finanz-notizen-heading" className="border-t border-border pt-5">
-                <h3 id="finanz-notizen-heading" className="font-medium text-foreground">Finanznotizen</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Zusätzliche Informationen zu Auszahlungen und Rechnungsempfängern.
-                </p>
-                <Textarea
-                  aria-label="Finanznotizen"
-                  className="mt-3 min-h-24"
-                  value={form.finanzNotizen ?? ""}
-                  onChange={(e) => set("finanzNotizen", e.target.value)}
-                  placeholder="z. B. Abweichende Zahlungsvereinbarungen …"
-                />
-              </section>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1106,6 +1106,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <CardTitle className="text-base">{t("nav.contacts")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
+              <section aria-labelledby="kontakte-notizen-heading" className="border-b border-border pb-5">
+                <h3 id="kontakte-notizen-heading" className="font-medium text-foreground">Kontaktnotizen</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Zusätzliche Informationen zur Kontaktorganisation dieses Events.
+                </p>
+                <Textarea
+                  aria-label="Kontaktnotizen"
+                  className="mt-3 min-h-24"
+                  value={form.kontakteNotizen ?? ""}
+                  onChange={(e) => set("kontakteNotizen", e.target.value)}
+                  placeholder="z. B. bevorzugte Ansprechpartner oder Erreichbarkeit …"
+                />
+              </section>
               <section>
                 <h3 className="font-medium text-foreground">Kontakte des Veranstalters</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -1300,19 +1313,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   </table>
                 </div>
               )}
-              <section aria-labelledby="kontakte-notizen-heading" className="border-t border-border pt-5">
-                <h3 id="kontakte-notizen-heading" className="font-medium text-foreground">Kontaktnotizen</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Zusätzliche Informationen zur Kontaktorganisation dieses Events.
-                </p>
-                <Textarea
-                  aria-label="Kontaktnotizen"
-                  className="mt-3 min-h-24"
-                  value={form.kontakteNotizen ?? ""}
-                  onChange={(e) => set("kontakteNotizen", e.target.value)}
-                  placeholder="z. B. bevorzugte Ansprechpartner oder Erreichbarkeit …"
-                />
-              </section>
             </CardContent>
           </Card>
         </TabsContent>
