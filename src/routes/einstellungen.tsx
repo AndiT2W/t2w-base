@@ -440,9 +440,8 @@ function Einstellungen() {
                           onDragStart={() => setDragged({ kind: "sports", id: sport.id })}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={() => void reorder("sports", sport.id)}
-                          className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center"
+                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
                         >
-                          <GripVertical className="size-4 cursor-grab text-muted-foreground" aria-label="Zum Sortieren ziehen" />
                           <span
                             aria-label={`Sportartvorschau: ${sport.name}`}
                             className="flex min-w-0 items-center"
@@ -593,10 +592,14 @@ function Einstellungen() {
                           onDragStart={() => setDragged({ kind: "hardwareObjects", id: hardwareObject.id })}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={() => void reorder("hardwareObjects", hardwareObject.id)}
-                          className="grid gap-2 rounded-md border p-3 lg:grid-cols-[minmax(12rem,1fr)_9rem] lg:items-center"
+                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
                         >
-                          <GripVertical className="size-4 cursor-grab text-muted-foreground" aria-label="Zum Sortieren ziehen" />
-                          <span className="flex items-center"><SelectionBadge {...hardwareObject} /></span>
+                          <span
+                            aria-label={`Hardware-Objektvorschau: ${hardwareObject.name}`}
+                            className="flex min-w-0 items-center"
+                          >
+                            <SelectionBadge {...hardwareObject} />
+                          </span>
                           <Input
                             aria-label={`Hardware-Objekt ${hardwareObject.name}`}
                             defaultValue={hardwareObject.name}

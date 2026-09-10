@@ -13,7 +13,7 @@ test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }
   await page.getByRole("dialog").getByRole("button", { name: "Radfahren" }).click();
   await expect(page.getByText("Sportart gespeichert.").last()).toBeVisible();
   await page.keyboard.press("Escape");
-  await page.getByLabel("Neue Sportart").fill("Radfahren");
+  await page.getByLabel("Neue Sportart").first().fill("Radfahren");
   await page.getByRole("button", { name: "Hinzufügen" }).first().click();
   await expect(page.getByText("Sportart angelegt.")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Sportart Radfahren" })).toBeVisible();
@@ -30,8 +30,8 @@ test("pflegt Hardware-Objekte als persistente Auswahlliste", async ({ page }) =>
   await expect(
     page.getByRole("textbox", { name: "Hardware-Objekt Active Transponder (T2W)" }),
   ).toBeVisible();
-  await page.getByLabel("Neues Hardware-Objekt").fill("Decoder");
-  await page.getByRole("button", { name: "Hardware-Objekt hinzufügen" }).click();
+  await page.getByLabel("Neues Hardware-Objekt").first().fill("Decoder");
+  await page.getByRole("button", { name: "Hardware-Objekt hinzufügen" }).first().click();
   await expect(page.getByRole("textbox", { name: "Hardware-Objekt Decoder" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("textbox", { name: "Hardware-Objekt Decoder" })).toBeVisible();
@@ -48,7 +48,7 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   ).toBeVisible();
   await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
   await page.getByRole("button", { name: "Darstellung für Service UHF" }).click();
-  await expect(page.getByRole("dialog").getByRole("button")).toHaveCount(46);
+  await expect(page.getByRole("dialog").getByRole("button")).toHaveCount(47);
   await page.getByRole("dialog").getByRole("button", { name: "Video" }).click();
   await expect(page.getByText("Service gespeichert.").last()).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Violett" }).click();
@@ -63,7 +63,7 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
     .getByRole("textbox", { name: "Service Video (iRewind)", exact: true })
     .boundingBox();
   expect(uhfName?.x).toBe(videoName?.x);
-  await page.getByLabel("Neuer Service").fill("Drohne");
+  await page.getByLabel("Neuer Service").first().fill("Drohne");
   await page.getByRole("button", { name: "Hinzufügen" }).nth(1).click();
   await expect(page.getByRole("textbox", { name: "Service Drohne", exact: true })).toBeVisible();
 
@@ -87,6 +87,28 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   await expect(selectedServices).toContainText("UHF");
   await expect(selectedServices).toContainText("Video (iRewind)");
   await expect(selectedServices.locator("svg")).toHaveCount(2);
+});
+
+test("zeigt Sportarten, Services und Hardware-Objekte im einheitlichen verschiebbaren Layout", async ({
+  page,
+}) => {
+  await mockApi(page);
+  const rowClass =
+    "lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto]";
+
+  for (const [liste, textboxName] of [
+    ["sportarten", "Sportart Triathlon"],
+    ["services", "Service UHF"],
+    ["hardwareobjekte", "Hardware-Objekt Active Transponder (T2W)"],
+  ] as const) {
+    await page.goto(`/einstellungen?tab=auswahllisten&liste=${liste}`);
+    const row = page.locator('[draggable="true"]').filter({
+      has: page.getByRole("textbox", { name: textboxName, exact: true }),
+    });
+    await expect(row).toHaveCount(1);
+    await expect.poll(async () => row.getAttribute("class")).toContain(rowClass);
+    await expect(row).toHaveAttribute("draggable", "true");
+  }
 });
 
 test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page }) => {

@@ -30,6 +30,17 @@ test.describe("Eventdetail UX", () => {
     await expect(page.getByText("Hardware-Ausgabe anlegen")).toBeVisible();
   });
 
+  test("trennt die Tabs der Eventdetailansicht auf dem Desktop klar", async ({ page }) => {
+    await mockApi(page);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/events/260820_demo_event");
+
+    const tabList = page.getByRole("tablist");
+    await expect(tabList).toHaveCSS("gap", "8px");
+    await expect(page.getByRole("tab", { name: "DATEIEN" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "KOMMUNIKATION" })).toBeVisible();
+  });
+
   test("hält den Gefahrenbereich geschlossen und verlangt die Löschbestätigung", async ({
     page,
   }) => {

@@ -539,7 +539,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
-          <TabsList className="min-w-0 max-w-full flex-1 gap-1 overflow-x-auto whitespace-nowrap md:gap-1.5">
+          <TabsList className="min-w-0 max-w-full flex-1 gap-2 overflow-x-auto whitespace-nowrap">
           <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
           <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
           <TabsTrigger value="finanz">FINANZ</TabsTrigger>
