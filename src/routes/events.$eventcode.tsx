@@ -200,18 +200,21 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const { personen, kunden, neuLaden } = useCrm();
   const { t } = useI18n();
   const [detailWorkspace] = useState(() =>
-    createEventDetailWorkspace(openEventSession(event.id), {
-      event,
-      persons: personen,
-      customers: kunden,
-      events,
-    }),
-    {
-      copy: kopiereEvent,
-      remove: loescheEvent,
-      updateSeries: apiUpdateEventSeries,
-      applyEvents: uebernehmeEvents,
-    },
+    createEventDetailWorkspace(
+      openEventSession(event.id),
+      {
+        event,
+        persons: personen,
+        customers: kunden,
+        events,
+      },
+      {
+        copy: kopiereEvent,
+        remove: loescheEvent,
+        updateSeries: apiUpdateEventSeries,
+        applyEvents: uebernehmeEvents,
+      },
+    ),
   );
   const detail = useSyncExternalStore(
     detailWorkspace.subscribe,
@@ -366,8 +369,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       await detailWorkspace.remove();
       toast.success("Event gelöscht.");
       window.location.assign("/");
-    } catch {
-      toast.error("Event konnte nicht gelöscht werden. Bitte neu laden.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Event konnte nicht gelöscht werden. Bitte neu laden.",
+      );
     }
   }
   async function copyEvent() {

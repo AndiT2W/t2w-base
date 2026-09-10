@@ -360,7 +360,19 @@ export async function apiDeleteEvent(id: string) {
     method: "DELETE",
     credentials: "include",
   });
-  if (!response.ok) throw new Error("Event konnte nicht gelöscht werden");
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((body: { message?: string | string[] }) =>
+        Array.isArray(body.message) ? body.message.join(", ") : body.message,
+      )
+      .catch(() => undefined);
+    throw new Error(
+      detail
+        ? `Event konnte nicht gelöscht werden (${response.status}: ${detail})`
+        : `Event konnte nicht gelöscht werden (HTTP ${response.status})`,
+    );
+  }
 }
 
 export type ApiSport = {

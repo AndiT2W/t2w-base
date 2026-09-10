@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { mockEventManagementApi as mockApi } from "./support/event-management-api";
+import { event, mockEventManagementApi as mockApi } from "./support/event-management-api";
 
 test.describe("Eventdetail UX", () => {
   test("zeigt den Speicherdirtyzustand und bestätigt das Speichern", async ({ page }) => {
@@ -55,6 +55,25 @@ test.describe("Eventdetail UX", () => {
     await expect(dialog).toContainText("260820_demo_event");
     await dialog.getByRole("button", { name: "Abbrechen" }).click();
     await expect(dialog).toBeHidden();
+  });
+
+  test("löscht ein bestätigtes Event über die API und kehrt zur Übersicht zurück", async ({
+    page,
+  }) => {
+    const requests = await mockApi(page);
+    await page.goto("/events/260820_demo_event");
+
+    await page.getByRole("button", { name: "Gefahrenbereich" }).click();
+    await page.getByRole("button", { name: "Event löschen" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Endgültig löschen" }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    expect(
+      requests.some(
+        (request) =>
+          request.method === "DELETE" && request.url.endsWith(`/api/v1/events/${event.id}`),
+      ),
+    ).toBeTruthy();
   });
 
   test("zeigt den Quartalswechsel als prüfbaren Vorschlag", async ({ page }) => {

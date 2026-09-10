@@ -64,6 +64,7 @@ export async function mockEventManagementApi(
     endAt: "2027-08-21T00:00:00.000Z",
   };
   let copiedEvents: (typeof mockedEvent)[] = [];
+  let eventDeleted = false;
   let settings = {
     outlookJahresordner: [{ jahr: "2026", url: "06_auftraege_26" }],
     jahresSites: [{ jahr: "2026", url: "https://old.example.com/sites/old" }],
@@ -210,8 +211,16 @@ export async function mockEventManagementApi(
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([mockedEvent, relatedEvent, ...copiedEvents]),
+        body: JSON.stringify([
+          ...(eventDeleted ? [] : [mockedEvent]),
+          relatedEvent,
+          ...copiedEvents,
+        ]),
       });
+    if (request.method() === "DELETE") {
+      eventDeleted = true;
+      return route.fulfill({ status: 204 });
+    }
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
       if (request.url().endsWith("/copy")) {
