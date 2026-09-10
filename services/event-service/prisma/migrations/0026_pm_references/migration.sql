@@ -1,0 +1,1 @@
+ALTER TABLE "PmTask" ADD COLUMN "references" JSONB NOT NULL DEFAULT '[]';

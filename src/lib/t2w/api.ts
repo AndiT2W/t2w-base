@@ -50,7 +50,6 @@ type ApiEvent = {
     title: string;
     dueAt: string | null;
     responsible: string | null;
-    dependsOnTaskId?: string | null;
     completed: boolean;
   }[];
   files?: { id: string; name: string; size: string | null; updatedAt: string }[];
@@ -155,7 +154,6 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
       titel: task.title,
       faellig: task.dueAt ? dateOnly(task.dueAt) : "",
       verantwortlich: task.responsible ?? "",
-      dependsOnTaskId: task.dependsOnTaskId ?? null,
       erledigt: task.completed,
     })),
     dateien: (event.files ?? []).map((file) => ({
@@ -246,12 +244,7 @@ export const apiUpdateEventContactRole = (
   ).then(mapApiEvent);
 export const apiCreateEventTask = (
   eventId: string,
-  body: {
-    title: string;
-    dueAt?: string;
-    responsible?: string;
-    dependsOnTaskId?: string | null;
-  },
+  body: { title: string; dueAt?: string; responsible?: string },
   version: number,
 ) =>
   eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks`, "POST", { ...body, version }).then(
@@ -260,13 +253,7 @@ export const apiCreateEventTask = (
 export const apiUpdateEventTask = (
   eventId: string,
   taskId: string,
-  body: {
-    title?: string;
-    dueAt?: string | null;
-    responsible?: string;
-    dependsOnTaskId?: string | null;
-    completed?: boolean;
-  },
+  body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
   version: number,
 ) =>
   eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", {
@@ -307,6 +294,13 @@ export async function apiEvents() {
       response.status === 401 ? "AUTH_REQUIRED" : "Events konnten nicht geladen werden",
     );
   return ((await response.json()) as ApiEvent[]).map(mapApiEvent);
+}
+export async function apiEventByCode(code: string) {
+  const response = await fetch(`/api/v1/events/by-code/${encodeURIComponent(code)}`, {
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Event konnte nicht geladen werden.");
+  return mapApiEvent(await response.json());
 }
 
 export async function apiCreateEvent(input: {

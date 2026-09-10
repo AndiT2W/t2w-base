@@ -62,25 +62,11 @@ export type EventDetailCommand =
   | { kind: "add-contact"; contactId: string; role: string }
   | { kind: "remove-contact"; contactId: string; role: string }
   | { kind: "change-contact-role"; contactId: string; role: string; nextRole: string }
-  | {
-      kind: "create-task";
-      input: {
-        title: string;
-        dueAt?: string;
-        responsible?: string;
-        dependsOnTaskId?: string | null;
-      };
-    }
+  | { kind: "create-task"; input: { title: string; dueAt?: string; responsible?: string } }
   | {
       kind: "update-task";
       taskId: string;
-      input: {
-        title?: string;
-        dueAt?: string | null;
-        responsible?: string;
-        dependsOnTaskId?: string | null;
-        completed?: boolean;
-      };
+      input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean };
     }
   | { kind: "create-file"; input: { name: string; url?: string; size?: string } }
   | {
@@ -124,19 +110,13 @@ export type EventTransport<TEvent extends EventRecord> = {
   ): Promise<TEvent>;
   createTask?(
     id: string,
-    input: { title: string; dueAt?: string; responsible?: string; dependsOnTaskId?: string | null },
+    input: { title: string; dueAt?: string; responsible?: string },
     version: number,
   ): Promise<TEvent>;
   updateTask?(
     id: string,
     taskId: string,
-    input: {
-      title?: string;
-      dueAt?: string | null;
-      responsible?: string;
-      dependsOnTaskId?: string | null;
-      completed?: boolean;
-    },
+    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
     version: number,
   ): Promise<TEvent>;
   createFile?(
@@ -307,7 +287,9 @@ export function createEventWorkspace<TEvent extends EventRecord>(
     },
     apply(events: TEvent[]) {
       const byId = new Map(events.map((event) => [event.id, event]));
+      const existingIds = new Set(collection.map((event) => event.id));
       collection = collection.map((event) => byId.get(event.id) ?? event);
+      collection.push(...events.filter((event) => !existingIds.has(event.id)));
       publish();
     },
     async create(input: CreateEventInput<TEvent>): Promise<TEvent> {

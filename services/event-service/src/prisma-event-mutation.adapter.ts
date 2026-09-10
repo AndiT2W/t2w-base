@@ -107,83 +107,29 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
   }
   async createTask(
     eventId: string,
-    input: {
-      title: string;
-      dueAt?: string;
-      responsible?: string;
-      dependsOnTaskId?: string | null;
-    },
+    input: { title: string; dueAt?: string; responsible?: string },
   ) {
-    if (input.dependsOnTaskId) {
-      await this.assertTaskDependencyBelongsToEvent(eventId, input.dependsOnTaskId);
-    }
     await this.prisma.eventTask.create({
       data: {
         eventId,
         title: input.title,
         dueAt: input.dueAt ? new Date(input.dueAt) : null,
         responsible: input.responsible,
-        dependsOnTaskId: input.dependsOnTaskId,
       },
     });
   }
   async updateTask(
     eventId: string,
     taskId: string,
-    input: {
-      title?: string;
-      dueAt?: string | null;
-      responsible?: string;
-      dependsOnTaskId?: string | null;
-      completed?: boolean;
-    },
+    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
   ) {
-    if (input.dependsOnTaskId !== undefined) {
-      if (input.dependsOnTaskId === taskId) {
-        throw new Error("TASK_DEPENDENCY_SELF_CYCLE");
-      }
-      if (input.dependsOnTaskId !== null) {
-        await this.assertTaskDependencyBelongsToEvent(eventId, input.dependsOnTaskId);
-        await this.assertNoTaskDependencyCycle(eventId, taskId, input.dependsOnTaskId);
-      }
-    }
     await this.prisma.eventTask.updateMany({
       where: { id: taskId, eventId },
       data: {
         ...input,
-        ...(input.dependsOnTaskId === undefined
-          ? {}
-          : { dependsOnTaskId: input.dependsOnTaskId }),
         ...(input.dueAt === undefined ? {} : { dueAt: input.dueAt ? new Date(input.dueAt) : null }),
       },
     });
-  }
-  private async assertTaskDependencyBelongsToEvent(eventId: string, dependsOnTaskId: string) {
-    const dependency = await this.prisma.eventTask.findFirst({
-      where: { id: dependsOnTaskId, eventId },
-      select: { id: true },
-    });
-    if (!dependency) throw new Error("TASK_DEPENDENCY_TARGET_NOT_FOUND");
-  }
-  private async assertNoTaskDependencyCycle(
-    eventId: string,
-    taskId: string,
-    dependsOnTaskId: string,
-  ) {
-    const seen = new Set<string>();
-    let cursor: string | null = dependsOnTaskId;
-    while (cursor) {
-      if (cursor === taskId) throw new Error("TASK_DEPENDENCY_CYCLE");
-      if (seen.has(cursor)) throw new Error("TASK_DEPENDENCY_CYCLE");
-      seen.add(cursor);
-      const dependencyTask: { dependsOnTaskId: string | null } | null =
-        await this.prisma.eventTask.findFirst({
-        where: { id: cursor, eventId },
-        select: { dependsOnTaskId: true },
-      });
-      if (!dependencyTask) throw new Error("TASK_DEPENDENCY_TARGET_NOT_FOUND");
-      cursor = dependencyTask.dependsOnTaskId;
-    }
   }
   async createFile(eventId: string, input: { name: string; url?: string; size?: string }) {
     await this.prisma.eventFile.create({ data: { eventId, ...input } });

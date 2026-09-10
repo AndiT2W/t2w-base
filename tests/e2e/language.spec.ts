@@ -40,7 +40,7 @@ test("switches language, preserves event data, and persists the preference", asy
   await expect.poll(() => page.evaluate(() => localStorage.getItem("t2w-locale"))).toBe("en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("link", { name: "Events" })).toBeVisible();
-  await expect(page.getByLabel("Tasks: In preparation")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Tasks", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Contacts & customers" })).toBeVisible();
   await expect(page.getByLabel("Offers: In preparation")).toBeVisible();
   await expect(page.getByLabel("Invoices: In preparation")).toBeVisible();

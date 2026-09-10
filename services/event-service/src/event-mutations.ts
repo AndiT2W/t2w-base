@@ -61,18 +61,12 @@ export interface EventMutationAdapter {
   ): Promise<void>;
   createTask(
     eventId: string,
-    input: { title: string; dueAt?: string; responsible?: string; dependsOnTaskId?: string | null },
+    input: { title: string; dueAt?: string; responsible?: string },
   ): Promise<void>;
   updateTask(
     eventId: string,
     taskId: string,
-    input: {
-      title?: string;
-      dueAt?: string | null;
-      responsible?: string;
-      dependsOnTaskId?: string | null;
-      completed?: boolean;
-    },
+    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
   ): Promise<void>;
   createFile(eventId: string, input: { name: string; url?: string; size?: string }): Promise<void>;
   createActivity(
@@ -208,7 +202,7 @@ export class EventMutations {
   }
   createTask(
     eventId: string,
-    input: { title: string; dueAt?: string; responsible?: string; dependsOnTaskId?: string | null },
+    input: { title: string; dueAt?: string; responsible?: string },
     version: number,
   ) {
     return this.mutate(eventId, version, (adapter) => adapter.createTask(eventId, input));
@@ -216,13 +210,7 @@ export class EventMutations {
   updateTask(
     eventId: string,
     taskId: string,
-    input: {
-      title?: string;
-      dueAt?: string | null;
-      responsible?: string;
-      dependsOnTaskId?: string | null;
-      completed?: boolean;
-    },
+    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
     version: number,
   ) {
     return this.mutate(eventId, version, (adapter) => adapter.updateTask(eventId, taskId, input));

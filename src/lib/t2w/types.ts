@@ -68,7 +68,6 @@ export type Task = {
   titel: string;
   faellig: string;
   verantwortlich: string;
-  dependsOnTaskId: string | null;
   erledigt: boolean;
 };
 

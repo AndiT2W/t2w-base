@@ -34,6 +34,7 @@ enum SyncStatus {
 }
 
 model User {
+  pmTasks      PmTask[]
   id           String   @id @default(uuid()) @db.Uuid
   displayName  String
   email        String   @unique
@@ -128,6 +129,10 @@ model Sport {
 }
 
 model Event {
+  pmGraphVersion        Int @default(0)
+  pmTimeZone            String @default("Europe/Vienna")
+  pmTasks               PmTask[]
+  pmSnapshots           PmLegacySnapshot[]
   id                    String      @id @default(uuid()) @db.Uuid
   eventCode             String      @unique
   name                  String
@@ -186,6 +191,72 @@ model Event {
   @@index([seriesId, startAt])
   @@index([status, archived])
   @@index([startAt, endAt])
+}
+
+model PmGroup {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  active Boolean @default(true)
+  sortOrder Int @default(0)
+  version Int @default(1)
+  tasks PmTask[]
+}
+
+model PmTask {
+  references Json @default("[]")
+  id String @id @default(uuid()) @db.Uuid
+  eventId String @db.Uuid
+  event Event @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  title String
+  status String @default("NEW")
+  priority String @default("NORMAL")
+  ownerId String? @db.Uuid
+  owner User? @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  groupId String? @db.Uuid
+  group PmGroup? @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  nextStep String @default("")
+  result String @default("")
+  reason String @default("")
+  dueType String @default("NONE")
+  dueDate String?
+  dueAt String?
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  predecessors PmDependency[] @relation("PmSuccessor")
+  successors PmDependency[] @relation("PmPredecessor")
+  activities PmActivity[]
+  @@index([eventId, id])
+}
+
+model PmDependency {
+  predecessorId String @db.Uuid
+  successorId String @db.Uuid
+  predecessor PmTask @relation("PmPredecessor", fields: [predecessorId], references: [id], onDelete: Restrict)
+  successor PmTask @relation("PmSuccessor", fields: [successorId], references: [id], onDelete: Restrict)
+  @@id([predecessorId, successorId])
+}
+
+model PmActivity {
+  id String @id @default(uuid()) @db.Uuid
+  taskId String @db.Uuid
+  task PmTask @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  actorId String @db.Uuid
+  action String
+  details Json
+  createdAt DateTime @default(now())
+  @@index([taskId, createdAt])
+}
+
+model PmLegacySnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  eventId String @db.Uuid
+  event Event @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  actorId String @db.Uuid
+  count Int
+  sha256 String
+  payload String
+  createdAt DateTime @default(now())
 }
 
 enum PayoutMailStatus {
@@ -347,10 +418,7 @@ model EventTask {
   title       String
   dueAt       DateTime?
   responsible String?
-  dependsOnTaskId String? @db.Uuid
   completed   Boolean  @default(false)
-  dependsOnTask EventTask? @relation("TaskDependency", fields: [dependsOnTaskId], references: [id], onDelete: SetNull)
-  blockedBy   EventTask[] @relation("TaskDependency")
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

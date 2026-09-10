@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./project-management": {
+      "types": "./dist/project-management.d.ts",
+      "import": "./dist/project-management.js"
+    },
     "./crm": {
       "types": "./dist/crm.d.ts",
       "import": "./dist/crm.js"

@@ -1,3 +1,4 @@
+import { ProjectManagement } from "@/components/t2w/ProjectManagement";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
@@ -65,7 +66,7 @@ import {
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
-import { apiUpdateEventSeries } from "@/lib/t2w/api";
+import { apiUpdateEventSeries, apiEventByCode } from "@/lib/t2w/api";
 import { useCrm } from "@/lib/crm/store";
 import { eventContactRoleChoices, selectionListChoices } from "@/lib/t2w/selection-list-workspace";
 import { useI18n } from "@/lib/i18n";
@@ -142,28 +143,6 @@ function communicationDate(value: string) {
   }).format(new Date(value));
 }
 
-function getTaskDependencyDescendants(
-  taskId: string,
-  tasks: T2WEvent["aufgaben"],
-): Set<string> {
-  const blocked = new Set<string>([taskId]);
-  const queue = [taskId];
-
-  while (queue.length) {
-    const currentTaskId = queue.shift();
-    if (!currentTaskId) continue;
-    tasks
-      .filter((task) => task.dependsOnTaskId === currentTaskId)
-      .forEach((task) => {
-        if (blocked.has(task.id)) return;
-        blocked.add(task.id);
-        queue.push(task.id);
-      });
-  }
-
-  return blocked;
-}
-
 export const Route = createFileRoute("/events/$eventcode")({
   head: () => ({
     meta: [
@@ -185,10 +164,26 @@ export const Route = createFileRoute("/events/$eventcode")({
 
 function EventDetail() {
   const { eventcode } = useParams({ from: "/events/$eventcode" });
-  const { events, bereit } = useT2W();
+  const { events, bereit, uebernehmeEvents } = useT2W();
   const event = events.find((e) => e.eventcode === eventcode);
+  const [lookupError, setLookupError] = useState("");
+  useEffect(() => {
+    if (!bereit || event) return;
+    let active = true;
+    setLookupError("");
+    apiEventByCode(eventcode)
+      .then((found) => {
+        if (active) uebernehmeEvents([found]);
+      })
+      .catch((e) => {
+        if (active) setLookupError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [bereit, event, eventcode, uebernehmeEvents]);
 
-  if (!bereit) {
+  if (!bereit || (!event && !lookupError)) {
     return <p className="py-16 text-center text-sm text-muted-foreground">Wird geladen …</p>;
   }
 
@@ -249,11 +244,36 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [seriesDialog, setSeriesDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteAreaOpen, setDeleteAreaOpen] = useState(false);
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editingTaskResponsible, setEditingTaskResponsible] = useState("");
-  const [editingTaskDue, setEditingTaskDue] = useState("");
-  const [editingTaskDependency, setEditingTaskDependency] = useState<string>("");
-  const [activeTab, setActiveTab] = useState("stammdaten");
+  const [activeTab, updateActiveTab] = useState("stammdaten");
+  const setActiveTab = (tab: string) => {
+    updateActiveTab(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.pushState(null, "", url);
+  };
+  useEffect(() => {
+    const sync = () => {
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      updateActiveTab(
+        tab &&
+          [
+            "stammdaten",
+            "kontakte",
+            "aufgaben",
+            "dateien",
+            "kommunikation",
+            "hardware",
+            "finanz",
+            "time2win",
+          ].includes(tab)
+          ? tab
+          : "stammdaten",
+      );
+    };
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
   const [saving, setSaving] = useState(false);
   const savedEventRef = useRef(event);
   const [seriesTargetEventId, setSeriesTargetEventId] = useState("");
@@ -467,52 +487,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     await detailWorkspace.updateContactRole(contact, role);
     toast.success("Eventrolle gespeichert.");
   }
-  async function addTask() {
-    if (!detail.newTask.trim()) return;
-    await detailWorkspace.addTask();
-    toast.success("Aufgabe angelegt.");
-  }
-  function startEditTask(
-    taskId: string,
-    verantwortlich: string,
-    faellig: string,
-    dependsOnTaskId: string | null,
-  ) {
-    setEditingTaskId(taskId);
-    setEditingTaskResponsible(verantwortlich);
-    setEditingTaskDue(faellig);
-    setEditingTaskDependency(dependsOnTaskId ?? "");
-  }
-  async function saveTaskMeta(taskId: string) {
-    const dependency = editingTaskDependency === "" ? null : editingTaskDependency;
-    try {
-      await detailWorkspace.updateTask(taskId, {
-        responsible: editingTaskResponsible.trim(),
-        dueAt: editingTaskDue || null,
-        dependsOnTaskId: dependency,
-      });
-      setEditingTaskId(null);
-      setEditingTaskResponsible("");
-      setEditingTaskDue("");
-      setEditingTaskDependency("");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Aufgabe konnte nicht gespeichert werden.");
-    }
-  }
-  function cancelTaskEdit() {
-    setEditingTaskId(null);
-    setEditingTaskResponsible("");
-    setEditingTaskDue("");
-    setEditingTaskDependency("");
-  }
-  function isTaskBlocked(taskId: string) {
-    const task = form.aufgaben.find((item) => item.id === taskId);
-    if (!task?.dependsOnTaskId) return false;
-    const blocker = form.aufgaben.find((item) => item.id === task.dependsOnTaskId);
-    return blocker ? !blocker.erledigt : false;
-  }
-  const getInvalidDependencyTargets = (taskId: string) =>
-    getTaskDependencyDescendants(taskId, form.aufgaben);
+
   async function addFile() {
     if (!detail.newFile.trim()) return;
     await detailWorkspace.addFile();
@@ -536,9 +511,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       />
 
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-5">
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span className="font-mono text-xs">{event.eventcode}</span>
+            <span className="break-all font-mono text-xs">{event.eventcode}</span>
             <span>·</span>
             <span>{event.veranstalter}</span>
             <span>·</span>
@@ -585,7 +560,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setSeriesDialog(true)}>
             Eventserie verwalten
           </Button>
@@ -630,7 +605,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               className="sr-only md:not-sr-only md:inline-flex"
               value="aufgaben"
             >
-              AUFGABEN
+              PROJEKTMANAGEMENT
             </TabsTrigger>
             <TabsTrigger
               id="event-tab-dateien"
@@ -663,7 +638,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {[
-                  ["aufgaben", "AUFGABEN"],
+                  ["aufgaben", "PROJEKTMANAGEMENT"],
                   ["dateien", "DATEIEN"],
                   ["kommunikation", "KOMMUNIKATION"],
                   ["hardware", "HARDWARE"],
@@ -672,10 +647,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     <button
                       type="button"
                       onPointerDown={() => {
-                        setActiveTab(value);
+                        if (value) setActiveTab(value);
                         document.getElementById(`event-tab-${value}`)?.click();
                       }}
-                      onClick={() => setActiveTab(value)}
+                      onClick={() => {
+                        if (value) setActiveTab(value);
+                      }}
                     >
                       {label}
                     </button>
@@ -1532,170 +1509,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         </TabsContent>
 
         <TabsContent value="aufgaben">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("nav.tasks")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  aria-label="Neue Aufgabe"
-                  value={detail.newTask}
-                  onChange={(e) => detailWorkspace.setInput("newTask", e.target.value)}
-                />
-                <Input
-                  aria-label="Verantwortlicher"
-                  value={detail.newTaskResponsible}
-                  onChange={(e) => detailWorkspace.setInput("newTaskResponsible", e.target.value)}
-                  placeholder="Verantwortlicher"
-                />
-                <Input
-                  aria-label="Fälligkeitsdatum"
-                  type="date"
-                  value={detail.newTaskDue}
-                  onChange={(e) => detailWorkspace.setInput("newTaskDue", e.target.value)}
-                />
-                <select
-                  aria-label="Vorgänger wählen"
-                  className="h-10 min-w-44 rounded-md border border-border bg-background px-3 text-sm"
-                  value={detail.newTaskDependency}
-                  onChange={(e) => detailWorkspace.setInput("newTaskDependency", e.target.value)}
-                >
-                  <option value="">— ohne Vorgänger —</option>
-                  {form.aufgaben.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.titel}
-                    </option>
-                  ))}
-                </select>
-                <Button onClick={() => void addTask()}>Aufgabe anlegen</Button>
-              </div>
-              {form.aufgaben.length === 0 && (
-                <p className="text-sm text-muted-foreground">Noch keine Aufgaben angelegt.</p>
-              )}
-              {form.aufgaben.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex flex-col gap-2 rounded-md border border-border px-3 py-2 sm:flex-row sm:items-center sm:gap-3"
-                >
-                  <div className="flex items-center gap-3 sm:shrink-0">
-                    <Checkbox
-                      checked={a.erledigt}
-                      onCheckedChange={(v) =>
-                        void detailWorkspace
-                          .updateTask(a.id, { completed: !!v })
-                          .catch(() => toast.error("Aufgabe konnte nicht gespeichert werden."))
-                      }
-                      disabled={isTaskBlocked(a.id)}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={
-                        a.erledigt
-                          ? "text-sm text-muted-foreground line-through"
-                          : "text-sm font-medium text-foreground"
-                      }
-                    >
-                      {a.titel}
-                    </p>
-                    {editingTaskId === a.id ? (
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        <Input
-                          aria-label="Verantwortlicher bearbeiten"
-                          value={editingTaskResponsible}
-                          onChange={(e) => setEditingTaskResponsible(e.target.value)}
-                          placeholder="Verantwortlicher"
-                          className="w-52"
-                        />
-                        <Input
-                          aria-label="Fälligkeitsdatum bearbeiten"
-                          type="date"
-                          value={editingTaskDue}
-                          onChange={(e) => setEditingTaskDue(e.target.value)}
-                          className="w-44"
-                        />
-                        <select
-                          aria-label="Abhängigkeit bearbeiten"
-                          className="h-10 min-w-40 rounded-md border border-border bg-background px-3 text-sm"
-                          value={editingTaskDependency}
-                          onChange={(e) => setEditingTaskDependency(e.target.value)}
-                        >
-                          <option value="">— keine Abhängigkeit —</option>
-                          {form.aufgaben
-                            .filter((candidate) => candidate.id !== a.id)
-                            .map((candidate) => {
-                              const blockedDependency = getInvalidDependencyTargets(a.id);
-                              const isBlocked = blockedDependency.has(candidate.id);
-                              if (isBlocked && candidate.id !== editingTaskDependency) {
-                                return null;
-                              }
-                              return (
-                                <option
-                                  key={candidate.id}
-                                  value={candidate.id}
-                                  disabled={isBlocked}
-                                  title={
-                                    isBlocked
-                                      ? "Diese Aufgabe ist bereits abhängig von der aktuellen Aufgabe"
-                                      : undefined
-                                  }
-                                >
-                                  {isBlocked
-                                    ? `${candidate.titel} (würde Zyklus erzeugen)`
-                                    : candidate.titel}
-                                </option>
-                              );
-                            })}
-                        </select>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        {a.faellig ? `fällig ${formatDatum(a.faellig)}` : "ohne Fälligkeitsdatum"} ·{" "}
-                        {a.verantwortlich || "—"} ·{" "}
-                        {a.dependsOnTaskId ? "hängt ab von Aufgabe" : "ohne Vorgänger"}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {editingTaskId === a.id ? (
-                      <>
-                        <Button size="sm" onClick={() => void saveTaskMeta(a.id)} type="button">
-                          Speichern
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={cancelTaskEdit} type="button">
-                          Abbrechen
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          startEditTask(
-                            a.id,
-                            a.verantwortlich,
-                            a.faellig,
-                            a.dependsOnTaskId,
-                          )
-                        }
-                        type="button"
-                      >
-                        Bearbeiten
-                      </Button>
-                    )}
-                  </div>
-                  {a.dependsOnTaskId ? (
-                    <p className="text-xs text-muted-foreground">
-                      Blockiert durch:{" "}
-                      {form.aufgaben.find((candidate) => candidate.id === a.dependsOnTaskId)?.titel ||
-                        "unbekannt"}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <ProjectManagement eventId={form.id} />
         </TabsContent>
 
         <TabsContent value="dateien">

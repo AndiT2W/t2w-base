@@ -1,4 +1,6 @@
 import { Module } from "@nestjs/common";
+import { ProjectManagementController } from "./project-management.controller.js";
+import { ProjectManagementService } from "./project-management.service.js";
 import { EventsController } from "./events.controller.js";
 import { HealthController } from "./health.controller.js";
 import { PrismaService } from "./prisma.service.js";
@@ -24,6 +26,7 @@ import { AutomationService } from "./automation.service.js";
 @Module({
   imports: [OutlookModule],
   controllers: [
+    ProjectManagementController,
     HealthController,
     EventsController,
     AuthController,
@@ -34,6 +37,7 @@ import { AutomationService } from "./automation.service.js";
     AuditLogController,
   ],
   providers: [
+    ProjectManagementService,
     PrismaService,
     HardwareService,
     EventRecordRetrieval,

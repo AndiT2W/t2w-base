@@ -322,7 +322,8 @@ test("reduziert die Navigation und verwendet das Bearbeiten-Symbol", async ({ pa
   await expect(
     page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ }),
   ).toBeVisible();
-  for (const modul of ["Aufgaben", "Angebote", "Rechnungen"]) {
+  await expect(page.getByRole("link", { name: "Aufgaben", exact: true })).toBeVisible();
+  for (const modul of ["Angebote", "Rechnungen"]) {
     await expect(page.getByRole("link", { name: modul, exact: true })).toHaveCount(0);
     await expect(page.getByLabel(`${modul}: In Vorbereitung`)).toBeVisible();
   }
@@ -1032,60 +1033,6 @@ test("zeigt den Eventcode in der Metadatenzeile des Events", async ({ page }) =>
   await expect(metadaten).toContainText("260820_demo_event");
   await expect(metadaten).toContainText("Alter Veranstalter");
   await expect(metadaten).toContainText("20.08.2026");
-});
-
-test("blockiert zyklische Aufgabe-Abhängigkeiten im Bearbeiten-Modus", async ({ page }) => {
-  await mockApi(page, {
-    version: 6,
-    tasks: [
-      {
-        id: "t1",
-        title: "Anmeldung",
-        dueAt: null,
-        responsible: "Anna",
-        dependsOnTaskId: null,
-        completed: false,
-      },
-      {
-        id: "t2",
-        title: "Briefing",
-        dueAt: null,
-        responsible: "Ben",
-        dependsOnTaskId: "t1",
-        completed: false,
-      },
-      {
-        id: "t3",
-        title: "Start",
-        dueAt: null,
-        responsible: "Claus",
-        dependsOnTaskId: "t2",
-        completed: false,
-      },
-      {
-        id: "t4",
-        title: "Abschluss",
-        dueAt: null,
-        responsible: "Dora",
-        dependsOnTaskId: null,
-        completed: false,
-      },
-    ],
-  });
-  await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "AUFGABEN" }).click();
-
-  const firstTaskRow = page.locator('div.rounded-md.border').filter({ hasText: "Anmeldung" }).first();
-  await firstTaskRow.getByRole("button", { name: "Bearbeiten", exact: true }).click();
-  const dependency = firstTaskRow.getByLabel("Abhängigkeit bearbeiten");
-  await expect(dependency).toBeVisible();
-  const optionCount = await dependency.evaluate((node) => node.options.length);
-  expect(optionCount).toBe(2);
-
-  await expect(dependency.locator('option[value="t2"]')).toHaveCount(0);
-  await expect(dependency.locator('option[value="t3"]')).toHaveCount(0);
-  await expect(dependency.locator('option[value="t4"]')).toHaveText("Abschluss");
-  await expect(dependency.locator('option[value="t4"]')).not.toHaveAttribute("disabled");
 });
 
 test("speichert Outlook- und SharePoint-Einstellungen persistent über PATCH", async ({ page }) => {

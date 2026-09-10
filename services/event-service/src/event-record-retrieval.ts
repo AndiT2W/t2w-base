@@ -22,6 +22,12 @@ export class EventRecordRetrieval {
   read(id: string) {
     return this.prisma.event.findUniqueOrThrow({ where: { id }, include: eventRecordInclude });
   }
+  readByCode(eventCode: string) {
+    return this.prisma.event.findUniqueOrThrow({
+      where: { eventCode },
+      include: eventRecordInclude,
+    });
+  }
 
   list(input: { q?: string; skip: number; take: number }) {
     return this.prisma.event.findMany({

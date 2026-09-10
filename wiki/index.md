@@ -2,6 +2,8 @@
 
 ## Core Pages
 
+- [Projektmanagement: Neuimplementierung und Testbetrieb](tasks/project-management-implementation.md)
+
 - [Projektmanagement v3: Aufgabenabhängigkeiten und aufklappbare Ablaufübersicht](tasks/project-management-spec-v3.md) (aktuell, Issue #55)
 - [Projektmanagement: Kategorie-Readiness](tasks/project-management-readiness-spec.md) (historischer Entwurf)
 

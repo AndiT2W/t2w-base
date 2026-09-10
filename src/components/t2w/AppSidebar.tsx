@@ -27,7 +27,7 @@ export const HAUPT_NAV = [
     exact: false,
     available: true,
   },
-  { to: "/aufgaben", label: "Aufgaben", icon: CheckSquare, exact: false, available: false },
+  { to: "/aufgaben", label: "Aufgaben", icon: CheckSquare, exact: false, available: true },
   { to: "/kontakte", label: "Kontakte & Kunden", icon: Users, exact: false, available: true },
   { to: "/hardware", label: "Hardware", icon: Package, exact: false, available: true },
   { to: "/auszahlungen", label: "Auszahlungen", icon: Receipt, exact: false, available: true },

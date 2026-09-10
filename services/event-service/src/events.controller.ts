@@ -10,8 +10,10 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  ForbiddenException,
 } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiTags, PartialType } from "@nestjs/swagger";
 import {
   IsBoolean,
   IsDateString,
@@ -30,6 +32,7 @@ import { Time2winService } from "./time2win.service.js";
 import { EventCommunicationHub } from "./outlook/event-communication.hub.js";
 import { EventRecordRetrieval } from "./event-record-retrieval.js";
 import { HardwareService } from "./hardware.service.js";
+import { ProjectManagementService, type PmActor } from "./project-management.service.js";
 
 export class CreateEventDto {
   @IsOptional() @IsString() eventCode?: string;
@@ -54,6 +57,9 @@ export class CreateEventDto {
   @IsOptional() invoiceRecipientIds?: string[];
   @IsOptional() serviceIds?: string[];
 }
+class UpdateEventDto extends PartialType(CreateEventDto) {
+  @IsOptional() @IsInt() @Min(1) version?: number;
+}
 class CopyEventDto {
   @IsString() name!: string;
   @IsString() eventCode!: string;
@@ -77,6 +83,7 @@ export class EventsController {
     private readonly time2win: Time2winService,
     private readonly communication: EventCommunicationHub,
     private readonly hardware: HardwareService,
+    private readonly pm: ProjectManagementService,
   ) {}
 
   @Get("hardware") listHardware(
@@ -166,6 +173,9 @@ export class EventsController {
   @Get(":id") get(@Param("id", ParseUUIDPipe) id: string) {
     return this.records.read(id);
   }
+  @Get("by-code/:code") byCode(@Param("code") code: string) {
+    return this.records.readByCode(code);
+  }
 
   @Post()
   create(@Body() dto: CreateEventDto) {
@@ -180,10 +190,31 @@ export class EventsController {
     });
   }
 
-  @Patch(":id") update(
+  @Patch(":id") async update(
     @Param("id", ParseUUIDPipe) id: string,
-    @Body() dto: Partial<CreateEventDto> & { version?: number },
+    @Body() dto: UpdateEventDto,
+    @Req() req: { user: PmActor },
   ) {
+    if (
+      dto.archived === false &&
+      req.user.role !== "ADMIN" &&
+      (await this.pm.read(id, req.user)).event.archived
+    )
+      throw new ForbiddenException("Nur Admins dürfen Events reaktivieren.");
+    if (dto.archived === true) {
+      const state = await this.pm.read(id, req.user);
+      if (
+        state.tasks.some(
+          (t) =>
+            t.status === "NEW" ||
+            t.status === "IN_PROGRESS" ||
+            t.reasons.includes("Voraussetzung erneut prüfen"),
+        )
+      )
+        throw new ConflictException(
+          "Offene Arbeit oder ungeklärte Voraussetzungen verhindern die Archivierung.",
+        );
+    }
     return this.eventMutations.update(id, dto).catch((error: unknown) => {
       if (error instanceof EventMutationConflict)
         throw new ConflictException("EVENT_VERSION_CONFLICT");
@@ -191,7 +222,13 @@ export class EventsController {
     });
   }
 
-  @Delete(":id") remove(@Param("id", ParseUUIDPipe) id: string) {
+  @Delete(":id") async remove(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Req() req: { user: PmActor },
+  ) {
+    const state = await this.pm.read(id, req.user);
+    if (state.tasks.length)
+      throw new ConflictException("Events mit PM-Historie dürfen nicht gelöscht werden.");
     return this.eventMutations.remove(id).catch((error: unknown) => {
       if (error instanceof EventMutationConflict) throw new ConflictException("EVENT_NOT_FOUND");
       throw error;
@@ -255,13 +292,7 @@ export class EventsController {
 
   @Post(":id/tasks") createTask(
     @Param("id", ParseUUIDPipe) eventId: string,
-    @Body() body: {
-      title: string;
-      dueAt?: string;
-      responsible?: string;
-      dependsOnTaskId?: string | null;
-      version: number;
-    },
+    @Body() body: { title: string; dueAt?: string; responsible?: string; version: number },
   ) {
     const { version, ...input } = body;
     return this.mutate(() => this.eventMutations.createTask(eventId, input, version));
@@ -274,7 +305,6 @@ export class EventsController {
       title?: string;
       dueAt?: string | null;
       responsible?: string;
-      dependsOnTaskId?: string | null;
       completed?: boolean;
       version: number;
     },

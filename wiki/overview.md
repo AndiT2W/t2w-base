@@ -56,7 +56,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 CI-Branding aktualisiert: TIME2WIN-Farben `#8DC63F` und `#05193A` sowie das freigegebene Logo-Asset sind integriert; der vorherige Style ist als `src/styles_begin.css` rückwechselbar archiviert. Siehe [TIME2WIN CI und Branding](concepts/time2win-ci-branding.md).
 
-- PM nach [v3](tasks/project-management-spec-v3.md) planen: Aufgabenbasis und Abhängigkeiten, abgeleitete Übersicht mit aufklappbarer Tabelle, Persistenz-/Browserregressionen. Das separate Prüfpunktmodell gehört nicht zum ersten Umfang.
+- PM nach [v3](tasks/project-management-spec-v3.md) neu implementiert: Aufgabenbasis, Abhängigkeiten, abgeleitete Kategorie-/Ablaufübersicht, globale Ansichten, atomarer Verlauf/Audit und kontrollierter Legacy-Cutover. Lokale Testnachweise und Deploymenthinweise: [Implementierungsstand](tasks/project-management-implementation.md). Kein produktiver Cutover in dieser Sitzung.
 - Normalize current ClickUp CRM-like data, especially customer duplicates and non-person contact records.
 - Verify how `Kunde`, `Veranstalter`, `Organisator`, and `Rechnungsempfänger` differ operationally in the current process.
 - Decide how much of the current Excel pricing and service logic should become native structured data versus retained document templates.
