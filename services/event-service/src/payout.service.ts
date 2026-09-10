@@ -95,12 +95,13 @@ export class PayoutService {
         action: "CREATE",
         userId: input.userId,
         newValue: p,
-      });
+      }, tx);
       return p;
     });
   }
   async update(id: string, input: any) {
-    const old = await this.prisma.payout.findUnique({ where: { id } });
+    return this.prisma.$transaction(async (tx) => {
+    const old = await tx.payout.findUnique({ where: { id } });
     if (!old) throw new NotFoundException();
     const data: any = { ...input };
     for (const k of ["userId", "id", "payoutNumber", "createdAt", "updatedAt"]) delete data[k];
@@ -108,7 +109,7 @@ export class PayoutService {
     if (data.paymentStatus === PayoutPaymentStatus.AUSBEZAHLT && !data.paidAt && !old.paidAt)
       data.paidAt = new Date();
     if (data.amount !== undefined) data.amount = new Prisma.Decimal(Number(data.amount).toFixed(2));
-    const p = await this.prisma.payout.update({ where: { id }, data, include });
+    const p = await tx.payout.update({ where: { id }, data, include });
     await this.audit.append({
       entity: "Payout",
       entityId: id,
@@ -116,11 +117,13 @@ export class PayoutService {
       userId: input.userId,
       oldValue: old,
       newValue: p,
-    });
+    }, tx);
     return p;
+    });
   }
   async remove(id: string, userId?: string) {
-    const old = await this.prisma.payout.findUnique({ where: { id } });
+    return this.prisma.$transaction(async (tx) => {
+    const old = await tx.payout.findUnique({ where: { id } });
     if (!old) throw new NotFoundException();
     await this.audit.append({
       entity: "Payout",
@@ -128,9 +131,10 @@ export class PayoutService {
       action: "DELETE",
       userId,
       oldValue: old,
-    });
-    await this.prisma.payout.delete({ where: { id } });
+    }, tx);
+    await tx.payout.delete({ where: { id } });
     return { deleted: true, payoutNumber: old.payoutNumber };
+    });
   }
   async markForMail(ids: string[], userId?: string) {
     const result = [] as any[];

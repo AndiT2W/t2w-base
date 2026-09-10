@@ -462,6 +462,8 @@
 - 2026-09-09: Spezifikation für das interne Mehrbenutzersystem erstellt und als GitHub-Issue #49 mit `enhancement` und `ready-for-agent` veröffentlicht.
 # 2026-09-09
 
+- 2026-09-10: Hardware-Lebenszyklus hinter ein gemeinsames Intent-Modul für zentrale und Event-Detailansicht gelegt. Hardware- und Auszahlungsmutationen verwenden nun den transaktionalen Audit-Seam; fokussierte Client-/Service-Regressionen sowie Event-Service- und Produktions-Build bestanden. Quelle: `src/lib/t2w/hardware-lifecycle.ts`, `services/event-service/src/audit.service.ts`, Nutzerentscheidung vom 2026-09-10.
+
 - Finanz-Reiter auf Variante 1 umgestellt: Auszahlungsempfänger und Rechnungsempfänger sind als kompakte getrennte Bereiche angeordnet; Auszahlungen nutzen eindeutige Status-Badges und gebündelte Aktionen statt mehrfacher Status-Dropdowns. KPI-Karten wurden bewusst nicht übernommen. Typecheck/Script nicht vorhanden; Domain-Build, Lint, Vitest (44 Tests) und Produktions-Build erfolgreich.
 - Finanz- und Kontakte-Reiter um je ein persistentes, tab-spezifisches Notizfeld ergänzt (`financeNotes`, `contactsNotes`), inklusive Prisma-Migration und Browser-Regression für Speicherung.
 - Event-Löschen ergänzt: bestätigte Löschaktion in Desktop- und Mobilliste, `DELETE /api/v1/events/:id` mit serverseitigem Aufräumen abhängiger Daten sowie Regressionstest im Event-Workspace.

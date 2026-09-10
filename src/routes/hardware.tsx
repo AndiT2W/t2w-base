@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
+import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { useT2W } from "@/lib/t2w/store";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { Button } from "@/components/ui/button";
@@ -264,20 +265,10 @@ function HardwarePage() {
     pendingSaves.current += 1;
     setSavingInline(true);
     const persist = async () => {
-      const baseUrl = item.event?.id
-        ? `/api/v1/events/${item.event.id}/hardware`
-        : "/api/v1/events/hardware";
-      const response = await fetch(`${baseUrl}/${item.id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(changes),
-      });
-      if (!response.ok) {
-        setInlineError("Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.");
-        return;
-      }
-      const updated = (await response.json()) as Hardware;
+      const updated = await hardwareLifecycle.save<Hardware>(
+        { eventId: item.event?.id },
+        { ...changes, id: item.id },
+      );
       setItems((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
     };
     const request = saveQueue.current.then(persist, persist);

@@ -11,4 +11,14 @@ describe("AuditService", () => {
     expect((service as any).update).toBeUndefined();
     expect((service as any).remove).toBeUndefined();
   });
+
+  it("writes through a supplied transaction client", async () => {
+    const rootCreate = vi.fn();
+    const transactionCreate = vi.fn().mockResolvedValue({ id: "a2" });
+    const service = new AuditService({ auditLog: { create: rootCreate } } as any);
+    const transaction = { auditLog: { create: transactionCreate } };
+    await service.append({ entity: "HardwareIssue", entityId: "h1", action: "CREATE" }, transaction as any);
+    expect(transactionCreate).toHaveBeenCalledOnce();
+    expect(rootCreate).not.toHaveBeenCalled();
+  });
 });

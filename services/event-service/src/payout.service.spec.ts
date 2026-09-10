@@ -11,8 +11,9 @@ const payout = {
 describe("PayoutService status rules", () => {
   it("sets paidAt when payment is marked as paid", async () => {
     const update = vi.fn().mockResolvedValue({ ...payout, paymentStatus: "AUSBEZAHLT" });
+    const tx = { payout: { findUnique: vi.fn().mockResolvedValue(payout), update }, auditLog: {} };
     const service = new PayoutService(
-      { payout: { findUnique: vi.fn().mockResolvedValue(payout), update }, auditLog: {} } as any,
+      { ...tx, $transaction: (work: (client: typeof tx) => unknown) => work(tx) } as any,
       { append: vi.fn() } as any,
     );
     await service.update("p1", { paymentStatus: "AUSBEZAHLT" });
@@ -23,8 +24,9 @@ describe("PayoutService status rules", () => {
 
   it("allows manually setting every mail status", async () => {
     const update = vi.fn().mockResolvedValue({ ...payout, mailStatus: "GESENDET" });
+    const tx = { payout: { findUnique: vi.fn().mockResolvedValue(payout), update }, auditLog: {} };
     const service = new PayoutService(
-      { payout: { findUnique: vi.fn().mockResolvedValue(payout), update }, auditLog: {} } as any,
+      { ...tx, $transaction: (work: (client: typeof tx) => unknown) => work(tx) } as any,
       { append: vi.fn() } as any,
     );
     await expect(service.update("p1", { mailStatus: "GESENDET" })).resolves.toBeDefined();

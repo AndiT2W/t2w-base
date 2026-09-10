@@ -2,9 +2,13 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "./prisma.service.js";
 import { normalizeHardwareInput } from "@t2w/domain/hardware";
+import { AuditService } from "./audit.service.js";
 @Injectable()
 export class HardwareService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
   list(
     eventId?: string,
     query?: string,
@@ -35,7 +39,8 @@ export class HardwareService {
   }
   async create(eventId: string | undefined, input: any) {
     const data = normalizeHardwareInput(input);
-    const result = await this.prisma.hardwareIssue.create({
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.hardwareIssue.create({
       data: {
         ...data,
         recipientName: input.recipientName?.trim() ?? "",
@@ -44,19 +49,17 @@ export class HardwareService {
         dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
       },
       include: { event: { select: { id: true, eventCode: true, name: true } } },
+      });
+      await this.audit.append(
+        { action: "CREATE", entity: "HardwareIssue", entityId: result.id, details: { eventId: eventId ?? null } },
+        tx,
+      );
+      return result;
     });
-    await this.prisma.auditLog.create({
-      data: {
-        action: "CREATE",
-        entity: "HardwareIssue",
-        entityId: result.id,
-        details: { eventId: eventId ?? null },
-      },
-    });
-    return result;
   }
   async update(eventId: string | undefined, id: string, input: any) {
-    const current = await this.prisma.hardwareIssue.findFirstOrThrow({
+    return this.prisma.$transaction(async (tx) => {
+    const current = await tx.hardwareIssue.findFirstOrThrow({
       where: { id, ...(eventId ? { eventId } : {}) },
     });
     if (
@@ -81,29 +84,26 @@ export class HardwareService {
     for (const key of ["issuedAt", "dueDate", "returnedAt"])
       if (data[key]) data[key] = new Date(data[key]);
     if (input.status === "RETURNED" && !data.returnedAt) data.returnedAt = new Date();
-    const result = await this.prisma.hardwareIssue.update({
+    const result = await tx.hardwareIssue.update({
       where: { id },
       data,
       include: { event: { select: { id: true, eventCode: true, name: true } } },
     });
-    await this.prisma.auditLog.create({
-      data: {
-        action: input.status ? "STATUS_CHANGE" : "UPDATE",
-        entity: "HardwareIssue",
-        entityId: id,
-        details: { from: current.status, to: result.status },
-      },
-    });
+    await this.audit.append(
+      { action: input.status ? "STATUS_CHANGE" : "UPDATE", entity: "HardwareIssue", entityId: id, details: { from: current.status, to: result.status } },
+      tx,
+    );
     return result;
+    });
   }
   async remove(eventId: string | undefined, id: string) {
-    const result = await this.prisma.hardwareIssue.deleteMany({
+    return this.prisma.$transaction(async (tx) => {
+    const result = await tx.hardwareIssue.deleteMany({
       where: { id, ...(eventId ? { eventId } : {}), status: { notIn: ["RETURNED", "COMPLETED"] } },
     });
     if (result.count)
-      await this.prisma.auditLog.create({
-        data: { action: "DELETE", entity: "HardwareIssue", entityId: id },
-      });
+      await this.audit.append({ action: "DELETE", entity: "HardwareIssue", entityId: id }, tx);
     return result;
+    });
   }
 }

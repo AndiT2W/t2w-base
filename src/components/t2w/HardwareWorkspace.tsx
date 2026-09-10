@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
+import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { useT2W } from "@/lib/t2w/store";
 
 type Item = {
@@ -72,11 +72,9 @@ export function HardwareWorkspace({
     .filter((value) => value.active || value.name === editing?.objectName)
     .map((value) => value.name);
   const load = () =>
-    fetch(eventId ? `/api/v1/events/${eventId}/hardware` : "/api/v1/events/hardware", {
-      credentials: "include",
-    })
-      .then((r) => r.json())
-      .then((value) => setItems(normalizeHardwareResponse<Item>(value)))
+    hardwareLifecycle
+      .list<Item>({ eventId })
+      .then(setItems)
       .catch(() => setItems([]));
   useEffect(() => {
     void load();
@@ -112,26 +110,13 @@ export function HardwareWorkspace({
       issuedAt: editing.issuedAt || undefined,
       note: editing.note,
     };
-    const base =
-      eventId && eventId !== "none"
-        ? `/api/v1/events/${eventId}/hardware`
-        : "/api/v1/events/hardware";
-    const url = editing.id ? `${base}/${editing.id}` : base;
-    await fetch(url, {
-      method: editing.id ? "PATCH" : "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    await hardwareLifecycle.save<Item>({ eventId }, { ...payload, id: editing.id });
     setEditing(null);
     await load();
     onSaved?.();
   };
   const remove = async (id: string) => {
-    await fetch(`/api/v1/events/${eventId}/hardware/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    await hardwareLifecycle.remove({ eventId }, id);
     await load();
   };
   return (

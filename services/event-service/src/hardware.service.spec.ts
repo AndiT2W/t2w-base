@@ -27,10 +27,14 @@ describe("HardwareService inline updates", () => {
       updatedAt: new Date("2026-09-01T00:00:00.000Z"),
     };
     const update = vi.fn().mockResolvedValue({ ...current, note: "Gerät gibt ihn zurück" });
-    const service = new HardwareService({
+    const prisma = {
       hardwareIssue: { findFirstOrThrow: vi.fn().mockResolvedValue(current), update },
       auditLog: { create: vi.fn() },
-    } as any);
+    };
+    const service = new HardwareService(
+      { ...prisma, $transaction: (work: (tx: typeof prisma) => unknown) => work(prisma) } as any,
+      { append: vi.fn() } as any,
+    );
 
     await service.update(undefined, current.id, {
       recipientName: current.recipientName,
@@ -51,6 +55,23 @@ describe("HardwareService inline updates", () => {
           note: "Gerät gibt ihn zurück",
         }),
       }),
+    );
+  });
+
+  it("writes the mutation and its audit entry through one transaction client", async () => {
+    const tx = {
+      hardwareIssue: { create: vi.fn().mockResolvedValue({ id: "h1" }) },
+      auditLog: { create: vi.fn() },
+    };
+    const audit = { append: vi.fn().mockResolvedValue(undefined) };
+    const service = new HardwareService(
+      { $transaction: (work: (client: typeof tx) => unknown) => work(tx) } as any,
+      audit as any,
+    );
+    await service.create(undefined, { recipientName: "Ada", objectName: "Tracker" });
+    expect(audit.append).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "CREATE", entity: "HardwareIssue", entityId: "h1" }),
+      tx,
     );
   });
 });
