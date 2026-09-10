@@ -1183,6 +1183,11 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
   await page.getByRole("tab", { name: "Kommunikation" }).click();
   await page.getByRole("button", { name: "Synchronisieren" }).click();
 
+  await expect(page.getByRole("button", { name: "Kompakt" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator('article[data-timeline-view="compact"]')).toHaveCount(2);
   await expect(page.locator('section[aria-label^="Kommunikation "]')).toHaveCount(1);
   await expect(page.getByText("Eventkontakt · Eva Beispiel (Anmeldung)")).toHaveCount(2);
   const time2winLogo = page.getByLabel("Von TIME2WIN gesendet");
@@ -1197,9 +1202,10 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
   await expect(page.getByRole("button", { name: "Vollständige Vorschau" })).toBeVisible();
   await expect(
     page
-      .locator('article[data-timeline-view="cards"]')
+      .locator('article[data-timeline-view="compact"]')
       .getByText("Regressionstest für die aufklappbare Vorschau."),
   ).not.toBeVisible();
+  await expect(page.locator("[data-communication-preview]").first()).toHaveClass(/line-clamp-1/);
 
   await page.getByRole("button", { name: "Vollständige Vorschau" }).click();
   await expect(
@@ -1220,8 +1226,6 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
   await expect(
     page.getByRole("button", { name: /Antwort auf „Startzeit bestätigt“ vom/ }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Kompakt" }).click();
-  await expect(page.locator('article[data-timeline-view="compact"]')).toHaveCount(2);
   await page.getByRole("button", { name: "Hybrid" }).click();
   await expect(page.locator('article[data-timeline-view="cards"]')).toHaveCount(2);
   await expect(page.getByRole("complementary", { name: "Thread-Kontext" })).toBeVisible();

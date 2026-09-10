@@ -257,7 +257,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [communicationContactFilter, setCommunicationContactFilter] = useState("all");
   const [communicationSearch, setCommunicationSearch] = useState("");
   const [communicationView, setCommunicationView] = useState<"cards" | "conversation" | "compact">(
-    "cards",
+    "compact",
   );
   const [selectedCommunicationId, setSelectedCommunicationId] = useState<string | null>(null);
   const threadContextRef = useRef<HTMLElement | null>(null);
@@ -354,15 +354,27 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
   async function outlookSynchronisieren() {
     const outcome = await detailWorkspace.execute("sync-outlook");
-    outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
+    if (outcome.kind === "success") {
+      toast.success(outcome.message);
+    } else {
+      toast.error(outcome.message);
+    }
   }
   async function time2winSynchronisieren() {
     const outcome = await detailWorkspace.execute("sync-time2win");
-    outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
+    if (outcome.kind === "success") {
+      toast.success(outcome.message);
+    } else {
+      toast.error(outcome.message);
+    }
   }
   async function kommunikationSynchronisieren() {
     const outcome = await detailWorkspace.execute("sync-communication");
-    outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
+    if (outcome.kind === "success") {
+      toast.success(outcome.message);
+    } else {
+      toast.error(outcome.message);
+    }
   }
   async function eventLoeschen() {
     try {
@@ -1696,7 +1708,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     : "space-y-5"
                 }
               >
-                <div className="space-y-5">
+                <div className={communicationView === "compact" ? "space-y-3" : "space-y-5"}>
                   {communicationGroups.map((group) => (
                     <section key={group.key} aria-label={`Kommunikation ${group.label}`}>
                       {group.conversation ? (
@@ -1747,7 +1759,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                             : undefined;
                           const viewClasses =
                             communicationView === "compact"
-                              ? "rounded-none border-0 border-b border-border p-3 shadow-none last:border-b-0"
+                              ? "rounded-none border-0 border-b border-border px-3 py-2 shadow-none last:border-b-0"
                               : communicationView === "conversation"
                                 ? message.richtung === "OUTGOING"
                                   ? "ml-8 rounded-2xl rounded-tr-sm p-4 shadow-sm sm:ml-24"
@@ -1783,15 +1795,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                   }`}
                                 />
                               )}
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div className="flex min-w-0 items-center gap-2">
+                              <div className="flex flex-wrap items-start justify-between gap-1.5">
+                                <div className="flex min-w-0 flex-1 items-center gap-2">
                                   <Icon
                                     className="size-4 shrink-0 text-muted-foreground"
                                     aria-hidden="true"
                                   />
-                                  <h4 className="font-medium text-foreground">{message.betreff}</h4>
+                                  <h4
+                                    className={`${communicationView === "compact" ? "truncate text-sm" : ""} font-medium text-foreground`}
+                                    title={message.betreff}
+                                  >
+                                    {message.betreff}
+                                  </h4>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                   <Badge variant="outline">{message.kanal}</Badge>
                                   {message.richtung && (
                                     <Badge
@@ -1831,7 +1848,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                   </time>
                                 </div>
                               </div>
-                              <p className="mt-2 text-sm text-muted-foreground">
+                              <p
+                                className={`${communicationView === "compact" ? "mt-1 truncate text-xs" : "mt-2 text-sm"} text-muted-foreground`}
+                                title={
+                                  message.richtung === "OUTGOING"
+                                    ? message.empfaenger
+                                    : message.autor
+                                }
+                              >
                                 {message.richtung === "OUTGOING" ? "An" : "Von"}:{" "}
                                 {message.richtung === "OUTGOING"
                                   ? message.empfaenger
@@ -1839,7 +1863,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               </p>
                               {linkedContact ? (
                                 <a
-                                  className="mt-2 inline-block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                  className={`${communicationView === "compact" ? "mt-1" : "mt-2"} inline-block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
                                   href={`/kontakte?person=${encodeURIComponent(linkedContact.id)}`}
                                 >
                                   <Badge
@@ -1856,14 +1880,17 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                   </Badge>
                                 </a>
                               ) : message.kanal === "E-Mail" ? (
-                                <Badge className="mt-2" variant="outline">
+                                <Badge
+                                  className={communicationView === "compact" ? "mt-1" : "mt-2"}
+                                  variant="outline"
+                                >
                                   Kein Kontakt zugeordnet
                                 </Badge>
                               ) : null}
                               {isReply && threadOrigin && communicationView !== "conversation" && (
                                 <button
                                   type="button"
-                                  className="mt-3 flex max-w-full items-center gap-1 border-l-2 border-primary/40 pl-3 text-left text-xs font-medium text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  className={`${communicationView === "compact" ? "mt-1" : "mt-3"} flex max-w-full items-center gap-1 border-l-2 border-primary/40 pl-3 text-left text-xs font-medium text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
                                   onClick={() => {
                                     const original = document.getElementById(
                                       `communication-${threadOrigin.id}`,
@@ -1883,13 +1910,16 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 </button>
                               )}
                               <p
-                                className={`mt-3 whitespace-pre-line text-sm text-foreground/80 ${communicationView === "compact" && !expanded ? "line-clamp-2 leading-5" : "leading-6"}`}
+                                data-communication-preview
+                                className={`${communicationView === "compact" ? "mt-1" : "mt-3"} whitespace-pre-line text-sm text-foreground/80 ${communicationView === "compact" && !expanded ? "line-clamp-1 leading-5" : "leading-6"}`}
                               >
                                 {expanded || !longPreview
                                   ? message.text
                                   : `${message.text.slice(0, 180).trimEnd()} …`}
                               </p>
-                              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                              <div
+                                className={`${communicationView === "compact" ? "mt-1" : "mt-3"} flex flex-wrap items-center gap-3 text-xs`}
+                              >
                                 {longPreview && (
                                   <Button
                                     variant="ghost"
@@ -1899,7 +1929,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                       event.stopPropagation();
                                       setExpandedMessages((current) => {
                                         const next = new Set(current);
-                                        expanded ? next.delete(message.id) : next.add(message.id);
+                                        if (expanded) {
+                                          next.delete(message.id);
+                                        } else {
+                                          next.add(message.id);
+                                        }
                                         return next;
                                       });
                                     }}

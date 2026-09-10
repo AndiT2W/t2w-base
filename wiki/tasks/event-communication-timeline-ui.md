@@ -9,6 +9,7 @@ The event communication tab presents synchronized Outlook messages and manual ac
 - Filters separate all entries, e-mails, and manual activities.
 - A local search matches subject, sender/recipient, and preview text.
 - Long e-mail previews are collapsed by default and can be expanded in place.
+- The compact, date-grouped list is the default view. It uses one-line previews, tighter vertical rhythm, and ellipsis for long subjects and addresses while preserving the full values through titles and in-place expansion.
 - E-mail direction, channel, timestamp, attachment state, and Outlook deep link are visible without opening the message.
 - E-mail addresses are matched against loaded CRM persons. A match is shown as a clickable contact badge that opens the matching person directly; otherwise the UI explicitly indicates that no contact is assigned.
 - Existing event contacts receive a blue role badge and a matching timeline accent. Outgoing messages from the configured TIME2WIN mailbox receive the green product accent and a `TIME2WIN gesendet` marker.
