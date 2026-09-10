@@ -47,6 +47,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Der unveränderliche Auditlog ist nun als eigener Unterpunkt in den Einstellungen sichtbar und kann nach Entität gefiltert werden. Siehe [Einstellungsseite](../../src/routes/einstellungen.tsx) und [Auditlog-E2E-Test](../../tests/e2e/auditlog-settings.spec.ts).
 - Hardware-Lebenszyklusaufrufe laufen für zentrale und Event-Detailansichten über ein gemeinsames Intent-Modul; Hardware- und Auszahlungsmutationen schreiben ihre Audit-Einträge atomar über den gemeinsamen Audit-Seam. Siehe [Hardware-Lebenszyklus](../../src/lib/t2w/hardware-lifecycle.ts) und [AuditService](../../services/event-service/src/audit.service.ts).
 - Die zentrale Hardware-Übersicht führt operative Rückgaben mit beschrifteten Filtern, Rücksetzoption, aussagekräftigen Kennzahlen und expliziter Überfälligkeitsmarkierung; die Browser-Regression sichert das Zurücksetzen der Filter. Siehe [Hardware-Verwaltung](tasks/hardware-management-spec.md).
+- Der Hardware-Anlegeflow ist als durchgängiger rechter Sheet spezifiziert; das bestehende Inline-Editing bleibt der schnelle Bearbeitungsweg für Tabellenzeilen. Siehe [Hardware-Anlage im seitlichen Sheet](tasks/hardware-create-sheet-spec.md).
 
 ## Next Best Actions
 

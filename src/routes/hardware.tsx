@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bell, PackageOpen, RotateCcw, TriangleAlert } from "lucide-react";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
@@ -208,7 +208,7 @@ function HardwarePage() {
   const [event, setEvent] = useState("");
   const [overdue, setOverdue] = useState(false);
   const [events, setEvents] = useState<{ id: string; name: string; eventCode: string }[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState("none");
   const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
   const [inlineDraft, setInlineDraft] = useState<InlineDraft | null>(null);
   const [savingInline, setSavingInline] = useState(false);
@@ -228,15 +228,18 @@ function HardwarePage() {
       .then((value) => setEvents(normalizeHardwareResponse(value)))
       .catch(() => setEvents([]));
   }, []);
-  useEffect(() => {
+  const loadItems = useCallback(() => {
     const params = new URLSearchParams({ q });
     if (status !== "active") params.set("status", status);
     if (issueType !== "all") params.set("issueType", issueType);
-    fetch(`/api/v1/events/hardware?${params}`, { credentials: "include" })
+    return fetch(`/api/v1/events/hardware?${params}`, { credentials: "include" })
       .then((r) => r.json())
       .then((value) => setItems(normalizeHardwareResponse<Hardware>(value)))
       .catch(() => setItems([]));
   }, [q, status, issueType]);
+  useEffect(() => {
+    void loadItems();
+  }, [loadItems]);
   useEffect(() => {
     if (!inlineEditingId) return;
     const finishEditing = (pointerEvent: PointerEvent) => {
@@ -336,33 +339,45 @@ function HardwarePage() {
         aktion={<Button onClick={() => setNewHardware(true)}>Hardware-Ausgabe anlegen</Button>}
       />
       <div className="space-y-6">
-        <Sheet open={newHardware} onOpenChange={setNewHardware}>
+        <Sheet
+          open={newHardware}
+          onOpenChange={(open) => {
+            setNewHardware(open);
+            if (!open) setSelectedEventId("none");
+          }}
+        >
           <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
             <SheetHeader>
               <SheetTitle>Hardware-Ausgabe anlegen</SheetTitle>
               <SheetDescription>Neue Ausgabe für ein Event erfassen.</SheetDescription>
             </SheetHeader>
             <div className="mt-5 space-y-4">
-              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Event (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Ohne Event (externer Verleih)</SelectItem>
-                  {events.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name} ({e.eventCode})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedEventId && (
-                <HardwareWorkspace
-                  eventId={selectedEventId}
-                  onSaved={() => setNewHardware(false)}
-                  showList={false}
-                />
-              )}
+              <label className="grid gap-1.5 text-sm font-medium">
+                Event (optional)
+                <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                  <SelectTrigger aria-label="Event zuordnen">
+                    <SelectValue placeholder="Event (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ohne Event (externer Verleih)</SelectItem>
+                    {events.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name} ({e.eventCode})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <HardwareWorkspace
+                eventId={selectedEventId === "none" ? undefined : selectedEventId}
+                createOnMount
+                onSaved={() => {
+                  void loadItems();
+                  setNewHardware(false);
+                  setSelectedEventId("none");
+                }}
+                showList={false}
+              />
             </div>
           </SheetContent>
         </Sheet>

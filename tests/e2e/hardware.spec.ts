@@ -190,6 +190,9 @@ test("keeps the event detail page usable when hardware API returns an error payl
   page,
 }) => {
   await mockEventManagementApi(page);
+  await page.route("**/api/v1/auth/**", (route) =>
+    route.fulfill({ json: { id: "user-1", email: "admin@time2win.cloud", role: "ADMIN" } }),
+  );
   await page.route("**/api/v1/events/*/hardware", (route) =>
     route.fulfill({ status: 500, json: { message: "Database unavailable" } }),
   );
@@ -228,4 +231,66 @@ test("manages hardware from the Event detail tab", async ({ page }) => {
   );
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByText("Max Mustermann")).toBeVisible();
+});
+
+test("creates a central hardware issue in the side sheet and keeps inline editing available", async ({
+  page,
+}) => {
+  const created = {
+    id: "created-hardware",
+    recipientName: "Neue Ausgabe",
+    issueType: "PARTICIPANT",
+    objectName: "Active Transponder (T2W)",
+    quantity: 1,
+    status: "OPEN",
+    event: { id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" },
+  };
+  let hardware = [
+    {
+      id: "existing-hardware",
+      recipientName: "Bestehende Ausgabe",
+      issueType: "PARTICIPANT",
+      objectName: "GPS Tracker (T2W)",
+      quantity: 1,
+      status: "OPEN",
+      event: { id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" },
+    },
+  ];
+  await page.route("**/api/v1/settings**", (route) =>
+    route.fulfill({ json: { outlookJahresordner: [], jahresSites: [], outlookMailbox: null } }),
+  );
+  await page.route("**/api/v1/hardware-objects**", (route) =>
+    route.fulfill({
+      json: [{ id: "hardware-1", name: "Active Transponder (T2W)", active: true }],
+    }),
+  );
+  for (const endpoint of ["sports", "event-roles", "services"]) {
+    await page.route(`**/api/v1/${endpoint}**`, (route) => route.fulfill({ json: [] }));
+  }
+  await page.route("**/api/v1/events**", (route) =>
+    route.fulfill({
+      json: [{ id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" }],
+    }),
+  );
+  await page.route("**/api/v1/events/hardware", (route) => route.fulfill({ json: hardware }));
+  await page.route("**/api/v1/events/event-1/hardware", async (route) => {
+    expect(route.request().method()).toBe("POST");
+    hardware = [...hardware, created];
+    await route.fulfill({ json: created });
+  });
+
+  await page.goto("/hardware");
+  await page.getByRole("button", { name: "Hardware-Ausgabe anlegen" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByLabel("Event zuordnen").click();
+  await page.getByRole("option", { name: /Demo Event/ }).click();
+  await page.getByLabel("Empfänger").fill("Neue Ausgabe");
+  await page.getByLabel("Objekt").click();
+  await page.getByRole("option", { name: "Active Transponder (T2W)" }).click();
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByText("Neue Ausgabe")).toBeVisible();
+  await page.getByRole("row", { name: /Bestehende Ausgabe/ }).click();
+  await expect(page.getByLabel("Empfänger bearbeiten")).toBeVisible();
 });

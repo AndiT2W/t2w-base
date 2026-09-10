@@ -58,22 +58,28 @@ export function HardwareWorkspace({
   initialEditing,
   onSaved,
   showList = true,
+  createOnMount = false,
 }: {
   eventId?: string;
   initialEditing?: Partial<Item> | null;
-  onSaved?: () => void;
+  onSaved?: (item: Item) => void;
   showList?: boolean;
+  createOnMount?: boolean;
 }) {
   const { selectionLists } = useT2W();
   const [items, setItems] = useState<Item[]>([]);
-  const [editing, setEditing] = useState<Partial<Item> | null>(null);
+  const [editing, setEditing] = useState<Partial<Item> | null>(() =>
+    createOnMount ? { objectNumberType: "NONE", issueType: "PARTICIPANT", quantity: 1 } : null,
+  );
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const hardwareObjectNames = selectionLists.hardwareObjects
     .filter((value) => value.active || value.name === editing?.objectName)
     .map((value) => value.name);
   const load = () =>
     hardwareLifecycle
-      .list<Item>({ eventId })
+      .list<Item>(eventId ? { eventId } : {})
       .then(setItems)
       .catch(() => setItems([]));
   useEffect(() => {
@@ -110,13 +116,24 @@ export function HardwareWorkspace({
       issuedAt: editing.issuedAt || undefined,
       note: editing.note,
     };
-    await hardwareLifecycle.save<Item>({ eventId }, { ...payload, id: editing.id });
-    setEditing(null);
-    await load();
-    onSaved?.();
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const saved = await hardwareLifecycle.save<Item>(eventId ? { eventId } : {}, {
+        ...payload,
+        id: editing.id,
+      });
+      setEditing(null);
+      await load();
+      if (saved) onSaved?.(saved);
+    } catch {
+      setSaveError("Die Hardware-Ausgabe konnte nicht gespeichert werden. Bitte erneut versuchen.");
+    } finally {
+      setSaving(false);
+    }
   };
   const remove = async (id: string) => {
-    await hardwareLifecycle.remove({ eventId }, id);
+    await hardwareLifecycle.remove(eventId ? { eventId } : {}, id);
     await load();
   };
   return (
@@ -136,6 +153,7 @@ export function HardwareWorkspace({
         <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-3">
           <Input
             placeholder="Empfänger"
+            aria-label="Empfänger"
             value={editing.recipientName ?? ""}
             onChange={(e) => setEditing({ ...editing, recipientName: e.target.value })}
           />
@@ -168,6 +186,7 @@ export function HardwareWorkspace({
           )}
           <Input
             placeholder="Telefon"
+            aria-label="Telefon"
             value={editing.phone ?? ""}
             onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
           />
@@ -188,6 +207,7 @@ export function HardwareWorkspace({
           </Select>
           <Input
             placeholder="Notiz"
+            aria-label="Notiz"
             value={editing.note ?? ""}
             onChange={(e) => setEditing({ ...editing, note: e.target.value })}
           />
@@ -292,8 +312,15 @@ export function HardwareWorkspace({
             </Select>
           )}
           <div className="flex gap-2 sm:col-span-3">
-            <Button onClick={() => void save()}>Speichern</Button>
-            <Button variant="outline" onClick={() => setEditing(null)}>
+            {saveError && (
+              <p className="text-sm text-destructive" role="alert">
+                {saveError}
+              </p>
+            )}
+            <Button disabled={saving} onClick={() => void save()}>
+              {saving ? "Speichert …" : "Speichern"}
+            </Button>
+            <Button disabled={saving} variant="outline" onClick={() => setEditing(null)}>
               Abbrechen
             </Button>
           </div>

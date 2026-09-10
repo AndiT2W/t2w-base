@@ -12,3 +12,4 @@ Use this section only for task notes that create durable project context worth k
 - [Legacy Event Contact Migration Audit](legacy-event-contact-migration-audit.md)
 - [Event Communication Timeline UI](event-communication-timeline-ui.md)
 - [Spezifikation: Hardware-Verwaltung](hardware-management-spec.md)
+- [Hardware-Anlage im seitlichen Sheet](hardware-create-sheet-spec.md)
