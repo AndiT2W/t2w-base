@@ -46,6 +46,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Am 2026-09-09 wurde ein internes Mehrbenutzermodell beschlossen: eine Organisation, eigene E-Mail-/Passwortkonten, die Rollen `Admin` und `Benutzer`, Admin-Verwaltung, serverseitige Berechtigungsprüfung, Deaktivierung statt Löschung und `.env`-Bootstrap für den ersten Admin. Siehe [Systembenutzer und Berechtigungen](decisions/2026-09-09-systembenutzer-und-berechtigungen.md).
 - Der unveränderliche Auditlog ist nun als eigener Unterpunkt in den Einstellungen sichtbar und kann nach Entität gefiltert werden. Siehe [Einstellungsseite](../../src/routes/einstellungen.tsx) und [Auditlog-E2E-Test](../../tests/e2e/auditlog-settings.spec.ts).
 - Hardware-Lebenszyklusaufrufe laufen für zentrale und Event-Detailansichten über ein gemeinsames Intent-Modul; Hardware- und Auszahlungsmutationen schreiben ihre Audit-Einträge atomar über den gemeinsamen Audit-Seam. Siehe [Hardware-Lebenszyklus](../../src/lib/t2w/hardware-lifecycle.ts) und [AuditService](../../services/event-service/src/audit.service.ts).
+- Die zentrale Hardware-Übersicht führt operative Rückgaben mit beschrifteten Filtern, Rücksetzoption, aussagekräftigen Kennzahlen und expliziter Überfälligkeitsmarkierung; die Browser-Regression sichert das Zurücksetzen der Filter. Siehe [Hardware-Verwaltung](tasks/hardware-management-spec.md).
 
 ## Next Best Actions
 

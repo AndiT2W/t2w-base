@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Bell, PackageOpen, RotateCcw, TriangleAlert } from "lucide-react";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { useT2W } from "@/lib/t2w/store";
@@ -70,6 +71,39 @@ function number(item: Hardware) {
     return `${item.objectNumberPrefix}${String(item.objectNumberFrom).padStart(3, "0")}–${item.objectNumberPrefix}${String(item.objectNumberTo).padStart(3, "0")}`;
   return "—";
 }
+function isOverdue(item: Hardware, today: string) {
+  return Boolean(
+    item.dueDate &&
+    item.dueDate.slice(0, 10) < today &&
+    item.status !== "RETURNED" &&
+    item.status !== "COMPLETED",
+  );
+}
+function formatDate(value?: string) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("de-AT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(`${value.slice(0, 10)}T12:00:00`));
+}
+function statusBadge(item: Hardware, today: string) {
+  const label = labels[item.status] ?? item.status;
+  if (isOverdue(item, today))
+    return (
+      <Badge variant="destructive" className="gap-1">
+        <TriangleAlert className="size-3" aria-hidden="true" /> {label}
+      </Badge>
+    );
+  if (item.status === "OPEN" || item.status === "MAIL_SEND")
+    return (
+      <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
+        {label}
+      </Badge>
+    );
+  if (item.status === "NOTIFIED") return <Badge variant="secondary">{label}</Badge>;
+  return <Badge variant="outline">{label}</Badge>;
+}
 function objectNumberChanges(value: string) {
   const trimmed = value.trim();
   if (!trimmed)
@@ -99,7 +133,7 @@ function objectNumberChanges(value: string) {
     objectNumberTo: null,
   };
 }
-function cell(item: Hardware, column: HardwareColumn): ReactNode {
+function cell(item: Hardware, column: HardwareColumn, today: string): ReactNode {
   if (column === "Event")
     return item.event ? (
       <Link
@@ -120,9 +154,13 @@ function cell(item: Hardware, column: HardwareColumn): ReactNode {
   if (column === "Objekt") return item.objectName;
   if (column === "Nummer") return number(item);
   if (column === "Anzahl") return item.quantity;
-  if (column === "Status") return <Badge>{labels[item.status] ?? item.status}</Badge>;
+  if (column === "Status") return statusBadge(item, today);
   if (column === "Kommentar") return item.note ?? "—";
-  return item.dueDate?.slice(0, 10) ?? "—";
+  return (
+    <span className={isOverdue(item, today) ? "font-medium text-destructive" : undefined}>
+      {formatDate(item.dueDate)}
+    </span>
+  );
 }
 const HARDWARE_COLUMNS = [
   "Event",
@@ -231,15 +269,18 @@ function HardwarePage() {
           .includes(q.toLowerCase())) &&
       (status !== "active" || (i.status !== "RETURNED" && i.status !== "COMPLETED")) &&
       (!event || i.event?.name.toLowerCase().includes(event.toLowerCase())) &&
-      (!overdue ||
-        Boolean(
-          i.dueDate &&
-          i.dueDate.slice(0, 10) < today &&
-          i.status !== "RETURNED" &&
-          i.status !== "COMPLETED",
-        )),
+      (!overdue || isOverdue(i, today)),
   );
   const rows = useMemo(() => table.rows(active), [active, table]);
+  const overdueCount = active.filter((item) => isOverdue(item, today)).length;
+  const hasFilters = Boolean(q || event || overdue || status !== "active" || issueType !== "all");
+  const resetFilters = () => {
+    setQ("");
+    setEvent("");
+    setStatus("active");
+    setIssueType("all");
+    setOverdue(false);
+  };
   const hardwareObjectNames = selectionLists.hardwareObjects
     .filter((value) => value.active)
     .map((value) => value.name);
@@ -325,54 +366,92 @@ function HardwarePage() {
             </div>
           </SheetContent>
         </Sheet>
-        <div className="grid gap-3 sm:grid-cols-4">
+        <section aria-label="Übersicht" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            ["Offen", active.filter((i) => i.status === "OPEN").length],
-            ["Benachrichtigt", active.filter((i) => i.status === "NOTIFIED").length],
-            ["Verleih", active.filter((i) => i.issueType === "RENTAL").length],
-            ["Gesamt aktiv", active.length],
-          ].map(([title, value]) => (
-            <Card key={String(title)}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">{title}</CardTitle>
+            [
+              "Offen",
+              active.filter((i) => i.status === "OPEN").length,
+              PackageOpen,
+              "text-primary",
+            ],
+            [
+              "Benachrichtigt",
+              active.filter((i) => i.status === "NOTIFIED").length,
+              Bell,
+              "text-muted-foreground",
+            ],
+            [
+              "Überfällig",
+              overdueCount,
+              TriangleAlert,
+              overdueCount ? "text-destructive" : "text-muted-foreground",
+            ],
+            ["Gesamt aktiv", active.length, PackageOpen, "text-foreground"],
+          ].map(([title, value, Icon, iconClass]) => (
+            <Card key={String(title)} className="border-border/80 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+                <Icon className={`size-4 ${iconClass}`} aria-hidden="true" />
               </CardHeader>
-              <CardContent className="text-2xl font-semibold">{value}</CardContent>
+              <CardContent className="text-3xl font-semibold tabular-nums">{value}</CardContent>
             </Card>
           ))}
-        </div>
-        <Card>
-          <CardHeader>
-            <div className="mt-3 grid gap-2 sm:grid-cols-4">
-              <Input
-                placeholder="Event filtern …"
-                value={event}
-                onChange={(e) => setEvent(e.target.value)}
-              />
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Aktive</SelectItem>
-                  <SelectItem value="OPEN">Offen</SelectItem>
-                  <SelectItem value="MAIL_SEND">Mail senden</SelectItem>
-                  <SelectItem value="NOTIFIED">Benachrichtigt</SelectItem>
-                  <SelectItem value="RETURNED">Retourniert</SelectItem>
-                  <SelectItem value="COMPLETED">Abgeschlossen</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={issueType} onValueChange={setIssueType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Alle Ausgabearten</SelectItem>
-                  <SelectItem value="PARTICIPANT">Teilnehmer</SelectItem>
-                  <SelectItem value="RENTAL">Verleih</SelectItem>
-                  <SelectItem value="OTHER">Sonstige</SelectItem>
-                </SelectContent>
-              </Select>
-              <label className="flex items-center gap-2 text-sm">
+        </section>
+        <Card className="border-border/80 shadow-sm">
+          <CardHeader className="gap-4 border-b border-border/70 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="font-semibold leading-none tracking-tight">Rückgabevorgänge</h2>
+                <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+                  {active.length} {active.length === 1 ? "aktiver Vorgang" : "aktive Vorgänge"}
+                </p>
+              </div>
+              {hasFilters && (
+                <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-2">
+                  <RotateCcw className="size-4" aria-hidden="true" /> Filter zurücksetzen
+                </Button>
+              )}
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(14rem,1.2fr)_minmax(10rem,.8fr)_minmax(10rem,.8fr)_auto_auto] xl:items-end">
+              <label className="grid gap-1.5 text-sm font-medium">
+                Event
+                <Input
+                  placeholder="Event filtern …"
+                  value={event}
+                  onChange={(e) => setEvent(e.target.value)}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Status
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Aktive</SelectItem>
+                    <SelectItem value="OPEN">Offen</SelectItem>
+                    <SelectItem value="MAIL_SEND">Mail senden</SelectItem>
+                    <SelectItem value="NOTIFIED">Benachrichtigt</SelectItem>
+                    <SelectItem value="RETURNED">Retourniert</SelectItem>
+                    <SelectItem value="COMPLETED">Abgeschlossen</SelectItem>
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Ausgabeart
+                <Select value={issueType} onValueChange={setIssueType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Ausgabearten</SelectItem>
+                    <SelectItem value="PARTICIPANT">Teilnehmer</SelectItem>
+                    <SelectItem value="RENTAL">Verleih</SelectItem>
+                    <SelectItem value="OTHER">Sonstige</SelectItem>
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="flex h-10 items-center gap-2 text-sm font-medium">
                 <input
                   type="checkbox"
                   checked={overdue}
@@ -380,11 +459,13 @@ function HardwarePage() {
                 />{" "}
                 Überfällig
               </label>
-              <ColumnPicker
-                columns={HARDWARE_COLUMNS}
-                visibleColumns={table.visibleColumns}
-                toggleColumn={table.toggleColumn}
-              />
+              <div className="flex h-10 items-end">
+                <ColumnPicker
+                  columns={HARDWARE_COLUMNS}
+                  visibleColumns={table.visibleColumns}
+                  toggleColumn={table.toggleColumn}
+                />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -396,8 +477,9 @@ function HardwarePage() {
                 {inlineError}
               </p>
             )}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-md border border-border/70">
+              <table className="min-w-[1100px] w-full text-sm">
+                <caption className="sr-only">Aktive Hardware-Rückgabevorgänge</caption>
                 <thead>
                   <tr className="border-b text-left">
                     {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => (
@@ -418,7 +500,7 @@ function HardwarePage() {
                       key={i.id}
                       data-inline-editing={inlineEditingId === i.id ? "true" : undefined}
                       aria-busy={savingInline && inlineEditingId === i.id}
-                      className="cursor-pointer border-b hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="cursor-pointer border-b transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[inline-editing=true]:bg-accent/50"
                       tabIndex={0}
                       onClick={() => inlineEditingId !== i.id && beginInlineEdit(i)}
                       onKeyDown={(event) => {
@@ -717,12 +799,22 @@ function HardwarePage() {
                           );
                         return (
                           <td className="px-2 py-1" key={h}>
-                            {cell(i, h)}
+                            {cell(i, h, today)}
                           </td>
                         );
                       })}
                     </tr>
                   ))}
+                  {!rows.length && (
+                    <tr>
+                      <td
+                        colSpan={table.visibleColumns.length}
+                        className="px-4 py-12 text-center text-muted-foreground"
+                      >
+                        Keine Hardware-Vorgänge entsprechen den aktuellen Filtern.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
