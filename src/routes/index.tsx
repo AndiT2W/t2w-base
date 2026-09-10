@@ -1,6 +1,14 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, CalendarClock, CheckSquare, Mail, Pencil, Plus, Share2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckSquare,
+  Mail,
+  Pencil,
+  Plus,
+  Share2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -160,7 +168,8 @@ function Uebersicht() {
           >
             <AlertTriangle className="size-5 shrink-0 text-risk-kritisch" aria-hidden="true" />
             <span className="flex-1">
-              {kpi.ueberfaellig} {kpi.ueberfaellig === 1 ? "Event hat" : "Events haben"} überfällige Aufgaben.
+              {kpi.ueberfaellig} {kpi.ueberfaellig === 1 ? "Event hat" : "Events haben"} überfällige
+              Aufgaben.
             </span>
             <span className="font-medium text-risk-kritisch">Anzeigen</span>
           </button>
@@ -295,7 +304,7 @@ function Uebersicht() {
                 const offen = e.aufgaben.filter((a) => !a.erledigt).length;
                 const folders = resolveEventFolderNavigation(e, settings);
                 return (
-                   <tr key={e.id} className="border-t border-border hover:bg-accent/50">
+                  <tr key={e.id} className="border-t border-border hover:bg-accent/50">
                     {visibleColumns.includes("Status") && (
                       <td
                         className="px-2 py-1"
@@ -341,18 +350,9 @@ function Uebersicht() {
                     {visibleColumns.includes("Ordner") && (
                       <td className="px-2 py-1">
                         <span className="flex gap-1">
-                          <FolderLink
-                            icon="outlook"
-                            label="Outlook"
-                            href={folders.outlook.href}
-                            available={folders.outlook.available}
-                          />
-                          <FolderLink
-                            icon="sharepoint"
-                            label="SharePoint"
-                            href={folders.sharepoint.href}
-                            available={folders.sharepoint.available}
-                          />
+                          {folders.map((destination) => (
+                            <FolderLink key={destination.id} destination={destination} />
+                          ))}
                         </span>
                       </td>
                     )}

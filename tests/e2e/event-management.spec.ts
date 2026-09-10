@@ -275,8 +275,10 @@ test("filtert die Übersicht über den Status-Dropdown und zeigt Ordner nur als 
     page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Statuslegende")).toBeVisible();
-  await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft")).toBeVisible();
-  await expect(page.locator("table").getByLabel("SharePoint: nicht verknüpft")).toBeVisible();
+  await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft").first()).toBeVisible();
+  await expect(
+    page.locator("table").getByLabel("SharePoint: nicht verknüpft").first(),
+  ).toBeVisible();
   await expect(page.getByText("Outlook-Ordner", { exact: true })).toHaveCount(0);
   await expect(page.getByText("SharePoint-Ordner", { exact: true })).toHaveCount(0);
 });
@@ -986,8 +988,10 @@ test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page
   await page.goto("/");
   const ordnerSpalte = page.locator("thead th").nth(6).locator("[title='Outlook und SharePoint']");
   await expect(ordnerSpalte).toHaveAttribute("title", "Outlook und SharePoint");
-  await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft")).toBeVisible();
-  await expect(page.locator("table").getByLabel("SharePoint: nicht verknüpft")).toBeVisible();
+  await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft").first()).toBeVisible();
+  await expect(
+    page.locator("table").getByLabel("SharePoint: nicht verknüpft").first(),
+  ).toBeVisible();
 });
 
 test("öffnet den Outlook-Ordner per Deep Link in Übersicht und Veranstaltungen", async ({
@@ -1132,22 +1136,24 @@ test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Dup
   await page.getByRole("tab", { name: "Kommunikation" }).click();
   await page.getByRole("button", { name: "Synchronisieren" }).click();
 
-  await expect(page.getByText("Startzeit bestätigt")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Startzeit bestätigt", exact: true })).toBeVisible();
   await expect(page.getByText("Eingehend", { exact: true })).toBeVisible();
   await expect(page.getByText("Von: Eva Beispiel <eva@example.at>")).toBeVisible();
-  await expect(page.getByText("Der Start bleibt um 09:00 Uhr.")).toBeVisible();
-  await expect(page.getByText("Ausgehend", { exact: true })).toBeVisible();
+  await expect(page.getByText("Der Start bleibt um 09:00 Uhr.").first()).toBeVisible();
+  await expect(page.getByText("Ausgehend", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("An: Eva Beispiel <eva@example.at>")).toBeVisible();
-  await expect(page.getByText("Zeitplan an das Team gesendet")).toBeVisible();
+  await expect(page.getByText("Zeitplan an das Team gesendet").first()).toBeVisible();
   await expect(
     page.locator('a[href="https://outlook.office.com/mail/deeplink/read/mail-1"]'),
   ).toHaveAccessibleName("In Outlook öffnen");
 
   await page.getByRole("button", { name: "Synchronisieren" }).click();
-  await expect(page.getByText("Startzeit bestätigt")).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Startzeit bestätigt", exact: true })).toHaveCount(
+    1,
+  );
   await page.reload();
   await page.getByRole("tab", { name: "Kommunikation" }).click();
-  await expect(page.getByText("Startzeit bestätigt")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Startzeit bestätigt", exact: true })).toBeVisible();
   expect(requests.filter((request) => request.url.endsWith("/outlook-messages/sync"))).toHaveLength(
     2,
   );

@@ -393,7 +393,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       toast.error("Event konnte nicht kopiert werden. Der Eventcode muss eindeutig sein.");
     }
   }
-  const { seriesCandidates, seriesEvents, previousSeriesEvent: previousEvent, nextSeriesEvent: nextEvent } = detail;
+  const {
+    seriesCandidates,
+    seriesEvents,
+    previousSeriesEvent: previousEvent,
+    nextSeriesEvent: nextEvent,
+  } = detail;
   const visibleSeriesCandidates = seriesCandidates.filter((item) => {
     const query = seriesSearch.trim().toLocaleLowerCase();
     if (!query) return true;
@@ -537,14 +542,38 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
           <TabsList className="min-w-0 max-w-full flex-1 gap-2 overflow-x-auto whitespace-nowrap">
-          <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
-          <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
-          <TabsTrigger value="finanz">FINANZ</TabsTrigger>
-          <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
-          <TabsTrigger id="event-tab-aufgaben" className="sr-only md:not-sr-only md:inline-flex" value="aufgaben">AUFGABEN</TabsTrigger>
-          <TabsTrigger id="event-tab-dateien" className="sr-only md:not-sr-only md:inline-flex" value="dateien">DATEIEN</TabsTrigger>
-          <TabsTrigger id="event-tab-kommunikation" className="sr-only md:not-sr-only md:inline-flex" value="kommunikation">KOMMUNIKATION</TabsTrigger>
-          <TabsTrigger id="event-tab-hardware" className="sr-only md:not-sr-only md:inline-flex" value="hardware">HARDWARE</TabsTrigger>
+            <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
+            <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
+            <TabsTrigger value="finanz">FINANZ</TabsTrigger>
+            <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
+            <TabsTrigger
+              id="event-tab-aufgaben"
+              className="sr-only md:not-sr-only md:inline-flex"
+              value="aufgaben"
+            >
+              AUFGABEN
+            </TabsTrigger>
+            <TabsTrigger
+              id="event-tab-dateien"
+              className="sr-only md:not-sr-only md:inline-flex"
+              value="dateien"
+            >
+              DATEIEN
+            </TabsTrigger>
+            <TabsTrigger
+              id="event-tab-kommunikation"
+              className="sr-only md:not-sr-only md:inline-flex"
+              value="kommunikation"
+            >
+              KOMMUNIKATION
+            </TabsTrigger>
+            <TabsTrigger
+              id="event-tab-hardware"
+              className="sr-only md:not-sr-only md:inline-flex"
+              value="hardware"
+            >
+              HARDWARE
+            </TabsTrigger>
           </TabsList>
           <div className="md:hidden">
             <DropdownMenu>
@@ -609,8 +638,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     checked={form.archiviert}
                     onCheckedChange={(v) => set("archiviert", v)}
                   />
-          </div>
-        </div>
+                </div>
+              </div>
               <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                 <section aria-labelledby="event-identity-period" className="space-y-3">
                   <h3
@@ -875,13 +904,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <FolderLink
-                    label="Outlook"
-                    href={folders.outlook.href}
-                    available={folders.outlook.available}
-                  >
-                    {form.outlookOrdner}
-                  </FolderLink>
+                  <FolderLink destination={folders.find(({ id }) => id === "outlook")!} />
                   <Button
                     type="button"
                     variant="outline"
@@ -934,30 +957,41 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   {jahresSite ? jahresSite.url : "in Einstellungen noch nicht hinterlegt"}
                 </p>
                 <div className="mt-2 text-xs">
-                  <FolderLink
-                    label="SharePoint"
-                    href={folders.sharepoint.href}
-                    available={folders.sharepoint.available}
-                  >
-                    {form.sharepointOrdner}
-                  </FolderLink>
+                  <FolderLink destination={folders.find(({ id }) => id === "sharepoint")!} />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Collapsible open={deleteAreaOpen} onOpenChange={setDeleteAreaOpen}>
-            <section className="rounded-lg border border-destructive/30 bg-destructive/5 p-5" aria-labelledby="event-delete-heading">
+            <section
+              className="rounded-lg border border-destructive/30 bg-destructive/5 p-5"
+              aria-labelledby="event-delete-heading"
+            >
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full justify-between px-0 text-destructive hover:bg-transparent">
-                  <span id="event-delete-heading" className="font-semibold">Gefahrenbereich</span>
-                  {deleteAreaOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                <Button
+                  variant="ghost"
+                  className="w-full justify-between px-0 text-destructive hover:bg-transparent"
+                >
+                  <span id="event-delete-heading" className="font-semibold">
+                    Gefahrenbereich
+                  </span>
+                  {deleteAreaOpen ? (
+                    <ChevronUp className="size-4" />
+                  ) : (
+                    <ChevronDown className="size-4" />
+                  )}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Das Event und die zugehörigen Daten werden dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.
+                  Das Event und die zugehörigen Daten werden dauerhaft gelöscht. Dieser Vorgang kann
+                  nicht rückgängig gemacht werden.
                 </p>
-                <Button variant="destructive" className="mt-4" onClick={() => setDeleteDialog(true)}>
+                <Button
+                  variant="destructive"
+                  className="mt-4"
+                  onClick={() => setDeleteDialog(true)}
+                >
                   Event löschen
                 </Button>
               </CollapsibleContent>

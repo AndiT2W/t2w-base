@@ -25,7 +25,8 @@ import {
   servicePresentation,
   selectionPresentation,
 } from "@/components/t2w/ServiceBadge";
-import { apiAuditLog, apiOutlookStatus, type ApiAuditLog } from "@/lib/t2w/api";
+import { apiAuditLog, apiOutlookStatus } from "@/lib/t2w/api";
+import { createAuditLogWorkspace, type AuditLogEntity } from "@/lib/t2w/audit-log-workspace";
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 import { createSelectionListManagementWorkspace } from "@/lib/t2w/selection-list-management-workspace";
 
@@ -61,14 +62,29 @@ export const Route = createFileRoute("/einstellungen")({
 });
 
 function Einstellungen() {
-  const { settings, setSettings, selectionLists, createSelectionValue, updateSelectionValue, reorderSelectionValues } =
-    useT2W();
+  const {
+    settings,
+    setSettings,
+    selectionLists,
+    createSelectionValue,
+    updateSelectionValue,
+    reorderSelectionValues,
+  } = useT2W();
   const { tab, liste } = Route.useSearch();
   const navigate = useNavigate();
   const [workspace] = useState(() =>
     createSettingsWorkspace({ save: setSettings, checkOutlook: apiOutlookStatus }, settings),
   );
-  const management = useMemo(() => createSelectionListManagementWorkspace({ create: createSelectionValue, update: updateSelectionValue, reorder: reorderSelectionValues }), [createSelectionValue, updateSelectionValue, reorderSelectionValues]);
+  const [auditLog] = useState(() => createAuditLogWorkspace({ load: apiAuditLog }));
+  const management = useMemo(
+    () =>
+      createSelectionListManagementWorkspace({
+        create: createSelectionValue,
+        update: updateSelectionValue,
+        reorder: reorderSelectionValues,
+      }),
+    [createSelectionValue, updateSelectionValue, reorderSelectionValues],
+  );
   const sports = selectionLists.sports;
   const [newSport, setNewSport] = useState("");
   const eventRoles = selectionLists.eventRoles;
@@ -77,11 +93,10 @@ function Einstellungen() {
   const [newService, setNewService] = useState("");
   const hardwareObjects = selectionLists.hardwareObjects;
   const [newHardwareObject, setNewHardwareObject] = useState("");
-  const [dragged, setDragged] = useState<{ kind: "sports" | "eventRoles" | "services" | "hardwareObjects"; id: string } | null>(null);
-  const [auditEntries, setAuditEntries] = useState<ApiAuditLog[]>([]);
-  const [auditEntity, setAuditEntity] = useState("");
-  const [auditSearch, setAuditSearch] = useState("");
-  const [auditLoading, setAuditLoading] = useState(false);
+  const [dragged, setDragged] = useState<{
+    kind: "sports" | "eventRoles" | "services" | "hardwareObjects";
+    id: string;
+  } | null>(null);
   const [presentation, setPresentation] = useState<{
     kind: "sports" | "eventRoles" | "services" | "hardwareObjects";
     id: string;
@@ -91,6 +106,7 @@ function Einstellungen() {
     workspace.snapshot,
     workspace.snapshot,
   );
+  const audit = useSyncExternalStore(auditLog.subscribe, auditLog.snapshot, auditLog.snapshot);
   const { outlookJahresordner, jahresSites: sites, outlookMailbox: mailbox } = draft;
   const setOutlookJahresordner = (
     next:
@@ -112,50 +128,18 @@ function Einstellungen() {
   }, [settings, workspace]);
   useEffect(() => {
     if (tab !== "auditlog") return;
-    setAuditLoading(true);
-    void apiAuditLog({ entity: auditEntity || undefined })
-      .then(setAuditEntries)
-      .catch(() => toast.error("Auditlog konnte nicht geladen werden."))
-      .finally(() => setAuditLoading(false));
-  }, [tab, auditEntity]);
-  const visibleAuditEntries = useMemo(() => {
-    const query = auditSearch.trim().toLocaleLowerCase("de-AT");
-    if (!query) return auditEntries;
-    return auditEntries.filter((entry) =>
-      [
-        entry.entity,
-        entry.entityId,
-        entry.action,
-        entry.user?.displayName,
-        entry.user?.email,
-        JSON.stringify(entry.details),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase("de-AT")
-        .includes(query),
-    );
-  }, [auditEntries, auditSearch]);
+    void auditLog.load();
+  }, [auditLog, tab]);
+  useEffect(() => {
+    if (audit.error) toast.error("Auditlog konnte nicht geladen werden.");
+  }, [audit.error]);
   function exportAuditLog() {
-    const escape = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-    const rows = [
-      ["Zeitpunkt", "Entität", "Aktion", "Benutzer", "Datensatz", "Details"],
-      ...visibleAuditEntries.map((entry) => [
-        new Date(entry.createdAt).toISOString(),
-        entry.entity,
-        entry.action,
-        entry.user?.displayName ?? entry.user?.email ?? "System",
-        entry.entityId,
-        JSON.stringify(entry.details ?? {}),
-      ]),
-    ];
-    const blob = new Blob([rows.map((row) => row.map(escape).join(",")).join("\r\n")], {
-      type: "text/csv;charset=utf-8",
-    });
+    const file = auditLog.exportCsv();
+    const blob = new Blob([file.contents], { type: file.mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `auditlog-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = file.fileName;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -248,7 +232,16 @@ function Einstellungen() {
       toast.error("Hardware-Objekt konnte nicht angelegt werden.");
     }
   }
-  async function saveHardwareObject(id: string, patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number }) {
+  async function saveHardwareObject(
+    id: string,
+    patch: {
+      name?: string;
+      active?: boolean;
+      icon?: string | null;
+      color?: string | null;
+      sortOrder?: number;
+    },
+  ) {
     try {
       await updateSelectionValue("hardwareObjects", id, patch);
       toast.success("Hardware-Objekt gespeichert.");
@@ -256,14 +249,20 @@ function Einstellungen() {
       toast.error("Hardware-Objekt konnte nicht gespeichert werden.");
     }
   }
-  async function reorder(kind: "sports" | "eventRoles" | "services" | "hardwareObjects", id: string) {
+  async function reorder(
+    kind: "sports" | "eventRoles" | "services" | "hardwareObjects",
+    id: string,
+  ) {
     if (!dragged || dragged.kind !== kind || dragged.id === id) return;
     const values = selectionLists[kind];
     const from = values.findIndex((value) => value.id === dragged.id);
     const to = values.findIndex((value) => value.id === id);
     if (from < 0 || to < 0) return;
     const result = await management.reorder(kind, dragged.id, id);
-    if (result.kind === "failed") { toast.error("Reihenfolge konnte nicht gespeichert werden."); return; }
+    if (result.kind === "failed") {
+      toast.error("Reihenfolge konnte nicht gespeichert werden.");
+      return;
+    }
     setDragged(null);
     toast.success("Reihenfolge gespeichert.");
   }
@@ -430,8 +429,16 @@ function Einstellungen() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex gap-2 pt-2">
-                        <Input aria-label="Neue Sportart" value={newSport} onChange={(event) => setNewSport(event.target.value)} placeholder="Sportart hinzufügen" />
-                        <Button type="button" onClick={() => void addSport()}><Plus className="size-4" />Hinzufügen</Button>
+                        <Input
+                          aria-label="Neue Sportart"
+                          value={newSport}
+                          onChange={(event) => setNewSport(event.target.value)}
+                          placeholder="Sportart hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addSport()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
                       </div>
                       {sports.map((sport) => (
                         <div
@@ -502,8 +509,16 @@ function Einstellungen() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex gap-2 pt-2">
-                        <Input aria-label="Neuer Service" value={newService} onChange={(event) => setNewService(event.target.value)} placeholder="Service hinzufügen" />
-                        <Button type="button" onClick={() => void addService()}><Plus className="size-4" />Hinzufügen</Button>
+                        <Input
+                          aria-label="Neuer Service"
+                          value={newService}
+                          onChange={(event) => setNewService(event.target.value)}
+                          placeholder="Service hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addService()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
                       </div>
                       {services.map((service) => (
                         <div
@@ -582,14 +597,28 @@ function Einstellungen() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex gap-2 pt-2">
-                        <Input aria-label="Neues Hardware-Objekt" value={newHardwareObject} onChange={(event) => setNewHardwareObject(event.target.value)} placeholder="Hardware-Objekt hinzufügen" />
-                        <Button type="button" aria-label="Hardware-Objekt hinzufügen" onClick={() => void addHardwareObject()}><Plus className="size-4" />Hinzufügen</Button>
+                        <Input
+                          aria-label="Neues Hardware-Objekt"
+                          value={newHardwareObject}
+                          onChange={(event) => setNewHardwareObject(event.target.value)}
+                          placeholder="Hardware-Objekt hinzufügen"
+                        />
+                        <Button
+                          type="button"
+                          aria-label="Hardware-Objekt hinzufügen"
+                          onClick={() => void addHardwareObject()}
+                        >
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
                       </div>
                       {hardwareObjects.map((hardwareObject) => (
                         <div
                           key={hardwareObject.id}
                           draggable
-                          onDragStart={() => setDragged({ kind: "hardwareObjects", id: hardwareObject.id })}
+                          onDragStart={() =>
+                            setDragged({ kind: "hardwareObjects", id: hardwareObject.id })
+                          }
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={() => void reorder("hardwareObjects", hardwareObject.id)}
                           className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
@@ -609,8 +638,19 @@ function Einstellungen() {
                                 void saveHardwareObject(hardwareObject.id, { name });
                             }}
                           />
-                          <Button type="button" variant="outline" aria-label={`Darstellung für Hardware-Objekt ${hardwareObject.name}`} onClick={() => setPresentation({ kind: "hardwareObjects", id: hardwareObject.id })}>
-                            <span className={`size-3 rounded-full border ${selectionPresentation(hardwareObject).className}`} aria-hidden="true" /> Darstellung
+                          <Button
+                            type="button"
+                            variant="outline"
+                            aria-label={`Darstellung für Hardware-Objekt ${hardwareObject.name}`}
+                            onClick={() =>
+                              setPresentation({ kind: "hardwareObjects", id: hardwareObject.id })
+                            }
+                          >
+                            <span
+                              className={`size-3 rounded-full border ${selectionPresentation(hardwareObject).className}`}
+                              aria-hidden="true"
+                            />{" "}
+                            Darstellung
                           </Button>
                           <Button
                             type="button"
@@ -731,8 +771,16 @@ function Einstellungen() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex gap-2 pt-2">
-                        <Input aria-label="Neue Eventrolle" value={newEventRole} onChange={(event) => setNewEventRole(event.target.value)} placeholder="Eventrolle hinzufügen" />
-                        <Button type="button" onClick={() => void addEventRole()}><Plus className="size-4" />Hinzufügen</Button>
+                        <Input
+                          aria-label="Neue Eventrolle"
+                          value={newEventRole}
+                          onChange={(event) => setNewEventRole(event.target.value)}
+                          placeholder="Eventrolle hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addEventRole()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
                       </div>
                       {eventRoles.map((role) => (
                         <div
@@ -817,8 +865,8 @@ function Einstellungen() {
                       <Input
                         id="audit-search"
                         aria-label="Auditlog durchsuchen"
-                        value={auditSearch}
-                        onChange={(event) => setAuditSearch(event.target.value)}
+                        value={audit.search}
+                        onChange={(event) => auditLog.search(event.target.value)}
                         className="pl-9"
                         placeholder="Aktion, Benutzer oder Datensatz …"
                       />
@@ -829,8 +877,10 @@ function Einstellungen() {
                     <select
                       id="audit-entity"
                       aria-label="Auditlog nach Entität filtern"
-                      value={auditEntity}
-                      onChange={(event) => setAuditEntity(event.target.value)}
+                      value={audit.entity}
+                      onChange={(event) =>
+                        void auditLog.selectEntity(event.target.value as AuditLogEntity)
+                      }
                       className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                     >
                       <option value="">Alle Entitäten</option>
@@ -839,13 +889,8 @@ function Einstellungen() {
                       <option value="Hardware">Hardware</option>
                     </select>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={exportAuditLog}
-                    disabled={auditLoading}
-                  >
-                    <Download className="size-4" /> Exportieren ({visibleAuditEntries.length})
+                  <Button type="button" variant="outline" onClick={exportAuditLog}>
+                    <Download className="size-4" /> Exportieren ({audit.visibleEntries.length})
                   </Button>
                 </div>
                 <div className="overflow-x-auto rounded-md border">
@@ -861,7 +906,7 @@ function Einstellungen() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {visibleAuditEntries.map((entry) => (
+                      {audit.visibleEntries.map((entry) => (
                         <tr key={entry.id}>
                           <td className="whitespace-nowrap px-3 py-2">
                             {new Date(entry.createdAt).toLocaleString("de-AT")}
@@ -881,12 +926,12 @@ function Einstellungen() {
                       ))}
                     </tbody>
                   </table>
-                  {!auditLoading && visibleAuditEntries.length === 0 && (
+                  {!audit.loading && audit.visibleEntries.length === 0 && (
                     <p className="px-3 py-8 text-center text-sm text-muted-foreground">
                       Keine Auditlog-Einträge gefunden.
                     </p>
                   )}
-                  {auditLoading && (
+                  {audit.loading && (
                     <p
                       className="px-3 py-8 text-center text-sm text-muted-foreground"
                       role="status"

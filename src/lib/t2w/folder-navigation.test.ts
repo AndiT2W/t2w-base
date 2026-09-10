@@ -16,7 +16,15 @@ describe("Event folder navigation", () => {
       },
       settings,
     );
-    expect(result.outlook.href).toBe("https://outlook.office.com/mail/deeplink/folder/folder-id");
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "outlook",
+        label: "Outlook",
+        href: "https://outlook.office.com/mail/deeplink/folder/folder-id",
+        available: true,
+      }),
+      expect.objectContaining({ id: "sharepoint", label: "SharePoint", available: false }),
+    ]);
   });
 
   it("keeps the general Outlook URL only as a legacy fallback", () => {
@@ -29,7 +37,9 @@ describe("Event folder navigation", () => {
       },
       settings,
     );
-    expect(result.outlook.href).toBe("https://outlook.office.com/mail/");
+    expect(result.find(({ id }) => id === "outlook")?.href).toBe(
+      "https://outlook.office.com/mail/",
+    );
   });
 
   it("resolves and encodes the SharePoint folder for the Event year", () => {
@@ -42,7 +52,7 @@ describe("Event folder navigation", () => {
       },
       settings,
     );
-    expect(result.sharepoint.href).toBe(
+    expect(result.find(({ id }) => id === "sharepoint")?.href).toBe(
       "https://tenant.example/sites/events-2026/Q3/Event%20Folder",
     );
   });

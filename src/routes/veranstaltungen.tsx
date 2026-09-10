@@ -19,7 +19,11 @@ import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
-import { selectEventCatalogue, type ArchiveSelection, type EventPeriod } from "@/lib/t2w/event-catalogue";
+import {
+  selectEventCatalogue,
+  type ArchiveSelection,
+  type EventPeriod,
+} from "@/lib/t2w/event-catalogue";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
 
@@ -340,22 +344,9 @@ function Veranstaltungen() {
                     {visibleColumns.includes("Ordner") && (
                       <td className="px-2 py-1">
                         <span className="flex gap-1">
-                          <FolderLink
-                            icon="outlook"
-                            label="Outlook"
-                            href={folders.outlook.href}
-                            available={folders.outlook.available}
-                          >
-                            OL
-                          </FolderLink>
-                          <FolderLink
-                            icon="sharepoint"
-                            label="SharePoint"
-                            href={folders.sharepoint.href}
-                            available={folders.sharepoint.available}
-                          >
-                            SP
-                          </FolderLink>
+                          {folders.map((destination) => (
+                            <FolderLink key={destination.id} destination={destination} />
+                          ))}
                         </span>
                       </td>
                     )}

@@ -55,18 +55,9 @@ export function EventMobileList({
                 {openTasks} offen
               </span>
               <span className="ml-auto inline-flex gap-1">
-                <FolderLink
-                  icon="outlook"
-                  label="Outlook"
-                  href={folders.outlook.href}
-                  available={folders.outlook.available}
-                />
-                <FolderLink
-                  icon="sharepoint"
-                  label="SharePoint"
-                  href={folders.sharepoint.href}
-                  available={folders.sharepoint.available}
-                />
+                {folders.map((destination) => (
+                  <FolderLink key={destination.id} destination={destination} />
+                ))}
               </span>
             </div>
           </article>
