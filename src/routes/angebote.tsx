@@ -32,7 +32,7 @@ function Angebote() {
   return (
     <div>
       <PageHeader
-        krumen={[{ label: "TIME2WIN", to: "/" }]}
+        krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Angebote"
         beschreibung="Modul in Vorbereitung · abgeleitet aus unbestätigten Events"
       />

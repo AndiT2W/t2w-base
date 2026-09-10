@@ -199,7 +199,7 @@ function KundenKontakte() {
       <PageHeader
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Kunden & Kontakte"
-        beschreibung="Personen und Kundenprofile zentral pflegen"
+        beschreibung="Stammdaten: Kontakte pflegen und Kundenprofile für Organisationen und Abrechnung verwalten"
         suche={{ value: q, onChange: setQ, placeholder: "Name, E-Mail, Telefon, UID, IBAN …" }}
       />
       <div className="space-y-3">

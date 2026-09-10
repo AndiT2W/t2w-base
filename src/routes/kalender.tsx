@@ -195,7 +195,7 @@ export function KalenderSeite({
     <div className="space-y-5">
       {veranstaltungsmenue && (
         <PageHeader
-          krumen={[{ label: "TIME2WIN", to: "/" }]}
+          krumen={[{ label: "Übersicht", to: "/" }]}
           titel="Veranstaltungen"
           beschreibung={`${sichtbareEvents.length} aktive Events`}
           aktion={

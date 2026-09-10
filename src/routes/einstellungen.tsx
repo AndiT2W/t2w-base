@@ -279,7 +279,7 @@ function Einstellungen() {
   return (
     <div className="space-y-5">
       <PageHeader
-        krumen={[{ label: "TIME2WIN", to: "/" }]}
+        krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Einstellungen"
         beschreibung="Outlook- und SharePoint-Ordnerkonventionen zentral verwalten."
       />

@@ -65,7 +65,7 @@ export function GanttSeite({
   return (
     <div>
       <PageHeader
-        krumen={[{ label: "TIME2WIN", to: "/" }]}
+        krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Veranstaltungen"
         beschreibung={`${sichtbar.length} aktive Events`}
       />

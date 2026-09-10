@@ -92,7 +92,7 @@ function Auszahlungen() {
   return (
     <div>
       <PageHeader
-        krumen={[{ label: "TIME2WIN", to: "/" }]}
+        krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Auszahlungen"
         beschreibung="Nenngeld-Auszahlungen über alle Events"
       />

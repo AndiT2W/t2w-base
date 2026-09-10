@@ -332,6 +332,14 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await mockApi(page);
   await page.goto("/kontakte");
   await expect(page.getByRole("heading", { name: "Kunden & Kontakte" })).toBeVisible();
+  await expect(
+    page.getByLabel("Breadcrumb").getByRole("link", { name: "Übersicht" }),
+  ).toHaveAttribute("href", "/");
+  await expect(
+    page.getByText(
+      "Stammdaten: Kontakte pflegen und Kundenprofile für Organisationen und Abrechnung verwalten",
+    ),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Neu anlegen" }).click();
   await page.getByLabel("Vorname").fill("Neue");
   await page.getByLabel("Nachname").fill("Kontaktperson");

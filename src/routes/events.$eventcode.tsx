@@ -461,7 +461,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     <div className="space-y-5">
       <PageHeader
         krumen={[
-          { label: "TIME2WIN", to: "/" },
+          { label: "Übersicht", to: "/" },
           { label: "Veranstaltungen", to: "/veranstaltungen" },
         ]}
         titel={event.name}

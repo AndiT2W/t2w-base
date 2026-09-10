@@ -122,7 +122,7 @@ function Veranstaltungen() {
   return (
     <div>
       <PageHeader
-        krumen={[{ label: "TIME2WIN", to: "/" }]}
+        krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Veranstaltungen"
         beschreibung={`${gefiltert.length} von ${events.length} Events`}
         suche={{

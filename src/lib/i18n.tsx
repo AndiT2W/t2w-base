@@ -170,6 +170,8 @@ const pageTextTranslations: TranslationCatalog = {
   "Zur Eventliste": "Back to event list",
   "Erneut versuchen": "Try again",
   "Kunden & Kontakte": "Customers & contacts",
+  "Stammdaten: Kontakte pflegen und Kundenprofile für Organisationen und Abrechnung verwalten":
+    "Master data: manage contacts and customer profiles for organizations and billing",
   "Ansprechpartner aller Veranstaltungen zentral durchsuchen.":
     "Search contacts across all events.",
   "Keine Kontakte gefunden.": "No contacts found.",

@@ -33,7 +33,7 @@ function Rechnungen() {
   return (
     <div>
       <PageHeader
-        krumen={[{ label: "TIME2WIN", to: "/" }]}
+        krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Rechnungen"
         beschreibung="Modul in Vorbereitung · abgeleitet aus durchgeführten Events"
       />
