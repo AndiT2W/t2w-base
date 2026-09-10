@@ -5,12 +5,7 @@ import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
-import {
-  
-  austrianHoliday,
-  groupConsecutive,
-  isoWeek,
-} from "@/lib/t2w/event-projections";
+import { austrianHoliday, groupConsecutive, isoWeek } from "@/lib/t2w/event-projections";
 import { activeCatalogueFilters, selectEventCatalogue } from "@/lib/t2w/event-catalogue";
 
 export const Route = createFileRoute("/gantt")({
@@ -25,7 +20,10 @@ export function GanttSeite({
   const [zoom, setZoom] = useState<"tag" | "woche" | "monat">("tag");
   const scrollRef = useRef<HTMLDivElement>(null);
   const heute = heuteIso();
-  const sichtbar = selectEventCatalogue(events, activeCatalogueFilters(new Date().toISOString().slice(0, 10)));
+  const sichtbar = selectEventCatalogue(
+    events,
+    activeCatalogueFilters(new Date().toISOString().slice(0, 10)),
+  );
   const min = Math.min(
     ...sichtbar.map((event) => Date.parse(`${event.start}T00:00:00`)),
     Date.parse(`${heute}T00:00:00`),

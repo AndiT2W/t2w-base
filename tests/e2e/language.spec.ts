@@ -47,7 +47,9 @@ test("switches language, preserves event data, and persists the preference", asy
   await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
   await expect(page.getByLabel("Status filtern")).toContainText("Confirmed");
   await expect(page.getByLabel("Status filtern")).toContainText("All statuses");
-  await expect(page.locator("table").getByRole("link", { name: "Demo Event", exact: true })).toBeVisible();
+  await expect(
+    page.locator("table").getByRole("link", { name: "Demo Event", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "German" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   await expect(page.getByRole("link", { name: "Übersicht" })).toBeVisible();
@@ -84,7 +86,9 @@ test("loads the event detail page", async ({ page }) => {
   );
   await page.goto("/events/260820_demo_event");
   await expect(page.getByRole("tab", { name: "Stammdaten" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByLabel("Breadcrumb").getByRole("link", { name: "Veranstaltungen" })).toBeVisible();
+  await expect(
+    page.getByLabel("Breadcrumb").getByRole("link", { name: "Veranstaltungen" }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Englisch" }).click();

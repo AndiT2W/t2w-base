@@ -53,16 +53,32 @@ function setup(
     applyEvents: vi.fn(),
   };
   return {
-    workspace: createEventDetailWorkspace(events.openSession("e1"), {
-      event,
-      persons: [person],
-      customers: [customer],
-      events: [
+    workspace: createEventDetailWorkspace(
+      events.openSession("e1"),
+      {
         event,
-        { ...event, id: "e0", eventcode: "270114_before", start: "2027-01-14", seriesId: "series-1" },
-        { ...event, id: "e2", eventcode: "270116_after", start: "2027-01-16", seriesId: "series-1" },
-      ],
-    }, mutations),
+        persons: [person],
+        customers: [customer],
+        events: [
+          event,
+          {
+            ...event,
+            id: "e0",
+            eventcode: "270114_before",
+            start: "2027-01-14",
+            seriesId: "series-1",
+          },
+          {
+            ...event,
+            id: "e2",
+            eventcode: "270116_after",
+            start: "2027-01-16",
+            seriesId: "series-1",
+          },
+        ],
+      },
+      mutations,
+    ),
     transport,
     syncTime2win,
     mutations,

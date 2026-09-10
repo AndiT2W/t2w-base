@@ -55,7 +55,13 @@ type Ctx = State & {
   updateSelectionValue: (
     kind: SelectionListKind,
     id: string,
-    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
+    patch: {
+      name?: string;
+      active?: boolean;
+      icon?: string | null;
+      color?: string | null;
+      sortOrder?: number;
+    },
   ) => Promise<void>;
   reorderSelectionValues: (kind: SelectionListKind, id: string, beforeId: string) => Promise<void>;
 };
@@ -108,10 +114,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     (id, input) => workspace.copy(id, input),
     [workspace],
   );
-  const loescheEvent: Ctx["loescheEvent"] = useCallback(
-    (id) => workspace.remove(id),
-    [workspace],
-  );
+  const loescheEvent: Ctx["loescheEvent"] = useCallback((id) => workspace.remove(id), [workspace]);
   const uebernehmeEvents: Ctx["uebernehmeEvents"] = useCallback(
     (changedEvents) => workspace.apply(changedEvents),
     [workspace],

@@ -16,8 +16,28 @@ export type AuditEntry = {
 export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
   append(input: AuditEntry, writer: AuditWriter = this.prisma) {
-    const details = JSON.parse(JSON.stringify({ oldValue: input.oldValue, newValue: input.newValue, ...(input.details as object ?? {}) }));
-    return writer.auditLog.create({ data: { entity: input.entity, entityId: input.entityId, action: input.action, userId: input.userId ?? undefined, details } });
+    const details = JSON.parse(
+      JSON.stringify({
+        oldValue: input.oldValue,
+        newValue: input.newValue,
+        ...((input.details as object) ?? {}),
+      }),
+    );
+    return writer.auditLog.create({
+      data: {
+        entity: input.entity,
+        entityId: input.entityId,
+        action: input.action,
+        userId: input.userId ?? undefined,
+        details,
+      },
+    });
   }
-  list(entity?: string, entityId?: string) { return this.prisma.auditLog.findMany({ where: { entity, entityId }, orderBy: { createdAt: "desc" }, include: { user: { select: { id: true, displayName: true, email: true } } } }); }
+  list(entity?: string, entityId?: string) {
+    return this.prisma.auditLog.findMany({
+      where: { entity, entityId },
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { id: true, displayName: true, email: true } } },
+    });
+  }
 }

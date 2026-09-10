@@ -23,10 +23,25 @@ function transport(overrides: Partial<EventTransport<TestEvent>> = {}) {
 
 describe("Event workspace editing lifecycle", () => {
   it("publishes a persisted copy through the workspace intent", async () => {
-    const copied = { ...event, id: "event-2", name: "Mountain Attack 2028", start: "2028-01-14", ende: "2028-01-14" };
+    const copied = {
+      ...event,
+      id: "event-2",
+      name: "Mountain Attack 2028",
+      start: "2028-01-14",
+      ende: "2028-01-14",
+    };
     const workspace = createEventWorkspace(transport({ copy: vi.fn().mockResolvedValue(copied) }));
     workspace.load([event]);
-    await expect(workspace.copy(event.id, { name: copied.name, eventcode: "280114_mountain_attack", start: copied.start, ende: copied.ende, createRelationship: true, version: 3 })).resolves.toEqual(copied);
+    await expect(
+      workspace.copy(event.id, {
+        name: copied.name,
+        eventcode: "280114_mountain_attack",
+        start: copied.start,
+        ende: copied.ende,
+        createRelationship: true,
+        version: 3,
+      }),
+    ).resolves.toEqual(copied);
     expect(workspace.events()).toEqual([event, copied]);
   });
   it("accepts refreshed Event state after an intent-level Event-detail command", async () => {

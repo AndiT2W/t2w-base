@@ -259,34 +259,38 @@ function KundenKontakte() {
                 Stammdaten und Zuordnungen bearbeiten
               </SheetDescription>
             </SheetHeader>
-          {p ? (
-            <>
-              <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
-              <AssociationRemover
-                label="Kundenzuordnung entfernen"
-                items={crm.kundenVonPerson(p).map((x) => [x.id, x.name])}
-                remove={(id) => crm.loeseVerknuepfung(p.id, id)}
-              />
-            </>
-          ) : (
-            <>
-              <CustomerDetail customer={k!} crm={crm} go={(id) => setSel({ art: "person", id })} />
-              <AssociationRemover
-                label="Kontaktzuordnung entfernen"
-                items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)])}
-                remove={(id) => crm.loeseVerknuepfung(id, k!.id)}
-              />
-            </>
-          )}
+            {p ? (
+              <>
+                <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
+                <AssociationRemover
+                  label="Kundenzuordnung entfernen"
+                  items={crm.kundenVonPerson(p).map((x) => [x.id, x.name])}
+                  remove={(id) => crm.loeseVerknuepfung(p.id, id)}
+                />
+              </>
+            ) : (
+              <>
+                <CustomerDetail
+                  customer={k!}
+                  crm={crm}
+                  go={(id) => setSel({ art: "person", id })}
+                />
+                <AssociationRemover
+                  label="Kontaktzuordnung entfernen"
+                  items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)])}
+                  remove={(id) => crm.loeseVerknuepfung(id, k!.id)}
+                />
+              </>
+            )}
             <div className="mt-8 border-t border-border pt-4">
-            <DeleteAction
-              label={p ? "Kontakt löschen" : "Kunde löschen"}
-              onDelete={async () => {
-                if (p) await crm.deletePerson(p.id);
-                else await crm.deleteKunde(k!.id);
-                setSel(null);
-              }}
-            />
+              <DeleteAction
+                label={p ? "Kontakt löschen" : "Kunde löschen"}
+                onDelete={async () => {
+                  if (p) await crm.deletePerson(p.id);
+                  else await crm.deleteKunde(k!.id);
+                  setSel(null);
+                }}
+              />
             </div>
           </SheetContent>
         </Sheet>
@@ -304,15 +308,23 @@ function PeopleTable({
   select: (id: string) => void;
   open: () => void;
 }) {
-  const table = useTableBehavior<Person, PeopleColumn>({ storageKey: "t2w-contact-table-columns", initialSort: { key: "Name", direction: "asc" }, columns: PEOPLE_COLUMNS.map((key) => ({ key, sortValue: (person) => ({
-        Name: personName(person),
-        Funktion: person.funktion,
-        "E-Mail": person.email,
-        Telefon: person.telefonBeruflich || person.telefonPrivat,
-        Kunden: person.kundenIds.length,
-        Eventrollen: person.eventRollen.length,
-        Kundenprofil: person.kundenprofilId ? "ja" : "nein",
-      })[key] ?? "" })) });
+  const table = useTableBehavior<Person, PeopleColumn>({
+    storageKey: "t2w-contact-table-columns",
+    initialSort: { key: "Name", direction: "asc" },
+    columns: PEOPLE_COLUMNS.map((key) => ({
+      key,
+      sortValue: (person) =>
+        ({
+          Name: personName(person),
+          Funktion: person.funktion,
+          "E-Mail": person.email,
+          Telefon: person.telefonBeruflich || person.telefonPrivat,
+          Kunden: person.kundenIds.length,
+          Eventrollen: person.eventRollen.length,
+          Kundenprofil: person.kundenprofilId ? "ja" : "nein",
+        })[key] ?? "",
+    })),
+  });
   const { visibleColumns, toggleColumn } = table;
   const sortedPeople = table.rows(people);
   return people.length ? (
@@ -363,18 +375,26 @@ function CustomerTable({
   select: (id: string) => void;
   open: () => void;
 }) {
-  const table = useTableBehavior<Kunde, CustomerColumn>({ storageKey: CUSTOMER_COLUMN_STORAGE_KEY, initialSort: { key: "Kunde", direction: "asc" }, columns: CUSTOMER_COLUMNS.map((key) => ({ key, sortValue: (customer) => ({
-        Kunde: customer.name,
-        Hauptansprechperson: customer.primaryContactId
-          ? personName(people.find((p) => p.id === customer.primaryContactId) ?? ({} as Person))
-          : "",
-        "E-Mail": customer.email,
-        UID: customer.uid,
-        IBAN: customer.iban,
-        Kontakte: customer.kontaktIds.length,
-        Events: customer.events.length,
-        Status: KUNDENSTATUS_LABEL[customer.status],
-      })[key] ?? "" })) });
+  const table = useTableBehavior<Kunde, CustomerColumn>({
+    storageKey: CUSTOMER_COLUMN_STORAGE_KEY,
+    initialSort: { key: "Kunde", direction: "asc" },
+    columns: CUSTOMER_COLUMNS.map((key) => ({
+      key,
+      sortValue: (customer) =>
+        ({
+          Kunde: customer.name,
+          Hauptansprechperson: customer.primaryContactId
+            ? personName(people.find((p) => p.id === customer.primaryContactId) ?? ({} as Person))
+            : "",
+          "E-Mail": customer.email,
+          UID: customer.uid,
+          IBAN: customer.iban,
+          Kontakte: customer.kontaktIds.length,
+          Events: customer.events.length,
+          Status: KUNDENSTATUS_LABEL[customer.status],
+        })[key] ?? "",
+    })),
+  });
   const { visibleColumns, toggleColumn } = table;
   const sortedCustomers = table.rows(customers);
   return customers.length ? (
@@ -985,7 +1005,9 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
       <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto p-5">
         <DialogHeader className="pr-10">
           <DialogTitle>Neu anlegen</DialogTitle>
-          <DialogDescription>Person, Kunde oder beide Datensätze gemeinsam anlegen.</DialogDescription>
+          <DialogDescription>
+            Person, Kunde oder beide Datensätze gemeinsam anlegen.
+          </DialogDescription>
         </DialogHeader>
         <div className="mt-4 flex rounded border p-1">
           {(["person", "kunde", "beides"] as Modus[]).map((x) => (

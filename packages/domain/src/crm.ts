@@ -233,7 +233,10 @@ export function createCrmWorkspace(adapter: CrmAdapter) {
     publish();
     throw cause;
   };
-  const persist = async <T>(operation: () => Promise<T>, message = "Änderung konnte nicht gespeichert werden.") => {
+  const persist = async <T>(
+    operation: () => Promise<T>,
+    message = "Änderung konnte nicht gespeichert werden.",
+  ) => {
     error = null;
     try {
       const value = await operation();
@@ -297,12 +300,18 @@ export function createCrmWorkspace(adapter: CrmAdapter) {
     async deletePerson(id: string) {
       const person = state.personen.find((item) => item.id === id);
       if (!person) return;
-      await persist(() => adapter.deletePerson(person), "Kontakt ist noch referenziert und kann nicht gelöscht werden.");
+      await persist(
+        () => adapter.deletePerson(person),
+        "Kontakt ist noch referenziert und kann nicht gelöscht werden.",
+      );
     },
     async deleteKunde(id: string) {
       const kunde = state.kunden.find((item) => item.id === id);
       if (!kunde) return;
-      await persist(() => adapter.deleteKunde(kunde), "Kunde ist noch referenziert und kann nicht gelöscht werden.");
+      await persist(
+        () => adapter.deleteKunde(kunde),
+        "Kunde ist noch referenziert und kann nicht gelöscht werden.",
+      );
     },
     link(personId: string, kundeId: string) {
       return persist(() => adapter.link(personId, kundeId));

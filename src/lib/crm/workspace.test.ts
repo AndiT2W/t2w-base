@@ -36,7 +36,15 @@ const kunde = {
 
 describe("CRM workspace", () => {
   it("reloads customer references after an event relationship changes", async () => {
-    const initial = { personen: [], kunden: [{ ...kunde, events: [{ eventcode: "event-1", eventName: "Event", funktion: "veranstalter" as const }] }] };
+    const initial = {
+      personen: [],
+      kunden: [
+        {
+          ...kunde,
+          events: [{ eventcode: "event-1", eventName: "Event", funktion: "veranstalter" as const }],
+        },
+      ],
+    };
     const current = { personen: [], kunden: [{ ...kunde, events: [] }] };
     const adapter = {
       load: vi.fn().mockResolvedValueOnce(initial).mockResolvedValueOnce(current),
@@ -57,7 +65,8 @@ describe("CRM workspace", () => {
       kunden: [kunde],
     };
     const adapter = {
-      load: vi.fn()
+      load: vi
+        .fn()
         .mockResolvedValueOnce({ personen: [], kunden: [] })
         .mockResolvedValueOnce(withPerson)
         .mockResolvedValueOnce(complete),

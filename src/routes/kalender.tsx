@@ -1,6 +1,13 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, ChevronLeft, ChevronRight, GanttChartSquare, List, Plus } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  GanttChartSquare,
+  List,
+  Plus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot } from "@/components/t2w/StatusBadge";
@@ -10,9 +17,7 @@ import { STATUS_LABEL, STATUS_ORDER, type T2WEvent } from "@/lib/t2w/types";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { EventDialog } from "@/components/t2w/EventDialog";
-import {
-  austrianHoliday,
-} from "@/lib/t2w/event-projections";
+import { austrianHoliday } from "@/lib/t2w/event-projections";
 import { selectEventCatalogue, type ArchiveSelection } from "@/lib/t2w/event-catalogue";
 import {
   addDays,
@@ -195,7 +200,12 @@ export function KalenderSeite({
           beschreibung={`${sichtbareEvents.length} aktive Events`}
           aktion={
             <EventDialog
-              trigger={<Button><Plus className="size-4" />Event anlegen</Button>}
+              trigger={
+                <Button>
+                  <Plus className="size-4" />
+                  Event anlegen
+                </Button>
+              }
             />
           }
         />
@@ -224,7 +234,14 @@ export function KalenderSeite({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {!veranstaltungsmenue && (
-            <EventDialog trigger={<Button><Plus className="size-4" />Event anlegen</Button>} />
+            <EventDialog
+              trigger={
+                <Button>
+                  <Plus className="size-4" />
+                  Event anlegen
+                </Button>
+              }
+            />
           )}
           <div className="flex rounded-md border border-border bg-surface p-0.5">
             {(["monat", "woche", "tag"] as const).map((m) => (
@@ -285,7 +302,8 @@ export function KalenderSeite({
           data-testid="calendar-scroll-area"
           className="overflow-x-auto overscroll-x-contain"
           onWheel={(event) => {
-            const delta = Math.abs(event.deltaX) > 18 ? event.deltaX : event.shiftKey ? event.deltaY : 0;
+            const delta =
+              Math.abs(event.deltaX) > 18 ? event.deltaX : event.shiftKey ? event.deltaY : 0;
             if (Math.abs(delta) > 18) {
               event.preventDefault();
               scrollNavigieren(delta > 0 ? 1 : -1);
@@ -297,10 +315,35 @@ export function KalenderSeite({
           }}
         >
           <div className="min-w-[56rem]">
-            <div className={cn("grid border-b border-border bg-secondary", modus === "tag" ? "grid-cols-1" : "grid-cols-7")}>
-              {(modus === "tag" ? [WOCHENTAGE[(anker.getDay() + 6) % 7]] : WOCHENTAGE).map((t) => <div key={t} className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t}</div>)}
+            <div
+              className={cn(
+                "grid border-b border-border bg-secondary",
+                modus === "tag" ? "grid-cols-1" : "grid-cols-7",
+              )}
+            >
+              {(modus === "tag" ? [WOCHENTAGE[(anker.getDay() + 6) % 7]] : WOCHENTAGE).map((t) => (
+                <div
+                  key={t}
+                  className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                >
+                  {t}
+                </div>
+              ))}
             </div>
-            {modus === "monat" ? Array.from({ length: wochenAnzahl }, (_, i) => <WochenGitter key={i} wochenStart={addDays(gitterStart, i * 7)} events={sichtbareEvents} monat={anker.getMonth()} />) : modus === "woche" ? <WochenGitter wochenStart={wochenStart} events={sichtbareEvents} /> : <WochenGitter wochenStart={anker} events={sichtbareEvents} tageAnzahl={1} />}
+            {modus === "monat" ? (
+              Array.from({ length: wochenAnzahl }, (_, i) => (
+                <WochenGitter
+                  key={i}
+                  wochenStart={addDays(gitterStart, i * 7)}
+                  events={sichtbareEvents}
+                  monat={anker.getMonth()}
+                />
+              ))
+            ) : modus === "woche" ? (
+              <WochenGitter wochenStart={wochenStart} events={sichtbareEvents} />
+            ) : (
+              <WochenGitter wochenStart={anker} events={sichtbareEvents} tageAnzahl={1} />
+            )}
           </div>
         </div>
       </div>

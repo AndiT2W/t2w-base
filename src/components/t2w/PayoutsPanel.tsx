@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
 
@@ -40,23 +40,27 @@ function statusClasses(p: P) {
 }
 export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
   const workspace = useMemo(() => createPayoutWorkspace<P>(createHttpPayoutAdapter<P>()), []);
-  const { rows: items } = useSyncExternalStore(workspace.subscribe, workspace.snapshot, workspace.snapshot);
+  const { rows: items } = useSyncExternalStore(
+    workspace.subscribe,
+    workspace.snapshot,
+    workspace.snapshot,
+  );
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("EUR");
-  const scope = { eventId };
-  const load = () => workspace.load(scope);
+  const scope = useMemo(() => ({ eventId }), [eventId]);
+  const load = useCallback(() => workspace.load(scope), [workspace, scope]);
   useEffect(() => {
     void load();
-  }, [eventId]);
+  }, [load]);
   async function create() {
     if (!amount) return;
     await workspace.create(scope, {
-        eventId,
-        recipientId,
-        mailRecipient: recipientEmail,
-        amount,
-        currency,
-      });
+      eventId,
+      recipientId,
+      mailRecipient: recipientEmail,
+      amount,
+      currency,
+    });
     setAmount("");
     await load();
   }
@@ -77,24 +81,24 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-        <input
-          aria-label="Auszahlungsbetrag"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Betrag"
-          className="w-28 rounded border px-2 py-1"
-        />
-        <select
-          aria-label="Auszahlungswährung"
-          value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
-          className="rounded border px-2 py-1"
-        >
-          <option>EUR</option>
-          <option>CHF</option>
-          <option>USD</option>
-        </select>
-        <Button onClick={() => void create()}>Auszahlung anlegen</Button>
+          <input
+            aria-label="Auszahlungsbetrag"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Betrag"
+            className="w-28 rounded border px-2 py-1"
+          />
+          <select
+            aria-label="Auszahlungswährung"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+            className="rounded border px-2 py-1"
+          >
+            <option>EUR</option>
+            <option>CHF</option>
+            <option>USD</option>
+          </select>
+          <Button onClick={() => void create()}>Auszahlung anlegen</Button>
         </div>
       </div>
       <div className="overflow-x-auto rounded border">
@@ -121,7 +125,10 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
                   {p.amount} {p.currency}
                 </td>
                 <td className="px-2 py-2">
-                  <span aria-label={`${p.payoutNumber} Status`} className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClasses(p)}`}>
+                  <span
+                    aria-label={`${p.payoutNumber} Status`}
+                    className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClasses(p)}`}
+                  >
                     {label(p)}
                   </span>
                 </td>
@@ -139,7 +146,12 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => void update(p.id, { paymentStatus: "AUSBEZAHLT", paidAt: new Date().toISOString() })}
+                      onClick={() =>
+                        void update(p.id, {
+                          paymentStatus: "AUSBEZAHLT",
+                          paidAt: new Date().toISOString(),
+                        })
+                      }
                     >
                       Als ausgezahlt markieren
                     </Button>

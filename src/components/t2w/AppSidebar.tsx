@@ -121,7 +121,10 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
               {t(HAUPT_NAV_KEYS[item.to])}
               {item.to === "/einstellungen" && (
                 <ChevronDown
-                  className={cn("ml-auto size-4 transition-transform", einstellungenAktiv && "rotate-180")}
+                  className={cn(
+                    "ml-auto size-4 transition-transform",
+                    einstellungenAktiv && "rotate-180",
+                  )}
                   aria-hidden="true"
                 />
               )}
@@ -143,7 +146,10 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
         )}
 
         {einstellungenAktiv && (
-          <div className="ml-3 border-l border-nav-active pl-2" aria-label="Einstellungen Untermenü">
+          <div
+            className="ml-3 border-l border-nav-active pl-2"
+            aria-label="Einstellungen Untermenü"
+          >
             {[
               ["allgemein", "Allgemein"],
               ["auswahllisten", "Auswahllisten"],
@@ -153,7 +159,10 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
               <Link
                 key={value}
                 to="/einstellungen"
-                search={{ tab: value as "allgemein" | "auswahllisten" | "outlook" | "auditlog", liste: "services" }}
+                search={{
+                  tab: value as "allgemein" | "auswahllisten" | "outlook" | "auditlog",
+                  liste: "services",
+                }}
                 onClick={onNavigate}
                 className={cn(
                   linkClass,

@@ -16,10 +16,7 @@ export type EventCopyInput = {
 };
 
 export type EventDetailMutations = {
-  copy: (
-    sourceId: string,
-    input: EventCopyInput & { version?: number },
-  ) => Promise<T2WEvent>;
+  copy: (sourceId: string, input: EventCopyInput & { version?: number }) => Promise<T2WEvent>;
   remove: (id: string) => Promise<void>;
   updateSeries: (
     id: string,

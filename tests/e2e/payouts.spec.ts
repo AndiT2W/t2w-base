@@ -10,7 +10,17 @@ test("legt eine Auszahlung im Event-Finanzreiter an und lädt sie nach Reload", 
     requests.push(`${route.request().method()} ${route.request().url()}`);
     if (route.request().method() === "POST") {
       const body = JSON.parse(route.request().postData() ?? "{}");
-      payouts = [{ id: "p1", payoutNumber: "T260001", amount: "125.50", currency: body.currency, mailStatus: "ENTWURF", paymentStatus: "OFFEN", mailRecipient: "finance@example.test" }];
+      payouts = [
+        {
+          id: "p1",
+          payoutNumber: "T260001",
+          amount: "125.50",
+          currency: body.currency,
+          mailStatus: "ENTWURF",
+          paymentStatus: "OFFEN",
+          mailRecipient: "finance@example.test",
+        },
+      ];
       return route.fulfill({ status: 201, json: payouts[0] });
     }
     return route.fulfill({ json: payouts });
@@ -22,7 +32,10 @@ test("legt eine Auszahlung im Event-Finanzreiter an und lädt sie nach Reload", 
       payouts = payouts.map((p) => ({ ...p, ...JSON.parse(route.request().postData() ?? "{}") }));
       return route.fulfill({ json: payouts[0] });
     }
-    if (route.request().method() === "DELETE") { payouts = []; return route.fulfill({ json: { deleted: true } }); }
+    if (route.request().method() === "DELETE") {
+      payouts = [];
+      return route.fulfill({ json: { deleted: true } });
+    }
     return route.fulfill({ json: payouts.find((p) => p.id === id) ?? null });
   });
   await page.goto(`/events/${event.eventCode}`);

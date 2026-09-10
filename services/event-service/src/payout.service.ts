@@ -89,51 +89,61 @@ export class PayoutService {
         },
         include,
       });
-      await this.audit.append({
-        entity: "Payout",
-        entityId: p.id,
-        action: "CREATE",
-        userId: input.userId,
-        newValue: p,
-      }, tx);
+      await this.audit.append(
+        {
+          entity: "Payout",
+          entityId: p.id,
+          action: "CREATE",
+          userId: input.userId,
+          newValue: p,
+        },
+        tx,
+      );
       return p;
     });
   }
   async update(id: string, input: any) {
     return this.prisma.$transaction(async (tx) => {
-    const old = await tx.payout.findUnique({ where: { id } });
-    if (!old) throw new NotFoundException();
-    const data: any = { ...input };
-    for (const k of ["userId", "id", "payoutNumber", "createdAt", "updatedAt"]) delete data[k];
-    for (const k of ["paidAt", "mailSentAt"]) if (data[k]) data[k] = new Date(data[k]);
-    if (data.paymentStatus === PayoutPaymentStatus.AUSBEZAHLT && !data.paidAt && !old.paidAt)
-      data.paidAt = new Date();
-    if (data.amount !== undefined) data.amount = new Prisma.Decimal(Number(data.amount).toFixed(2));
-    const p = await tx.payout.update({ where: { id }, data, include });
-    await this.audit.append({
-      entity: "Payout",
-      entityId: id,
-      action: "UPDATE",
-      userId: input.userId,
-      oldValue: old,
-      newValue: p,
-    }, tx);
-    return p;
+      const old = await tx.payout.findUnique({ where: { id } });
+      if (!old) throw new NotFoundException();
+      const data: any = { ...input };
+      for (const k of ["userId", "id", "payoutNumber", "createdAt", "updatedAt"]) delete data[k];
+      for (const k of ["paidAt", "mailSentAt"]) if (data[k]) data[k] = new Date(data[k]);
+      if (data.paymentStatus === PayoutPaymentStatus.AUSBEZAHLT && !data.paidAt && !old.paidAt)
+        data.paidAt = new Date();
+      if (data.amount !== undefined)
+        data.amount = new Prisma.Decimal(Number(data.amount).toFixed(2));
+      const p = await tx.payout.update({ where: { id }, data, include });
+      await this.audit.append(
+        {
+          entity: "Payout",
+          entityId: id,
+          action: "UPDATE",
+          userId: input.userId,
+          oldValue: old,
+          newValue: p,
+        },
+        tx,
+      );
+      return p;
     });
   }
   async remove(id: string, userId?: string) {
     return this.prisma.$transaction(async (tx) => {
-    const old = await tx.payout.findUnique({ where: { id } });
-    if (!old) throw new NotFoundException();
-    await this.audit.append({
-      entity: "Payout",
-      entityId: id,
-      action: "DELETE",
-      userId,
-      oldValue: old,
-    }, tx);
-    await tx.payout.delete({ where: { id } });
-    return { deleted: true, payoutNumber: old.payoutNumber };
+      const old = await tx.payout.findUnique({ where: { id } });
+      if (!old) throw new NotFoundException();
+      await this.audit.append(
+        {
+          entity: "Payout",
+          entityId: id,
+          action: "DELETE",
+          userId,
+          oldValue: old,
+        },
+        tx,
+      );
+      await tx.payout.delete({ where: { id } });
+      return { deleted: true, payoutNumber: old.payoutNumber };
     });
   }
   async markForMail(ids: string[], userId?: string) {

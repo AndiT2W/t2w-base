@@ -101,8 +101,18 @@ export class AutomationService {
       await this.prisma.payout.update({
         where: { id: claim.recordId },
         data: input.success
-          ? { mailStatus: "GESENDET", mailSentAt: new Date(), externalMessageId: input.externalId, automationLastError: null }
-          : { automationClaimedAt: null, automationWorkflowId: null, automationLastError: input.error ?? "Automation failed", automationRetryCount: { increment: 1 } },
+          ? {
+              mailStatus: "GESENDET",
+              mailSentAt: new Date(),
+              externalMessageId: input.externalId,
+              automationLastError: null,
+            }
+          : {
+              automationClaimedAt: null,
+              automationWorkflowId: null,
+              automationLastError: input.error ?? "Automation failed",
+              automationRetryCount: { increment: 1 },
+            },
       });
     }
     return this.prisma.automationClaim.update({

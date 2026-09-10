@@ -405,7 +405,13 @@ export async function apiCreateSport(name: string) {
 }
 export async function apiUpdateSport(
   id: string,
-  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
+  patch: {
+    name?: string;
+    active?: boolean;
+    icon?: string | null;
+    color?: string | null;
+    sortOrder?: number;
+  },
 ) {
   const response = await fetch(`/api/v1/sports/${id}`, {
     method: "PATCH",
@@ -441,7 +447,13 @@ export async function apiCreateService(name: string) {
 }
 export async function apiUpdateService(
   id: string,
-  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
+  patch: {
+    name?: string;
+    active?: boolean;
+    icon?: string | null;
+    color?: string | null;
+    sortOrder?: number;
+  },
 ) {
   const response = await fetch(`/api/v1/services/${id}`, {
     method: "PATCH",
@@ -472,7 +484,13 @@ export async function apiCreateHardwareObject(name: string) {
 }
 export async function apiUpdateHardwareObject(
   id: string,
-  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
+  patch: {
+    name?: string;
+    active?: boolean;
+    icon?: string | null;
+    color?: string | null;
+    sortOrder?: number;
+  },
 ) {
   const response = await fetch(`/api/v1/hardware-objects/${id}`, {
     method: "PATCH",
@@ -515,7 +533,13 @@ export async function apiCreateEventRole(name: string) {
 }
 export async function apiUpdateEventRole(
   id: string,
-  patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
+  patch: {
+    name?: string;
+    active?: boolean;
+    icon?: string | null;
+    color?: string | null;
+    sortOrder?: number;
+  },
 ) {
   const response = await fetch(`/api/v1/event-roles/${id}`, {
     method: "PATCH",

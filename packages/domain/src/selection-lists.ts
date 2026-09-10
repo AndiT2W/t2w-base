@@ -45,7 +45,11 @@ const sortValues = (values: SelectionListValue[]) =>
   [...values].sort((left, right) =>
     left.sortOrder !== undefined && right.sortOrder !== undefined
       ? left.sortOrder - right.sortOrder
-      : left.sortOrder !== undefined ? -1 : right.sortOrder !== undefined ? 1 : left.name.localeCompare(right.name, "de"),
+      : left.sortOrder !== undefined
+        ? -1
+        : right.sortOrder !== undefined
+          ? 1
+          : left.name.localeCompare(right.name, "de"),
   );
 
 /**
@@ -84,7 +88,9 @@ export class SelectionLists {
       ...(patch.name === undefined ? {} : { name: normalizeName(patch.name) }),
     });
   }
-  reorder(kind: SelectionListKind, ids: string[]) { return this.adapter.reorder(kind, ids); }
+  reorder(kind: SelectionListKind, ids: string[]) {
+    return this.adapter.reorder(kind, ids);
+  }
 }
 
 export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
@@ -144,7 +150,10 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
       const [moved] = next.splice(from, 1);
       if (!moved) return snapshot[kind];
       next.splice(to, 0, moved);
-      const values = await lists.reorder(kind, next.map((value) => value.id));
+      const values = await lists.reorder(
+        kind,
+        next.map((value) => value.id),
+      );
       replace(kind, values);
       return values;
     },

@@ -24,7 +24,9 @@ test("zeigt den Auditlog in den Einstellungen und filtert nach Entität", async 
     await page.getByLabel("Passwort").fill("test");
     await page.getByRole("button", { name: "Anmelden" }).click();
   }
-  await expect(page.getByText("Unveränderliche Aufzeichnungen über relevante Änderungen im System.")).toBeVisible();
+  await expect(
+    page.getByText("Unveränderliche Aufzeichnungen über relevante Änderungen im System."),
+  ).toBeVisible();
   await expect(page.getByText("payout-42")).toBeVisible();
   await expect(page.getByText("Andi")).toBeVisible();
   await page.getByLabel("Auditlog durchsuchen").fill("nicht vorhanden");

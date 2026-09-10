@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { Button } from "@/components/ui/button";
 import { PayoutCreateForm } from "@/components/t2w/PayoutsPanel";
@@ -28,7 +28,10 @@ function status(p: Payout) {
   return "Offen";
 }
 function Auszahlungen() {
-  const workspace = useMemo(() => createPayoutWorkspace<Payout>(createHttpPayoutAdapter<Payout>()), []);
+  const workspace = useMemo(
+    () => createPayoutWorkspace<Payout>(createHttpPayoutAdapter<Payout>()),
+    [],
+  );
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("");
   const [eventId, setEventId] = useState("");
@@ -37,12 +40,19 @@ function Auszahlungen() {
   const [events, setEvents] = useState<Array<{ id: string; eventCode: string; name: string }>>([]);
   const [recipients, setRecipients] = useState<Array<{ id: string; name: string }>>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const scope = useMemo(() => ({ q, status: filter, eventId, year, recipientId }), [q, filter, eventId, year, recipientId]);
-  const { rows } = useSyncExternalStore(workspace.subscribe, workspace.snapshot, workspace.snapshot);
-  const load = () => workspace.load(scope);
+  const scope = useMemo(
+    () => ({ q, status: filter, eventId, year, recipientId }),
+    [q, filter, eventId, year, recipientId],
+  );
+  const { rows } = useSyncExternalStore(
+    workspace.subscribe,
+    workspace.snapshot,
+    workspace.snapshot,
+  );
+  const load = useCallback(() => workspace.load(scope), [workspace, scope]);
   useEffect(() => {
     void load();
-  }, [workspace, scope]);
+  }, [load]);
   useEffect(() => {
     void Promise.all([
       fetch("/api/v1/events?limit=1000", { credentials: "include" }).then((r) => r.json()),

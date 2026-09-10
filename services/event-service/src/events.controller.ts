@@ -100,7 +100,10 @@ export class EventsController {
     return this.hardware.create(undefined, body);
   }
   @Patch("hardware/:hardwareId")
-  updateUnassignedHardware(@Param("hardwareId", ParseUUIDPipe) id: string, @Body() body: Record<string, unknown>) {
+  updateUnassignedHardware(
+    @Param("hardwareId", ParseUUIDPipe) id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.hardware.update(undefined, id, body);
   }
   @Delete("hardware/:hardwareId")

@@ -46,7 +46,9 @@ describe("CRM commands", () => {
 
   it("preserves a person and Event roles when unlinking a customer association", async () => {
     const persistence = adapter();
-    await expect(new CrmCommands(persistence).unlinkContact("customer-1", "person-1")).resolves.toEqual({
+    await expect(
+      new CrmCommands(persistence).unlinkContact("customer-1", "person-1"),
+    ).resolves.toEqual({
       kind: "saved",
       value: undefined,
     });

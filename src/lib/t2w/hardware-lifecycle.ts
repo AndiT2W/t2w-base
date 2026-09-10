@@ -8,7 +8,11 @@ function baseUrl(scope: HardwareScope) {
     : "/api/v1/events/hardware";
 }
 
-async function request<T>(url: string, method: "GET" | "POST" | "PATCH" | "DELETE", body?: unknown) {
+async function request<T>(
+  url: string,
+  method: "GET" | "POST" | "PATCH" | "DELETE",
+  body?: unknown,
+) {
   const response = await fetch(url, {
     method,
     credentials: "include",

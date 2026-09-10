@@ -3,7 +3,9 @@ import { hardwareLifecycle } from "./hardware-lifecycle";
 
 describe("hardwareLifecycle", () => {
   it("uses the central and Event-detail seams without exposing URL rules to callers", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: "h1" }) });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: "h1" }) });
     vi.stubGlobal("fetch", fetchMock);
     await hardwareLifecycle.save({ eventId: "event-1" }, { id: "h1", status: "RETURNED" });
     await hardwareLifecycle.save({}, { recipientName: "Ada" });
