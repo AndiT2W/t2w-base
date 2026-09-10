@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
+import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
 
 type P = {
   id: string;
@@ -38,46 +39,33 @@ function statusClasses(p: P) {
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
-  const [items, setItems] = useState<P[]>([]);
+  const workspace = useMemo(() => createPayoutWorkspace<P>(createHttpPayoutAdapter<P>()), []);
+  const { rows: items } = useSyncExternalStore(workspace.subscribe, workspace.snapshot, workspace.snapshot);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("EUR");
-  const load = () =>
-    fetch(`/api/v1/payouts?eventId=${eventId}`, { credentials: "include" })
-      .then((r) => r.json())
-      .then(setItems);
+  const scope = { eventId };
+  const load = () => workspace.load(scope);
   useEffect(() => {
     void load();
   }, [eventId]);
   async function create() {
     if (!amount) return;
-    await fetch("/api/v1/payouts", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    await workspace.create(scope, {
         eventId,
         recipientId,
         mailRecipient: recipientEmail,
         amount,
         currency,
-      }),
-    });
+      });
     setAmount("");
     await load();
   }
   async function update(id: string, body: Record<string, unknown>) {
-    await fetch(`/api/v1/payouts/${id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    await load();
+    await workspace.update(scope, id, body);
   }
   async function remove(id: string) {
     if (!window.confirm("Auszahlung dauerhaft löschen?")) return;
-    await fetch(`/api/v1/payouts/${id}`, { method: "DELETE", credentials: "include" });
-    await load();
+    await workspace.remove(scope, id);
   }
   return (
     <section aria-label="Auszahlungen" className="space-y-4">
