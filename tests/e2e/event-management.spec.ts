@@ -1035,9 +1035,6 @@ test("zeigt den Eventcode in der Metadatenzeile des Events", async ({ page }) =>
 });
 
 test("blockiert zyklische Aufgabe-Abhängigkeiten im Bearbeiten-Modus", async ({ page }) => {
-  await page.route("**/api/v1/events/11111111-1111-4111-8111-111111111111/tasks/**", (route) =>
-    route.continue(),
-  );
   await mockApi(page, {
     version: 6,
     tasks: [
@@ -1083,10 +1080,10 @@ test("blockiert zyklische Aufgabe-Abhängigkeiten im Bearbeiten-Modus", async ({
   const dependency = firstTaskRow.getByLabel("Abhängigkeit bearbeiten");
   await expect(dependency).toBeVisible();
   const optionCount = await dependency.evaluate((node) => node.options.length);
-  expect(optionCount).toBeGreaterThan(1);
+  expect(optionCount).toBe(2);
 
-  await expect(dependency.locator('option[value="t2"]')).not.toHaveCount(1);
-  await expect(dependency.locator('option[value="t3"]')).not.toHaveCount(1);
+  await expect(dependency.locator('option[value="t2"]')).toHaveCount(0);
+  await expect(dependency.locator('option[value="t3"]')).toHaveCount(0);
   await expect(dependency.locator('option[value="t4"]')).toHaveText("Abschluss");
   await expect(dependency.locator('option[value="t4"]')).not.toHaveAttribute("disabled");
 });
