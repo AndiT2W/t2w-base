@@ -26,7 +26,6 @@ export class EventRecordRetrieval {
   list(input: { q?: string; skip: number; take: number }) {
     return this.prisma.event.findMany({
       where: {
-        archived: false,
         ...(input.q
           ? {
               OR: [

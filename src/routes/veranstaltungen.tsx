@@ -19,7 +19,7 @@ import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
-import { selectEvents, type ArchiveSelection, type EventPeriod } from "@/lib/t2w/event-projections";
+import { selectEventCatalogue, type ArchiveSelection, type EventPeriod } from "@/lib/t2w/event-catalogue";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
 
@@ -102,7 +102,7 @@ function Veranstaltungen() {
   const heute = heuteIso();
 
   const gefiltert = useMemo(() => {
-    return selectEvents(events, {
+    return selectEventCatalogue(events, {
       query: suche,
       status,
       period: zeitraum,

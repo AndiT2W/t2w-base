@@ -12,9 +12,8 @@ import { cn } from "@/lib/utils";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import {
   austrianHoliday,
-  selectEvents,
-  type ArchiveSelection,
 } from "@/lib/t2w/event-projections";
+import { selectEventCatalogue, type ArchiveSelection } from "@/lib/t2w/event-catalogue";
 import {
   addDays,
   iso,
@@ -146,7 +145,7 @@ export function KalenderSeite({
   const navigatingScroll = useRef(false);
   const sichtbareEvents = useMemo(
     () =>
-      selectEvents(events, {
+      selectEventCatalogue(events, {
         query: "",
         status: "alle",
         period: "alle",
