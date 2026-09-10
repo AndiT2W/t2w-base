@@ -120,6 +120,7 @@ model Sport {
   active    Boolean @default(true)
   icon      String?
   color     String?
+  sortOrder Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   events    Event[]
@@ -301,6 +302,7 @@ model ServiceOption {
   active    Boolean  @default(true)
   icon      String?
   color     String?
+  sortOrder Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   events    EventService[]
@@ -312,6 +314,7 @@ model HardwareObjectOption {
   id        String   @id @default(uuid()) @db.Uuid
   name      String   @unique
   active    Boolean  @default(true)
+  sortOrder Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -331,6 +334,7 @@ model EventRoleOption {
   active    Boolean  @default(true)
   icon      String?
   color     String?
+  sortOrder Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

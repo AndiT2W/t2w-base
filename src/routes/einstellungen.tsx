@@ -60,7 +60,7 @@ export const Route = createFileRoute("/einstellungen")({
 });
 
 function Einstellungen() {
-  const { settings, setSettings, selectionLists, createSelectionValue, updateSelectionValue } =
+  const { settings, setSettings, selectionLists, createSelectionValue, updateSelectionValue, reorderSelectionValues } =
     useT2W();
   const { tab, liste } = Route.useSearch();
   const navigate = useNavigate();
@@ -260,10 +260,7 @@ function Einstellungen() {
     const from = values.findIndex((value) => value.id === dragged.id);
     const to = values.findIndex((value) => value.id === id);
     if (from < 0 || to < 0) return;
-    const next = [...values];
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    await Promise.all(next.map((value, index) => updateSelectionValue(kind, value.id, { sortOrder: index })));
+    await reorderSelectionValues(kind, dragged.id, id);
     setDragged(null);
     toast.success("Reihenfolge gespeichert.");
   }

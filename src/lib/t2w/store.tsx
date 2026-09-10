@@ -57,6 +57,7 @@ type Ctx = State & {
     id: string,
     patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null; sortOrder?: number },
   ) => Promise<void>;
+  reorderSelectionValues: (kind: SelectionListKind, id: string, beforeId: string) => Promise<void>;
 };
 
 const StoreContext = createContext<Ctx | null>(null);
@@ -141,6 +142,9 @@ export function T2WProvider({ children }: { children: ReactNode }) {
       },
       updateSelectionValue: async (kind, id, patch) => {
         await selectionWorkspace.update(kind, id, patch);
+      },
+      reorderSelectionValues: async (kind, id, beforeId) => {
+        await selectionWorkspace.reorder(kind, id, beforeId);
       },
     }),
     [

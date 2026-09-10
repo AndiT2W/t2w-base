@@ -33,6 +33,7 @@ export interface SelectionListAdapter {
     id: string,
     patch: SelectionListPatch,
   ): Promise<SelectionListValue>;
+  reorder(kind: SelectionListKind, ids: string[]): Promise<SelectionListValue[]>;
 }
 
 const normalizeName = (name: string) => {
@@ -83,6 +84,7 @@ export class SelectionLists {
       ...(patch.name === undefined ? {} : { name: normalizeName(patch.name) }),
     });
   }
+  reorder(kind: SelectionListKind, ids: string[]) { return this.adapter.reorder(kind, ids); }
 }
 
 export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
@@ -133,6 +135,18 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
         snapshot[kind].map((current) => (current.id === id ? value : current)),
       );
       return value;
+    },
+    async reorder(kind: SelectionListKind, id: string, beforeId: string) {
+      const next = [...snapshot[kind]];
+      const from = next.findIndex((value) => value.id === id);
+      const to = next.findIndex((value) => value.id === beforeId);
+      if (from < 0 || to < 0 || from === to) return snapshot[kind];
+      const [moved] = next.splice(from, 1);
+      if (!moved) return snapshot[kind];
+      next.splice(to, 0, moved);
+      const values = await lists.reorder(kind, next.map((value) => value.id));
+      replace(kind, values);
+      return values;
     },
   };
 }

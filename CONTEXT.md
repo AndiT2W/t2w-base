@@ -24,6 +24,8 @@ Table behavior consists of generic column definitions, persisted visibility, loc
 
 A selection list is a centrally managed set of domain-named values offered as choices in Event workflows. Values can be activated or deactivated without rewriting existing Event data. Active values are available for selection; management views also include inactive values. Sport types and Event roles are selection lists.
 
+Each selection list has one persisted order. Reordering is atomic: a list shows either its complete prior order or its complete new order. Existing values receive a deterministic alphabetical initial order when ordering is introduced.
+
 An inactive Event role remains visible for an existing Event-contact assignment, but is not available for a new assignment.
 
 ## Architectural vocabulary

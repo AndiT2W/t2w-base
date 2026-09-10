@@ -46,14 +46,26 @@ function setup(
   };
   const events = createEventWorkspace(transport);
   events.load([event]);
+  const mutations = {
+    copy: vi.fn().mockResolvedValue({ ...event, id: "e2", eventcode: "270116_mountain_attack" }),
+    remove: vi.fn().mockResolvedValue(undefined),
+    updateSeries: vi.fn().mockResolvedValue([{ ...event, seriesId: "series-1", version: 2 }]),
+    applyEvents: vi.fn(),
+  };
   return {
     workspace: createEventDetailWorkspace(events.openSession("e1"), {
       event,
       persons: [person],
       customers: [customer],
-    }),
+      events: [
+        event,
+        { ...event, id: "e0", eventcode: "270114_before", start: "2027-01-14", seriesId: "series-1" },
+        { ...event, id: "e2", eventcode: "270116_after", start: "2027-01-16", seriesId: "series-1" },
+      ],
+    }, mutations),
     transport,
     syncTime2win,
+    mutations,
   };
 }
 
@@ -114,5 +126,39 @@ describe("Event detail workspace", () => {
     await expect(workspace.syncTime2win()).resolves.toEqual({ kind: "failed" });
     expect(workspace.snapshot().form).toEqual(event);
     expect(workspace.snapshot().time2winSyncMessage).toContain("letzte erfolgreiche Wert");
+  });
+
+  it("owns copy, series, and delete mutations behind the detail seam", async () => {
+    const { workspace, mutations } = setup();
+    expect(workspace.snapshot().seriesCandidates.map((item) => item.id)).toEqual(["e0", "e2"]);
+
+    await expect(
+      workspace.copy({
+        name: "Mountain Attack 2027",
+        eventcode: "270116_mountain_attack",
+        start: "2027-01-16",
+        ende: "2027-01-16",
+        createRelationship: true,
+      }),
+    ).resolves.toMatchObject({ id: "e2" });
+    expect(mutations.copy).toHaveBeenCalledWith(
+      "e1",
+      expect.objectContaining({ version: 1, createRelationship: true }),
+    );
+
+    await workspace.updateSeries("e2");
+    expect(mutations.updateSeries).toHaveBeenCalledWith("e1", {
+      targetEventId: "e2",
+      version: 1,
+    });
+    expect(mutations.applyEvents).toHaveBeenCalledOnce();
+    expect(workspace.snapshot()).toMatchObject({
+      form: { seriesId: "series-1", version: 2 },
+      previousSeriesEvent: { id: "e0" },
+      nextSeriesEvent: { id: "e2" },
+    });
+
+    await workspace.remove();
+    expect(mutations.remove).toHaveBeenCalledWith("e1");
   });
 });

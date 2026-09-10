@@ -105,6 +105,10 @@ export class MasterDataController {
   @Patch("sports/:id/deactivate") deactivateSport(@Param("id", ParseUUIDPipe) id: string) {
     return this.selectionLists.update("sports", id, { active: false });
   }
+  @Post(":kind/reorder") reorderSelectionList(@Param("kind") kind: "sports" | "services" | "hardware-objects" | "event-roles", @Body() body: { ids: string[] }) {
+    const normalized = kind === "hardware-objects" ? "hardwareObjects" : kind === "event-roles" ? "eventRoles" : kind;
+    return this.selectionLists.reorder(normalized, body.ids);
+  }
 
   @Get("services") services(@Query("includeInactive") includeInactive?: string) {
     return this.selectionLists.list("services", includeInactive === "true");

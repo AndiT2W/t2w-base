@@ -7,6 +7,27 @@ import type {
 } from "./event-workspace";
 import type { T2WEvent } from "./types";
 
+export type EventCopyInput = {
+  name: string;
+  eventcode: string;
+  start: string;
+  ende: string;
+  createRelationship: boolean;
+};
+
+export type EventDetailMutations = {
+  copy: (
+    sourceId: string,
+    input: EventCopyInput & { version?: number },
+  ) => Promise<T2WEvent>;
+  remove: (id: string) => Promise<void>;
+  updateSeries: (
+    id: string,
+    input: { targetEventId?: string; version?: number },
+  ) => Promise<T2WEvent[]>;
+  applyEvents: (events: T2WEvent[]) => void;
+};
+
 type DraftInputKey =
   "contactSearch" | "invoiceRecipientSearch" | "newTask" | "newFile" | "newActivity";
 type DraftInputs = Record<DraftInputKey, string> & { contactId: string; contactRole: string };
@@ -27,6 +48,10 @@ export type EventDetailSnapshot = DraftInputs & {
   invoiceRecipientIds: string[];
   invoiceRecipients: Kunde[];
   visibleInvoiceRecipients: Kunde[];
+  seriesCandidates: T2WEvent[];
+  seriesEvents: T2WEvent[];
+  previousSeriesEvent?: T2WEvent;
+  nextSeriesEvent?: T2WEvent;
 };
 
 export type EventDetailInteraction =
@@ -38,11 +63,13 @@ export type EventDetailOutcome = {
 
 export function createEventDetailWorkspace(
   session: EventEditingSession,
-  initial: { event: T2WEvent; persons: Person[]; customers: Kunde[] },
+  initial: { event: T2WEvent; persons: Person[]; customers: Kunde[]; events: T2WEvent[] },
+  mutations: EventDetailMutations,
 ) {
   let event = initial.event;
   let persons = initial.persons;
   let customers = initial.customers;
+  let events = initial.events;
   let outlookPlan: OutlookFolderPlan | null = null;
   let outlookSyncing = false;
   let outlookSyncMessage: string | null = null;
@@ -69,6 +96,15 @@ export function createEventDetailWorkspace(
     const invoiceRecipientIds =
       form.rechnungsempfaengerIds ?? (event.veranstalterId ? [event.veranstalterId] : []);
     const payoutRecipientId = form.auszahlungsempfaengerId ?? event.veranstalterId;
+    const seriesCandidates = events
+      .filter((item) => item.id !== event.id)
+      .sort((left, right) => left.start.localeCompare(right.start));
+    const seriesEvents = form.seriesId
+      ? events
+          .filter((item) => item.seriesId === form.seriesId)
+          .sort((left, right) => left.start.localeCompare(right.start))
+      : [];
+    const seriesIndex = seriesEvents.findIndex((item) => item.id === event.id);
     return {
       ...inputs,
       form,
@@ -97,6 +133,10 @@ export function createEventDetailWorkspace(
       visibleInvoiceRecipients: customers.filter((customer) =>
         customer.name.toLocaleLowerCase("de").includes(invoiceQuery),
       ),
+      seriesCandidates,
+      seriesEvents,
+      previousSeriesEvent: seriesEvents[seriesIndex - 1],
+      nextSeriesEvent: seriesEvents[seriesIndex + 1],
     };
   };
   const publish = () => {
@@ -117,10 +157,16 @@ export function createEventDetailWorkspace(
       subscribers.add(subscriber);
       return () => subscribers.delete(subscriber);
     },
-    accept(eventSnapshot: T2WEvent, nextPersons: Person[], nextCustomers: Kunde[]) {
+    accept(
+      eventSnapshot: T2WEvent,
+      nextPersons: Person[],
+      nextCustomers: Kunde[],
+      nextEvents = events,
+    ) {
       event = eventSnapshot;
       persons = nextPersons;
       customers = nextCustomers;
+      events = nextEvents;
       session.accept(eventSnapshot);
       publish();
     },
@@ -331,6 +377,27 @@ export function createEventDetailWorkspace(
     async confirmOutlookMove(path: string) {
       session.update({ outlookOrdner: path });
       return session.save();
+    },
+    async copy(input: EventCopyInput) {
+      return mutations.copy(event.id, { ...input, version: snapshot.form.version });
+    },
+    async updateSeries(targetEventId?: string) {
+      const changed = await mutations.updateSeries(event.id, {
+        ...(targetEventId ? { targetEventId } : {}),
+        version: snapshot.form.version,
+      });
+      mutations.applyEvents(changed);
+      events = events.map((item) => changed.find((updated) => updated.id === item.id) ?? item);
+      const updated = changed.find((item) => item.id === event.id);
+      if (updated) {
+        event = updated;
+        session.accept(updated);
+      }
+      publish();
+      return changed;
+    },
+    remove() {
+      return mutations.remove(event.id);
     },
   };
 }

@@ -53,5 +53,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
             ? apiUpdateHardwareObject(id, patch)
             : apiUpdateEventRole(id, patch);
     },
+    reorder(kind, ids) {
+      const path = kind === "sports" ? "sports" : kind === "services" ? "services" : kind === "hardwareObjects" ? "hardware-objects" : "event-roles";
+      return fetch(`/api/v1/${path}/reorder`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) }).then(async (response) => { if (!response.ok) throw new Error("SELECTION_LIST_REORDER_FAILED"); return response.json(); });
+    },
   };
 }

@@ -34,4 +34,11 @@ export class PrismaSelectionListAdapter implements SelectionListAdapter {
       });
     return this.prisma.eventRoleOption.update({ where: { id }, data: patch });
   }
+  async reorder(kind: SelectionListKind, ids: string[]) {
+    const model: any = kind === "sports" ? this.prisma.sport : kind === "services" ? this.prisma.serviceOption : kind === "hardwareObjects" ? this.prisma.hardwareObjectOption : this.prisma.eventRoleOption;
+    const current = await model.findMany({ orderBy: { name: "asc" } });
+    if (current.length !== ids.length || current.some((value: { id: string }) => !ids.includes(value.id))) throw new Error("SELECTION_LIST_REORDER_CONFLICT");
+    await this.prisma.$transaction(ids.map((id, sortOrder) => model.update({ where: { id }, data: { sortOrder } })));
+    return model.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+  }
 }

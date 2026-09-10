@@ -61,10 +61,10 @@ export class AutomationController {
     return this.automation.result(key, body);
   }
   @Post("payouts/claim") claim(@Body() body: { idempotencyKey: string; workflowId?: string }) {
-    return this.payouts.claim(body.idempotencyKey, body.workflowId);
+    return this.automation.claimNext({ domain: "payout", ...body });
   }
   @Post("payouts/:id/result") result(@Param("id") id: string, @Body() body: any) {
-    return this.payouts.result(id, body);
+    return this.automation.result(id, body);
   }
 }
 

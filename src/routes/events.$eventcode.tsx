@@ -204,7 +204,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       event,
       persons: personen,
       customers: kunden,
+      events,
     }),
+    {
+      copy: kopiereEvent,
+      remove: loescheEvent,
+      updateSeries: apiUpdateEventSeries,
+      applyEvents: uebernehmeEvents,
+    },
   );
   const detail = useSyncExternalStore(
     detailWorkspace.subscribe,
@@ -311,9 +318,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   };
 
   useEffect(() => {
-    detailWorkspace.accept(event, personen, kunden);
+    detailWorkspace.accept(event, personen, kunden, events);
     savedEventRef.current = event;
-  }, [detailWorkspace, event, personen, kunden]);
+  }, [detailWorkspace, event, personen, kunden, events]);
   useEffect(() => {
     void detailWorkspace.refreshOutlookPlan();
   }, [event.id, event.start, event.outlookOrdner, detailWorkspace]);
@@ -356,7 +363,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   }
   async function eventLoeschen() {
     try {
-      await loescheEvent(event.id);
+      await detailWorkspace.remove();
       toast.success("Event gelöscht.");
       window.location.assign("/");
     } catch {
@@ -365,13 +372,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   }
   async function copyEvent() {
     try {
-      const copied = await kopiereEvent(event.id, {
+      const copied = await detailWorkspace.copy({
         name: copyName,
         eventcode: copyCode,
         start: copyStart,
         ende: copyEnde,
         createRelationship,
-        version: event.version,
       });
       toast.success("Event kopiert.");
       setCopyDialog(false);
@@ -380,9 +386,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       toast.error("Event konnte nicht kopiert werden. Der Eventcode muss eindeutig sein.");
     }
   }
-  const seriesCandidates = events
-    .filter((item) => item.id !== event.id)
-    .sort((left, right) => left.start.localeCompare(right.start));
+  const { seriesCandidates, seriesEvents, previousSeriesEvent: previousEvent, nextSeriesEvent: nextEvent } = detail;
   const visibleSeriesCandidates = seriesCandidates.filter((item) => {
     const query = seriesSearch.trim().toLocaleLowerCase();
     if (!query) return true;
@@ -392,13 +396,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   });
   async function updateSeries(targetEventId?: string) {
     try {
-      const changed = await apiUpdateEventSeries(event.id, {
-        ...(targetEventId ? { targetEventId } : {}),
-        version: form.version,
-      });
-      uebernehmeEvents(changed);
-      const updated = changed.find((item) => item.id === event.id);
-      if (updated) detailWorkspace.accept(updated, personen, kunden);
+      await detailWorkspace.updateSeries(targetEventId);
       setSeriesDialog(false);
       setSeriesTargetEventId("");
       toast.success(targetEventId ? "Eventserie gespeichert." : "Event aus der Serie entfernt.");
@@ -406,14 +404,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       toast.error("Eventserie konnte nicht gespeichert werden. Bitte neu laden.");
     }
   }
-  const seriesEvents = form.seriesId
-    ? events
-        .filter((item) => item.seriesId === form.seriesId)
-        .sort((a, b) => a.start.localeCompare(b.start))
-    : [];
-  const seriesIndex = seriesEvents.findIndex((item) => item.id === event.id);
-  const previousEvent = seriesEvents[seriesIndex - 1];
-  const nextEvent = seriesEvents[seriesIndex + 1];
 
   async function addEventContact(personId: string, role: string) {
     await detailWorkspace.addEventContact(personId, role);
