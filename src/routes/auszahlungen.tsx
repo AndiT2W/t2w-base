@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { Button } from "@/components/ui/button";
 import { PayoutCreateForm } from "@/components/t2w/PayoutsPanel";
+import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
 
 type Payout = {
   id: string;
@@ -27,7 +28,7 @@ function status(p: Payout) {
   return "Offen";
 }
 function Auszahlungen() {
-  const [rows, setRows] = useState<Payout[]>([]);
+  const workspace = useMemo(() => createPayoutWorkspace<Payout>(createHttpPayoutAdapter<Payout>()), []);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("");
   const [eventId, setEventId] = useState("");
@@ -36,18 +37,12 @@ function Auszahlungen() {
   const [events, setEvents] = useState<Array<{ id: string; eventCode: string; name: string }>>([]);
   const [recipients, setRecipients] = useState<Array<{ id: string; name: string }>>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const load = () =>
-    fetch(
-      `/api/v1/payouts?q=${encodeURIComponent(q)}${filter ? `&status=${filter}` : ""}${eventId ? `&eventId=${encodeURIComponent(eventId)}` : ""}${year ? `&year=${encodeURIComponent(year)}` : ""}${recipientId ? `&recipientId=${encodeURIComponent(recipientId)}` : ""}`,
-      {
-        credentials: "include",
-      },
-    )
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setRows);
+  const scope = useMemo(() => ({ q, status: filter, eventId, year, recipientId }), [q, filter, eventId, year, recipientId]);
+  const { rows } = useSyncExternalStore(workspace.subscribe, workspace.snapshot, workspace.snapshot);
+  const load = () => workspace.load(scope);
   useEffect(() => {
     void load();
-  }, [q, filter, eventId, year, recipientId]);
+  }, [workspace, scope]);
   useEffect(() => {
     void Promise.all([
       fetch("/api/v1/events?limit=1000", { credentials: "include" }).then((r) => r.json()),
@@ -74,28 +69,15 @@ function Auszahlungen() {
       !window.confirm(`${selected.length} Auszahlung(en) für Mailversand markieren?`)
     )
       return;
-    await fetch("/api/v1/payouts/bulk/mark-for-mail", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: selected }),
-    });
+    await workspace.markForMail(scope, selected);
     setSelected([]);
-    await load();
   }
   async function update(id: string, changes: Record<string, string>) {
-    await fetch(`/api/v1/payouts/${id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(changes),
-    });
-    await load();
+    await workspace.update(scope, id, changes);
   }
   async function remove(id: string) {
     if (!window.confirm("Auszahlung dauerhaft löschen?")) return;
-    await fetch(`/api/v1/payouts/${id}`, { method: "DELETE", credentials: "include" });
-    await load();
+    await workspace.remove(scope, id);
   }
   return (
     <div>

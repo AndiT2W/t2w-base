@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { ColumnPicker, SortHeader, useStoredColumns } from "@/components/t2w/TableFeatures";
+import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -304,16 +304,7 @@ function PeopleTable({
   select: (id: string) => void;
   open: () => void;
 }) {
-  const [sort, setSort] = useState<TableSort>({ key: "Name", direction: "asc" });
-  const { visibleColumns, toggleColumn } = useStoredColumns<PeopleColumn>(
-    "t2w-contact-table-columns",
-    PEOPLE_COLUMNS,
-  );
-  const sortedPeople = sortRows(
-    people,
-    sort,
-    (person) =>
-      ({
+  const table = useTableBehavior<Person, PeopleColumn>({ storageKey: "t2w-contact-table-columns", initialSort: { key: "Name", direction: "asc" }, columns: PEOPLE_COLUMNS.map((key) => ({ key, sortValue: (person) => ({
         Name: personName(person),
         Funktion: person.funktion,
         "E-Mail": person.email,
@@ -321,8 +312,9 @@ function PeopleTable({
         Kunden: person.kundenIds.length,
         Eventrollen: person.eventRollen.length,
         Kundenprofil: person.kundenprofilId ? "ja" : "nein",
-      })[sort.key],
-  );
+      })[key] ?? "" })) });
+  const { visibleColumns, toggleColumn } = table;
+  const sortedPeople = table.rows(people);
   return people.length ? (
     <>
       <ColumnPicker
@@ -332,8 +324,8 @@ function PeopleTable({
       />
       <Table
         h={PEOPLE_COLUMNS.filter((column) => visibleColumns.includes(column))}
-        sort={sort}
-        onSort={setSort}
+        sort={table.sort}
+        onSort={table.sortBy}
       >
         {sortedPeople.map((p) => (
           <tr
@@ -371,16 +363,7 @@ function CustomerTable({
   select: (id: string) => void;
   open: () => void;
 }) {
-  const [sort, setSort] = useState<TableSort>({ key: "Kunde", direction: "asc" });
-  const { visibleColumns, toggleColumn } = useStoredColumns<CustomerColumn>(
-    CUSTOMER_COLUMN_STORAGE_KEY,
-    CUSTOMER_COLUMNS,
-  );
-  const sortedCustomers = sortRows(
-    customers,
-    sort,
-    (customer) =>
-      ({
+  const table = useTableBehavior<Kunde, CustomerColumn>({ storageKey: CUSTOMER_COLUMN_STORAGE_KEY, initialSort: { key: "Kunde", direction: "asc" }, columns: CUSTOMER_COLUMNS.map((key) => ({ key, sortValue: (customer) => ({
         Kunde: customer.name,
         Hauptansprechperson: customer.primaryContactId
           ? personName(people.find((p) => p.id === customer.primaryContactId) ?? ({} as Person))
@@ -391,8 +374,9 @@ function CustomerTable({
         Kontakte: customer.kontaktIds.length,
         Events: customer.events.length,
         Status: KUNDENSTATUS_LABEL[customer.status],
-      })[sort.key],
-  );
+      })[key] ?? "" })) });
+  const { visibleColumns, toggleColumn } = table;
+  const sortedCustomers = table.rows(customers);
   return customers.length ? (
     <>
       <ColumnPicker
@@ -402,8 +386,8 @@ function CustomerTable({
       />
       <Table
         h={CUSTOMER_COLUMNS.filter((column) => visibleColumns.includes(column))}
-        sort={sort}
-        onSort={setSort}
+        sort={table.sort}
+        onSort={table.sortBy}
       >
         {sortedCustomers.map((k) => (
           <tr
@@ -437,20 +421,6 @@ function CustomerTable({
     <Empty text="Keine Kunden gefunden." open={open} label="Kunde anlegen" />
   );
 }
-type TableSort = { key: string; direction: "asc" | "desc" };
-
-function sortRows<T>(rows: T[], sort: TableSort, value: (row: T) => string | number | undefined) {
-  return [...rows].sort((a, b) => {
-    const left = value(a) ?? "";
-    const right = value(b) ?? "";
-    const comparison =
-      typeof left === "number" && typeof right === "number"
-        ? left - right
-        : String(left).localeCompare(String(right), "de", { numeric: true });
-    return sort.direction === "asc" ? comparison : -comparison;
-  });
-}
-
 function Table({
   h,
   children,
@@ -459,8 +429,8 @@ function Table({
 }: {
   h: string[];
   children: ReactNode;
-  sort: TableSort;
-  onSort: (sort: TableSort) => void;
+  sort: { key: string; direction: "asc" | "desc" };
+  onSort: (key: string) => void;
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-surface">
@@ -473,12 +443,7 @@ function Table({
                   label={x}
                   active={sort.key === x}
                   direction={sort.direction}
-                  onSort={() =>
-                    onSort({
-                      key: x,
-                      direction: sort.key === x && sort.direction === "asc" ? "desc" : "asc",
-                    })
-                  }
+                  onSort={() => onSort(x)}
                 />
               </th>
             ))}

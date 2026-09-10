@@ -27,6 +27,7 @@ import {
 } from "@/components/t2w/ServiceBadge";
 import { apiAuditLog, apiOutlookStatus, type ApiAuditLog } from "@/lib/t2w/api";
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
+import { createSelectionListManagementWorkspace } from "@/lib/t2w/selection-list-management-workspace";
 
 export const Route = createFileRoute("/einstellungen")({
   validateSearch: (search) => ({
@@ -67,6 +68,7 @@ function Einstellungen() {
   const [workspace] = useState(() =>
     createSettingsWorkspace({ save: setSettings, checkOutlook: apiOutlookStatus }, settings),
   );
+  const management = useMemo(() => createSelectionListManagementWorkspace({ create: createSelectionValue, update: updateSelectionValue, reorder: reorderSelectionValues }), [createSelectionValue, updateSelectionValue, reorderSelectionValues]);
   const sports = selectionLists.sports;
   const [newSport, setNewSport] = useState("");
   const eventRoles = selectionLists.eventRoles;
@@ -260,7 +262,8 @@ function Einstellungen() {
     const from = values.findIndex((value) => value.id === dragged.id);
     const to = values.findIndex((value) => value.id === id);
     if (from < 0 || to < 0) return;
-    await reorderSelectionValues(kind, dragged.id, id);
+    const result = await management.reorder(kind, dragged.id, id);
+    if (result.kind === "failed") { toast.error("Reihenfolge konnte nicht gespeichert werden."); return; }
     setDragged(null);
     toast.success("Reihenfolge gespeichert.");
   }
