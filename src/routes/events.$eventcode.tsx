@@ -485,15 +485,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   }
   async function saveTaskMeta(taskId: string) {
     const dependency = editingTaskDependency === "" ? null : editingTaskDependency;
-    await detailWorkspace.updateTask(taskId, {
-      responsible: editingTaskResponsible.trim(),
-      dueAt: editingTaskDue || null,
-      dependsOnTaskId: dependency,
-    });
-    setEditingTaskId(null);
-    setEditingTaskResponsible("");
-    setEditingTaskDue("");
-    setEditingTaskDependency("");
+    try {
+      await detailWorkspace.updateTask(taskId, {
+        responsible: editingTaskResponsible.trim(),
+        dueAt: editingTaskDue || null,
+        dependsOnTaskId: dependency,
+      });
+      setEditingTaskId(null);
+      setEditingTaskResponsible("");
+      setEditingTaskDue("");
+      setEditingTaskDependency("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Aufgabe konnte nicht gespeichert werden.");
+    }
   }
   function cancelTaskEdit() {
     setEditingTaskId(null);
