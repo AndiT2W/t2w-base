@@ -131,6 +131,8 @@ Implemented on 2026-08-30: the Event Service now persists Outlook message overvi
 
 Implemented on 2026-09-01: communication sync also inspects `Gesendete Elemente` for matching Graph `conversationId` values. A sent message is moved only when its conversation exists in the current Event folder and no persisted communication message assigns that conversation to another Event. After a move, the authoritative Event folder is read again. The timeline exposes three selectable presentations (`Karten`, `Dialog`, `Kompakt`) and marks later messages in the same conversation as indented replies.
 
+Outgoing messages from the configured TIME2WIN mailbox use the existing circular TIME2WIN logo instead of a textual sender badge. The logo remains exposed as `Von TIME2WIN gesendet` to assistive technology and through a tooltip.
+
 ## Later Phases
 
 - Extend sent-mail ingestion with review handling for ambiguous conversations and richer thread metadata.

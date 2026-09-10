@@ -74,7 +74,7 @@ Build a lean billing module for one active TIME2WIN issuing company. It supports
   - Credits: `Entwurf -> Ausgestellt -> Versendet -> Teilweise verwendet -> Verwendet`, with `Storniert` and `Archiviert` as additional states/actions.
 - `Ausgestellt` can return to `Entwurf` while the document has not been externally sent and has no payment. `Versendet` is the final immutability boundary.
 - Status changes use explicit actions, not a free status dropdown. Invalid transitions are prevented.
-- One active company, no role model, and all users may perform the available actions initially. The append-only audit timeline records who did what and when.
+- One active company with internal users. The initial role model has `Admin` and `Benutzer`; admins manage users and system settings, while both roles may use the operational data. Authorization is enforced server-side and the append-only audit timeline records who did what and when.
 - Customer and event are fast-search fields. Customers can be created inline; events must exist before linking.
 - Event linkage is optional. Event participant counts may be refreshed manually from TIME2WIN when linked; accepted quantities are copied into the document and never auto-update.
 - Products remain simple: code, name, description, unit, standard price, standard tax, optional group, active/inactive. No customer price lists, stock, or formula engine.

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
-  ArrowLeft,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
@@ -37,7 +36,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
@@ -73,6 +79,7 @@ import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
 import { ServiceBadge, SelectionBadge } from "@/components/t2w/ServiceBadge";
+import { PageHeader } from "@/components/t2w/PageHeader";
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
   const address = [
@@ -209,6 +216,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [copyDialog, setCopyDialog] = useState(false);
   const [seriesDialog, setSeriesDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [deleteAreaOpen, setDeleteAreaOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("stammdaten");
+  const [saving, setSaving] = useState(false);
+  const savedEventRef = useRef(event);
   const [seriesTargetEventId, setSeriesTargetEventId] = useState("");
   const [seriesSearch, setSeriesSearch] = useState("");
   const [seriesPickerOpen, setSeriesPickerOpen] = useState(false);
@@ -301,6 +312,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
   useEffect(() => {
     detailWorkspace.accept(event, personen, kunden);
+    savedEventRef.current = event;
   }, [detailWorkspace, event, personen, kunden]);
   useEffect(() => {
     void detailWorkspace.refreshOutlookPlan();
@@ -311,14 +323,23 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const quartalsAbweichung = detail.outlookPlan?.drifted ?? false;
   const jahresSite = settings.jahresSites.find((s) => s.jahr === jahr(form.start));
   const folders = resolveEventFolderNavigation(form, settings);
+  const isDirty = JSON.stringify(form) !== JSON.stringify(savedEventRef.current);
 
   function set<K extends keyof T2WEvent>(key: K, wert: T2WEvent[K]) {
     detailWorkspace.update(key, wert);
   }
 
   async function speichern() {
-    const outcome = await detailWorkspace.execute("save", neuLaden);
-    outcome.kind === "success" ? toast.success(outcome.message) : toast.error(outcome.message);
+    setSaving(true);
+    try {
+      const outcome = await detailWorkspace.execute("save", neuLaden);
+      if (outcome.kind === "success") {
+        savedEventRef.current = detailWorkspace.snapshot().form;
+        toast.success(outcome.message);
+      } else toast.error(outcome.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function outlookSynchronisieren() {
@@ -424,16 +445,17 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
   return (
     <div className="space-y-5">
-      <Button asChild variant="ghost" size="sm" className="-ml-2">
-        <Link to="/">
-          <ArrowLeft className="size-4" />
-          Zurück zur Eventliste
-        </Link>
-      </Button>
+      <PageHeader
+        krumen={[
+          { label: "TIME2WIN", to: "/" },
+          { label: "Veranstaltungen", to: "/veranstaltungen" },
+        ]}
+        titel={event.name}
+        beschreibung={event.eventcode}
+      />
 
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-5">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{event.name}</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span className="font-mono text-xs">{event.eventcode}</span>
             <span>·</span>
@@ -489,36 +511,75 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <Button variant="outline" onClick={() => setCopyDialog(true)}>
             Event kopieren
           </Button>
-          <Button onClick={speichern}>Änderungen speichern</Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {isDirty && (
+              <span className="text-xs text-muted-foreground" aria-live="polite">
+                Ungespeicherte Änderungen
+              </span>
+            )}
+            <Button disabled={!isDirty || saving} onClick={speichern}>
+              {saving ? "Wird gespeichert …" : "Änderungen speichern"}
+            </Button>
+          </div>
         </div>
       </div>
 
       {quartalsAbweichung && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-accent px-4 py-3">
           <p className="text-sm text-accent-foreground">
-            Quartalswechsel erkannt: Der Outlook-Ordner liegt nicht in {detail.outlookPlan?.quarter}
-            . Vorschlag: <span className="font-mono">{outlookVorschlag}</span>. SharePoint bleibt
-            unverändert.
+            Der Outlook-Ordner liegt im falschen Quartal. Prüfen Sie den vorgeschlagenen Zielordner;
+            SharePoint bleibt unverändert.
           </p>
           <Button variant="outline" size="sm" onClick={() => setQuartalsDialog(true)}>
             <FolderSync className="size-4" />
-            Verschiebung prüfen
+            Vorschlag prüfen
           </Button>
         </div>
       )}
 
-      <Tabs defaultValue="stammdaten">
-        <TabsList className="flex-wrap">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
+          <TabsList className="min-w-0 max-w-full flex-1 overflow-x-auto whitespace-nowrap">
           <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
           <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
           <TabsTrigger value="finanz">FINANZ</TabsTrigger>
           <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
-          <TabsTrigger value="aufgaben">AUFGABEN</TabsTrigger>
-          <TabsTrigger value="dateien">DATEIEN</TabsTrigger>
-          <TabsTrigger value="kommunikation">KOMMUNIKATION</TabsTrigger>
-          <TabsTrigger value="hardware">HARDWARE</TabsTrigger>
-        </TabsList>
-
+          <TabsTrigger id="event-tab-aufgaben" className="sr-only md:not-sr-only md:inline-flex" value="aufgaben">AUFGABEN</TabsTrigger>
+          <TabsTrigger id="event-tab-dateien" className="sr-only md:not-sr-only md:inline-flex" value="dateien">DATEIEN</TabsTrigger>
+          <TabsTrigger id="event-tab-kommunikation" className="sr-only md:not-sr-only md:inline-flex" value="kommunikation">KOMMUNIKATION</TabsTrigger>
+          <TabsTrigger id="event-tab-hardware" className="sr-only md:not-sr-only md:inline-flex" value="hardware">HARDWARE</TabsTrigger>
+          </TabsList>
+          <div className="md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" aria-label="Weitere Eventbereiche">
+                  Mehr <ChevronDown className="size-4" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {[
+                  ["aufgaben", "AUFGABEN"],
+                  ["dateien", "DATEIEN"],
+                  ["kommunikation", "KOMMUNIKATION"],
+                  ["hardware", "HARDWARE"],
+                ].map(([value, label]) => (
+                  <DropdownMenuItem key={value} asChild>
+                    <button
+                      type="button"
+                      onPointerDown={() => {
+                        setActiveTab(value);
+                        document.getElementById(`event-tab-${value}`)?.click();
+                      }}
+                      onClick={() => setActiveTab(value)}
+                    >
+                      {label}
+                    </button>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
         <TabsContent value="stammdaten" className="space-y-4">
           <Card>
             <CardHeader>
@@ -551,8 +612,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     checked={form.archiviert}
                     onCheckedChange={(v) => set("archiviert", v)}
                   />
-                </div>
-              </div>
+          </div>
+        </div>
               <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
                 <section aria-labelledby="event-identity-period" className="space-y-3">
                   <h3
@@ -887,20 +948,24 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </div>
             </CardContent>
           </Card>
-          <section
-            className="rounded-lg border border-destructive/30 bg-destructive/5 p-5"
-            aria-labelledby="event-delete-heading"
-          >
-            <h2 id="event-delete-heading" className="text-base font-semibold text-destructive">
-              Gefahrenbereich
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Das Event und die zugehörigen Daten dauerhaft löschen.
-            </p>
-            <Button variant="destructive" className="mt-4" onClick={() => setDeleteDialog(true)}>
-              Event löschen
-            </Button>
-          </section>
+          <Collapsible open={deleteAreaOpen} onOpenChange={setDeleteAreaOpen}>
+            <section className="rounded-lg border border-destructive/30 bg-destructive/5 p-5" aria-labelledby="event-delete-heading">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between px-0 text-destructive hover:bg-transparent">
+                  <span id="event-delete-heading" className="font-semibold">Gefahrenbereich</span>
+                  {deleteAreaOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Das Event und die zugehörigen Daten werden dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden.
+                </p>
+                <Button variant="destructive" className="mt-4" onClick={() => setDeleteDialog(true)}>
+                  Event löschen
+                </Button>
+              </CollapsibleContent>
+            </section>
+          </Collapsible>
         </TabsContent>
 
         <TabsContent value="time2win">
@@ -2111,8 +2176,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Event endgültig löschen?</AlertDialogTitle>
             <AlertDialogDescription>
-              „{event.name}“ wird dauerhaft gelöscht. Dieser Vorgang kann nicht rückgängig gemacht
-              werden.
+              „{event.name}“ ({event.eventcode}) wird dauerhaft gelöscht. Dieser Vorgang kann nicht
+              rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

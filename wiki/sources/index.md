@@ -17,6 +17,8 @@ Track ingested evidence and source summaries here.
 - [2026-06-30 User Target Model V1](2026-06-30-user-target-model-v1.md)
 - [2026-08-19 Lovable Event Navigator](2026-08-19-lovable-event-navigator.md)
 - [2026-08-23 User Codex Gateway Brief](2026-08-23-user-codex-gateway-brief.md)
+- [2026-08-28 Mountain Attack 2027 Outlook-Web-Link](2026-08-28-user-mountain-attack-outlook-link.md)
+- [Event-Services-Anforderung (2026-09-07)](2026-09-07-user-event-services.md)
 
 ## Notes
 

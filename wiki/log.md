@@ -468,3 +468,4 @@
 - 2026-09-09: Auditlog als eigene Einstellungsseite mit Entitätsfilter, zentraler API-Anbindung und Browser-Regressionstest ergänzt.
 - 2026-09-09: Deploy-Reihenfolge korrigiert: Event-Service startet erst nach erfolgreichem Prisma-Migrationslauf, damit neue Prisma-Clients während des Deployments keine 500er wegen fehlender Datenbankspalten ausliefern.
  - 2026-09-09: Auswahllisten erweitert: Hinzufügen steht oberhalb der Einträge, Reihenfolge per Drag & Drop mit sortOrder speicherbar; Hardware nutzt nun ebenfalls Symbol- und Farbdarstellung.
+- 2026-09-09: Eventdetail-UX für Issues #50–#53 umgesetzt: responsive Tab-Navigation mit mobilem „Mehr“-Menü, Dirty-/Loading-Feedback beim Speichern, verständlicher Outlook-Quartals-Hinweis und eingeklappter Gefahrenbereich mit Bestätigungsdialog. Fokussierte Regression in `tests/e2e/event-detail-ux.spec.ts` (4 Tests) und Development-Build erfolgreich.

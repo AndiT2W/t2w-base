@@ -84,6 +84,8 @@ test("loads the event detail page", async ({ page }) => {
   );
   await page.goto("/events/260820_demo_event");
   await expect(page.getByRole("tab", { name: "Stammdaten" })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByLabel("Breadcrumb").getByRole("link", { name: "Veranstaltungen" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");

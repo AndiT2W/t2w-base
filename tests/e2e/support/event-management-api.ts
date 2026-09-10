@@ -202,7 +202,7 @@ export async function mockEventManagementApi(
           quarter: "Q3",
           eventFolderName: mockedEvent.eventCode,
           path: `06_auftraege_26/Q3/${mockedEvent.eventCode}`,
-          drifted: false,
+          drifted: mockedEvent.outlookFolder?.includes("/Q2/") ?? false,
           existence: mockedEvent.outlookFolderId ? "EXISTS" : "MISSING",
         },
       });
