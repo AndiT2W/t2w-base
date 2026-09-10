@@ -142,6 +142,28 @@ function communicationDate(value: string) {
   }).format(new Date(value));
 }
 
+function getTaskDependencyDescendants(
+  taskId: string,
+  tasks: T2WEvent["aufgaben"],
+): Set<string> {
+  const blocked = new Set<string>([taskId]);
+  const queue = [taskId];
+
+  while (queue.length) {
+    const currentTaskId = queue.shift();
+    if (!currentTaskId) continue;
+    tasks
+      .filter((task) => task.dependsOnTaskId === currentTaskId)
+      .forEach((task) => {
+        if (blocked.has(task.id)) return;
+        blocked.add(task.id);
+        queue.push(task.id);
+      });
+  }
+
+  return blocked;
+}
+
 export const Route = createFileRoute("/events/$eventcode")({
   head: () => ({
     meta: [
@@ -485,6 +507,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     const blocker = form.aufgaben.find((item) => item.id === task.dependsOnTaskId);
     return blocker ? !blocker.erledigt : false;
   }
+  const getInvalidDependencyTargets = (taskId: string) =>
+    getTaskDependencyDescendants(taskId, form.aufgaben);
   async function addFile() {
     if (!detail.newFile.trim()) return;
     await detailWorkspace.addFile();
@@ -1596,11 +1620,29 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                           <option value="">— keine Abhängigkeit —</option>
                           {form.aufgaben
                             .filter((candidate) => candidate.id !== a.id)
-                            .map((candidate) => (
-                              <option key={candidate.id} value={candidate.id}>
-                                {candidate.titel}
-                              </option>
-                            ))}
+                            .map((candidate) => {
+                              const blockedDependency = getInvalidDependencyTargets(a.id);
+                              const isBlocked = blockedDependency.has(candidate.id);
+                              if (isBlocked && candidate.id !== editingTaskDependency) {
+                                return null;
+                              }
+                              return (
+                                <option
+                                  key={candidate.id}
+                                  value={candidate.id}
+                                  disabled={isBlocked}
+                                  title={
+                                    isBlocked
+                                      ? "Diese Aufgabe ist bereits abhängig von der aktuellen Aufgabe"
+                                      : undefined
+                                  }
+                                >
+                                  {isBlocked
+                                    ? `${candidate.titel} (würde Zyklus erzeugen)`
+                                    : candidate.titel}
+                                </option>
+                              );
+                            })}
                         </select>
                       </div>
                     ) : (
