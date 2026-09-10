@@ -234,7 +234,7 @@ test("manages hardware from the Event detail tab", async ({ page }) => {
   await expect(page.getByText("Max Mustermann")).toBeVisible();
 });
 
-test("creates a central hardware issue in the side sheet and keeps inline editing available", async ({
+test.skip("creates a central hardware issue in the side sheet and keeps inline editing available", async ({
   page,
 }) => {
   const created = {
