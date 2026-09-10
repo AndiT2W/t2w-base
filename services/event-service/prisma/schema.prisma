@@ -347,7 +347,10 @@ model EventTask {
   title       String
   dueAt       DateTime?
   responsible String?
+  dependsOnTaskId String? @db.Uuid
   completed   Boolean  @default(false)
+  dependsOnTask EventTask? @relation("TaskDependency", fields: [dependsOnTaskId], references: [id], onDelete: SetNull)
+  blockedBy   EventTask[] @relation("TaskDependency")
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -2,6 +2,12 @@
 
 ## Core Pages
 
+- [Projektmanagement v3: Aufgabenabhängigkeiten und aufklappbare Ablaufübersicht](tasks/project-management-spec-v3.md) (aktuell, Issue #55)
+- [Projektmanagement: Kategorie-Readiness](tasks/project-management-readiness-spec.md) (historischer Entwurf)
+
+- [Integriertes Projektmanagement: Spezifikation v2](tasks/project-management-spec-v2.md) (ersetzt)
+- [Integriertes Projektmanagement: Spezifikation v1](tasks/project-management-spec.md) (ersetzt, historische Fassung)
+
 - [Overview](overview.md)
 - [Specification v1](specification-v1.md)
 - [Delivery Phases](phases.md)

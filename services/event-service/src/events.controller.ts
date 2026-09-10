@@ -255,7 +255,13 @@ export class EventsController {
 
   @Post(":id/tasks") createTask(
     @Param("id", ParseUUIDPipe) eventId: string,
-    @Body() body: { title: string; dueAt?: string; responsible?: string; version: number },
+    @Body() body: {
+      title: string;
+      dueAt?: string;
+      responsible?: string;
+      dependsOnTaskId?: string | null;
+      version: number;
+    },
   ) {
     const { version, ...input } = body;
     return this.mutate(() => this.eventMutations.createTask(eventId, input, version));
@@ -268,6 +274,7 @@ export class EventsController {
       title?: string;
       dueAt?: string | null;
       responsible?: string;
+      dependsOnTaskId?: string | null;
       completed?: boolean;
       version: number;
     },

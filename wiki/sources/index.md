@@ -4,6 +4,12 @@ Track ingested evidence and source summaries here.
 
 ## Active Sources
 
+- [Projektmanagement v3: Auftrag und ursprüngliches Issue #55](2026-09-10-project-management-spec-v3.md)
+
+- [Event-Readiness-Anforderung (2026-09-10)](2026-09-10-user-event-readiness.md)
+
+- [Projektmanagement-Anforderung (2026-09-10)](2026-09-10-user-project-management.md)
+
 - [2026-06-15 User Product Brief](2026-06-15-user-product-brief.md)
 - [2026-06-15 User Customer Model Brief](2026-06-15-user-customer-model.md)
 - [2026-06-15 User Event Operations Brief](2026-06-15-user-event-operations-brief.md)

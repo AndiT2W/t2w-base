@@ -62,11 +62,25 @@ export type EventDetailCommand =
   | { kind: "add-contact"; contactId: string; role: string }
   | { kind: "remove-contact"; contactId: string; role: string }
   | { kind: "change-contact-role"; contactId: string; role: string; nextRole: string }
-  | { kind: "create-task"; input: { title: string; dueAt?: string; responsible?: string } }
+  | {
+      kind: "create-task";
+      input: {
+        title: string;
+        dueAt?: string;
+        responsible?: string;
+        dependsOnTaskId?: string | null;
+      };
+    }
   | {
       kind: "update-task";
       taskId: string;
-      input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean };
+      input: {
+        title?: string;
+        dueAt?: string | null;
+        responsible?: string;
+        dependsOnTaskId?: string | null;
+        completed?: boolean;
+      };
     }
   | { kind: "create-file"; input: { name: string; url?: string; size?: string } }
   | {
@@ -110,13 +124,19 @@ export type EventTransport<TEvent extends EventRecord> = {
   ): Promise<TEvent>;
   createTask?(
     id: string,
-    input: { title: string; dueAt?: string; responsible?: string },
+    input: { title: string; dueAt?: string; responsible?: string; dependsOnTaskId?: string | null },
     version: number,
   ): Promise<TEvent>;
   updateTask?(
     id: string,
     taskId: string,
-    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
+    input: {
+      title?: string;
+      dueAt?: string | null;
+      responsible?: string;
+      dependsOnTaskId?: string | null;
+      completed?: boolean;
+    },
     version: number,
   ): Promise<TEvent>;
   createFile?(

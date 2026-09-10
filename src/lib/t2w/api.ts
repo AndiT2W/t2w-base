@@ -50,6 +50,7 @@ type ApiEvent = {
     title: string;
     dueAt: string | null;
     responsible: string | null;
+    dependsOnTaskId?: string | null;
     completed: boolean;
   }[];
   files?: { id: string; name: string; size: string | null; updatedAt: string }[];
@@ -154,6 +155,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
       titel: task.title,
       faellig: task.dueAt ? dateOnly(task.dueAt) : "",
       verantwortlich: task.responsible ?? "",
+      dependsOnTaskId: task.dependsOnTaskId ?? null,
       erledigt: task.completed,
     })),
     dateien: (event.files ?? []).map((file) => ({
@@ -244,7 +246,12 @@ export const apiUpdateEventContactRole = (
   ).then(mapApiEvent);
 export const apiCreateEventTask = (
   eventId: string,
-  body: { title: string; dueAt?: string; responsible?: string },
+  body: {
+    title: string;
+    dueAt?: string;
+    responsible?: string;
+    dependsOnTaskId?: string | null;
+  },
   version: number,
 ) =>
   eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks`, "POST", { ...body, version }).then(
@@ -253,7 +260,13 @@ export const apiCreateEventTask = (
 export const apiUpdateEventTask = (
   eventId: string,
   taskId: string,
-  body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
+  body: {
+    title?: string;
+    dueAt?: string | null;
+    responsible?: string;
+    dependsOnTaskId?: string | null;
+    completed?: boolean;
+  },
   version: number,
 ) =>
   eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", {

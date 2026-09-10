@@ -4,6 +4,17 @@ Use this section only for task notes that create durable project context worth k
 
 ## Task Notes
 
+- [Projektmanagement v3: Aufgabenabhängigkeiten und aufklappbare Ablaufübersicht](project-management-spec-v3.md) (aktuell, Issue #55)
+
+- [Projektmanagement: generische Abläufe und Status](project-management-generic-workflows.md) (Diskussionshistorie, in v3 konsolidiert)
+
+- [Projektmanagement: drei Readiness-Designvorschläge](project-management-readiness-designs.md) (Auswahl offen)
+
+- [Projektmanagement: Kategorie-Readiness](project-management-readiness-spec.md) (historischer Entwurf)
+
+- [Spezifikation: Integriertes Projektmanagement v2](project-management-spec-v2.md) (ersetzt)
+- [Spezifikation: Integriertes Projektmanagement v1](project-management-spec.md) (historisch)
+
 - [Spezifikation: Nenngeld-Auszahlungen](event-payouts-spec.md)
 
 - [MVP: Event CRM With Invoices And Contacts](mvp-event-crm.md)

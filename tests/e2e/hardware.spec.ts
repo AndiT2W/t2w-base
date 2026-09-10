@@ -104,7 +104,7 @@ test("shows central hardware cases, filters them, and links to the event", async
   await expect(page.getByRole("heading", { name: "Hardware" })).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", {
-      name: "TIME2WIN",
+      name: "Übersicht",
     }),
   ).toHaveAttribute("href", "/");
   await expect(page.getByRole("button", { name: "Hardware-Ausgabe anlegen" })).toBeVisible();

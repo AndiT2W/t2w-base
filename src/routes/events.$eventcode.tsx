@@ -227,6 +227,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [seriesDialog, setSeriesDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteAreaOpen, setDeleteAreaOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingTaskResponsible, setEditingTaskResponsible] = useState("");
+  const [editingTaskDue, setEditingTaskDue] = useState("");
+  const [editingTaskDependency, setEditingTaskDependency] = useState<string>("");
   const [activeTab, setActiveTab] = useState("stammdaten");
   const [saving, setSaving] = useState(false);
   const savedEventRef = useRef(event);
@@ -445,6 +449,41 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     if (!detail.newTask.trim()) return;
     await detailWorkspace.addTask();
     toast.success("Aufgabe angelegt.");
+  }
+  function startEditTask(
+    taskId: string,
+    verantwortlich: string,
+    faellig: string,
+    dependsOnTaskId: string | null,
+  ) {
+    setEditingTaskId(taskId);
+    setEditingTaskResponsible(verantwortlich);
+    setEditingTaskDue(faellig);
+    setEditingTaskDependency(dependsOnTaskId ?? "");
+  }
+  async function saveTaskMeta(taskId: string) {
+    const dependency = editingTaskDependency === "" ? null : editingTaskDependency;
+    await detailWorkspace.updateTask(taskId, {
+      responsible: editingTaskResponsible.trim(),
+      dueAt: editingTaskDue || null,
+      dependsOnTaskId: dependency,
+    });
+    setEditingTaskId(null);
+    setEditingTaskResponsible("");
+    setEditingTaskDue("");
+    setEditingTaskDependency("");
+  }
+  function cancelTaskEdit() {
+    setEditingTaskId(null);
+    setEditingTaskResponsible("");
+    setEditingTaskDue("");
+    setEditingTaskDependency("");
+  }
+  function isTaskBlocked(taskId: string) {
+    const task = form.aufgaben.find((item) => item.id === taskId);
+    if (!task?.dependsOnTaskId) return false;
+    const blocker = form.aufgaben.find((item) => item.id === task.dependsOnTaskId);
+    return blocker ? !blocker.erledigt : false;
   }
   async function addFile() {
     if (!detail.newFile.trim()) return;
@@ -1476,6 +1515,31 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   value={detail.newTask}
                   onChange={(e) => detailWorkspace.setInput("newTask", e.target.value)}
                 />
+                <Input
+                  aria-label="Verantwortlicher"
+                  value={detail.newTaskResponsible}
+                  onChange={(e) => detailWorkspace.setInput("newTaskResponsible", e.target.value)}
+                  placeholder="Verantwortlicher"
+                />
+                <Input
+                  aria-label="Fälligkeitsdatum"
+                  type="date"
+                  value={detail.newTaskDue}
+                  onChange={(e) => detailWorkspace.setInput("newTaskDue", e.target.value)}
+                />
+                <select
+                  aria-label="Vorgänger wählen"
+                  className="h-10 min-w-44 rounded-md border border-border bg-background px-3 text-sm"
+                  value={detail.newTaskDependency}
+                  onChange={(e) => detailWorkspace.setInput("newTaskDependency", e.target.value)}
+                >
+                  <option value="">— ohne Vorgänger —</option>
+                  {form.aufgaben.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.titel}
+                    </option>
+                  ))}
+                </select>
                 <Button onClick={() => void addTask()}>Aufgabe anlegen</Button>
               </div>
               {form.aufgaben.length === 0 && (
@@ -1484,16 +1548,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               {form.aufgaben.map((a) => (
                 <div
                   key={a.id}
-                  className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+                  className="flex flex-col gap-2 rounded-md border border-border px-3 py-2 sm:flex-row sm:items-center sm:gap-3"
                 >
-                  <Checkbox
-                    checked={a.erledigt}
-                    onCheckedChange={(v) =>
-                      void detailWorkspace
-                        .updateTask(a.id, !!v)
-                        .catch(() => toast.error("Aufgabe konnte nicht gespeichert werden."))
-                    }
-                  />
+                  <div className="flex items-center gap-3 sm:shrink-0">
+                    <Checkbox
+                      checked={a.erledigt}
+                      onCheckedChange={(v) =>
+                        void detailWorkspace
+                          .updateTask(a.id, { completed: !!v })
+                          .catch(() => toast.error("Aufgabe konnte nicht gespeichert werden."))
+                      }
+                      disabled={isTaskBlocked(a.id)}
+                    />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p
                       className={
@@ -1504,10 +1571,81 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     >
                       {a.titel}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      fällig {formatDatum(a.faellig)} · {a.verantwortlich}
-                    </p>
+                    {editingTaskId === a.id ? (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <Input
+                          aria-label="Verantwortlicher bearbeiten"
+                          value={editingTaskResponsible}
+                          onChange={(e) => setEditingTaskResponsible(e.target.value)}
+                          placeholder="Verantwortlicher"
+                          className="w-52"
+                        />
+                        <Input
+                          aria-label="Fälligkeitsdatum bearbeiten"
+                          type="date"
+                          value={editingTaskDue}
+                          onChange={(e) => setEditingTaskDue(e.target.value)}
+                          className="w-44"
+                        />
+                        <select
+                          aria-label="Abhängigkeit bearbeiten"
+                          className="h-10 min-w-40 rounded-md border border-border bg-background px-3 text-sm"
+                          value={editingTaskDependency}
+                          onChange={(e) => setEditingTaskDependency(e.target.value)}
+                        >
+                          <option value="">— keine Abhängigkeit —</option>
+                          {form.aufgaben
+                            .filter((candidate) => candidate.id !== a.id)
+                            .map((candidate) => (
+                              <option key={candidate.id} value={candidate.id}>
+                                {candidate.titel}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {a.faellig ? `fällig ${formatDatum(a.faellig)}` : "ohne Fälligkeitsdatum"} ·{" "}
+                        {a.verantwortlich || "—"} ·{" "}
+                        {a.dependsOnTaskId ? "hängt ab von Aufgabe" : "ohne Vorgänger"}
+                      </p>
+                    )}
                   </div>
+                  <div className="flex flex-wrap gap-2">
+                    {editingTaskId === a.id ? (
+                      <>
+                        <Button size="sm" onClick={() => void saveTaskMeta(a.id)} type="button">
+                          Speichern
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={cancelTaskEdit} type="button">
+                          Abbrechen
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          startEditTask(
+                            a.id,
+                            a.verantwortlich,
+                            a.faellig,
+                            a.dependsOnTaskId,
+                          )
+                        }
+                        type="button"
+                      >
+                        Bearbeiten
+                      </Button>
+                    )}
+                  </div>
+                  {a.dependsOnTaskId ? (
+                    <p className="text-xs text-muted-foreground">
+                      Blockiert durch:{" "}
+                      {form.aufgaben.find((candidate) => candidate.id === a.dependsOnTaskId)?.titel ||
+                        "unbekannt"}
+                    </p>
+                  ) : null}
                 </div>
               ))}
             </CardContent>

@@ -26,7 +26,14 @@ export type EventDetailMutations = {
 };
 
 type DraftInputKey =
-  "contactSearch" | "invoiceRecipientSearch" | "newTask" | "newFile" | "newActivity";
+  | "contactSearch"
+  | "invoiceRecipientSearch"
+  | "newTask"
+  | "newTaskResponsible"
+  | "newTaskDue"
+  | "newTaskDependency"
+  | "newFile"
+  | "newActivity";
 type DraftInputs = Record<DraftInputKey, string> & { contactId: string; contactRole: string };
 
 export type EventDetailSnapshot = DraftInputs & {
@@ -80,6 +87,9 @@ export function createEventDetailWorkspace(
     contactSearch: "",
     invoiceRecipientSearch: "",
     newTask: "",
+    newTaskResponsible: "",
+    newTaskDue: "",
+    newTaskDependency: "",
     newFile: "",
     newActivity: "",
   };
@@ -334,17 +344,40 @@ export function createEventDetailWorkspace(
     },
     async addTask() {
       if (!inputs.newTask.trim()) return undefined;
-      const result = await requireSaved(
-        session.execute({ kind: "create-task", input: { title: inputs.newTask } }),
+        const result = await requireSaved(
+        session.execute({
+          kind: "create-task",
+          input: {
+            title: inputs.newTask,
+            responsible: inputs.newTaskResponsible.trim() || undefined,
+            ...(inputs.newTaskDue ? { dueAt: inputs.newTaskDue } : {}),
+            ...(inputs.newTaskDependency ? { dependsOnTaskId: inputs.newTaskDependency } : {}),
+          },
+        }),
         "EVENT_TASK_SAVE_FAILED",
       );
-      inputs = { ...inputs, newTask: "" };
+      inputs = {
+        ...inputs,
+        newTask: "",
+        newTaskResponsible: "",
+        newTaskDue: "",
+        newTaskDependency: "",
+      };
       publish();
       return result;
     },
-    updateTask(taskId: string, completed: boolean) {
+    updateTask(
+      taskId: string,
+      input: {
+        completed?: boolean;
+        dependsOnTaskId?: string | null;
+        responsible?: string;
+        dueAt?: string | null;
+        title?: string;
+      },
+    ) {
       return requireSaved(
-        session.execute({ kind: "update-task", taskId, input: { completed } }),
+        session.execute({ kind: "update-task", taskId, input }),
         "EVENT_TASK_SAVE_FAILED",
       );
     },

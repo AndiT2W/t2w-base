@@ -460,6 +460,8 @@
 - 2026-09-09: Mail- und Zahlungsstatus von Auszahlungen sind in Event-Finanzreiter und zentraler Übersicht unabhängig manuell auswählbar; der bisherige CRUD-Schutz für `GESENDET` wurde entfernt. Service- und Browser-Regression ergänzt.
 - 2026-09-09: Mehrbenutzersystem verbindlich beschlossen: interne Benutzer in einer Organisation, `Admin`/`Benutzer`, E-Mail-/Passwort-Login, Einladung, Deaktivierung statt Löschung, serverseitige Rechteprüfung, Auditierung und `.env`-Bootstrap des ersten Admins.
 - 2026-09-09: Spezifikation für das interne Mehrbenutzersystem erstellt und als GitHub-Issue #49 mit `enhancement` und `ready-for-agent` veröffentlicht.
+- 2026-09-10: Ticket #55 erweitert: Aufgaben im Event-Detail bekommen optionale Abhängigkeitsbeziehung (`dependsOnTaskId`) mit Backend-Read/Write im Event-Task-Pfad (`Task`-Schema, API, Domain-Command, Transport), plus Inline-UI für Blocker-Auswahl und Sperrlogik beim Erledigen. Quellen: `services/event-service/prisma/schema.prisma`, `services/event-service/src/events.controller.ts`, `services/event-service/src/event-mutations.ts`, `services/event-service/src/prisma-event-mutation.adapter.ts`, `src/lib/t2w/api.ts`, `src/lib/t2w/types.ts`, `src/routes/events.$eventcode.tsx`, `services/event-service/prisma/migrations/0006_task_dependencies/migration.sql`.
+- 2026-09-10: Ticket #55 Folge-Slice: Task-Abhängigkeiten sind jetzt beim Schreiben validiert (gleiche Event-ID, keine Selbst-Abhängigkeit, kein Zykel). Neu kann zusätzlich bei der Erstausgabe eine Abhängigkeit gesetzt werden (`newTaskDependency`). Quelle: `services/event-service/src/prisma-event-mutation.adapter.ts`, `src/lib/t2w/event-detail-workspace.ts`, `src/routes/events.$eventcode.tsx`.
 
 # 2026-09-09
 
@@ -479,3 +481,43 @@
 - 2026-09-10: Event-Kommunikation für große Nachrichtenbestände verdichtet. Die kompakte Listenansicht ist Standard; Betreff und Adressen werden kontrolliert gekürzt, Vorschauen auf eine Zeile begrenzt und Abstände reduziert. Expansion, Kontaktstatus, Richtung, Anlagen und Outlook-Link bleiben erhalten. Browser-Regression deckt Standardansicht und Vorschau ab. Quellen: `src/routes/events.$eventcode.tsx`, `tests/e2e/event-management.spec.ts`, Live-Prüfung am Event `260904_ultraks_mayrhofen_2026`.
 - 2026-09-10: Hardware-Übersicht visuell und operativ verdichtet: beschriftete Filter, aktiver Ergebniszähler, Filter-Reset, leerer Ergebniszustand, lokale Datumsdarstellung sowie klar markierte überfällige Vorgänge. `tests/e2e/hardware.spec.ts` sichert den Resetpfad; die Hardware-Playwright-Suite (3 Tests) und das gezielte ESLint liefen erfolgreich. Quellen: `src/routes/hardware.tsx`, `tests/e2e/hardware.spec.ts`, Live-Prüfung der Produktivansicht am 2026-09-10.
 - 2026-09-10: Durchgängiger Hardware-Anlege-Sheet neben dem bestehenden Tabellen-Inline-Editing spezifiziert und als Issue #54 veröffentlicht. Der Browser-E2E-Workflow ist der gemeinsame Test-Seam. Quelle: [Issue #54](https://github.com/AndiT2W/t2w-base/issues/54), Nutzerentscheidung vom 2026-09-10.
+
+
+## 2026-09-10 — Integriertes Projektmanagement spezifiziert
+
+Nutzerauftrag und vorhandene EventTask-, Serien-, Kommunikations-, Benutzer- und Auditstruktur ausgewertet. [Vollständige Spezifikation](tasks/project-management-spec.md) mit Fachregeln, UX, Datenmodell, API-Verträgen, Migration und 30 Akzeptanzkriterien erstellt. Versionierte Serienvorlagen und Event-Löschschutz sind vorgeschlagene Erweiterungen; keine Produktimplementierung. [Konversationsquelle](sources/2026-09-10-user-project-management.md) und Wiki-Navigation ergänzt.
+
+## 2026-09-10 — Projektmanagement-Spezifikation v2
+
+Die überarbeitete [Spezifikation v2](tasks/project-management-spec-v2.md) trennt nach überprüftem Ist-Stand ausdrücklich Task-, Liefer- und Risikozustände, ergänzt Zielmodell, API, Transaktionen, Historienerhalt, Migration, Tests und einen inkrementellen MVP-Schnitt. Sie verweist für jede Bestandsaussage auf Repository-Evidenz; es wurde keine Produktimplementierung vorgenommen.
+
+### Bestätigte MVP-Schärfung
+
+Die Spezifikation wurde nach einer Grill-Session präzisiert: MVP mit vier Arbeitsstatus, `NORMAL`/`HIGH`, berechneter nicht blockierender Überfälligkeit, administrierbaren Gruppen, ClickUp-artigem Aktivitätslog und rein lesendem n8n-Service-Token. Risiken, Red Flags, Blocker, Abhängigkeiten, Kommentare, Kanban und Kalender sind bewusst spätere Inkremente. Legacy-Checkboxaufgaben werden nach einem auditierbaren Snapshot entfernt statt migriert. Quelle: Nutzerentscheidungen vom 2026-09-10.
+
+- Die bestätigte MVP-Spezifikation als GitHub-Issue [#55](https://github.com/AndiT2W/t2w-base/issues/55) mit `enhancement` und `ready-for-agent` veröffentlicht. Kein Produktcode geändert.
+
+- 2026-09-10: Alle Modul- und Eventseiten verwenden im gemeinsamen Seitenkopf nun den Breadcrumb `Übersicht > …`; die Übersichtsseite zeigt keinen Produktnamen im Breadcrumb. Die Kunden-/Kontaktseite erläutert zusätzlich die Fachgrenze: Kontakte sind Personen/Ansprechpersonen, Kundenprofile dienen Organisationen und Abrechnung. Quellen: `src/components/t2w/PageHeader.tsx`, `src/routes/kontakte.tsx`, `src/routes/veranstaltungen.tsx`, [Entscheidung Person, Kundenprofil und Eventrollen](decisions/2026-08-21-person-kundenprofil-und-eventrollen.md).
+- 2026-09-10: Das Hardware-Anlegeformular von Platzhalter-/Dreispaltenlayout auf klar beschriftete, gruppierte Zwei-Spalten-Abschnitte umgestellt. Empfänger, Ausgabe und Details bleiben auch bei Nummernbereichen nachvollziehbar; die Event-Hardware-E2E sichert die sichtbaren Abschnitte und Felder. Quellen: `src/components/t2w/HardwareWorkspace.tsx`, `tests/e2e/hardware.spec.ts`, Nutzerreferenz auf den Kontakt-Dialog vom 2026-09-10.
+
+## 2026-09-10 — Kategorie-Readiness spezifiziert
+
+Pflichtquellen und Issue #55 gelesen, visuelle Referenz geprüft. [Readiness-Ergänzung](tasks/project-management-readiness-spec.md) mit Hybridvergleich, exakter Zustandsableitung, neutralen Wissenslücken, manuellen Nachweisen statt pauschaler Grün-Übersteuerung, Prozessketten und Fachmodulgrenzen erstellt. Informationsarchitektur auf bestehendes Eventlayout und globale Route ausgerichtet; 24 Browser-Abnahmeszenarien einschließlich Reload-Persistenz spezifiziert. Prüfpunkte im ersten Umfang bleiben eine offene Produktentscheidung. [Nutzerquelle](sources/2026-09-10-user-event-readiness.md), Glossar und Navigation aktualisiert; Widersprüche zu v2/Issue sichtbar dokumentiert. Kein Produktcode und kein GitHub-Issue verändert; keine Produkttests ausgeführt.
+
+## 2026-09-10 — Drei Readiness-Designvorschläge
+
+Auf Nutzerauftrag drei interaktive Gesprächsentwürfe mit identischen Beispieldaten erstellt: ruhige Bereichsübersicht, handlungsorientiertes Briefing und Kategorien mit Arbeitsbereich. [Designvergleich](tasks/project-management-readiness-designs.md) dokumentiert Vorteile und Abwägungen; Empfehlung A, Auswahl offen. Bestehender Eventrahmen bleibt erhalten; Lieferkette als späteres Zielbild. Keine Produktimplementierung oder Produkttests; Prüfpunkte im ersten Umfang weiterhin nicht bestätigt.
+
+## 2026-09-10 — Generische PM-Abläufe diskutiert
+
+Auf Nutzerfrage [generische Abläufe](tasks/project-management-generic-workflows.md) als unbestätigten Ausbau dokumentiert: frei benannte fachliche Schritte, gemeinsame Aufgabenstatus, eindeutige Nachweisquelle und eventinterne Ende-zu-Start-Voraussetzungen. Planmäßiges Warten erzeugt keinen Handlungsbedarf; tatsächliche Fachereignisse und Historien werden nicht zurückgesetzt. Bestehender MVP bleibt unverändert; keine Implementierung.
+
+## 2026-09-10 — Aufgabenketten mit aufklappbarer Tabelle
+
+Nutzervorschlag als bevorzugte Diskussionsrichtung im [Ablaufkonzept](tasks/project-management-generic-workflows.md) ergänzt: direkte Task-Abhängigkeiten bilden die Übersicht, Klick öffnet dieselben Aufgaben tabellarisch. Interaktiver Gesprächsentwurf erstellt. Verzweigungen, unabhängige Aufgaben und Aussagegrenze einer rein aufgabenbasierten Readiness festgehalten. Kein zusätzliches Schrittmodell beschlossen, keine Implementierung.
+
+## 2026-09-10 — Issue #55 auf PM-Spezifikation v3 aktualisiert
+
+Mit dem ausdrücklich aufgerufenen to-spec-Skill [v3](tasks/project-management-spec-v3.md) synthetisiert und im bestehenden [Issue #55](https://github.com/AndiT2W/t2w-base/issues/55) veröffentlicht: direkte Aufgabenabhängigkeiten, abgeleitete Ablaufübersicht, darunter aufklappbare Aufgabentabelle; vier Arbeitsstatus und berechnete Voraussetzungen. 44 User Stories, 19 Browser-Abnahmen für den Erstumfang, getrennte spätere Liefer-/Vorlagen-/n8n-Inkremente. Titel/Body und Labels enhancement/ready-for-agent nach dem Schreiben vollständig geprüft. Ursprünglichen Issue-Stand unter raw gesichert, ältere Spezifikationen als abgelöst verlinkt; [Quellennachweis](sources/2026-09-10-project-management-spec-v3.md). Kein Produktcode implementiert.
+
+Parallel gemeldete Inline-Vorschau auf natives details/summary ohne eigene Scripts oder Host-Tweak-Aufrufe vereinfacht. Lokale Playwright-Prüfung im sandboxed iframe: Klick/Enter/Space, vier Tabellenzeilen und äußere Breite bei Desktop/Mobil erfolgreich. Interner MCP-Renderer-Timeout nicht direkt reproduzierbar; erneute Inline-Auslieferung bleibt vom Host abhängig.

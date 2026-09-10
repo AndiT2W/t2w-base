@@ -6,6 +6,8 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 ## Current State
 
+- Aktuell ist [PM-Spezifikation v3](tasks/project-management-spec-v3.md) für Issue #55: Event als Projektcontainer; direkte Aufgabenabhängigkeiten erzeugen die Kategorie-/Ablaufübersicht, Klick öffnet die Tabelle. Vier Aufgabenstatus, atomare Aktivität/Audit und Browser-E2E mit Reload; kein separates Prüfmodell. Lieferstatus, Serienvorlagen, relative Fristen und n8n-Lesezugriff folgen später. Nutzerauftrag zur Issue-Aktualisierung vom 10.09.2026, noch keine Produktimplementierung.
+
 - Repository scaffold created on 2026-06-15.
 - Initial product brief captured from user conversation on 2026-06-15.
 - Organizer-centric CRM requirement captured from user conversation on 2026-06-15.
@@ -48,12 +50,13 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Hardware-Lebenszyklusaufrufe laufen für zentrale und Event-Detailansichten über ein gemeinsames Intent-Modul; Hardware- und Auszahlungsmutationen schreiben ihre Audit-Einträge atomar über den gemeinsamen Audit-Seam. Siehe [Hardware-Lebenszyklus](../../src/lib/t2w/hardware-lifecycle.ts) und [AuditService](../../services/event-service/src/audit.service.ts).
 - Die zentrale Hardware-Übersicht führt operative Rückgaben mit beschrifteten Filtern, Rücksetzoption, aussagekräftigen Kennzahlen und expliziter Überfälligkeitsmarkierung; die Browser-Regression sichert das Zurücksetzen der Filter. Siehe [Hardware-Verwaltung](tasks/hardware-management-spec.md).
 - Der Hardware-Anlegeflow ist als durchgängiger rechter Sheet spezifiziert; das bestehende Inline-Editing bleibt der schnelle Bearbeitungsweg für Tabellenzeilen. Siehe [Hardware-Anlage im seitlichen Sheet](tasks/hardware-create-sheet-spec.md).
+- Das Hardware-Anlegeformular folgt nun dem Muster der Kontakt-Details: sichtbare Feldbeschriftungen, Gruppen für Empfänger, Ausgabe und Details sowie ein responsives Zwei-Spalten-Raster. Die angepasste Browser-Regression prüft die Abschnitte und beschrifteten Felder. Siehe [Hardware-Workspace](../../src/components/t2w/HardwareWorkspace.tsx) und [Hardware-E2E-Test](../../tests/e2e/hardware.spec.ts).
 
 ## Next Best Actions
 
 CI-Branding aktualisiert: TIME2WIN-Farben `#8DC63F` und `#05193A` sowie das freigegebene Logo-Asset sind integriert; der vorherige Style ist als `src/styles_begin.css` rückwechselbar archiviert. Siehe [TIME2WIN CI und Branding](concepts/time2win-ci-branding.md).
 
-- Decide whether MVP treats `Event` and `Project` as separate domain objects or one combined operational record.
+- PM nach [v3](tasks/project-management-spec-v3.md) planen: Aufgabenbasis und Abhängigkeiten, abgeleitete Übersicht mit aufklappbarer Tabelle, Persistenz-/Browserregressionen. Das separate Prüfpunktmodell gehört nicht zum ersten Umfang.
 - Normalize current ClickUp CRM-like data, especially customer duplicates and non-person contact records.
 - Verify how `Kunde`, `Veranstalter`, `Organisator`, and `Rechnungsempfänger` differ operationally in the current process.
 - Decide how much of the current Excel pricing and service logic should become native structured data versus retained document templates.

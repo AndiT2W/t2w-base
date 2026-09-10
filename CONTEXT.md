@@ -1,5 +1,17 @@
 # Domain Context
 
+## Projektmanagement – Zielbegriffe
+
+**Event**: Die konkrete Veranstaltung ist zugleich der operative Projektcontainer. Quelle: [bestätigter Nutzerauftrag vom 10.09.2026](wiki/sources/2026-09-10-user-event-readiness.md).
+
+**Aufgabe**: Eine konkrete Arbeitseinheit innerhalb genau eines Events mit interner Verantwortung und dokumentiertem Ergebnis. Ihr Arbeitsstatus ist vom Lieferstatus und vom Eventstatus getrennt.
+
+**Kategorie-Readiness**: Die aktuelle Planlage der erfassten Aufgaben eines Eventbereichs; sie belegt weder vollständige Erledigung noch die Vollständigkeit aller Eventanforderungen. Quelle: [PM-Spezifikation v3](wiki/tasks/project-management-spec-v3.md).
+
+**Aufgabenabhängigkeit**: Die notwendige Erledigung einer Vorgängeraufgabe vor Beginn einer Nachfolgeraufgabe innerhalb desselben Events.
+
+**Aufgabenablauf**: Die aus verbundenen Aufgaben abgeleitete Folge einschließlich paralleler Zweige; Übersicht und Tabelle beschreiben dieselbe Arbeit.
+
 ## CRM workspace
 
 The CRM workspace manages people, customer profiles, and their independent relationships. A person may have customer associations and event roles simultaneously. Removing a customer association preserves the person and any event roles.
