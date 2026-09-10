@@ -93,8 +93,7 @@ test("zeigt Sportarten, Services und Hardware-Objekte im einheitlichen verschieb
   page,
 }) => {
   await mockApi(page);
-  const rowClass =
-    "lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto]";
+  const rowClass = "lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto]";
 
   for (const [liste, textboxName] of [
     ["sportarten", "Sportart Triathlon"],
@@ -918,7 +917,9 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
   await expect(invoiceDetails).toContainText("Nordwerk GmbH");
   await expect(invoiceDetails).toContainText("Jonas Feld");
   await expect(invoiceDetails).toContainText("BKAUATWW");
-  await page.getByLabel("Finanznotizen").fill("Zahlung nach Freigabe durch den Veranstalter.");
+  await page
+    .getByRole("textbox", { name: "Finanznotizen" })
+    .fill("Zahlung nach Freigabe durch den Veranstalter.");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -1136,7 +1137,9 @@ test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Dup
   await page.getByRole("tab", { name: "Kommunikation" }).click();
   await page.getByRole("button", { name: "Synchronisieren" }).click();
 
-  await expect(page.getByRole("heading", { name: "Startzeit bestätigt", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Startzeit bestätigt", exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("Eingehend", { exact: true })).toBeVisible();
   await expect(page.getByText("Von: Eva Beispiel <eva@example.at>")).toBeVisible();
   await expect(page.getByText("Der Start bleibt um 09:00 Uhr.").first()).toBeVisible();
@@ -1153,7 +1156,9 @@ test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Dup
   );
   await page.reload();
   await page.getByRole("tab", { name: "Kommunikation" }).click();
-  await expect(page.getByRole("heading", { name: "Startzeit bestätigt", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Startzeit bestätigt", exact: true }),
+  ).toBeVisible();
   expect(requests.filter((request) => request.url.endsWith("/outlook-messages/sync"))).toHaveLength(
     2,
   );
