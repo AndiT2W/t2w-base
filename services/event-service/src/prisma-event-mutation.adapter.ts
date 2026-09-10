@@ -176,7 +176,8 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
       if (cursor === taskId) throw new Error("TASK_DEPENDENCY_CYCLE");
       if (seen.has(cursor)) throw new Error("TASK_DEPENDENCY_CYCLE");
       seen.add(cursor);
-      const dependencyTask = await this.prisma.eventTask.findFirst({
+      const dependencyTask: { dependsOnTaskId: string | null } | null =
+        await this.prisma.eventTask.findFirst({
         where: { id: cursor, eventId },
         select: { dependsOnTaskId: true },
       });
