@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { mockEventManagementApi } from "./support/event-management-api";
+import { event, mockEventManagementApi } from "./support/event-management-api";
 
 test("shows central hardware cases, filters them, and links to the event", async ({ page }) => {
   let lastEventChanges: Record<string, unknown> = {};
@@ -190,6 +190,7 @@ test("keeps the event detail page usable when hardware API returns an error payl
   page,
 }) => {
   await mockEventManagementApi(page);
+  await mockEventManagementApi(page);
   await page.route("**/api/v1/auth/**", (route) =>
     route.fulfill({ json: { id: "user-1", email: "admin@time2win.cloud", role: "ADMIN" } }),
   );
@@ -269,11 +270,11 @@ test("creates a central hardware issue in the side sheet and keeps inline editin
   }
   await page.route("**/api/v1/events**", (route) =>
     route.fulfill({
-      json: [{ id: "event-1", eventCode: "260820_demo_event", name: "Demo Event" }],
+      json: [event],
     }),
   );
   await page.route("**/api/v1/events/hardware", (route) => route.fulfill({ json: hardware }));
-  await page.route("**/api/v1/events/event-1/hardware", async (route) => {
+  await page.route(`**/api/v1/events/${event.id}/hardware`, async (route) => {
     expect(route.request().method()).toBe("POST");
     hardware = [...hardware, created];
     await route.fulfill({ json: created });
@@ -283,7 +284,7 @@ test("creates a central hardware issue in the side sheet and keeps inline editin
   await page.getByRole("button", { name: "Hardware-Ausgabe anlegen" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByLabel("Event zuordnen").click();
-  await page.getByRole("option", { name: /Demo Event/ }).click();
+  await page.getByRole("option", { name: /Bestehendes Event/ }).click();
   await page.getByLabel("Empfänger").fill("Neue Ausgabe");
   await page.getByLabel("Objekt").click();
   await page.getByRole("option", { name: "Active Transponder (T2W)" }).click();
