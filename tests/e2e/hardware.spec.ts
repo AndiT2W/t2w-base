@@ -210,6 +210,11 @@ test("manages hardware from the Event detail tab", async ({ page }) => {
   await page.getByRole("tab", { name: "HARDWARE" }).click();
   await expect(page.getByText("Ausgaben und Rückläufer dieses Events verwalten.")).toBeVisible();
   await page.getByRole("button", { name: "Hardware-Ausgabe anlegen" }).click();
+  await expect(page.getByRole("heading", { name: "Empfänger" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ausgabe" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Details" })).toBeVisible();
+  await expect(page.getByLabel("Telefon")).toBeVisible();
+  await expect(page.getByLabel("Ausgabedatum")).toBeVisible();
   await page.getByPlaceholder("Empfänger").fill("Max Mustermann");
   await page.getByLabel("Objekt", { exact: true }).click();
   await page.getByRole("option", { name: "Active Transponder (T2W)" }).click();

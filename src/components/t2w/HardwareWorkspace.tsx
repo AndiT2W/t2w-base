@@ -150,170 +150,241 @@ export function HardwareWorkspace({
         </div>
       )}
       {editing && (
-        <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-3">
-          <Input
-            placeholder="Empfänger"
-            aria-label="Empfänger"
-            value={editing.recipientName ?? ""}
-            onChange={(e) => setEditing({ ...editing, recipientName: e.target.value })}
-          />
-          <Input
-            placeholder="E-Mail"
-            aria-label="E-Mail"
-            aria-describedby={emailError ? "hardware-form-email-error" : undefined}
-            aria-invalid={emailError ? "true" : undefined}
-            type="email"
-            value={editing.email ?? ""}
-            onChange={(e) => {
-              setEmailError(null);
-              setEditing({ ...editing, email: e.target.value });
-            }}
-            onBlur={() => {
-              const email = editing.email?.trim() ?? "";
-              setEmailError(
-                validEmail(email) ? null : "Bitte eine gültige E-Mail-Adresse angeben.",
-              );
-            }}
-          />
-          {emailError && (
-            <p
-              id="hardware-form-email-error"
-              className="text-xs text-destructive sm:col-span-3"
-              role="alert"
-            >
-              {emailError}
-            </p>
-          )}
-          <Input
-            placeholder="Telefon"
-            aria-label="Telefon"
-            value={editing.phone ?? ""}
-            onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
-          />
-          <Select
-            value={editing.objectName ?? ""}
-            onValueChange={(objectName) => setEditing({ ...editing, objectName })}
-          >
-            <SelectTrigger aria-label="Objekt">
-              <SelectValue placeholder="Objekt auswählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {hardwareObjectNames.map((objectName) => (
-                <SelectItem key={objectName} value={objectName}>
-                  {objectName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            placeholder="Notiz"
-            aria-label="Notiz"
-            value={editing.note ?? ""}
-            onChange={(e) => setEditing({ ...editing, note: e.target.value })}
-          />
-          <Input
-            type="date"
-            aria-label="Ausgabedatum"
-            value={editing.issuedAt?.slice(0, 10) ?? ""}
-            onChange={(e) => setEditing({ ...editing, issuedAt: e.target.value })}
-          />
-          <Select
-            value={editing.issueType ?? "PARTICIPANT"}
-            onValueChange={(v) => setEditing({ ...editing, issueType: v })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Ausgabeart" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(issueLabels).map(([v, l]) => (
-                <SelectItem key={v} value={v}>
-                  {l}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={editing.objectNumberType ?? "NONE"}
-            onValueChange={(v) => setEditing({ ...editing, objectNumberType: v })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Nummerntyp" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="NONE">Keine Nummer</SelectItem>
-              <SelectItem value="SINGLE">Einzelgerät</SelectItem>
-              <SelectItem value="RANGE">Range</SelectItem>
-            </SelectContent>
-          </Select>
-          {editing.objectNumberType === "SINGLE" && (
-            <Input
-              placeholder="Objektnummer"
-              value={editing.objectNumberSingle ?? ""}
-              onChange={(e) => setEditing({ ...editing, objectNumberSingle: e.target.value })}
-            />
-          )}
-          {editing.objectNumberType === "RANGE" && (
-            <>
-              <Input
-                placeholder="Prefix"
-                value={editing.objectNumberPrefix ?? ""}
-                onChange={(e) => setEditing({ ...editing, objectNumberPrefix: e.target.value })}
-              />
-              <Input
-                type="number"
-                placeholder="Von"
-                value={editing.objectNumberFrom ?? ""}
-                onChange={(e) =>
-                  setEditing({ ...editing, objectNumberFrom: Number(e.target.value) })
-                }
-              />
-              <Input
-                type="number"
-                placeholder="Bis"
-                value={editing.objectNumberTo ?? ""}
-                onChange={(e) => setEditing({ ...editing, objectNumberTo: Number(e.target.value) })}
-              />
-              <Input
-                type="number"
-                placeholder="Padding"
-                value={editing.objectNumberPadding ?? 3}
-                onChange={(e) =>
-                  setEditing({ ...editing, objectNumberPadding: Number(e.target.value) })
-                }
-              />
-            </>
-          )}
-          <Input
-            type="number"
-            placeholder="Anzahl"
-            value={editing.quantity ?? 1}
-            onChange={(e) => setEditing({ ...editing, quantity: Number(e.target.value) })}
-          />
-          <Input
-            type="date"
-            value={editing.dueDate?.slice(0, 10) ?? ""}
-            onChange={(e) => setEditing({ ...editing, dueDate: e.target.value })}
-          />
-          {editing.id && (
-            <Select
-              value={editing.status ?? "OPEN"}
-              onValueChange={(v) => setEditing({ ...editing, status: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(statusLabels).map(([v, l]) => (
-                  <SelectItem key={v} value={v}>
-                    {l}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <div className="flex gap-2 sm:col-span-3">
+        <div className="space-y-6">
+          <section aria-labelledby="hardware-recipient-heading" className="space-y-3">
+            <h3 id="hardware-recipient-heading" className="text-base font-semibold">
+              Empfänger
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-sm font-medium">
+                Empfänger
+                <Input
+                  aria-label="Empfänger"
+                  placeholder="Empfänger"
+                  value={editing.recipientName ?? ""}
+                  onChange={(e) => setEditing({ ...editing, recipientName: e.target.value })}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                E-Mail
+                <Input
+                  aria-label="E-Mail"
+                  aria-describedby={emailError ? "hardware-form-email-error" : undefined}
+                  aria-invalid={emailError ? "true" : undefined}
+                  type="email"
+                  value={editing.email ?? ""}
+                  onChange={(e) => {
+                    setEmailError(null);
+                    setEditing({ ...editing, email: e.target.value });
+                  }}
+                  onBlur={() => {
+                    const email = editing.email?.trim() ?? "";
+                    setEmailError(
+                      validEmail(email) ? null : "Bitte eine gültige E-Mail-Adresse angeben.",
+                    );
+                  }}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Telefon
+                <Input
+                  aria-label="Telefon"
+                  type="tel"
+                  value={editing.phone ?? ""}
+                  onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
+                />
+              </label>
+            </div>
+            {emailError && (
+              <p id="hardware-form-email-error" className="text-xs text-destructive" role="alert">
+                {emailError}
+              </p>
+            )}
+          </section>
+
+          <section aria-labelledby="hardware-issue-heading" className="space-y-3">
+            <h3 id="hardware-issue-heading" className="text-base font-semibold">
+              Ausgabe
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-sm font-medium">
+                Objekt
+                <Select
+                  value={editing.objectName ?? ""}
+                  onValueChange={(objectName) => setEditing({ ...editing, objectName })}
+                >
+                  <SelectTrigger aria-label="Objekt">
+                    <SelectValue placeholder="Objekt auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hardwareObjectNames.map((objectName) => (
+                      <SelectItem key={objectName} value={objectName}>
+                        {objectName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Ausgabeart
+                <Select
+                  value={editing.issueType ?? "PARTICIPANT"}
+                  onValueChange={(v) => setEditing({ ...editing, issueType: v })}
+                >
+                  <SelectTrigger aria-label="Ausgabeart">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(issueLabels).map(([v, l]) => (
+                      <SelectItem key={v} value={v}>
+                        {l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Nummerntyp
+                <Select
+                  value={editing.objectNumberType ?? "NONE"}
+                  onValueChange={(v) => setEditing({ ...editing, objectNumberType: v })}
+                >
+                  <SelectTrigger aria-label="Nummerntyp">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">Keine Nummer</SelectItem>
+                    <SelectItem value="SINGLE">Einzelgerät</SelectItem>
+                    <SelectItem value="RANGE">Range</SelectItem>
+                  </SelectContent>
+                </Select>
+              </label>
+              {editing.objectNumberType === "SINGLE" && (
+                <label className="grid gap-1.5 text-sm font-medium">
+                  Objektnummer
+                  <Input
+                    aria-label="Objektnummer"
+                    value={editing.objectNumberSingle ?? ""}
+                    onChange={(e) => setEditing({ ...editing, objectNumberSingle: e.target.value })}
+                  />
+                </label>
+              )}
+              {editing.objectNumberType === "RANGE" && (
+                <>
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Präfix
+                    <Input
+                      aria-label="Präfix"
+                      value={editing.objectNumberPrefix ?? ""}
+                      onChange={(e) =>
+                        setEditing({ ...editing, objectNumberPrefix: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Von
+                    <Input
+                      aria-label="Von"
+                      type="number"
+                      value={editing.objectNumberFrom ?? ""}
+                      onChange={(e) =>
+                        setEditing({ ...editing, objectNumberFrom: Number(e.target.value) })
+                      }
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Bis
+                    <Input
+                      aria-label="Bis"
+                      type="number"
+                      value={editing.objectNumberTo ?? ""}
+                      onChange={(e) =>
+                        setEditing({ ...editing, objectNumberTo: Number(e.target.value) })
+                      }
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-medium">
+                    Stellen
+                    <Input
+                      aria-label="Stellen"
+                      type="number"
+                      value={editing.objectNumberPadding ?? 3}
+                      onChange={(e) =>
+                        setEditing({ ...editing, objectNumberPadding: Number(e.target.value) })
+                      }
+                    />
+                  </label>
+                </>
+              )}
+            </div>
+          </section>
+
+          <section aria-labelledby="hardware-details-heading" className="space-y-3">
+            <h3 id="hardware-details-heading" className="text-base font-semibold">
+              Details
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-sm font-medium">
+                Ausgabedatum
+                <Input
+                  aria-label="Ausgabedatum"
+                  type="date"
+                  value={editing.issuedAt?.slice(0, 10) ?? ""}
+                  onChange={(e) => setEditing({ ...editing, issuedAt: e.target.value })}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Fällig am
+                <Input
+                  aria-label="Fällig am"
+                  type="date"
+                  value={editing.dueDate?.slice(0, 10) ?? ""}
+                  onChange={(e) => setEditing({ ...editing, dueDate: e.target.value })}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                Anzahl
+                <Input
+                  aria-label="Anzahl"
+                  type="number"
+                  min="1"
+                  value={editing.quantity ?? 1}
+                  onChange={(e) => setEditing({ ...editing, quantity: Number(e.target.value) })}
+                />
+              </label>
+              {editing.id && (
+                <label className="grid gap-1.5 text-sm font-medium">
+                  Status
+                  <Select
+                    value={editing.status ?? "OPEN"}
+                    onValueChange={(v) => setEditing({ ...editing, status: v })}
+                  >
+                    <SelectTrigger aria-label="Status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(statusLabels).map(([v, l]) => (
+                        <SelectItem key={v} value={v}>
+                          {l}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </label>
+              )}
+              <label className="grid gap-1.5 text-sm font-medium sm:col-span-2">
+                Notiz
+                <Input
+                  aria-label="Notiz"
+                  value={editing.note ?? ""}
+                  onChange={(e) => setEditing({ ...editing, note: e.target.value })}
+                />
+              </label>
+            </div>
+          </section>
+          <div className="flex flex-wrap gap-2 border-t pt-4">
             {saveError && (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="w-full text-sm text-destructive" role="alert">
                 {saveError}
               </p>
             )}
