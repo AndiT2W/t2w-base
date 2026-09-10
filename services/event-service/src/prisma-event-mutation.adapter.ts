@@ -176,12 +176,12 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
       if (cursor === taskId) throw new Error("TASK_DEPENDENCY_CYCLE");
       if (seen.has(cursor)) throw new Error("TASK_DEPENDENCY_CYCLE");
       seen.add(cursor);
-      const task = await this.prisma.eventTask.findFirst({
+      const dependencyTask = await this.prisma.eventTask.findFirst({
         where: { id: cursor, eventId },
         select: { dependsOnTaskId: true },
       });
-      if (!task) throw new Error("TASK_DEPENDENCY_TARGET_NOT_FOUND");
-      cursor = task.dependsOnTaskId;
+      if (!dependencyTask) throw new Error("TASK_DEPENDENCY_TARGET_NOT_FOUND");
+      cursor = dependencyTask.dependsOnTaskId;
     }
   }
   async createFile(eventId: string, input: { name: string; url?: string; size?: string }) {
