@@ -93,15 +93,29 @@ jobs:
           deploy_path=$1
           commit_sha=$2
 
+          if [ "$deploy_path" = / ] || [ ! -d "$deploy_path" ]; then
+            echo "Ungültiger Deployment-Pfad: $deploy_path"
+            exit 1
+          fi
           if [ ! -f "$deploy_path/.env" ]; then
             echo "Erforderliche Deployment-Datei fehlt: $deploy_path/.env"
             exit 1
           fi
-          tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$deploy_path" --overwrite
-          if [ ! -f "$deploy_path/docker-compose.yml" ]; then
+          release_dir=$(mktemp -d "$deploy_path/.release-XXXXXX")
+          trap 'rm -rf "$release_dir"' EXIT
+          tar -xzf "/tmp/t2w-base-$commit_sha.tar.gz" -C "$release_dir"
+          if [ ! -f "$release_dir/docker-compose.yml" ]; then
             echo "docker-compose.yml fehlt im Release-Archiv"
             exit 1
           fi
+          # git archive contains no tombstones.  Clear the previous release first so files
+          # removed from Git cannot be copied into a subsequent Docker build; keep the
+          # deployment-specific environment file outside the release payload.
+          find "$deploy_path" -mindepth 1 -maxdepth 1 \
+            ! -name .env \
+            ! -name "$(basename "$release_dir")" \
+            -exec rm -rf -- {} +
+          tar -C "$release_dir" -cf - . | tar -C "$deploy_path" -xf -
           docker compose -f "$deploy_path/docker-compose.yml" up -d event-db
           docker compose -f "$deploy_path/docker-compose.yml" --profile migrate build event-migrate
           docker compose -f "$deploy_path/docker-compose.yml" --profile migrate run --rm -T event-migrate npx prisma migrate resolve --rolled-back 0018_hardware_issue </dev/null
