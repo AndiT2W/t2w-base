@@ -88,6 +88,36 @@ test("keeps categories closed, expands the sequential table and blocks premature
   await page.getByLabel("Ende").fill("2026-09-18");
   await expect(page.getByLabel("Beschreibung")).toHaveValue(/example\.test/);
 });
+test("shows dependent and independent category tasks separately", async ({ page }) => {
+  const event = await fixture(page);
+  const suffix = randomUUID().slice(0, 6),
+    designTitle = `Startnummerndesign einrichten ${suffix}`,
+    printTitle = `Startnummern drucken ${suffix}`,
+    allocationTitle = `Startnummernzuteilung ${suffix}`;
+  const design = await create(page, event.id, designTitle);
+  const print = await create(page, event.id, printTitle);
+  await create(page, event.id, allocationTitle);
+  const state = await (await page.request.get(`/api/v1/pm/events/${event.id}`)).json();
+  const response = await page.request.post(`/api/v1/pm/events/${event.id}/commands`, {
+    data: {
+      type: "add-dependency",
+      graphVersion: state.event.pmGraphVersion,
+      taskId: print.id,
+      taskVersion: print.version,
+      predecessorId: design.id,
+    },
+  });
+  expect(response.ok()).toBeTruthy();
+
+  await page.goto(`/events/${event.eventCode}?tab=aufgaben`);
+  const dependentFlow = page.getByRole("group", { name: "Abhängiger Ablauf" });
+  await expect(dependentFlow).toContainText(designTitle);
+  await expect(dependentFlow).toContainText(printTitle);
+  await expect(dependentFlow).not.toContainText(allocationTitle);
+  await expect(page.getByRole("group", { name: "Weitere Aufgaben" })).toContainText(
+    allocationTitle,
+  );
+});
 test("projects canonical Event tasks into the Event list after reload", async ({ page }) => {
   const event = await fixture(page);
   const title = `Readiness ${randomUUID().slice(0, 6)}`;

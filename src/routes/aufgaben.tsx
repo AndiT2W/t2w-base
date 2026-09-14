@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { projectTaskPortfolios, type Task } from "@t2w/domain/project-management";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { TaskFlowBadges } from "@/components/t2w/TaskFlowBadges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { pmRequest, priorityLabel, statusLabel, type PmGlobal } from "@/lib/t2w/project-management";
+import { categoryTaskFlows } from "@/lib/t2w/task-flow-display";
 import {
   createTaskInteractionWorkspace,
   createHttpTaskInteractionAdapter,
@@ -70,13 +72,12 @@ function portfolioBlocks(data: PmGlobal, sourceTasks: PmGlobal["tasks"]) {
     return {
       key: eventId ?? "global",
       event,
-      categories: portfolio.categories.map((category, index) => ({
-        ...category,
-        tasks: portfolio.tasks
+      categories: portfolio.categories.map((category) => {
+        const tasks = portfolio.tasks
           .filter((task) => task.groupId === category.groupId)
-          .map((task) => ({ ...task, event })),
-        stages: portfolio.flows[index] ?? [],
-      })),
+          .map((task) => ({ ...task, event }));
+        return { ...category, tasks, flows: categoryTaskFlows(tasks, data.edges) };
+      }),
     };
   });
 }
@@ -481,20 +482,7 @@ function Aufgaben() {
                         Nächster Schritt: {taskById.get(category.nextTaskId ?? "")?.title ?? "—"}
                         {category.nextEndDate ? ` · Ende ${category.nextEndDate}` : ""}
                       </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {category.stages.flatMap((stage, index) => [
-                          index ? (
-                            <span key={`a-${index}`} aria-hidden="true">
-                              →
-                            </span>
-                          ) : null,
-                          ...stage.map((id) => (
-                            <span key={id} className="rounded-full border px-2 py-1 text-xs">
-                              {taskById.get(id)?.title}
-                            </span>
-                          )),
-                        ])}
-                      </div>
+                      <TaskFlowBadges flows={category.flows} taskById={taskById} />
                     </button>
                     {shown && (
                       <div className="hidden overflow-x-auto md:block">

@@ -10,6 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { TaskFlowBadges } from "@/components/t2w/TaskFlowBadges";
 import {
   pmCommand,
   pmRead,
@@ -18,6 +19,7 @@ import {
   type PmCommand,
   type PmState,
 } from "@/lib/t2w/project-management";
+import { categoryTaskFlows } from "@/lib/t2w/task-flow-display";
 import {
   createTaskInteractionWorkspace,
   createHttpTaskInteractionAdapter,
@@ -162,9 +164,9 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
             <Button disabled={busy || state.event.archived}>Aufgabe anlegen</Button>
           </form>
           <div className="space-y-3">
-            {state.categories.map((category, index) => {
+            {state.categories.map((category) => {
               const members = state.tasks.filter((task) => task.groupId === category.groupId);
-              const stages = state.flows[index] ?? [];
+              const flows = categoryTaskFlows(members, state.edges);
               const expanded = open === (category.groupId ?? "none");
               const next = category.nextTaskId ? taskById.get(category.nextTaskId) : null;
               return (
@@ -194,31 +196,13 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                       Nächster Schritt: {next?.title ?? "—"}
                       {category.nextEndDate ? ` · Ende ${category.nextEndDate}` : ""}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-2" aria-label="Ablauf">
-                      <span className="sr-only">Ablauf: </span>
-                      {stages.flatMap((stage, stageIndex) => [
-                        stageIndex ? (
-                          <span
-                            key={`arrow-${stageIndex}`}
-                            aria-hidden="true"
-                            className="self-center text-muted-foreground"
-                          >
-                            →
-                          </span>
-                        ) : null,
-                        ...stage.map((id) => {
-                          const task = taskById.get(id)!;
-                          return (
-                            <span
-                              key={id}
-                              className={`rounded-full border px-2 py-1 text-xs ${task.status === "DONE" ? "border-emerald-700 bg-emerald-50 text-emerald-800" : task.blockedBy.length ? "border-muted bg-muted text-muted-foreground" : task.status === "IN_PROGRESS" ? "border-blue-700 bg-blue-50 text-blue-800" : "border-border bg-background"}`}
-                            >
-                              {task.title}
-                            </span>
-                          );
-                        }),
-                      ])}
-                    </div>
+                    <TaskFlowBadges
+                      flows={flows}
+                      taskById={taskById}
+                      badgeClassName={(task) =>
+                        `rounded-full border px-2 py-1 text-xs ${task.status === "DONE" ? "border-emerald-700 bg-emerald-50 text-emerald-800" : task.blockedBy.length ? "border-muted bg-muted text-muted-foreground" : task.status === "IN_PROGRESS" ? "border-blue-700 bg-blue-50 text-blue-800" : "border-border bg-background"}`
+                      }
+                    />
                   </button>
                   {expanded && (
                     <div className="border-t">
