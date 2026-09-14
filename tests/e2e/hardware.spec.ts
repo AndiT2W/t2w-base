@@ -146,7 +146,9 @@ test("shows central hardware cases, filters them, and links to the event", async
   await expect.poll(() => lastEventChanges.objectName).toBe("Active Transponder (Lindinger)");
   await page.getByLabel("Nummer bearbeiten").fill("LINDI1066");
   await page.getByLabel("Nummer bearbeiten").press("Tab");
-  await expect.poll(() => lastEventChanges.objectNumberSingle).toBe("LINDI1066");
+  await expect
+    .poll(() => eventChanges.some((changes) => changes.objectNumberSingle === "LINDI1066"))
+    .toBe(true);
   await page.getByLabel("Status bearbeiten").click();
   await page.getByRole("option", { name: "Offen" }).click();
   await expect.poll(() => lastEventChanges.status).toBe("OPEN");

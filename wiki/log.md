@@ -2,6 +2,8 @@
 
 ## 2026-09-14
 
+- Der Hardware-E2E-Test prüft beim Inline-Ändern der Objektnummer nun die passende PATCH-Anfrage statt pauschal der zuletzt eingegangenen Anfrage. Ein durch den Fokuswechsel ausgelöster, unveränderter Mengen-Request konnte die letzte Anfrage überlagern und den GitHub-Deploy fälschlich fehlschlagen lassen. Quelle: [Hardware-E2E-Test](../../tests/e2e/hardware.spec.ts), [Deploy-Workflow](../../.github/workflows/deploy-hostinger.yml).
+
 - Ablauf-Badges trennen nun echte Abhängigkeitsgruppen von unabhängigen Aufgaben. Dadurch wird beispielsweise `Startnummerndesign eingerichtet → Startnummern gedruckt` direkt gezeigt, während `Startnummernzuteilung` nicht mehr als scheinbarer Vorgänger erscheint. Unit- und Browser-Regression ergänzt; der Browserlauf benötigt weiterhin `PM_TEST_DATABASE_URL`. Quellen: [Badge-Komponente](../../src/components/t2w/TaskFlowBadges.tsx), [Ablaufprojektion](../../src/lib/t2w/task-flow-display.ts), [PM-Browser-Regression](../../tests/pm-e2e/project-management.spec.ts).
 
 - `PmTask` als einzige Aufgabenhaltung für Event- und globale Planung bestätigt. Die Migration `0028_canonical_task_projection` entfernt den alten `EventTask`-Speicher ohne Datenübernahme; Event-Schnappschüsse liefern stattdessen offene und überfällige Aufgaben als Readiness-Projektion. Abhängigkeiten bleiben innerhalb eines Planungsbereichs. Siehe [ADR-0002](../../docs/adr/0002-canonical-event-and-global-tasks.md), [PM-Domain](../../packages/domain/src/project-management.ts) und [PM-Browser-Regression](../../tests/pm-e2e/project-management.spec.ts).
