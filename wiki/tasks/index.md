@@ -4,7 +4,8 @@ Use this section only for task notes that create durable project context worth k
 
 ## Task Notes
 
-- [Projektmanagement v3: Aufgabenabhängigkeiten und aufklappbare Ablaufübersicht](project-management-spec-v3.md) (aktuell, Issue #55)
+- [Projektmanagement v4: vereinfachte Aufgaben und Gesamtübersicht](project-management-spec-v4.md) (aktuell, Issue #55)
+- [Projektmanagement v3: Aufgabenabhängigkeiten und aufklappbare Ablaufübersicht](project-management-spec-v3.md) (ersetzt)
 
 - [Projektmanagement: generische Abläufe und Status](project-management-generic-workflows.md) (Diskussionshistorie, in v3 konsolidiert)
 

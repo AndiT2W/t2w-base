@@ -6,7 +6,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 ## Current State
 
-- Aktuell ist [PM-Spezifikation v3](tasks/project-management-spec-v3.md) für Issue #55: Event als Projektcontainer; direkte Aufgabenabhängigkeiten erzeugen die Kategorie-/Ablaufübersicht, Klick öffnet die Tabelle. Vier Aufgabenstatus, atomare Aktivität/Audit und Browser-E2E mit Reload; kein separates Prüfmodell. Lieferstatus, Serienvorlagen, relative Fristen und n8n-Lesezugriff folgen später. Nutzerauftrag zur Issue-Aktualisierung vom 10.09.2026, noch keine Produktimplementierung.
+- Aktuell ist [PM-Spezifikation v4](tasks/project-management-spec-v4.md) für Issue #55 umgesetzt: vereinfachte Event- oder globale Aufgaben, drei Status, Tagesplanung, Voraussetzungen, Kommentare und eine geschlossene Kategorie-Gesamtübersicht. Die Tabellenansicht ist Standard, Gantt eine Desktop-Zeitansicht. Migration `0027_simplify_project_management` entfernt vorherige PM-Aufgaben bewusst; Legacy-`EventTask`-Snapshots bleiben bestehen.
 
 - Repository scaffold created on 2026-06-15.
 - Initial product brief captured from user conversation on 2026-06-15.
@@ -56,7 +56,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 CI-Branding aktualisiert: TIME2WIN-Farben `#8DC63F` und `#05193A` sowie das freigegebene Logo-Asset sind integriert; der vorherige Style ist als `src/styles_begin.css` rückwechselbar archiviert. Siehe [TIME2WIN CI und Branding](concepts/time2win-ci-branding.md).
 
-- PM nach [v3](tasks/project-management-spec-v3.md) neu implementiert: Aufgabenbasis, Abhängigkeiten, abgeleitete Kategorie-/Ablaufübersicht, globale Ansichten, atomarer Verlauf/Audit und kontrollierter Legacy-Cutover. Lokale Testnachweise und Deploymenthinweise: [Implementierungsstand](tasks/project-management-implementation.md). Kein produktiver Cutover in dieser Sitzung.
+- PM v4 gegen eine Staging-/Produktionsdatenbank migrieren und die bewusste Entfernung der bisherigen PM-Aufgaben vor dem Rollout erneut prüfen. Details: [PM v4](tasks/project-management-spec-v4.md).
 - Normalize current ClickUp CRM-like data, especially customer duplicates and non-person contact records.
 - Verify how `Kunde`, `Veranstalter`, `Organisator`, and `Rechnungsempfänger` differ operationally in the current process.
 - Decide how much of the current Excel pricing and service logic should become native structured data versus retained document templates.

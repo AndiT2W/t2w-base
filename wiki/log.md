@@ -399,6 +399,10 @@
 
 # 2026-09-09
 
+# 2026-09-14
+
+- Projektmanagement für Issue #55 auf Spezifikation v4 umgestellt: Aufgaben sind global oder eventgebunden, haben drei Status, optionale Start-/Endtage, Voraussetzungen und Kommentare. Die UI zeigt geschlossene Kategorieblöcke, aufklappbare Tabellen/Karten und eine Desktop-Gantt-Ansicht. Migration `0027_simplify_project_management` entfernt bisherige PM-Daten absichtlich; alte `EventTask`-Snapshots bleiben erhalten. Domain-, Service-, Browser- und Produktionsbuild-Prüfungen erfolgreich. Siehe [PM v4](tasks/project-management-spec-v4.md).
+
 - Importdefinition für die ClickUp-Liste `VERANSTALTUNGEN` ergänzt: ClickUp-Task-ID als externe Referenz, Stammdaten zuerst, Rollen danach, IBAN/BIC ausschließlich am Kunden-/Zahlungsempfänger-Stammsatz, keine automatische Kontaktanlage nur wegen einer IBAN, unsichere Matches in Reviewliste und zuerst Vorschau-/Idempotenzlauf. Siehe [ClickUp-Import Veranstaltungen](concepts/clickup-veranstaltungen-import.md).
 
 - Eventserien lassen sich nun im Eventdetail nachträglich mit einem bestehenden Event verknüpfen, auf eine andere Serie verschieben oder lösen. Die transaktionale API aktualisiert die betroffenen Events versionssicher; eine Browser-Regression prüft Verknüpfen und Persistenz nach Reload.
@@ -481,7 +485,6 @@
 - 2026-09-10: Event-Kommunikation für große Nachrichtenbestände verdichtet. Die kompakte Listenansicht ist Standard; Betreff und Adressen werden kontrolliert gekürzt, Vorschauen auf eine Zeile begrenzt und Abstände reduziert. Expansion, Kontaktstatus, Richtung, Anlagen und Outlook-Link bleiben erhalten. Browser-Regression deckt Standardansicht und Vorschau ab. Quellen: `src/routes/events.$eventcode.tsx`, `tests/e2e/event-management.spec.ts`, Live-Prüfung am Event `260904_ultraks_mayrhofen_2026`.
 - 2026-09-10: Hardware-Übersicht visuell und operativ verdichtet: beschriftete Filter, aktiver Ergebniszähler, Filter-Reset, leerer Ergebniszustand, lokale Datumsdarstellung sowie klar markierte überfällige Vorgänge. `tests/e2e/hardware.spec.ts` sichert den Resetpfad; die Hardware-Playwright-Suite (3 Tests) und das gezielte ESLint liefen erfolgreich. Quellen: `src/routes/hardware.tsx`, `tests/e2e/hardware.spec.ts`, Live-Prüfung der Produktivansicht am 2026-09-10.
 - 2026-09-10: Durchgängiger Hardware-Anlege-Sheet neben dem bestehenden Tabellen-Inline-Editing spezifiziert und als Issue #54 veröffentlicht. Der Browser-E2E-Workflow ist der gemeinsame Test-Seam. Quelle: [Issue #54](https://github.com/AndiT2W/t2w-base/issues/54), Nutzerentscheidung vom 2026-09-10.
-
 
 ## 2026-09-10 — Integriertes Projektmanagement spezifiziert
 

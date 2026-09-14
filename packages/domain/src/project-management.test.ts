@@ -5,75 +5,38 @@ import {
   validateTaskChange,
   type Task,
 } from "./project-management.js";
-
-const task = (id: string, values: Partial<Task> = {}): Task => ({
-  id,
-  eventId: "event",
-  title: id,
-  status: "NEW",
-  priority: "NORMAL",
-  ownerId: "owner",
-  groupId: "group",
-  nextStep: "Bearbeiten",
-  result: "",
-  reason: "",
-  dueType: "NONE",
-  dueDate: null,
-  dueAt: null,
-  version: 1,
-  ...values,
-});
 const catalogue = {
   owners: [{ id: "owner", active: true }],
   groups: [{ id: "group", active: true }],
 };
-describe("project management workspace rules", () => {
-  it("orders a real chain by its dependencies and detects mixed deadline contradictions", () => {
-    const tasks = [
-      task("a", { dueType: "INSTANT", dueAt: "2026-11-01T12:00:00Z" }),
-      task("z", { dueType: "DATE", dueDate: "2026-12-01" }),
-    ];
-    const state = projectTasks(
-      tasks,
-      [{ predecessorId: "z", successorId: "a" }],
-      catalogue,
-      "Europe/Vienna",
-      "2026-09-10T12:00:00Z",
-    );
-    expect(state.flows).toEqual([["z", "a"]]);
-    expect(state.tasks[0]?.reasons).toContain("Terminwiderspruch: z");
-  });
-  it("keeps planned dependencies neutral, and evaluates day deadlines in the event timezone across DST", () => {
-    const tasks = [
-      task("a", { dueType: "DATE", dueDate: "2026-10-25" }),
-      task("b", { priority: "HIGH" }),
-    ];
-    const edges = [{ predecessorId: "a", successorId: "b" }];
-    expect(
-      projectTasks(tasks, edges, catalogue, "Europe/Vienna", "2026-10-25T22:59:59Z").categories[0]
-        ?.summary,
-    ).toBe("Alles im Plan");
-    expect(
-      projectTasks(tasks, edges, catalogue, "Europe/Vienna", "2026-10-25T23:00:00Z").tasks[0]
-        ?.overdue,
-    ).toBe(true);
-    expect(
-      projectTasks(tasks, edges, catalogue, "Europe/Vienna", "2026-10-25T23:00:00Z").tasks[1]
-        ?.overdue,
-    ).toBe(false);
-  });
-  it("preserves terminal results and detects reopened transitive prerequisites", () => {
-    const tasks = [task("a"), task("b", { status: "DONE", result: "Ergebnis bleibt" }), task("c")];
+const task = (id: string, changes: Partial<Task> = {}): Task => ({
+  id,
+  scope: "EVENT",
+  eventId: "event",
+  title: id,
+  description: "",
+  status: "OPEN",
+  priority: "NORMAL",
+  ownerId: "owner",
+  groupId: "group",
+  startDate: null,
+  endDate: null,
+  version: 1,
+  ...changes,
+});
+describe("project management v4", () => {
+  it("models a sequential workflow with parallel stages and blocks only completion", () => {
+    const tasks = [task("design"), task("setup"), task("print")];
     const edges = [
-      { predecessorId: "a", successorId: "b" },
-      { predecessorId: "b", successorId: "c" },
+      { predecessorId: "design", successorId: "setup" },
+      { predecessorId: "setup", successorId: "print" },
     ];
-    const state = projectTasks(tasks, edges, catalogue, "Europe/Vienna", "2026-09-10T12:00:00Z");
-    expect(state.tasks[1]).toMatchObject({
-      status: "DONE",
-      result: "Ergebnis bleibt",
-      reasons: ["Voraussetzung erneut prüfen"],
-    });
+    const result = projectTasks(tasks, edges, catalogue, "2026-09-14T12:00:00Z");
+    expect(result.flows).toEqual([[["design"], ["setup"], ["print"]]]);
+    expect(result.tasks.find((item) => item.id === "print")?.blockedBy).toEqual(["setup"]);
+    expect(() =>
+      validateTaskChange(tasks[2]!, { ...tasks[2]!, status: "DONE" }, tasks, edges, catalogue),
+    ).toThrow("setup");
     expect(() =>
       validateTaskChange(
         tasks[2]!,
@@ -82,45 +45,55 @@ describe("project management workspace rules", () => {
         edges,
         catalogue,
       ),
-    ).toThrow("a");
+    ).not.toThrow();
   });
-  it("does not treat empty or cancelled categories as completed", () => {
+  it("rejects cross-context and cyclic prerequisites", () => {
+    const tasks = [task("a"), task("b"), task("global", { scope: "GLOBAL", eventId: null })];
+    expect(() =>
+      validateDependency(tasks, [], { predecessorId: "global", successorId: "a" }),
+    ).toThrow("selben Kontext");
+    expect(() =>
+      validateDependency(tasks, [{ predecessorId: "a", successorId: "b" }], {
+        predecessorId: "b",
+        successorId: "a",
+      }),
+    ).toThrow("Zyklische");
+  });
+  it("derives category health from overdue, blocked, due-soon and active work", () => {
+    const reference = "2026-09-14T12:00:00Z";
     expect(
-      projectTasks([], [], catalogue, "Europe/Vienna", "2026-09-10T12:00:00Z").categories[0]
-        ?.summary,
-    ).toBe("Keine Aufgaben erfasst");
+      projectTasks([task("late", { endDate: "2026-09-13" })], [], catalogue, reference)
+        .categories[0]?.health,
+    ).toBe("critical");
     expect(
-      projectTasks(
-        [task("a", { status: "CANCELLED" })],
+      projectTasks([task("soon", { endDate: "2026-09-21" })], [], catalogue, reference)
+        .categories[0]?.health,
+    ).toBe("warning");
+    expect(
+      projectTasks([task("work", { status: "IN_PROGRESS" })], [], catalogue, reference)
+        .categories[0]?.health,
+    ).toBe("active");
+    expect(
+      projectTasks([task("done", { status: "DONE" })], [], catalogue, reference).categories[0]
+        ?.health,
+    ).toBe("done");
+  });
+  it("requires a title and coherent optional calendar dates", () => {
+    const base = task("a");
+    expect(() => validateTaskChange(null, { ...base, title: "" }, [], [], catalogue)).toThrow(
+      "Titel",
+    );
+    expect(() =>
+      validateTaskChange(
+        null,
+        { ...base, startDate: "2026-10-02", endDate: "2026-10-01" },
+        [],
         [],
         catalogue,
-        "Europe/Vienna",
-        "2026-09-10T12:00:00Z",
-      ).categories[0]?.summary,
-    ).toBe("Alle erfassten Aufgaben storniert");
-  });
-  it("requires all predecessors and rejects cycles", () => {
-    const tasks = [task("a", { status: "DONE" }), task("b"), task("c")];
-    const edges = [
-      { predecessorId: "a", successorId: "c" },
-      { predecessorId: "b", successorId: "c" },
-    ];
-    expect(() =>
-      validateTaskChange(
-        tasks[2]!,
-        { ...tasks[2]!, status: "IN_PROGRESS" },
-        tasks,
-        edges,
-        catalogue,
       ),
-    ).toThrow("b");
+    ).toThrow("Ende");
     expect(() =>
-      validateDependency(tasks, edges, { predecessorId: "c", successorId: "a" }),
-    ).toThrow();
-    expect(
-      projectTasks(tasks, edges, catalogue, "Europe/Vienna", "2026-09-10T10:00:00Z").tasks.find(
-        (t) => t.id === "c",
-      )?.blockedBy,
-    ).toEqual(["b"]);
+      validateTaskChange(null, { ...base, startDate: "bad" }, [], [], catalogue),
+    ).toThrow("Gültiges");
   });
 });

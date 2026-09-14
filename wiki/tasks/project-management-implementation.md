@@ -1,5 +1,7 @@
 # Projektmanagement: Neuimplementierung von Issue #55
 
+> **Ersetzt am 2026-09-14:** Dieses Dokument hält den Umsetzungsstand von v3 fest. Die aktuelle Umsetzung folgt der [Spezifikation v4](project-management-spec-v4.md); insbesondere entfallen vier Arbeitsstatus, Fachreferenzen, Cutover-Workflow und PM-Snapshots.
+
 Stand: 2026-09-10. Auftrag aus Nutzerkonversation: vorherige Implementierung zurücknehmen und `/implement #55` erneut ausführen. Maßgeblich bleibt [Spezifikation v3](project-management-spec-v3.md).
 
 ## Umsetzung

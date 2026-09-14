@@ -205,10 +205,7 @@ export class EventsController {
       const state = await this.pm.read(id, req.user);
       if (
         state.tasks.some(
-          (t) =>
-            t.status === "NEW" ||
-            t.status === "IN_PROGRESS" ||
-            t.reasons.includes("Voraussetzung erneut prüfen"),
+          (t) => t.status === "OPEN" || t.status === "IN_PROGRESS" || t.blockedBy.length > 0,
         )
       )
         throw new ConflictException(

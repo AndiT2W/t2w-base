@@ -1,18 +1,14 @@
 import type { Task } from "@t2w/domain/project-management";
-import { statusLabel, type PmState } from "@/lib/t2w/project-management";
+import { priorityLabel, statusLabel, type PmState } from "@/lib/t2w/project-management";
 const fields = {
   title: "Titel",
+  description: "Beschreibung",
   status: "Arbeitsstatus",
   priority: "Priorität",
   ownerId: "Owner",
   groupId: "Kategorie",
-  nextStep: "Nächster Schritt",
-  dueType: "Fristtyp",
-  dueDate: "Tagesfrist",
-  dueAt: "Zeitpunkt",
-  result: "Abschlussergebnis",
-  reason: "Begründung",
-  references: "Fachreferenzen",
+  startDate: "Start",
+  endDate: "Ende",
 } as const;
 export function TaskChangeDetails({
   before,
@@ -31,10 +27,7 @@ export function TaskChangeDetails({
       return state.owners.find((o) => o.id === value)?.displayName ?? "Ehemalige Zuweisung";
     if (key === "groupId")
       return state.groups.find((g) => g.id === value)?.name ?? "Ehemalige Kategorie";
-    if (key === "priority") return value === "HIGH" ? "Hoch" : "Normal";
-    if (key === "dueType")
-      return value === "DATE" ? "Tagesfrist" : value === "INSTANT" ? "Zeitpunkt" : "Ohne Frist";
-    if (key === "references") return `${Array.isArray(value) ? value.length : 0} Referenzen`;
+    if (key === "priority") return priorityLabel[value as Task["priority"]];
     return String(value);
   };
   return (
@@ -57,6 +50,9 @@ export const activityLabel: Record<string, string> = {
   update: "Aufgabe geändert",
   "add-dependency": "Voraussetzung hinzugefügt",
   "remove-dependency": "Voraussetzung entfernt",
+  "comment-create": "Kommentar erstellt",
+  "comment-update": "Kommentar bearbeitet",
+  "comment-delete": "Kommentar gelöscht",
 };
 export function TaskActivityDetails({ details, state }: { details: unknown; state: PmState }) {
   const data = details as {

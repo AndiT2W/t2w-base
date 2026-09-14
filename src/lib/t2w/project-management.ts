@@ -1,34 +1,30 @@
 import type { projectTasks, Task } from "@t2w/domain/project-management";
 export type PmState = ReturnType<typeof projectTasks> & {
-  event: {
-    id: string;
-    eventCode: string;
-    name: string;
-    archived: boolean;
-    pmGraphVersion: number;
-    pmTimeZone: string;
-  };
+  event: { id: string; eventCode: string; name: string; archived: boolean; pmGraphVersion: number };
   owners: { id: string; displayName: string; active: boolean }[];
   groups: { id: string; name: string; active: boolean; sortOrder: number; version: number }[];
   legacyCount: number;
-  legacySnapshots: { id: string; count: number; sha256: string; createdAt: string }[];
 };
-export type PmGlobal = Pick<PmState, "owners" | "groups" | "referenceTime"> & {
-  eventChoices: { id: string; name: string; seriesId: string | null }[];
-  events: { event: PmState["event"]; categories: PmState["categories"] }[];
-  tasks: (PmState["tasks"][number] & { event: PmState["event"] })[];
-  totalTasks: number;
-  totalEvents: number;
-  nextCursor: string | null;
-  nextEventCursor: string | null;
+export type PmGlobal = {
+  referenceTime: string;
+  owners: PmState["owners"];
+  groups: PmState["groups"];
+  eventChoices: PmState["event"][];
+  events: PmState["event"][];
+  tasks: (PmState["tasks"][number] & { event: PmState["event"] | null })[];
+  edges: PmState["edges"];
+  projects: {
+    eventId: string | null;
+    categories: PmState["categories"];
+    flows: PmState["flows"];
+  }[];
 };
 export type PmCommand = {
-  type: "create" | "update" | "add-dependency" | "remove-dependency";
+  type: "create" | "update" | "delete" | "add-dependency" | "remove-dependency";
   taskId?: string;
   taskVersion?: number;
   task?: Partial<Task>;
   predecessorId?: string;
-  reason?: string;
 };
 export async function pmRequest<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`/api/v1/pm${path}`, {
@@ -56,9 +52,15 @@ export const pmCommand = (state: PmState, command: PmCommand) =>
     ...command,
     graphVersion: state.event.pmGraphVersion,
   });
+export const pmGlobalCommand = (command: PmCommand) =>
+  pmRequest<ReturnType<typeof projectTasks>>("/commands", command);
 export const statusLabel: Record<Task["status"], string> = {
-  NEW: "Neu",
+  OPEN: "Offen",
   IN_PROGRESS: "In Arbeit",
   DONE: "Erledigt",
-  CANCELLED: "Storniert",
+};
+export const priorityLabel: Record<Task["priority"], string> = {
+  LOW: "Niedrig",
+  NORMAL: "Normal",
+  HIGH: "Hoch",
 };
