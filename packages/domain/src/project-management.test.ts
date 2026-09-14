@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  projectTasks,
+  projectTaskPortfolio,
+  projectTaskPortfolios,
+  projectTaskReadiness,
   validateDependency,
   validateTaskChange,
   type Task,
@@ -31,7 +33,7 @@ describe("project management v4", () => {
       { predecessorId: "design", successorId: "setup" },
       { predecessorId: "setup", successorId: "print" },
     ];
-    const result = projectTasks(tasks, edges, catalogue, "2026-09-14T12:00:00Z");
+    const result = projectTaskPortfolio(tasks, edges, catalogue, "2026-09-14T12:00:00Z");
     expect(result.flows).toEqual([[["design"], ["setup"], ["print"]]]);
     expect(result.tasks.find((item) => item.id === "print")?.blockedBy).toEqual(["setup"]);
     expect(() =>
@@ -62,21 +64,44 @@ describe("project management v4", () => {
   it("derives category health from overdue, blocked, due-soon and active work", () => {
     const reference = "2026-09-14T12:00:00Z";
     expect(
-      projectTasks([task("late", { endDate: "2026-09-13" })], [], catalogue, reference)
+      projectTaskPortfolio([task("late", { endDate: "2026-09-13" })], [], catalogue, reference)
         .categories[0]?.health,
     ).toBe("critical");
     expect(
-      projectTasks([task("soon", { endDate: "2026-09-21" })], [], catalogue, reference)
+      projectTaskPortfolio([task("soon", { endDate: "2026-09-21" })], [], catalogue, reference)
         .categories[0]?.health,
     ).toBe("warning");
     expect(
-      projectTasks([task("work", { status: "IN_PROGRESS" })], [], catalogue, reference)
+      projectTaskPortfolio([task("work", { status: "IN_PROGRESS" })], [], catalogue, reference)
         .categories[0]?.health,
     ).toBe("active");
     expect(
-      projectTasks([task("done", { status: "DONE" })], [], catalogue, reference).categories[0]
-        ?.health,
+      projectTaskPortfolio([task("done", { status: "DONE" })], [], catalogue, reference)
+        .categories[0]?.health,
     ).toBe("done");
+  });
+  it("projects Event readiness without mixing in global work", () => {
+    expect(
+      projectTaskReadiness(
+        [
+          task("open", { endDate: "2026-09-13" }),
+          task("done", { status: "DONE", endDate: "2026-09-01" }),
+        ],
+        "2026-09-14T12:00:00Z",
+      ),
+    ).toEqual({ openCount: 1, overdueCount: 1 });
+  });
+  it("keeps Event and global portfolio flows in separate planning scopes", () => {
+    const portfolios = projectTaskPortfolios(
+      [task("event"), task("global", { scope: "GLOBAL", eventId: null })],
+      [],
+      catalogue,
+      "2026-09-14T12:00:00Z",
+    );
+    expect(portfolios.map((portfolio) => [portfolio.scope, portfolio.eventId])).toEqual([
+      ["EVENT", "event"],
+      ["GLOBAL", null],
+    ]);
   });
   it("requires a title and coherent optional calendar dates", () => {
     const base = task("a");

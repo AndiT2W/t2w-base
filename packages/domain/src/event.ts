@@ -62,12 +62,6 @@ export type EventDetailCommand =
   | { kind: "add-contact"; contactId: string; role: string }
   | { kind: "remove-contact"; contactId: string; role: string }
   | { kind: "change-contact-role"; contactId: string; role: string; nextRole: string }
-  | { kind: "create-task"; input: { title: string; dueAt?: string; responsible?: string } }
-  | {
-      kind: "update-task";
-      taskId: string;
-      input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean };
-    }
   | { kind: "create-file"; input: { name: string; url?: string; size?: string } }
   | {
       kind: "create-activity";
@@ -106,17 +100,6 @@ export type EventTransport<TEvent extends EventRecord> = {
     contactId: string,
     role: string,
     nextRole: string,
-    version: number,
-  ): Promise<TEvent>;
-  createTask?(
-    id: string,
-    input: { title: string; dueAt?: string; responsible?: string },
-    version: number,
-  ): Promise<TEvent>;
-  updateTask?(
-    id: string,
-    taskId: string,
-    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
     version: number,
   ): Promise<TEvent>;
   createFile?(
@@ -373,15 +356,6 @@ export function createEventWorkspace<TEvent extends EventRecord>(
                     event.version ?? 0,
                   ) ?? unavailable()
                 );
-              case "create-task":
-                return (
-                  transport.createTask?.(id, command.input, event.version ?? 0) ?? unavailable()
-                );
-              case "update-task":
-                return (
-                  transport.updateTask?.(id, command.taskId, command.input, event.version ?? 0) ??
-                  unavailable()
-                );
               case "create-file":
                 return (
                   transport.createFile?.(id, command.input, event.version ?? 0) ?? unavailable()
@@ -418,17 +392,6 @@ export function createEventWorkspace<TEvent extends EventRecord>(
           execute({ kind: "remove-contact", contactId, role }),
         updateContactRole: (contactId: string, role: string, nextRole: string) =>
           execute({ kind: "change-contact-role", contactId, role, nextRole }),
-        createTask: (input: { title: string; dueAt?: string; responsible?: string }) =>
-          execute({ kind: "create-task", input }),
-        updateTask: (
-          taskId: string,
-          input: {
-            title?: string;
-            dueAt?: string | null;
-            responsible?: string;
-            completed?: boolean;
-          },
-        ) => execute({ kind: "update-task", taskId, input }),
         createFile: (input: { name: string; url?: string; size?: string }) =>
           execute({ kind: "create-file", input }),
         createActivity: (input: {

@@ -8,7 +8,7 @@ Stand: 2026-09-14. Quelle: Nutzerentscheidung in dieser Unterhaltung und die dre
 - Sie enthält Titel, einfache Beschreibung, Status `OPEN`/`IN_PROGRESS`/`DONE`, Priorität `LOW`/`NORMAL`/`HIGH`, eine Person, Kategorie und optionale Start-/Endtage.
 - Unerledigte Vorgänger erzeugen den abgeleiteten Hinweis „Blockiert“, verhindern jedoch nur den Abschluss.
 - Kommentare können vom Autor bearbeitet oder gelöscht werden. Änderungen sind im Aufgabenverlauf nachvollziehbar; eine Löschung entfernt Kommentar und dessen sichtbaren Verlauf.
-- Bestehende PM-Aufgaben werden beim Rollout bewusst entfernt statt migriert. Legacy-`EventTask`-Snapshots bleiben unverändert.
+- Der alte `EventTask`-Speicher wird beim Rollout bewusst ohne Migration entfernt. `PmTask` ist die einzige Aufgabenhaltung; Event-Schnappschüsse enthalten ausschließlich eine kompakte Readiness-Projektion.
 
 ## Ansichten
 

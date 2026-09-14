@@ -98,7 +98,7 @@ describe.skipIf(!enabled)("simplified PM persistence", () => {
       { type: "create", task: { title: "Globale Aufgabe", endDate: "2026-09-20" } },
       actor,
     );
-    const global = await pm.global({}, actor);
+    const global = await pm.global(actor);
     expect(
       global.tasks.some((task) => task.title === "Globale Aufgabe" && task.event === null),
     ).toBe(true);

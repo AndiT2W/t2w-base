@@ -13,7 +13,7 @@ const event = {
   ende: "2027-01-15",
   veranstalterId: "c1",
   kontakte: [],
-  aufgaben: [],
+  taskReadiness: { openCount: 0, overdueCount: 0 },
   dateien: [],
   kommunikation: [],
   rechnungsempfaengerIds: ["c1"],
@@ -32,7 +32,7 @@ function setup(
     .fn()
     .mockResolvedValue({ kind: "synced", event: { ...event, participantCurrent: 42 } }),
 ) {
-  const saved = { ...event, version: 2, aufgaben: [{ id: "t1", titel: "Briefing" }] } as T2WEvent;
+  const saved = { ...event, version: 2 } as T2WEvent;
   const transport = {
     create: vi.fn(),
     save: vi.fn().mockResolvedValue(saved),
@@ -42,7 +42,6 @@ function setup(
       .fn()
       .mockResolvedValue({ path: "07_auftraege_27/Q1/270115_mountain_attack", drifted: false }),
     addContact: vi.fn().mockResolvedValue(saved),
-    createTask: vi.fn().mockResolvedValue(saved),
   };
   const events = createEventWorkspace(transport);
   events.load([event]);
@@ -106,15 +105,6 @@ describe("Event detail workspace", () => {
     workspace.setInput("contactSearch", "marion");
     workspace.selectContact("p1");
     expect(workspace.snapshot()).toMatchObject({ contactId: "p1", contactSearch: "" });
-  });
-
-  it("owns pessimistic detail commands and clears input only after persistence", async () => {
-    const { workspace, transport } = setup();
-    workspace.setInput("newTask", "Briefing");
-    await workspace.addTask();
-    expect(transport.createTask).toHaveBeenCalledWith("e1", { title: "Briefing" }, 1);
-    expect(workspace.snapshot().newTask).toBe("");
-    expect(workspace.snapshot().form.version).toBe(2);
   });
 
   it("owns Outlook planning and synchronization status", async () => {

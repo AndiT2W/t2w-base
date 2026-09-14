@@ -287,28 +287,6 @@ export class EventsController {
     );
   }
 
-  @Post(":id/tasks") createTask(
-    @Param("id", ParseUUIDPipe) eventId: string,
-    @Body() body: { title: string; dueAt?: string; responsible?: string; version: number },
-  ) {
-    const { version, ...input } = body;
-    return this.mutate(() => this.eventMutations.createTask(eventId, input, version));
-  }
-  @Patch(":id/tasks/:taskId") updateTask(
-    @Param("id", ParseUUIDPipe) eventId: string,
-    @Param("taskId", ParseUUIDPipe) taskId: string,
-    @Body()
-    body: {
-      title?: string;
-      dueAt?: string | null;
-      responsible?: string;
-      completed?: boolean;
-      version: number;
-    },
-  ) {
-    const { version, ...input } = body;
-    return this.mutate(() => this.eventMutations.updateTask(eventId, taskId, input, version));
-  }
   @Post(":id/files") createFile(
     @Param("id", ParseUUIDPipe) eventId: string,
     @Body() body: { name: string; url?: string; size?: string; version: number },

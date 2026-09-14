@@ -61,7 +61,7 @@ const OVERVIEW_TABLE_COLUMNS = [
   { key: "Tage", sortValue: (event: T2WEvent) => tageZwischen(event.start, event.ende) },
   {
     key: "Aufgaben",
-    sortValue: (event: T2WEvent) => event.aufgaben.filter((task) => !task.erledigt).length,
+    sortValue: (event: T2WEvent) => event.taskReadiness.openCount,
   },
   {
     key: "Ordner",
@@ -102,10 +102,8 @@ function Uebersicht() {
 
   const kpi = useMemo(() => {
     const kommend = aktive.filter((e) => e.ende >= heute && inTagen(e.start, 14, heute)).length;
-    const aufgaben = aktive.reduce((n, e) => n + e.aufgaben.filter((a) => !a.erledigt).length, 0);
-    const ueberfaellig = aktive.filter((e) =>
-      e.aufgaben.some((a) => !a.erledigt && !!a.faellig && a.faellig < heute),
-    ).length;
+    const aufgaben = aktive.reduce((n, e) => n + e.taskReadiness.openCount, 0);
+    const ueberfaellig = aktive.filter((e) => e.taskReadiness.overdueCount > 0).length;
     return { kommend, aufgaben, ueberfaellig };
   }, [aktive, heute]);
 
@@ -115,9 +113,8 @@ function Uebersicht() {
       .filter((e) => (status === "alle" ? true : e.status === status))
       .filter((e) => {
         if (filter === "diese-woche") return e.ende >= heute && inTagen(e.start, 14, heute);
-        if (filter === "offen") return e.aufgaben.some((a) => !a.erledigt);
-        if (filter === "ueberfaellig")
-          return e.aufgaben.some((a) => !a.erledigt && !!a.faellig && a.faellig < heute);
+        if (filter === "offen") return e.taskReadiness.openCount > 0;
+        if (filter === "ueberfaellig") return e.taskReadiness.overdueCount > 0;
         if (filter === "ohne-ordner") return !e.outlookOrdner || !e.sharepointOrdner;
         return true;
       })
@@ -300,7 +297,7 @@ function Uebersicht() {
             </thead>
             <tbody>
               {zeilen.map((e) => {
-                const offen = e.aufgaben.filter((a) => !a.erledigt).length;
+                const offen = e.taskReadiness.openCount;
                 const folders = resolveEventFolderNavigation(e, settings);
                 return (
                   <tr key={e.id} className="border-t border-border hover:bg-accent/50">

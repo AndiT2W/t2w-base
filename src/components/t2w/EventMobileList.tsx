@@ -27,7 +27,7 @@ export function EventMobileList({
     <div className="space-y-2 md:hidden" aria-label="Veranstaltungen mobile Liste">
       {events.map((event) => {
         const folders = resolveEventFolderNavigation(event, settings);
-        const openTasks = event.aufgaben.filter((task) => !task.erledigt).length;
+        const openTasks = event.taskReadiness.openCount;
         return (
           <article key={event.id} className="rounded-lg border border-border bg-surface p-3">
             <div className="flex items-start justify-between gap-3">

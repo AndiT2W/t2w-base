@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-09-14
+
+- `PmTask` als einzige Aufgabenhaltung für Event- und globale Planung bestätigt. Die Migration `0028_canonical_task_projection` entfernt den alten `EventTask`-Speicher ohne Datenübernahme; Event-Schnappschüsse liefern stattdessen offene und überfällige Aufgaben als Readiness-Projektion. Abhängigkeiten bleiben innerhalb eines Planungsbereichs. Siehe [ADR-0002](../../docs/adr/0002-canonical-event-and-global-tasks.md), [PM-Domain](../../packages/domain/src/project-management.ts) und [PM-Browser-Regression](../../tests/pm-e2e/project-management.spec.ts).
+
 ## 2026-09-09
 
 - Neues vorgeschlagenes Berechtigungsmodell aufgenommen: Systembenutzer mit `Admin`/`User`, serverseitiger Autorisierung, Einladungsworkflow und Deaktivierung statt Löschung; getrennt von fachlichen Eventrollen.

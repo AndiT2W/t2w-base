@@ -20,7 +20,7 @@ export type Catalogue = {
   owners: { id: string; active: boolean }[];
   groups: { id: string; active: boolean }[];
 };
-export const isOpen = (task: Task) => task.status !== "DONE";
+export const isOpen = (task: Pick<Task, "status">) => task.status !== "DONE";
 const validDay = (value: string | null) =>
   value === null ||
   (/^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(value).toISOString().slice(0, 10) === value);
@@ -88,7 +88,24 @@ export function validateTaskChange(
   }
 }
 
-export function projectTasks(
+export type TaskReadiness = {
+  openCount: number;
+  overdueCount: number;
+};
+
+export function projectTaskReadiness(
+  tasks: Pick<Task, "status" | "endDate">[],
+  referenceTime: string,
+): TaskReadiness {
+  const today = referenceTime.slice(0, 10);
+  return {
+    openCount: tasks.filter(isOpen).length,
+    overdueCount: tasks.filter((task) => isOpen(task) && !!task.endDate && task.endDate < today)
+      .length,
+  };
+}
+
+export function projectTaskPortfolio(
   tasks: Task[],
   edges: Dependency[],
   catalogue: Catalogue,
@@ -154,4 +171,38 @@ export function projectTasks(
     return stages;
   });
   return { referenceTime, tasks: projected, edges, categories, flows };
+}
+
+export type TaskPortfolioScope = {
+  scope: TaskScope;
+  eventId: string | null;
+  portfolio: ReturnType<typeof projectTaskPortfolio>;
+};
+
+export function projectTaskPortfolios(
+  tasks: Task[],
+  edges: Dependency[],
+  catalogue: Catalogue,
+  referenceTime: string,
+): TaskPortfolioScope[] {
+  const scopes = new Map<string, { scope: TaskScope; eventId: string | null; tasks: Task[] }>();
+  for (const task of tasks) {
+    const key = `${task.scope}:${task.eventId ?? "global"}`;
+    const current = scopes.get(key) ?? { scope: task.scope, eventId: task.eventId, tasks: [] };
+    current.tasks.push(task);
+    scopes.set(key, current);
+  }
+  return [...scopes.values()].map(({ scope, eventId, tasks: scopedTasks }) => {
+    const ids = new Set(scopedTasks.map((task) => task.id));
+    return {
+      scope,
+      eventId,
+      portfolio: projectTaskPortfolio(
+        scopedTasks,
+        edges.filter((edge) => ids.has(edge.predecessorId) && ids.has(edge.successorId)),
+        catalogue,
+        referenceTime,
+      ),
+    };
+  });
 }

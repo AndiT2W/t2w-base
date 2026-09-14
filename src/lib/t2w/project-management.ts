@@ -1,9 +1,8 @@
-import type { projectTasks, Task } from "@t2w/domain/project-management";
-export type PmState = ReturnType<typeof projectTasks> & {
+import type { projectTaskPortfolio, Task } from "@t2w/domain/project-management";
+export type PmState = ReturnType<typeof projectTaskPortfolio> & {
   event: { id: string; eventCode: string; name: string; archived: boolean; pmGraphVersion: number };
   owners: { id: string; displayName: string; active: boolean }[];
   groups: { id: string; name: string; active: boolean; sortOrder: number; version: number }[];
-  legacyCount: number;
 };
 export type PmGlobal = {
   referenceTime: string;
@@ -11,13 +10,8 @@ export type PmGlobal = {
   groups: PmState["groups"];
   eventChoices: PmState["event"][];
   events: PmState["event"][];
-  tasks: (PmState["tasks"][number] & { event: PmState["event"] | null })[];
+  tasks: (Task & { event: PmState["event"] | null })[];
   edges: PmState["edges"];
-  projects: {
-    eventId: string | null;
-    categories: PmState["categories"];
-    flows: PmState["flows"];
-  }[];
 };
 export type PmCommand = {
   type: "create" | "update" | "delete" | "add-dependency" | "remove-dependency";
@@ -53,7 +47,7 @@ export const pmCommand = (state: PmState, command: PmCommand) =>
     graphVersion: state.event.pmGraphVersion,
   });
 export const pmGlobalCommand = (command: PmCommand) =>
-  pmRequest<ReturnType<typeof projectTasks>>("/commands", command);
+  pmRequest<ReturnType<typeof projectTaskPortfolio>>("/commands", command);
 export const statusLabel: Record<Task["status"], string> = {
   OPEN: "Offen",
   IN_PROGRESS: "In Arbeit",

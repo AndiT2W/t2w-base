@@ -44,23 +44,6 @@ describe("Event workspace editing lifecycle", () => {
     ).resolves.toEqual(copied);
     expect(workspace.events()).toEqual([event, copied]);
   });
-  it("accepts refreshed Event state after an intent-level Event-detail command", async () => {
-    const refreshed = { ...event, version: 4, name: "Mountain Attack 2027" };
-    const persistence = transport({ createTask: vi.fn().mockResolvedValue(refreshed) });
-    const workspace = createEventWorkspace(persistence);
-    workspace.load([event]);
-    const session = workspace.openSession(event.id);
-
-    await expect(
-      session.execute({ kind: "create-task", input: { title: "Briefing" } }),
-    ).resolves.toEqual({
-      kind: "saved",
-      event: refreshed,
-    });
-    expect(session.snapshot()).toEqual(refreshed);
-    expect(workspace.events()).toEqual([refreshed]);
-  });
-
   it("keeps draft and collection unchanged after a version conflict", async () => {
     const persistence = transport({
       save: vi

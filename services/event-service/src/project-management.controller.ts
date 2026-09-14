@@ -1,12 +1,12 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req } from "@nestjs/common";
 import type { Request } from "express";
 import { ProjectManagementService, type PmActor } from "./project-management.service.js";
 type AuthRequest = Request & { user: PmActor };
 @Controller("api/v1/pm")
 export class ProjectManagementController {
   constructor(private readonly pm: ProjectManagementService) {}
-  @Get() global(@Query() query: Record<string, string>, @Req() req: AuthRequest) {
-    return this.pm.global(query, req.user);
+  @Get() global(@Req() req: AuthRequest) {
+    return this.pm.global(req.user);
   }
   @Post("commands") globalCommand(
     @Body() body: Parameters<ProjectManagementService["globalCommand"]>[0],

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Task } from "@t2w/domain/project-management";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,15 @@ import {
 import {
   pmCommand,
   pmRead,
-  pmRequest,
   priorityLabel,
   statusLabel,
   type PmCommand,
   type PmState,
 } from "@/lib/t2w/project-management";
+import {
+  createTaskInteractionWorkspace,
+  createHttpTaskInteractionAdapter,
+} from "@/lib/t2w/task-interaction-workspace";
 
 const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
 const healthLabel: Record<string, string> = {
@@ -61,68 +64,59 @@ function empty(task: Task): Task {
 
 export function ProjectManagement({ eventId }: { eventId: string }) {
   const [state, setState] = useState<PmState>();
-  const [draft, setDraft] = useState<Task | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [comment, setComment] = useState("");
-  const [comments, setComments] = useState<
-    { id: string; authorId: string; text: string; createdAt: string; updatedAt: string }[]
-  >([]);
-  const [activities, setActivities] = useState<
-    { id: string; action: string; actorId: string; details: unknown; createdAt: string }[]
-  >([]);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const stateRef = useRef<PmState | undefined>(undefined);
+  const interaction = useMemo(
+    () =>
+      createTaskInteractionWorkspace(
+        createHttpTaskInteractionAdapter<PmState>(async (command) => {
+          const current = stateRef.current;
+          if (!current) throw new Error("Aufgaben sind noch nicht geladen.");
+          const next = await pmCommand(current, command);
+          stateRef.current = next;
+          const task = command.taskId
+            ? command.type === "delete"
+              ? null
+              : (next.tasks.find((candidate) => candidate.id === command.taskId) ?? null)
+            : (next.tasks.find((candidate) => candidate.title === command.task?.title) ?? null);
+          return { state: next, task };
+        }),
+      ),
+    [],
+  );
+  const [interactionSnapshot, setInteractionSnapshot] = useState(() => interaction.snapshot());
+  useEffect(
+    () => interaction.subscribe(() => setInteractionSnapshot(interaction.snapshot())),
+    [interaction],
+  );
+  const draft = interactionSnapshot.task ? (interactionSnapshot.draft as Task) : null;
+  const { activities, busy, comments } = interactionSnapshot;
+  const error = loadError || interactionSnapshot.error || "";
   const load = useCallback(async () => {
     try {
-      setState(await pmRead(eventId));
-      setError("");
+      const next = await pmRead(eventId);
+      stateRef.current = next;
+      setState(next);
+      setLoadError("");
     } catch (value) {
-      setError(value instanceof Error ? value.message : "Laden fehlgeschlagen");
+      setLoadError(value instanceof Error ? value.message : "Laden fehlgeschlagen");
     }
   }, [eventId]);
   useEffect(() => {
     void load();
   }, [load]);
-  const draftId = draft?.id;
   useEffect(() => {
-    if (!draftId) return;
-    let alive = true;
-    Promise.all([
-      pmRequest<typeof comments>(`/tasks/${draftId}/comments`),
-      pmRequest<typeof activities>(`/tasks/${draftId}/activities`),
-    ])
-      .then(([nextComments, nextActivities]) => {
-        if (alive) {
-          setComments(nextComments);
-          setActivities(nextActivities);
-        }
-      })
-      .catch((value) => alive && setError(value.message));
-    return () => {
-      alive = false;
-    };
-  }, [draftId]);
+    interaction.close();
+  }, [eventId, interaction]);
   const taskById = useMemo(() => new Map(state?.tasks.map((task) => [task.id, task])), [state]);
   async function mutate(command: PmCommand) {
-    if (!state) return false;
-    setBusy(true);
-    try {
-      const next = await pmCommand(state, command);
-      setState(next);
-      const changed = command.taskId
-        ? next.tasks.find((task) => task.id === command.taskId)
-        : next.tasks.find((task) => task.title === command.task?.title);
-      if (changed && command.type !== "delete") setDraft(changed);
-      if (command.type === "delete") setDraft(null);
-      setError("");
-      return true;
-    } catch (value) {
-      setError(value instanceof Error ? value.message : "Speichern fehlgeschlagen");
-      return false;
-    } finally {
-      setBusy(false);
-    }
+    const next = await interaction.command(command);
+    if (!next) return false;
+    setState(next);
+    return true;
   }
   const categoryName = (id: string | null) =>
     state?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
@@ -245,7 +239,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                                 <td className="p-3">
                                   <button
                                     className="min-h-11 text-left font-medium underline"
-                                    onClick={() => setDraft(task)}
+                                    onClick={() => void interaction.open(task)}
                                   >
                                     {task.title}
                                   </button>
@@ -275,7 +269,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                           <button
                             key={task.id}
                             className="w-full rounded-md border p-3 text-left"
-                            onClick={() => setDraft(task)}
+                            onClick={() => void interaction.open(task)}
                           >
                             <strong>{task.title}</strong>
                             <p className="mt-1 text-sm text-muted-foreground">
@@ -293,7 +287,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
           </div>
         </>
       )}
-      <Sheet open={!!draft} onOpenChange={(shown) => !shown && !busy && setDraft(null)}>
+      <Sheet open={!!draft} onOpenChange={(shown) => !shown && !busy && interaction.close()}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>Aufgabe</SheetTitle>
@@ -318,7 +312,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                   id="pm-title"
                   required
                   value={draft.title}
-                  onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+                  onChange={(event) => interaction.updateDraft({ title: event.target.value })}
                 />
                 <Label htmlFor="pm-description">Beschreibung</Label>
                 <textarea
@@ -326,7 +320,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                   className={control}
                   rows={5}
                   value={draft.description}
-                  onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+                  onChange={(event) => interaction.updateDraft({ description: event.target.value })}
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -336,7 +330,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                       className={control}
                       value={draft.status}
                       onChange={(event) =>
-                        setDraft({ ...draft, status: event.target.value as Task["status"] })
+                        interaction.updateDraft({ status: event.target.value as Task["status"] })
                       }
                     >
                       {Object.entries(statusLabel).map(([value, label]) => (
@@ -353,7 +347,9 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                       className={control}
                       value={draft.priority}
                       onChange={(event) =>
-                        setDraft({ ...draft, priority: event.target.value as Task["priority"] })
+                        interaction.updateDraft({
+                          priority: event.target.value as Task["priority"],
+                        })
                       }
                     >
                       {Object.entries(priorityLabel).map(([value, label]) => (
@@ -370,7 +366,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                       className={control}
                       value={draft.ownerId ?? ""}
                       onChange={(event) =>
-                        setDraft({ ...draft, ownerId: event.target.value || null })
+                        interaction.updateDraft({ ownerId: event.target.value || null })
                       }
                     >
                       <option value="">Nicht zugeordnet</option>
@@ -390,7 +386,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                       className={control}
                       value={draft.groupId ?? ""}
                       onChange={(event) =>
-                        setDraft({ ...draft, groupId: event.target.value || null })
+                        interaction.updateDraft({ groupId: event.target.value || null })
                       }
                     >
                       <option value="">Ohne Kategorie</option>
@@ -410,7 +406,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                       type="date"
                       value={draft.startDate ?? ""}
                       onChange={(event) =>
-                        setDraft({ ...draft, startDate: event.target.value || null })
+                        interaction.updateDraft({ startDate: event.target.value || null })
                       }
                     />
                   </div>
@@ -421,7 +417,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                       type="date"
                       value={draft.endDate ?? ""}
                       onChange={(event) =>
-                        setDraft({ ...draft, endDate: event.target.value || null })
+                        interaction.updateDraft({ endDate: event.target.value || null })
                       }
                     />
                   </div>
@@ -504,8 +500,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                           onClick={async () => {
                             const text = window.prompt("Kommentar bearbeiten", item.text);
                             if (text === null) return;
-                            await pmRequest(`/tasks/${draft.id}/comments`, { id: item.id, text });
-                            setComments(await pmRequest(`/tasks/${draft.id}/comments`));
+                            await interaction.writeComment({ id: item.id, text });
                           }}
                         >
                           Bearbeiten
@@ -516,11 +511,10 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                           size="sm"
                           onClick={async () => {
                             if (!window.confirm("Kommentar dauerhaft löschen?")) return;
-                            await pmRequest(`/tasks/${draft.id}/comments`, {
+                            await interaction.writeComment({
                               id: item.id,
                               delete: true,
                             });
-                            setComments(await pmRequest(`/tasks/${draft.id}/comments`));
                           }}
                         >
                           Löschen
@@ -534,9 +528,8 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                   onSubmit={async (event) => {
                     event.preventDefault();
                     if (!comment.trim()) return;
-                    await pmRequest(`/tasks/${draft.id}/comments`, { text: comment });
+                    await interaction.writeComment({ text: comment });
                     setComment("");
-                    setComments(await pmRequest(`/tasks/${draft.id}/comments`));
                   }}
                 >
                   <Label htmlFor="pm-comment">Kommentar</Label>

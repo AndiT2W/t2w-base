@@ -5,7 +5,7 @@ import type {
   EventMutationAdapter,
   EventMutationRecord,
 } from "./event-mutations.js";
-import { eventRecordInclude } from "./event-record-retrieval.js";
+import { eventRecordInclude, withTaskReadiness } from "./event-record-retrieval.js";
 
 type PrismaConnection = PrismaService | Prisma.TransactionClient | PrismaClient;
 
@@ -79,11 +79,12 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
     return updated.count === 1;
   }
 
-  getEvent(id: string) {
-    return this.prisma.event.findUnique({
+  async getEvent(id: string) {
+    const event = await this.prisma.event.findUnique({
       where: { id },
       include: eventRecordInclude,
-    }) as Promise<EventMutationRecord | undefined>;
+    });
+    return event ? (withTaskReadiness(event) as EventMutationRecord) : undefined;
   }
 
   async replaceContactRole(eventId: string, contactId: string, role: string, nextRole: string) {
@@ -104,32 +105,6 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
   }
   async removeContact(eventId: string, contactId: string, role: string) {
     await this.prisma.eventContact.deleteMany({ where: { eventId, contactId, role } });
-  }
-  async createTask(
-    eventId: string,
-    input: { title: string; dueAt?: string; responsible?: string },
-  ) {
-    await this.prisma.eventTask.create({
-      data: {
-        eventId,
-        title: input.title,
-        dueAt: input.dueAt ? new Date(input.dueAt) : null,
-        responsible: input.responsible,
-      },
-    });
-  }
-  async updateTask(
-    eventId: string,
-    taskId: string,
-    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
-  ) {
-    await this.prisma.eventTask.updateMany({
-      where: { id: taskId, eventId },
-      data: {
-        ...input,
-        ...(input.dueAt === undefined ? {} : { dueAt: input.dueAt ? new Date(input.dueAt) : null }),
-      },
-    });
   }
   async createFile(eventId: string, input: { name: string; url?: string; size?: string }) {
     await this.prisma.eventFile.create({ data: { eventId, ...input } });

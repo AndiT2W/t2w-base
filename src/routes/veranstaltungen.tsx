@@ -81,7 +81,7 @@ const EVENT_TABLE_COLUMNS = [
   },
   {
     key: "Aufgaben",
-    sortValue: (event: T2WEvent) => event.aufgaben.filter((task) => !task.erledigt).length,
+    sortValue: (event: T2WEvent) => event.taskReadiness.openCount,
   },
   {
     key: "Ordner",
@@ -337,9 +337,7 @@ function Veranstaltungen() {
                       </td>
                     )}
                     {visibleColumns.includes("Aufgaben") && (
-                      <td className="px-2 py-1 tabular-nums">
-                        {e.aufgaben.filter((a) => !a.erledigt).length || "–"}
-                      </td>
+                      <td className="px-2 py-1 tabular-nums">{e.taskReadiness.openCount || "–"}</td>
                     )}
                     {visibleColumns.includes("Ordner") && (
                       <td className="px-2 py-1">

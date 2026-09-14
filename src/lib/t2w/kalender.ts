@@ -90,9 +90,3 @@ export const STATUS_BAR = {
   "datum-pruefen": "bg-status-angefragt",
   zugesagt: "bg-status-zugesagt",
 } as const;
-
-export function naechsteAufgabe(e: T2WEvent) {
-  return [...e.aufgaben]
-    .filter((a) => !a.erledigt)
-    .sort((a, b) => a.faellig.localeCompare(b.faellig))[0];
-}

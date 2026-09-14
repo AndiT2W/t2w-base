@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Task } from "@t2w/domain/project-management";
+import { projectTaskPortfolios, type Task } from "@t2w/domain/project-management";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +12,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { pmRequest, priorityLabel, statusLabel, type PmGlobal } from "@/lib/t2w/project-management";
 import {
-  pmGlobalCommand,
-  pmRequest,
-  priorityLabel,
-  statusLabel,
-  type PmCommand,
-  type PmGlobal,
-} from "@/lib/t2w/project-management";
+  createTaskInteractionWorkspace,
+  createHttpTaskInteractionAdapter,
+} from "@/lib/t2w/task-interaction-workspace";
 
 export const Route = createFileRoute("/aufgaben")({ component: Aufgaben });
 const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
@@ -46,6 +43,11 @@ const isoWeek = (date: Date) => {
 };
 const dateText = (date: Date, options: Intl.DateTimeFormatOptions) =>
   date.toLocaleDateString("de-AT", { timeZone: "UTC", ...options });
+type VisibleTask = ReturnType<
+  typeof projectTaskPortfolios
+>[number]["portfolio"]["tasks"][number] & {
+  event: PmGlobal["eventChoices"][number] | null;
+};
 function urlText(text: string) {
   return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) =>
     /^https?:\/\//.test(part) ? (
@@ -55,6 +57,34 @@ function urlText(text: string) {
     ) : (
       part
     ),
+  );
+}
+function portfolioBlocks(data: PmGlobal, sourceTasks: PmGlobal["tasks"]) {
+  return projectTaskPortfolios(
+    sourceTasks,
+    data.edges,
+    { owners: data.owners, groups: data.groups },
+    data.referenceTime,
+  ).map(({ eventId, portfolio }) => {
+    const event = sourceTasks.find((task) => task.eventId === eventId)?.event ?? null;
+    return {
+      key: eventId ?? "global",
+      event,
+      categories: portfolio.categories.map((category, index) => ({
+        ...category,
+        tasks: portfolio.tasks
+          .filter((task) => task.groupId === category.groupId)
+          .map((task) => ({ ...task, event })),
+        stages: portfolio.flows[index] ?? [],
+      })),
+    };
+  });
+}
+function visibleTask(data: PmGlobal, taskId: string): VisibleTask | null {
+  return (
+    portfolioBlocks(data, data.tasks)
+      .flatMap((block) => block.categories.flatMap((category) => category.tasks))
+      .find((task) => task.id === taskId) ?? null
   );
 }
 
@@ -70,55 +100,75 @@ function Aufgaben() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [task, setTask] = useState<PmGlobal["tasks"][number] | null>(null);
-  const [draft, setDraft] = useState<Partial<Task>>({
-    title: "",
-    description: "",
-    status: "OPEN",
-    priority: "NORMAL",
-    ownerId: null,
-    groupId: null,
-    startDate: null,
-    endDate: null,
-  });
-  const [comments, setComments] = useState<
-    { id: string; authorId: string; text: string; createdAt: string; updatedAt: string }[]
-  >([]);
-  const [activities, setActivities] = useState<{ id: string; action: string; createdAt: string }[]>(
-    [],
-  );
   const [comment, setComment] = useState("");
   const [range, setRange] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   });
   const [months, setMonths] = useState(3);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const dataRef = useRef<PmGlobal | undefined>(undefined);
+  const interaction = useMemo(
+    () =>
+      createTaskInteractionWorkspace(
+        createHttpTaskInteractionAdapter<PmGlobal, VisibleTask>(async (command) => {
+          const current = dataRef.current;
+          if (!current) throw new Error("Aufgaben sind noch nicht geladen.");
+          const source = command.taskId
+            ? current.tasks.find((candidate) => candidate.id === command.taskId)
+            : null;
+          if (source?.event) {
+            const event = current.events.find((candidate) => candidate.id === source.event?.id);
+            await pmRequest(`/events/${source.event.id}/commands`, {
+              ...command,
+              graphVersion: event?.pmGraphVersion,
+            });
+          } else {
+            await pmRequest("/commands", command);
+          }
+          const next = await pmRequest<PmGlobal>("");
+          dataRef.current = next;
+          return {
+            state: next,
+            task:
+              command.taskId && command.type === "delete"
+                ? null
+                : command.taskId
+                  ? visibleTask(next, command.taskId)
+                  : (next.tasks
+                      .filter((candidate) => candidate.title === command.task?.title)
+                      .map((candidate) => visibleTask(next, candidate.id))
+                      .find(Boolean) ?? null),
+          };
+        }),
+      ),
+    [],
+  );
+  const [interactionSnapshot, setInteractionSnapshot] = useState(() => interaction.snapshot());
+  useEffect(
+    () => interaction.subscribe(() => setInteractionSnapshot(interaction.snapshot())),
+    [interaction],
+  );
+  const task = interactionSnapshot.task;
+  const draft = interactionSnapshot.draft;
+  const { activities, comments } = interactionSnapshot;
+  const error = loadError || interactionSnapshot.error || "";
   const load = async (): Promise<PmGlobal | undefined> => {
     try {
       const next = await pmRequest<PmGlobal>("");
+      dataRef.current = next;
       setData(next);
-      setError("");
+      setLoadError("");
       return next;
     } catch (value) {
-      setError(value instanceof Error ? value.message : "Laden fehlgeschlagen");
+      setLoadError(value instanceof Error ? value.message : "Laden fehlgeschlagen");
+      return undefined;
     }
   };
   useEffect(() => {
     void load();
   }, []);
-  useEffect(() => {
-    if (!task) return;
-    setDraft(task);
-    void Promise.all([
-      pmRequest<typeof comments>(`/tasks/${task.id}/comments`),
-      pmRequest<typeof activities>(`/tasks/${task.id}/activities`),
-    ]).then(([nextComments, nextActivities]) => {
-      setComments(nextComments);
-      setActivities(nextActivities);
-    });
-  }, [task]);
-  const tasks = useMemo(
+  const rawTasks = useMemo(
     () =>
       (data?.tasks ?? []).filter(
         (item) =>
@@ -146,88 +196,50 @@ function Aufgaben() {
       toDate,
     ],
   );
+  const blocks = useMemo(() => {
+    if (!data) return [];
+    return portfolioBlocks(data, rawTasks);
+  }, [data, rawTasks]);
+  const tasks = useMemo(
+    () => blocks.flatMap((block) => block.categories.flatMap((category) => category.tasks)),
+    [blocks],
+  );
   const taskById = useMemo(() => new Map(tasks.map((item) => [item.id, item])), [tasks]);
   const allTaskById = useMemo(
     () => new Map((data?.tasks ?? []).map((item) => [item.id, item])),
     [data],
   );
-  const blocks = useMemo(() => {
-    const result = new Map<
-      string,
-      {
-        event: PmGlobal["eventChoices"][number] | null;
-        categories: Map<string | null, typeof tasks>;
-      }
-    >();
-    for (const item of tasks) {
-      const key = item.event?.id ?? "global";
-      if (!result.has(key)) result.set(key, { event: item.event, categories: new Map() });
-      const categories = result.get(key)!.categories;
-      const group = item.groupId;
-      if (!categories.has(group)) categories.set(group, []);
-      categories.get(group)!.push(item);
-    }
-    return [...result.entries()];
-  }, [tasks]);
   const categoryName = (id: string | null) =>
     data?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
-  const health = (items: typeof tasks) =>
-    items.some((item) => item.overdue || item.blockedBy.length)
-      ? "critical"
-      : items.some((item) => item.dueSoon)
-        ? "warning"
-        : items.every((item) => item.status === "DONE") && items.length
-          ? "done"
-          : items.some((item) => item.status === "IN_PROGRESS")
-            ? "active"
-            : "neutral";
-  const next = (items: typeof tasks) =>
-    items
-      .filter((item) => item.status !== "DONE" && !item.blockedBy.length)
-      .sort((a, b) => (a.endDate ?? "9999").localeCompare(b.endDate ?? "9999"))[0];
-  async function command(command: PmCommand) {
-    if (task?.event) {
-      const event = data?.events.find((item) => item.id === task.event?.id);
-      return pmRequest(`/events/${task.event.id}/commands`, {
-        ...command,
-        graphVersion: event?.pmGraphVersion,
-      });
-    }
-    return pmGlobalCommand(command);
-  }
   async function save() {
     if (!task) return;
-    try {
-      await command({ type: "update", taskId: task.id, taskVersion: task.version, task: draft });
-      await load();
-      setTask(null);
-    } catch (value) {
-      setError(value instanceof Error ? value.message : "Speichern fehlgeschlagen");
-    }
+    const next = await interaction.command({
+      type: "update",
+      taskId: task.id,
+      taskVersion: task.version,
+      task: draft,
+    });
+    if (next) setData(next);
   }
   async function createGlobal(): Promise<void> {
-    try {
-      await pmGlobalCommand({ type: "create", task: { ...draft, title: draft.title ?? "" } });
-      await load();
-      setTask(null);
-    } catch (value) {
-      setError(value instanceof Error ? value.message : "Anlegen fehlgeschlagen");
-    }
+    const next = await interaction.command({
+      type: "create",
+      task: { ...draft, title: draft.title ?? "" },
+    });
+    if (next) setData(next);
   }
   async function updateDependency(
     type: "add-dependency" | "remove-dependency",
     predecessorId: string,
   ) {
     if (!task) return;
-    try {
-      await command({ type, taskId: task.id, taskVersion: task.version, predecessorId });
-      const next = await load();
-      setTask(next?.tasks.find((item) => item.id === task.id) ?? null);
-    } catch (value) {
-      setError(
-        value instanceof Error ? value.message : "Voraussetzung konnte nicht geändert werden",
-      );
-    }
+    const next = await interaction.command({
+      type,
+      taskId: task.id,
+      taskVersion: task.version,
+      predecessorId,
+    });
+    if (next) setData(next);
   }
   const start = new Date(`${range}T00:00:00Z`),
     end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, 1)),
@@ -252,14 +264,14 @@ function Aufgaben() {
   const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const todayIndex = Math.round((today - start.getTime()) / 86400000);
   const ganttEvents = blocks
-    .map(([eventId, block]) => ({
-      key: eventId,
+    .map((block) => ({
+      key: block.key,
       name: block.event?.name ?? "Globale Aufgaben",
-      categories: [...block.categories.entries()]
-        .map(([groupId, items]) => ({
-          key: `${eventId}:${groupId ?? "none"}`,
-          name: categoryName(groupId),
-          items: items.filter((item) => {
+      categories: block.categories
+        .map((category) => ({
+          key: `${block.key}:${category.groupId ?? "none"}`,
+          name: categoryName(category.groupId),
+          items: category.tasks.filter((item) => {
             const itemStart = dateValue(item.startDate ?? item.endDate!);
             const itemEnd = dateValue(item.endDate ?? item.startDate!);
             return itemEnd >= start.getTime() && itemStart < end.getTime();
@@ -293,7 +305,7 @@ function Aufgaben() {
         <Button
           variant="outline"
           onClick={() => {
-            setTask({
+            void interaction.open({
               id: "",
               scope: "GLOBAL",
               eventId: null,
@@ -310,16 +322,6 @@ function Aufgaben() {
               overdue: false,
               dueSoon: false,
               event: null,
-            });
-            setDraft({
-              title: "",
-              description: "",
-              status: "OPEN",
-              priority: "NORMAL",
-              ownerId: null,
-              groupId: null,
-              startDate: null,
-              endDate: null,
             });
           }}
         >
@@ -444,29 +446,14 @@ function Aufgaben() {
       </details>
       {view === "table" ? (
         <div className="space-y-4">
-          {blocks.map(([eventId, block]) => (
-            <section key={eventId} className="rounded-lg border">
+          {blocks.map((block) => (
+            <section key={block.key} className="rounded-lg border">
               <header className="border-b px-4 py-3">
                 <h2 className="font-semibold">{block.event?.name ?? "Globale Aufgaben"}</h2>
               </header>
-              {[...block.categories.entries()].map(([groupId, items]) => {
-                const key = `${eventId}:${groupId ?? "none"}`,
-                  state = health(items),
-                  ready = next(items),
+              {block.categories.map((category) => {
+                const key = `${block.key}:${category.groupId ?? "none"}`,
                   shown = expanded === key;
-                const stages: string[][] = [];
-                const remaining = new Set(items.map((item) => item.id));
-                while (remaining.size) {
-                  const stage = [...remaining].filter(
-                    (id) =>
-                      !data?.edges.some(
-                        (edge) => edge.successorId === id && remaining.has(edge.predecessorId),
-                      ),
-                  );
-                  if (!stage.length) break;
-                  stages.push(stage);
-                  stage.forEach((id) => remaining.delete(id));
-                }
                 return (
                   <article key={key} className="border-b last:border-0">
                     <button
@@ -477,26 +464,25 @@ function Aufgaben() {
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <span className="flex items-center gap-2">
                           <span
-                            className={`h-3 w-3 rounded-full ${healthClass[state]}`}
+                            className={`h-3 w-3 rounded-full ${healthClass[category.health]}`}
                             aria-hidden="true"
                           />
-                          <strong>{categoryName(groupId)}</strong>
+                          <strong>{categoryName(category.groupId)}</strong>
                           <span className="text-sm text-muted-foreground">
-                            {healthLabel[state]}
+                            {healthLabel[category.health]}
                           </span>
                         </span>
                         <span className="text-sm">
-                          {items.filter((item) => item.status === "OPEN").length} offen ·{" "}
-                          {items.filter((item) => item.status === "IN_PROGRESS").length} in Arbeit ·{" "}
-                          {items.filter((item) => item.status === "DONE").length} erledigt
+                          {category.counts.open} offen · {category.counts.inProgress} in Arbeit ·{" "}
+                          {category.counts.done} erledigt
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        Nächster Schritt: {ready?.title ?? "—"}
-                        {ready?.endDate ? ` · Ende ${ready.endDate}` : ""}
+                        Nächster Schritt: {taskById.get(category.nextTaskId ?? "")?.title ?? "—"}
+                        {category.nextEndDate ? ` · Ende ${category.nextEndDate}` : ""}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {stages.flatMap((stage, index) => [
+                        {category.stages.flatMap((stage, index) => [
                           index ? (
                             <span key={`a-${index}`} aria-hidden="true">
                               →
@@ -523,12 +509,12 @@ function Aufgaben() {
                             </tr>
                           </thead>
                           <tbody>
-                            {items.map((item) => (
+                            {category.tasks.map((item) => (
                               <tr key={item.id} className="border-t">
                                 <td className="p-3">
                                   <button
                                     className="min-h-11 text-left font-medium underline"
-                                    onClick={() => setTask(item)}
+                                    onClick={() => void interaction.open(item)}
                                   >
                                     {item.title}
                                   </button>
@@ -551,11 +537,11 @@ function Aufgaben() {
                     )}
                     {shown && (
                       <div className="space-y-2 p-3 md:hidden">
-                        {items.map((item) => (
+                        {category.tasks.map((item) => (
                           <button
                             key={item.id}
                             className="w-full rounded-md border p-3 text-left"
-                            onClick={() => setTask(item)}
+                            onClick={() => void interaction.open(item)}
                           >
                             <strong>{item.title}</strong>
                             <p className="text-sm text-muted-foreground">
@@ -713,7 +699,7 @@ function Aufgaben() {
                           <button
                             key={item.id}
                             className="grid w-full grid-cols-[22rem_minmax(0,1fr)] border-b text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            onClick={() => setTask(item)}
+                            onClick={() => void interaction.open(item)}
                           >
                             <span className="sticky left-0 z-20 grid min-h-11 grid-cols-[1fr_5rem] border-r bg-background">
                               <span className="flex min-w-0 items-center gap-2 px-3">
@@ -799,7 +785,7 @@ function Aufgaben() {
                 <button
                   key={item.id}
                   className="mr-3 mt-2 rounded border px-3 py-2 text-sm underline"
-                  onClick={() => setTask(item)}
+                  onClick={() => void interaction.open(item)}
                 >
                   {item.title}
                 </button>
@@ -807,7 +793,7 @@ function Aufgaben() {
           </aside>
         </section>
       )}
-      <Sheet open={!!task} onOpenChange={(shown) => !shown && setTask(null)}>
+      <Sheet open={!!task} onOpenChange={(shown) => !shown && interaction.close()}>
         <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>{task?.id ? "Aufgabe bearbeiten" : "Globale Aufgabe anlegen"}</SheetTitle>
@@ -827,7 +813,7 @@ function Aufgaben() {
                   id="global-title"
                   required
                   value={draft.title ?? ""}
-                  onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+                  onChange={(event) => interaction.updateDraft({ title: event.target.value })}
                 />
                 <Label htmlFor="global-description">Beschreibung</Label>
                 <textarea
@@ -835,7 +821,7 @@ function Aufgaben() {
                   className={control}
                   rows={5}
                   value={draft.description ?? ""}
-                  onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+                  onChange={(event) => interaction.updateDraft({ description: event.target.value })}
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -845,7 +831,7 @@ function Aufgaben() {
                       className={control}
                       value={draft.status ?? "OPEN"}
                       onChange={(event) =>
-                        setDraft({ ...draft, status: event.target.value as Task["status"] })
+                        interaction.updateDraft({ status: event.target.value as Task["status"] })
                       }
                     >
                       {Object.entries(statusLabel).map(([value, label]) => (
@@ -862,7 +848,9 @@ function Aufgaben() {
                       className={control}
                       value={draft.priority ?? "NORMAL"}
                       onChange={(event) =>
-                        setDraft({ ...draft, priority: event.target.value as Task["priority"] })
+                        interaction.updateDraft({
+                          priority: event.target.value as Task["priority"],
+                        })
                       }
                     >
                       {Object.entries(priorityLabel).map(([value, label]) => (
@@ -879,7 +867,7 @@ function Aufgaben() {
                       className={control}
                       value={draft.ownerId ?? ""}
                       onChange={(event) =>
-                        setDraft({ ...draft, ownerId: event.target.value || null })
+                        interaction.updateDraft({ ownerId: event.target.value || null })
                       }
                     >
                       <option value="">Nicht zugeordnet</option>
@@ -897,7 +885,7 @@ function Aufgaben() {
                       className={control}
                       value={draft.groupId ?? ""}
                       onChange={(event) =>
-                        setDraft({ ...draft, groupId: event.target.value || null })
+                        interaction.updateDraft({ groupId: event.target.value || null })
                       }
                     >
                       <option value="">Ohne Kategorie</option>
@@ -915,7 +903,7 @@ function Aufgaben() {
                       type="date"
                       value={draft.startDate ?? ""}
                       onChange={(event) =>
-                        setDraft({ ...draft, startDate: event.target.value || null })
+                        interaction.updateDraft({ startDate: event.target.value || null })
                       }
                     />
                   </div>
@@ -926,7 +914,7 @@ function Aufgaben() {
                       type="date"
                       value={draft.endDate ?? ""}
                       onChange={(event) =>
-                        setDraft({ ...draft, endDate: event.target.value || null })
+                        interaction.updateDraft({ endDate: event.target.value || null })
                       }
                     />
                   </div>
@@ -1020,13 +1008,7 @@ function Aufgaben() {
                             onClick={async () => {
                               const text = window.prompt("Kommentar bearbeiten", item.text);
                               if (text === null) return;
-                              await pmRequest(`/tasks/${task.id}/comments`, { id: item.id, text });
-                              const [nextComments, nextActivities] = await Promise.all([
-                                pmRequest<typeof comments>(`/tasks/${task.id}/comments`),
-                                pmRequest<typeof activities>(`/tasks/${task.id}/activities`),
-                              ]);
-                              setComments(nextComments);
-                              setActivities(nextActivities);
+                              await interaction.writeComment({ id: item.id, text });
                             }}
                           >
                             Bearbeiten
@@ -1037,16 +1019,10 @@ function Aufgaben() {
                             variant="ghost"
                             onClick={async () => {
                               if (!window.confirm("Kommentar dauerhaft löschen?")) return;
-                              await pmRequest(`/tasks/${task.id}/comments`, {
+                              await interaction.writeComment({
                                 id: item.id,
                                 delete: true,
                               });
-                              const [nextComments, nextActivities] = await Promise.all([
-                                pmRequest<typeof comments>(`/tasks/${task.id}/comments`),
-                                pmRequest<typeof activities>(`/tasks/${task.id}/activities`),
-                              ]);
-                              setComments(nextComments);
-                              setActivities(nextActivities);
                             }}
                           >
                             Löschen
@@ -1060,14 +1036,8 @@ function Aufgaben() {
                     onSubmit={async (event) => {
                       event.preventDefault();
                       if (!comment.trim()) return;
-                      await pmRequest(`/tasks/${task.id}/comments`, { text: comment });
+                      await interaction.writeComment({ text: comment });
                       setComment("");
-                      const [nextComments, nextActivities] = await Promise.all([
-                        pmRequest<typeof comments>(`/tasks/${task.id}/comments`),
-                        pmRequest<typeof activities>(`/tasks/${task.id}/activities`),
-                      ]);
-                      setComments(nextComments);
-                      setActivities(nextActivities);
                     }}
                   >
                     <Label htmlFor="global-comment">Kommentar</Label>
@@ -1090,13 +1060,12 @@ function Aufgaben() {
                     className="mt-4"
                     onClick={async () => {
                       if (window.confirm("Aufgabe dauerhaft löschen?")) {
-                        await pmGlobalCommand({
+                        const next = await interaction.command({
                           type: "delete",
                           taskId: task.id,
                           taskVersion: task.version,
                         });
-                        await load();
-                        setTask(null);
+                        if (next) setData(next);
                       }
                     }}
                   >

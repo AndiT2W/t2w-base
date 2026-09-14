@@ -181,7 +181,6 @@ model Event {
   updatedBy             User?       @relation("EventUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
   contacts              EventContact[]
   invoiceRecipients     EventInvoiceRecipient[]
-  tasks                 EventTask[]
   files                 EventFile[]
   activities            EventActivity[]
   communicationMessages EventCommunicationMessage[]
@@ -420,18 +419,6 @@ model EventRoleOption {
   updatedAt DateTime @updatedAt
 
   @@unique([name])
-}
-
-model EventTask {
-  id          String   @id @default(uuid()) @db.Uuid
-  eventId     String   @db.Uuid
-  title       String
-  dueAt       DateTime?
-  responsible String?
-  completed   Boolean  @default(false)
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }
 
 model EventFile {

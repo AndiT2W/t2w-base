@@ -25,8 +25,7 @@ export type EventDetailMutations = {
   applyEvents: (events: T2WEvent[]) => void;
 };
 
-type DraftInputKey =
-  "contactSearch" | "invoiceRecipientSearch" | "newTask" | "newFile" | "newActivity";
+type DraftInputKey = "contactSearch" | "invoiceRecipientSearch" | "newFile" | "newActivity";
 type DraftInputs = Record<DraftInputKey, string> & { contactId: string; contactRole: string };
 
 export type EventDetailSnapshot = DraftInputs & {
@@ -79,7 +78,6 @@ export function createEventDetailWorkspace(
     contactRole: "Kontakt",
     contactSearch: "",
     invoiceRecipientSearch: "",
-    newTask: "",
     newFile: "",
     newActivity: "",
   };
@@ -330,22 +328,6 @@ export function createEventDetailWorkspace(
       return requireSaved(
         session.execute({ kind: "remove-contact", contactId, role }),
         "EVENT_CONTACT_REMOVE_FAILED",
-      );
-    },
-    async addTask() {
-      if (!inputs.newTask.trim()) return undefined;
-      const result = await requireSaved(
-        session.execute({ kind: "create-task", input: { title: inputs.newTask } }),
-        "EVENT_TASK_SAVE_FAILED",
-      );
-      inputs = { ...inputs, newTask: "" };
-      publish();
-      return result;
-    },
-    updateTask(taskId: string, completed: boolean) {
-      return requireSaved(
-        session.execute({ kind: "update-task", taskId, input: { completed } }),
-        "EVENT_TASK_SAVE_FAILED",
       );
     },
     async addFile() {

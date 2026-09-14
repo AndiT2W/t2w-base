@@ -8,7 +8,7 @@ import {
 import { Prisma, type PmTask } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import {
-  projectTasks,
+  projectTaskPortfolio,
   validateDependency,
   validateTaskChange,
   type Dependency,
@@ -90,7 +90,7 @@ export class ProjectManagementService {
     const edges = ids.length
       ? await tx.pmDependency.findMany({ where: { successorId: { in: ids } } })
       : [];
-    return { ...projectTasks(tasks, edges, catalogue, referenceTime), ...catalogue };
+    return { ...projectTaskPortfolio(tasks, edges, catalogue, referenceTime), ...catalogue };
   }
   async read(eventId: string, actor: PmActor) {
     return this.prisma.$transaction(async (tx) => {
@@ -102,11 +102,10 @@ export class ProjectManagementService {
       return {
         event,
         ...(await this.state(tx, { scope: "EVENT", eventId })),
-        legacyCount: await tx.eventTask.count({ where: { eventId } }),
       };
     });
   }
-  async global(query: Record<string, string>, actor: PmActor) {
+  async global(actor: PmActor) {
     return this.prisma.$transaction(async (tx) => {
       await this.actor(tx, actor);
       const catalogue = await this.catalogue(tx),
@@ -122,53 +121,17 @@ export class ProjectManagementService {
             where: { successorId: { in: all.map((task) => task.id) } },
           })
         : [];
-      const projects = new Map<string, ReturnType<typeof projectTasks>>();
-      for (const task of all) {
-        const key = task.eventId ?? "global";
-        if (!projects.has(key))
-          projects.set(
-            key,
-            projectTasks(
-              all.filter((item) => (item.eventId ?? "global") === key),
-              edges.filter(
-                (edge) =>
-                  all.find((item) => item.id === edge.successorId)?.eventId === task.eventId,
-              ),
-              catalogue,
-              time,
-            ),
-          );
-      }
-      const values = (key: string) => query[key]?.split(",").filter(Boolean) ?? [];
-      const matching = (
-        task: ReturnType<typeof projectTasks>["tasks"][number],
-        eventId: string | null,
-      ) =>
-        (!query.q || task.title.toLowerCase().includes(query.q.toLowerCase())) &&
-        (!values("event").length || values("event").includes(eventId ?? "global")) &&
-        (!values("status").length || values("status").includes(task.status)) &&
-        (!values("owner").length || values("owner").includes(task.ownerId ?? "none"));
-      const records = [...projects.entries()].flatMap(([key, state]) =>
-        state.tasks
-          .filter((task) => matching(task, key === "global" ? null : key))
-          .map((task) => ({
-            ...task,
-            event: key === "global" ? null : (events.find((event) => event.id === key) ?? null),
-          })),
-      );
       return {
         referenceTime: time,
         owners: catalogue.owners,
         groups: catalogue.groups,
         eventChoices: events,
-        tasks: records,
+        tasks: all.map((task) => ({
+          ...task,
+          event: task.eventId ? (events.find((event) => event.id === task.eventId) ?? null) : null,
+        })),
         edges,
         events,
-        projects: [...projects.entries()].map(([key, state]) => ({
-          eventId: key === "global" ? null : key,
-          categories: state.categories,
-          flows: state.flows,
-        })),
       };
     });
   }
@@ -315,7 +278,6 @@ export class ProjectManagementService {
     return {
       event,
       ...(await this.state(tx, { scope: "EVENT", eventId })),
-      legacyCount: await tx.eventTask.count({ where: { eventId } }),
     };
   }
   command(eventId: string, input: Command, actor: PmActor) {

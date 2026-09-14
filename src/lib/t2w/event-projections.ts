@@ -12,21 +12,6 @@ export const invoiceReadyEvents = (events: T2WEvent[], today: string) =>
   events
     .filter((event) => event.ende < today && event.status !== "abgesagt")
     .sort((a, b) => b.ende.localeCompare(a.ende));
-export const projectedTasks = (
-  events: T2WEvent[],
-  options: { openOnly: boolean; query: string },
-) => {
-  const query = options.query.trim().toLowerCase();
-  return activeEvents(events)
-    .flatMap((event) => event.aufgaben.map((task) => ({ ...task, event })))
-    .filter((task) => !options.openOnly || !task.erledigt)
-    .filter(
-      (task) =>
-        !query ||
-        [task.titel, task.verantwortlich, task.event.name].join(" ").toLowerCase().includes(query),
-    )
-    .sort((a, b) => a.faellig.localeCompare(b.faellig));
-};
 export function selectEvents(
   events: T2WEvent[],
   options: {

@@ -88,6 +88,21 @@ test("keeps categories closed, expands the sequential table and blocks premature
   await page.getByLabel("Ende").fill("2026-09-18");
   await expect(page.getByLabel("Beschreibung")).toHaveValue(/example\.test/);
 });
+test("projects canonical Event tasks into the Event list after reload", async ({ page }) => {
+  const event = await fixture(page);
+  const title = `Readiness ${randomUUID().slice(0, 6)}`;
+  await create(page, event.id, title);
+
+  const record = await page.request.get(`/api/v1/events/${event.id}`);
+  expect(record.ok()).toBeTruthy();
+  await expect(record.json()).resolves.toMatchObject({
+    taskReadiness: { openCount: 1, overdueCount: 0 },
+  });
+
+  await page.goto("/veranstaltungen");
+  const row = page.getByRole("row").filter({ hasText: event.name });
+  await expect(row).toContainText("1");
+});
 test("shows the combined overview, desktop Gantt and global work", async ({ page }) => {
   const event = await fixture(page);
   await create(page, event.id, "Event-Aufgabe");

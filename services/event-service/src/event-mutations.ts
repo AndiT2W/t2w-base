@@ -59,15 +59,6 @@ export interface EventMutationAdapter {
     role: string,
     nextRole: string,
   ): Promise<void>;
-  createTask(
-    eventId: string,
-    input: { title: string; dueAt?: string; responsible?: string },
-  ): Promise<void>;
-  updateTask(
-    eventId: string,
-    taskId: string,
-    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
-  ): Promise<void>;
   createFile(eventId: string, input: { name: string; url?: string; size?: string }): Promise<void>;
   createActivity(
     eventId: string,
@@ -199,21 +190,6 @@ export class EventMutations {
       if (!adapter.replaceContactRole) throw new Error("CONTACT_ROLE_ADAPTER_UNAVAILABLE");
       await adapter.replaceContactRole(eventId, contactId, role, nextRole.trim() || "Kontakt");
     });
-  }
-  createTask(
-    eventId: string,
-    input: { title: string; dueAt?: string; responsible?: string },
-    version: number,
-  ) {
-    return this.mutate(eventId, version, (adapter) => adapter.createTask(eventId, input));
-  }
-  updateTask(
-    eventId: string,
-    taskId: string,
-    input: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
-    version: number,
-  ) {
-    return this.mutate(eventId, version, (adapter) => adapter.updateTask(eventId, taskId, input));
   }
   createFile(
     eventId: string,

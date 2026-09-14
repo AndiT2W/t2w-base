@@ -45,13 +45,7 @@ type ApiEvent = {
     role: string;
     contact: { id: string; name: string; email: string | null; phone: string | null };
   }[];
-  tasks?: {
-    id: string;
-    title: string;
-    dueAt: string | null;
-    responsible: string | null;
-    completed: boolean;
-  }[];
+  taskReadiness?: T2WEvent["taskReadiness"];
   files?: { id: string; name: string; size: string | null; updatedAt: string }[];
   activities?: {
     id: string;
@@ -149,13 +143,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
       email: contact.email ?? "",
       telefon: contact.phone ?? "",
     })),
-    aufgaben: (event.tasks ?? []).map((task) => ({
-      id: task.id,
-      titel: task.title,
-      faellig: task.dueAt ? dateOnly(task.dueAt) : "",
-      verantwortlich: task.responsible ?? "",
-      erledigt: task.completed,
-    })),
+    taskReadiness: event.taskReadiness ?? { openCount: 0, overdueCount: 0 },
     dateien: (event.files ?? []).map((file) => ({
       id: file.id,
       name: file.name,
@@ -242,24 +230,6 @@ export const apiUpdateEventContactRole = (
     "PATCH",
     { role: nextRole, version },
   ).then(mapApiEvent);
-export const apiCreateEventTask = (
-  eventId: string,
-  body: { title: string; dueAt?: string; responsible?: string },
-  version: number,
-) =>
-  eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks`, "POST", { ...body, version }).then(
-    mapApiEvent,
-  );
-export const apiUpdateEventTask = (
-  eventId: string,
-  taskId: string,
-  body: { title?: string; dueAt?: string | null; responsible?: string; completed?: boolean },
-  version: number,
-) =>
-  eventAction<ApiEvent>(`/api/v1/events/${eventId}/tasks/${taskId}`, "PATCH", {
-    ...body,
-    version,
-  }).then(mapApiEvent);
 export const apiCreateEventFile = (
   eventId: string,
   body: { name: string; url?: string; size?: string },
@@ -740,8 +710,6 @@ export function createHttpEventTransport(): EventTransport<T2WEvent> {
     addContact: apiAddEventContact,
     removeContact: apiRemoveEventContact,
     updateContactRole: apiUpdateEventContactRole,
-    createTask: apiCreateEventTask,
-    updateTask: apiUpdateEventTask,
     createFile: apiCreateEventFile,
     createActivity: apiCreateEventActivity,
   };

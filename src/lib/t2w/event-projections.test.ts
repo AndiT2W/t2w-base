@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  invoiceReadyEvents,
-  openOfferEvents,
-  projectedTasks,
-  selectEvents,
-} from "./event-projections";
+import { invoiceReadyEvents, openOfferEvents, selectEvents } from "./event-projections";
 import type { T2WEvent } from "./types";
 const base = {
   id: "1",
@@ -23,7 +18,7 @@ const base = {
   outlookWebUrl: null,
   sharepointOrdner: null,
   kontakte: [],
-  aufgaben: [],
+  taskReadiness: { openCount: 0, overdueCount: 0 },
   dateien: [],
   kommunikation: [],
 } as T2WEvent;
@@ -45,22 +40,5 @@ describe("Event projections", () => {
         today: "2026-08-23",
       }).map((e) => e.id),
     ).toEqual(["1", "2"]);
-  });
-  it("projects searchable open tasks through the same interface", () => {
-    const events = [
-      {
-        ...base,
-        aufgaben: [
-          {
-            id: "t",
-            titel: "Timing",
-            faellig: "2026-08-22",
-            verantwortlich: "Ada",
-            erledigt: false,
-          },
-        ],
-      },
-    ];
-    expect(projectedTasks(events, { openOnly: true, query: "ada" })).toHaveLength(1);
   });
 });

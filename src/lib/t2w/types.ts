@@ -63,13 +63,7 @@ export type Teilnehmerwerte = {
   aktuellSynchronisiertAm: string | null;
 };
 
-export type Task = {
-  id: string;
-  titel: string;
-  faellig: string;
-  verantwortlich: string;
-  erledigt: boolean;
-};
+export type TaskReadiness = { openCount: number; overdueCount: number };
 
 export type EventFile = {
   id: string;
@@ -142,7 +136,7 @@ export type T2WEvent = {
   outlookMessageLastError?: string | null;
   sharepointOrdner: string | null;
   kontakte: Contact[];
-  aufgaben: Task[];
+  taskReadiness: TaskReadiness;
   dateien: EventFile[];
   kommunikation: Message[];
 };
