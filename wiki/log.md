@@ -2,6 +2,8 @@
 
 ## 2026-09-14
 
+- Gemeinsamer Tabellenstandard eingeführt: `DataTable` definiert die kompakte Desktopdichte (30/34 px), Status-Tags und sichtbaren Tastaturfokus; die zentralen Event-, Hardware- und Auszahlungstabellen verwenden ihn. Benutzerpräferenzen für Sichtbarkeit, Sortierung und Reihenfolge werden über die geschützte `UserTablePreference`-Haltung synchronisiert. Unit- und Browser-Regression prüfen sichere Wiederherstellung bzw. Rückspeicherung. Quellen: [Datentabellen-Konzept](concepts/shared-compact-data-tables.md), [ADR-0003](../../docs/adr/0003-shared-compact-data-tables.md), [E2E-Test](../../tests/e2e/table-preferences.spec.ts).
+
 - Der Hardware-E2E-Test prüft beim Inline-Ändern der Objektnummer nun die passende PATCH-Anfrage statt pauschal der zuletzt eingegangenen Anfrage. Ein durch den Fokuswechsel ausgelöster, unveränderter Mengen-Request konnte die letzte Anfrage überlagern und den GitHub-Deploy fälschlich fehlschlagen lassen. Quelle: [Hardware-E2E-Test](../../tests/e2e/hardware.spec.ts), [Deploy-Workflow](../../.github/workflows/deploy-hostinger.yml).
 
 - Ablauf-Badges trennen nun echte Abhängigkeitsgruppen von unabhängigen Aufgaben. Dadurch wird beispielsweise `Startnummerndesign eingerichtet → Startnummern gedruckt` direkt gezeigt, während `Startnummernzuteilung` nicht mehr als scheinbarer Vorgänger erscheint. Unit- und Browser-Regression ergänzt; der Browserlauf benötigt weiterhin `PM_TEST_DATABASE_URL`. Quellen: [Badge-Komponente](../../src/components/t2w/TaskFlowBadges.tsx), [Ablaufprojektion](../../src/lib/t2w/task-flow-display.ts), [PM-Browser-Regression](../../tests/pm-e2e/project-management.spec.ts).

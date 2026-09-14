@@ -18,6 +18,7 @@
 - [Migration Concept](concepts/tool-consolidation-and-migration.md)
 - [Locale Rendering Module](concepts/locale-rendering-module.md)
 - [Deep CRM, Event Workspace, and Outlook Modules](concepts/deep-crm-event-outlook-modules.md)
+- [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md)
 - [Architekturvertiefung vom 2026-08-27](concepts/architecture-deepening-2026-08-27.md)
 - [Architekturvertiefung vom 2026-08-28](concepts/architecture-deepening-2026-08-28.md)
 - [Maintenance Log](log.md)

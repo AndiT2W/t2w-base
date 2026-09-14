@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpDown, ArrowUpToLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   createTableBehavior,
   createTablePreferences,
@@ -49,14 +50,57 @@ export function useTableBehavior<T, K extends string>(options: {
     createTableBehavior({ ...options, adapter: browserTablePreferenceAdapter }),
   );
   const [snapshot, setSnapshot] = useState(behavior.snapshot());
+  const writes = useRef(Promise.resolve());
+
+  function persist() {
+    const preference = behavior.preference();
+    writes.current = writes.current
+      .then(async () => {
+        await fetch(`/api/v1/table-preferences/${encodeURIComponent(options.storageKey)}`, {
+          method: "PUT",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(preference),
+        });
+      })
+      .catch(() => undefined);
+  }
 
   useEffect(() => setSnapshot(behavior.load()), [behavior]);
+  useEffect(() => {
+    let active = true;
+    void fetch(`/api/v1/table-preferences/${encodeURIComponent(options.storageKey)}`, {
+      credentials: "include",
+    })
+      .then(async (response) =>
+        response.ok ? ((await response.json()) as { value?: unknown }) : null,
+      )
+      .then((remote) => {
+        if (!active) return;
+        if (remote?.value) setSnapshot(behavior.hydrate(remote.value));
+        else if (browserTablePreferenceAdapter.read(options.storageKey)) persist();
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [behavior, options.storageKey]);
 
   return {
     ...snapshot,
     rows: (rows: readonly T[]) => behavior.rows(rows),
-    sortBy: (column: K) => setSnapshot(behavior.sortBy(column)),
-    toggleColumn: (column: K) => setSnapshot(behavior.toggleColumn(column)),
+    sortBy: (column: K) => {
+      setSnapshot(behavior.sortBy(column));
+      persist();
+    },
+    toggleColumn: (column: K) => {
+      setSnapshot(behavior.toggleColumn(column));
+      persist();
+    },
+    moveColumn: (column: K, offset: -1 | 1) => {
+      setSnapshot(behavior.moveColumn(column, offset));
+      persist();
+    },
   };
 }
 
@@ -64,41 +108,66 @@ export function ColumnPicker<T extends string>({
   columns,
   visibleColumns,
   toggleColumn,
+  moveColumn,
 }: {
   columns: readonly T[];
   visibleColumns: T[];
   toggleColumn: (column: T) => void;
+  moveColumn?: (column: T, offset: -1 | 1) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const orderedColumns = [
+    ...visibleColumns,
+    ...columns.filter((column) => !visibleColumns.includes(column)),
+  ];
   return (
-    <div className="relative flex justify-end">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        Spalten auswählen
-      </Button>
-      {open && (
-        <div className="absolute top-9 z-10 w-48 rounded border border-border bg-background p-2 shadow-md">
-          {columns.map((column) => (
-            <label
-              key={column}
-              className="flex cursor-pointer items-center gap-2 px-1 py-1 text-sm"
-            >
-              <input
-                type="checkbox"
-                checked={visibleColumns.includes(column)}
-                onChange={() => toggleColumn(column)}
-              />
-              {column}
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button type="button" size="sm" variant="outline">
+          Spalten auswählen
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-60 p-2">
+        <p className="px-1 pb-1 text-xs text-muted-foreground">Sichtbarkeit und Reihenfolge</p>
+        {orderedColumns.map((column) => {
+          const isVisible = visibleColumns.includes(column);
+          const visibleIndex = visibleColumns.indexOf(column);
+          return (
+            <div key={column} className="flex min-h-8 items-center gap-1 px-1 text-sm">
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 truncate">
+                <input type="checkbox" checked={isVisible} onChange={() => toggleColumn(column)} />
+                <span className="truncate">{column}</span>
+              </label>
+              {moveColumn && isVisible && (
+                <span className="flex">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="size-6"
+                    aria-label={`${column} nach oben verschieben`}
+                    disabled={visibleIndex === 0}
+                    onClick={() => moveColumn(column, -1)}
+                  >
+                    <ArrowUpToLine className="size-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="size-6"
+                    aria-label={`${column} nach unten verschieben`}
+                    disabled={visibleIndex === visibleColumns.length - 1}
+                    onClick={() => moveColumn(column, 1)}
+                  >
+                    <ArrowDownToLine className="size-3" />
+                  </Button>
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -121,6 +190,7 @@ export function SortHeader({
       className="inline-flex items-center gap-1 font-semibold hover:text-foreground"
       onClick={onSort}
       aria-label={`${label} sortieren`}
+      aria-pressed={active}
     >
       {children ?? label}
       {active ? (

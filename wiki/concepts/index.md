@@ -15,6 +15,7 @@ Use this section for recurring ideas, workflows, business rules, technical patte
 - [Organizer Account Model](organizer-account-model.md)
 - [Multilingual Product Design](multilingual-product-design.md)
 - [Persistente Einstellungen und Browser-Regressionstests](settings-persistence-and-browser-tests.md)
+- [Gemeinsame kompakte Datentabellen](shared-compact-data-tables.md)
 - [Service Presentations](service-presentations.md)
 - [Tool Consolidation And Migration](tool-consolidation-and-migration.md)
 - [TIME2WIN CI und Branding](time2win-ci-branding.md)

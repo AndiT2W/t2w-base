@@ -26,6 +26,7 @@ import {
 } from "@/lib/t2w/event-catalogue";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
+import { DataTable } from "@/components/t2w/DataTable";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -215,10 +216,10 @@ function Veranstaltungen() {
           settings={settings}
           emptyText="Keine Events für die aktuelle Filterauswahl."
         />
-        <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface md:block">
-          <table className="w-full min-w-[54rem] border-collapse text-xs">
+        <div className="hidden md:block">
+          <DataTable className="min-w-[54rem]">
             <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-              <tr>
+              <tr className="h-[30px]">
                 {visibleColumns.includes("Status") && (
                   <th className="px-2 py-1.5">
                     <SortHeader
@@ -301,7 +302,7 @@ function Veranstaltungen() {
               {zeilen.map((e) => {
                 const folders = resolveEventFolderNavigation(e, settings);
                 return (
-                  <tr key={e.id} className="border-t border-border hover:bg-accent/50">
+                  <tr key={e.id} className="h-[34px] border-t border-border hover:bg-accent/50">
                     {visibleColumns.includes("Status") && (
                       <td className="px-2 py-1" title={STATUS_LABEL[e.status]}>
                         <StatusDot status={e.status} />
@@ -370,7 +371,7 @@ function Veranstaltungen() {
                 </tr>
               )}
             </tbody>
-          </table>
+          </DataTable>
         </div>
       </div>
     </div>

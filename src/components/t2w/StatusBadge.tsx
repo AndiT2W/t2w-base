@@ -23,7 +23,7 @@ export function StatusDot({ status, className }: { status: EventStatus; classNam
 export function StatusBadge({ status }: { status: EventStatus }) {
   const { t } = useI18n();
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground">
+    <span className="inline-flex h-5 items-center gap-1.5 rounded-[4px] border border-border bg-surface px-1.5 text-[11px] font-semibold leading-4 text-foreground">
       <StatusDot status={status} />
       {t(`status.${status}` as Parameters<typeof t>[0])}
     </span>

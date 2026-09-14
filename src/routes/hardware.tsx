@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
+import { DataTable } from "@/components/t2w/DataTable";
 import {
   Sheet,
   SheetContent,
@@ -479,6 +480,7 @@ function HardwarePage() {
                   columns={HARDWARE_COLUMNS}
                   visibleColumns={table.visibleColumns}
                   toggleColumn={table.toggleColumn}
+                  moveColumn={table.moveColumn}
                 />
               </div>
             </div>
@@ -492,12 +494,12 @@ function HardwarePage() {
                 {inlineError}
               </p>
             )}
-            <div className="overflow-x-auto rounded-md border border-border/70">
-              <table className="min-w-[1100px] w-full text-sm">
+            <div>
+              <DataTable className="min-w-[1100px]">
                 <caption className="sr-only">Aktive Hardware-Rückgabevorgänge</caption>
                 <thead>
-                  <tr className="border-b text-left">
-                    {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => (
+                  <tr className="h-[30px] border-b text-left">
+                    {table.visibleColumns.map((h) => (
                       <th className="px-2 py-1.5" key={h}>
                         <SortHeader
                           label={h}
@@ -515,7 +517,7 @@ function HardwarePage() {
                       key={i.id}
                       data-inline-editing={inlineEditingId === i.id ? "true" : undefined}
                       aria-busy={savingInline && inlineEditingId === i.id}
-                      className="cursor-pointer border-b transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[inline-editing=true]:bg-accent/50"
+                      className="h-[34px] cursor-pointer border-b transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[inline-editing=true]:bg-accent/50"
                       tabIndex={0}
                       onClick={() => inlineEditingId !== i.id && beginInlineEdit(i)}
                       onKeyDown={(event) => {
@@ -533,7 +535,7 @@ function HardwarePage() {
                         }
                       }}
                     >
-                      {HARDWARE_COLUMNS.filter((h) => table.visibleColumns.includes(h)).map((h) => {
+                      {table.visibleColumns.map((h) => {
                         const editing = inlineEditingId === i.id && inlineDraft;
                         if (editing && h === "Event")
                           return (
@@ -831,7 +833,7 @@ function HardwarePage() {
                     </tr>
                   )}
                 </tbody>
-              </table>
+              </DataTable>
             </div>
           </CardContent>
         </Card>

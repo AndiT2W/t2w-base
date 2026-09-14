@@ -22,6 +22,7 @@ import { PayoutService } from "./payout.service.js";
 import { PayoutController, AutomationController, AuditLogController } from "./payout.controller.js";
 import { PayoutImportService } from "./payout-import.service.js";
 import { AutomationService } from "./automation.service.js";
+import { TablePreferencesController } from "./table-preferences.controller.js";
 
 @Module({
   imports: [OutlookModule],
@@ -35,6 +36,7 @@ import { AutomationService } from "./automation.service.js";
     PayoutController,
     AutomationController,
     AuditLogController,
+    TablePreferencesController,
   ],
   providers: [
     ProjectManagementService,

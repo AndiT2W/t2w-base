@@ -51,6 +51,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Die zentrale Hardware-Übersicht führt operative Rückgaben mit beschrifteten Filtern, Rücksetzoption, aussagekräftigen Kennzahlen und expliziter Überfälligkeitsmarkierung; die Browser-Regression sichert das Zurücksetzen der Filter. Siehe [Hardware-Verwaltung](tasks/hardware-management-spec.md).
 - Der Hardware-Anlegeflow ist als durchgängiger rechter Sheet spezifiziert; das bestehende Inline-Editing bleibt der schnelle Bearbeitungsweg für Tabellenzeilen. Siehe [Hardware-Anlage im seitlichen Sheet](tasks/hardware-create-sheet-spec.md).
 - Das Hardware-Anlegeformular folgt nun dem Muster der Kontakt-Details: sichtbare Feldbeschriftungen, Gruppen für Empfänger, Ausgabe und Details sowie ein responsives Zwei-Spalten-Raster. Die angepasste Browser-Regression prüft die Abschnitte und beschrifteten Felder. Siehe [Hardware-Workspace](../../src/components/t2w/HardwareWorkspace.tsx) und [Hardware-E2E-Test](../../tests/e2e/hardware.spec.ts).
+- Der einheitliche Tabellenstandard folgt einer ClickUp-dichten Desktopansicht: 30-px-Kopfzeilen, 34-px-Datenzeilen, einzeilige 13-px-Zellen und kompakte Status-Tags. Sichtbarkeit, Sortierung und mögliche Spaltenreihenfolge sind als versionierte Benutzerpräferenz im Event-Service hinterlegt. Siehe [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
 
 ## Next Best Actions
 

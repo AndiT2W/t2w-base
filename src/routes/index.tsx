@@ -23,6 +23,7 @@ import { activeEvents } from "@/lib/t2w/event-projections";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
+import { DataTable } from "@/components/t2w/DataTable";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -210,15 +211,15 @@ function Uebersicht() {
           settings={settings}
           emptyText="Keine Events für diese Schnellfilter."
         />
-        <div className="hidden overflow-x-auto rounded-lg border border-border bg-surface md:block">
+        <div className="hidden md:block">
           <ColumnPicker
             columns={OVERVIEW_COLUMNS}
             visibleColumns={visibleColumns}
             toggleColumn={toggleColumn}
           />
-          <table className="w-full min-w-[54rem] border-collapse text-xs">
+          <DataTable className="min-w-[54rem]">
             <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-              <tr>
+              <tr className="h-[30px]">
                 {visibleColumns.includes("Status") && (
                   <th className="px-2 py-1.5">
                     <SortHeader
@@ -300,7 +301,7 @@ function Uebersicht() {
                 const offen = e.taskReadiness.openCount;
                 const folders = resolveEventFolderNavigation(e, settings);
                 return (
-                  <tr key={e.id} className="border-t border-border hover:bg-accent/50">
+                  <tr key={e.id} className="h-[34px] border-t border-border hover:bg-accent/50">
                     {visibleColumns.includes("Status") && (
                       <td
                         className="px-2 py-1"
@@ -375,7 +376,7 @@ function Uebersicht() {
                 </tr>
               )}
             </tbody>
-          </table>
+          </DataTable>
         </div>
         <div
           aria-label="Statuslegende"

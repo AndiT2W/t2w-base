@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/t2w/PageHeader";
 import { Button } from "@/components/ui/button";
 import { PayoutCreateForm } from "@/components/t2w/PayoutsPanel";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
+import { DataTable } from "@/components/t2w/DataTable";
 
 type Payout = {
   id: string;
@@ -162,11 +163,11 @@ function Auszahlungen() {
           </span>
         ))}
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table className="w-full text-sm">
+      <div>
+        <DataTable>
           <thead className="bg-secondary text-left">
-            <tr>
-              <th className="px-3 py-2">
+            <tr className="h-[30px]">
+              <th className="px-2 py-1">
                 <input
                   aria-label="Alle sichtbaren auswählen"
                   type="checkbox"
@@ -187,7 +188,7 @@ function Auszahlungen() {
                 "Transaktionsbestätigung",
                 "Aktionen",
               ].map((x) => (
-                <th key={x} className="px-3 py-2">
+                <th key={x} className="px-2 py-1">
                   {x}
                 </th>
               ))}
@@ -195,8 +196,8 @@ function Auszahlungen() {
           </thead>
           <tbody>
             {rows.map((p) => (
-              <tr key={p.id} className="border-t border-border">
-                <td className="px-3 py-2">
+              <tr key={p.id} className="h-[34px] border-t border-border">
+                <td className="px-2 py-1">
                   <input
                     aria-label={`${p.payoutNumber} auswählen`}
                     type="checkbox"
@@ -204,8 +205,8 @@ function Auszahlungen() {
                     onChange={() => toggle(p.id)}
                   />
                 </td>
-                <td className="px-3 py-2 font-mono">{p.payoutNumber}</td>
-                <td className="px-3 py-2">
+                <td className="px-2 py-1 font-mono">{p.payoutNumber}</td>
+                <td className="px-2 py-1">
                   {p.event ? (
                     <Link
                       className="text-primary hover:underline"
@@ -218,8 +219,8 @@ function Auszahlungen() {
                     "Event nachzuordnen"
                   )}
                 </td>
-                <td className="px-3 py-2">{p.recipient?.name ?? "—"}</td>
-                <td className="px-3 py-2 tabular-nums">
+                <td className="px-2 py-1">{p.recipient?.name ?? "—"}</td>
+                <td className="px-2 py-1 tabular-nums">
                   <input
                     aria-label={`${p.payoutNumber} Betrag`}
                     defaultValue={p.amount}
@@ -231,10 +232,10 @@ function Auszahlungen() {
                   />{" "}
                   {p.currency}
                 </td>
-                <td className="px-3 py-2">{status(p)}</td>
-                <td className="px-3 py-2">{p.mailSentAt?.slice(0, 10) ?? "—"}</td>
-                <td className="px-3 py-2">{p.paidAt?.slice(0, 10) ?? "—"}</td>
-                <td className="px-3 py-2">
+                <td className="px-2 py-1">{status(p)}</td>
+                <td className="px-2 py-1">{p.mailSentAt?.slice(0, 10) ?? "—"}</td>
+                <td className="px-2 py-1">{p.paidAt?.slice(0, 10) ?? "—"}</td>
+                <td className="px-2 py-1">
                   <input
                     aria-label={`${p.payoutNumber} Transaktionsbestätigung`}
                     defaultValue={p.transactionReference ?? ""}
@@ -246,7 +247,7 @@ function Auszahlungen() {
                     className="w-32 rounded border px-1"
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-2 py-1">
                   <select
                     aria-label={`${p.payoutNumber} Mailstatus`}
                     value={p.mailStatus}
@@ -272,7 +273,7 @@ function Auszahlungen() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </DataTable>
       </div>
     </div>
   );

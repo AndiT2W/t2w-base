@@ -64,4 +64,23 @@ describe("table model", () => {
     expect(behavior.rows(rows).map((row) => row.count)).toEqual([2, 10]);
     expect(behavior.toggleColumn("count").visibleColumns).toEqual(["name"]);
   });
+  it("keeps an intentional column order and safely hydrates a saved view", () => {
+    const behavior = createTableBehavior({
+      adapter: { read: () => null, write: () => undefined, clear: () => undefined },
+      storageKey: "table",
+      columns: [
+        { key: "name", sortValue: (row: { name: string; count: number }) => row.name },
+        { key: "count", sortValue: (row: { name: string; count: number }) => row.count },
+      ],
+      initialSort: { key: "name", direction: "asc" },
+    });
+    expect(behavior.moveColumn("count", -1).visibleColumns).toEqual(["count", "name"]);
+    expect(
+      behavior.hydrate({
+        version: 1,
+        visible: ["count", "unknown"],
+        sort: { key: "count", direction: "desc" },
+      }),
+    ).toEqual({ visibleColumns: ["count"], sort: { key: "count", direction: "desc" } });
+  });
 });
