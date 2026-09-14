@@ -16,6 +16,7 @@ Stand: 2026-09-14. Quelle: Nutzerentscheidung in dieser Unterhaltung und die dre
 - Das Aufklappen zeigt Tabelle oder auf Mobilgeräten Karten mit Name, Person, Ende, Priorität und Status.
 - Die globale `/aufgaben`-Ansicht kombiniert Event- und globale Aufgaben. Suche, Event, Status und Person sind permanent sichtbar; Kategorie, Priorität und Endzeitraum liegen unter „Weitere Filter“.
 - Gantt startet mit drei Monaten und lässt drei, sechs oder zwölf Monate wählen, gliedert Event und Kategorie und markiert terminierte Voraussetzungen als Verbindungspfeile. Start+Ende ergeben einen Balken; nur Ende einen Meilenstein; nicht geplante Aufgaben stehen separat. Änderungen erfolgen im Seitenpanel, nicht durch Ziehen.
+- Die Desktop-Ganttansicht folgt einer zweigeteilten Arbeitsansicht: links bleiben Name, Status und Ende sichtbar; rechts liegen Wochen- und Tagesraster mit abgesetzten Wochenenden, Heute-Markierung, Balkenbeschriftung sowie Event- und Kategoriezwischenzeilen. Quelle: Nutzerreferenz vom 2026-09-14.
 
 ## Bewertung und Tests
 

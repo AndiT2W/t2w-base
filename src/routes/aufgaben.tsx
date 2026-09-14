@@ -37,8 +37,15 @@ const healthLabel: Record<string, string> = {
   done: "Erledigt",
   neutral: "Offen",
 };
-const daysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 const dateValue = (value: string) => new Date(`${value}T00:00:00Z`).getTime();
+const isoWeek = (date: Date) => {
+  const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(day.getUTCFullYear(), 0, 1));
+  return Math.ceil(((day.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+};
+const dateText = (date: Date, options: Intl.DateTimeFormatOptions) =>
+  date.toLocaleDateString("de-AT", { timeZone: "UTC", ...options });
 function urlText(text: string) {
   return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) =>
     /^https?:\/\//.test(part) ? (
@@ -164,16 +171,6 @@ function Aufgaben() {
   }, [tasks]);
   const categoryName = (id: string | null) =>
     data?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
-  const ganttGroups = blocks.flatMap(([eventId, block]) =>
-    [...block.categories.entries()]
-      .map(([groupId, items]) => ({
-        key: `${eventId}:${groupId ?? "none"}`,
-        eventName: block.event?.name ?? "Globale Aufgaben",
-        categoryName: categoryName(groupId),
-        items: items.filter((item) => item.startDate || item.endDate),
-      }))
-      .filter((group) => group.items.length),
-  );
   const health = (items: typeof tasks) =>
     items.some((item) => item.overdue || item.blockedBy.length)
       ? "critical"
@@ -235,6 +232,42 @@ function Aufgaben() {
   const start = new Date(`${range}T00:00:00Z`),
     end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, 1)),
     duration = end.getTime() - start.getTime();
+  const timelineDays = Array.from({ length: Math.round(duration / 86400000) }, (_, index) => {
+    const date = new Date(start.getTime() + index * 86400000);
+    return { date, index, weekend: [0, 6].includes(date.getUTCDay()) };
+  });
+  const calendarWeeks = timelineDays.reduce<{ index: number; length: number; label: string }[]>(
+    (weeks, day) => {
+      const week = weeks.at(-1);
+      if (!week || day.date.getUTCDay() === 1) {
+        weeks.push({ index: day.index, length: 1, label: `KW ${isoWeek(day.date)}` });
+      } else {
+        week.length += 1;
+      }
+      return weeks;
+    },
+    [],
+  );
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayIndex = Math.round((today - start.getTime()) / 86400000);
+  const ganttEvents = blocks
+    .map(([eventId, block]) => ({
+      key: eventId,
+      name: block.event?.name ?? "Globale Aufgaben",
+      categories: [...block.categories.entries()]
+        .map(([groupId, items]) => ({
+          key: `${eventId}:${groupId ?? "none"}`,
+          name: categoryName(groupId),
+          items: items.filter((item) => {
+            const itemStart = dateValue(item.startDate ?? item.endDate!);
+            const itemEnd = dateValue(item.endDate ?? item.startDate!);
+            return itemEnd >= start.getTime() && itemStart < end.getTime();
+          }),
+        }))
+        .filter((category) => category.items.length),
+    }))
+    .filter((event) => event.categories.length);
   return (
     <main className="space-y-5">
       <PageHeader
@@ -572,89 +605,189 @@ function Aufgaben() {
               </div>
             </div>
           </div>
-          <div className="relative overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div className="mb-2 grid grid-cols-[18rem_1fr] border-b">
-                <span className="p-2 font-medium">Aufgabe</span>
-                <span className="p-2 text-center text-sm text-muted-foreground">
-                  {start.toLocaleDateString("de-AT", { month: "long", year: "numeric" })} bis{" "}
-                  {new Date(end.getTime() - 86400000).toLocaleDateString("de-AT", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </span>
+          <div className="overflow-auto rounded-md border bg-background">
+            <div style={{ minWidth: `${352 + timelineDays.length * 32}px` }}>
+              <div className="grid grid-cols-[22rem_minmax(0,1fr)] border-b">
+                <div className="sticky left-0 z-30 grid grid-cols-[1fr_5rem] border-r bg-background text-xs text-muted-foreground">
+                  <span className="px-3 py-2">Name</span>
+                  <span className="px-2 py-2">Ende</span>
+                </div>
+                <div
+                  className="grid text-xs text-muted-foreground"
+                  style={{ gridTemplateColumns: `repeat(${timelineDays.length}, 32px)` }}
+                >
+                  {calendarWeeks.map((week) => (
+                    <span
+                      key={`${week.index}-${week.label}`}
+                      className="border-l px-2 py-2 font-medium"
+                      style={{ gridColumn: `${week.index + 1} / span ${week.length}` }}
+                    >
+                      {week.label}
+                    </span>
+                  ))}
+                </div>
               </div>
-              {ganttGroups.map((group) => (
-                <div key={group.key}>
-                  <div className="grid grid-cols-[18rem_1fr] border-b bg-muted/50 text-sm">
-                    <span className="p-2 font-medium">{group.eventName}</span>
-                    <span className="border-l p-2 text-muted-foreground">{group.categoryName}</span>
+              <div className="grid grid-cols-[22rem_minmax(0,1fr)] border-b">
+                <div className="sticky left-0 z-30 border-r bg-background" />
+                <div
+                  className="grid text-center text-[11px] text-muted-foreground"
+                  style={{ gridTemplateColumns: `repeat(${timelineDays.length}, 32px)` }}
+                >
+                  {timelineDays.map((day) => (
+                    <span
+                      key={day.index}
+                      className={`min-h-9 border-l py-1 ${day.weekend ? "bg-muted/60" : ""} ${day.index === todayIndex ? "bg-destructive text-destructive-foreground" : ""}`}
+                    >
+                      <span className="block font-medium">
+                        {dateText(day.date, { weekday: "short" })}
+                      </span>
+                      <span>{dateText(day.date, { day: "numeric" })}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {ganttEvents.map((event) => (
+                <section key={event.key} data-testid="gantt-event">
+                  <div className="grid grid-cols-[22rem_minmax(0,1fr)] border-b bg-muted/70">
+                    <span className="sticky left-0 z-20 border-r bg-muted/70 px-3 py-2 text-sm font-semibold">
+                      {event.name}
+                    </span>
+                    <span />
                   </div>
-                  {group.items.map((item) => {
-                    const itemStart = item.startDate ?? item.endDate!;
-                    const itemEnd = item.endDate ?? item.startDate!;
-                    const left = Math.max(
-                      0,
-                      Math.min(100, ((dateValue(itemStart) - start.getTime()) / duration) * 100),
-                    );
-                    const width = Math.max(
-                      1,
-                      Math.min(
-                        100 - left,
-                        ((dateValue(itemEnd) - dateValue(itemStart) + 86400000) / duration) * 100,
-                      ),
-                    );
-                    const dependency = data?.edges.find(
-                      (edge) => edge.successorId === item.id && allTaskById.has(edge.predecessorId),
-                    );
-                    const predecessor = dependency
-                      ? allTaskById.get(dependency.predecessorId)
-                      : undefined;
-                    const predecessorEnd = predecessor?.endDate ?? predecessor?.startDate;
-                    const dependencyLeft = predecessorEnd
-                      ? Math.max(
+                  {event.categories.map((category) => (
+                    <div key={category.key} data-testid="gantt-category">
+                      <div className="grid grid-cols-[22rem_minmax(0,1fr)] border-b bg-muted/30">
+                        <span className="sticky left-0 z-20 border-r bg-muted/30 px-3 py-2 pl-7 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {category.name}
+                        </span>
+                        <span />
+                      </div>
+                      {category.items.map((item) => {
+                        const itemStart = item.startDate ?? item.endDate!;
+                        const itemEnd = item.endDate ?? item.startDate!;
+                        const left = Math.max(
                           0,
                           Math.min(
-                            100,
-                            ((dateValue(predecessorEnd) - start.getTime()) / duration) * 100,
+                            timelineDays.length - 1,
+                            Math.floor((dateValue(itemStart) - start.getTime()) / 86400000),
                           ),
-                        )
-                      : null;
-                    const dependencyWidth =
-                      dependencyLeft === null ? 0 : Math.max(0, left - dependencyLeft);
-                    return (
-                      <button
-                        key={item.id}
-                        className="grid w-full grid-cols-[18rem_1fr] border-b text-left hover:bg-muted/50"
-                        onClick={() => setTask(item)}
-                      >
-                        <span className="truncate p-3">
-                          <strong>{item.title}</strong>
-                          {predecessor ? ` · nach ${predecessor.title}` : ""}
-                        </span>
-                        <span className="relative min-h-12 border-l">
-                          {dependencyWidth > 0 && (
-                            <span
-                              className="absolute top-2 h-px bg-muted-foreground"
-                              style={{ left: `${dependencyLeft}%`, width: `${dependencyWidth}%` }}
-                              title={`Voraussetzung: ${predecessor?.title}`}
-                            >
-                              <span className="absolute -right-1 -top-1.5">›</span>
+                        );
+                        const endOffset = Math.max(
+                          left + 1,
+                          Math.min(
+                            timelineDays.length,
+                            Math.ceil((dateValue(itemEnd) - start.getTime()) / 86400000) + 1,
+                          ),
+                        );
+                        const width = Math.max(16, (endOffset - left) * 32);
+                        const dependency = data?.edges.find(
+                          (edge) =>
+                            edge.successorId === item.id && allTaskById.has(edge.predecessorId),
+                        );
+                        const predecessor = dependency
+                          ? allTaskById.get(dependency.predecessorId)
+                          : undefined;
+                        const predecessorEnd = predecessor?.endDate ?? predecessor?.startDate;
+                        const dependencyLeft = predecessorEnd
+                          ? Math.max(
+                              0,
+                              Math.min(
+                                timelineDays.length - 1,
+                                Math.floor(
+                                  (dateValue(predecessorEnd) - start.getTime()) / 86400000,
+                                ),
+                              ),
+                            )
+                          : null;
+                        const dependencyWidth =
+                          dependencyLeft === null ? 0 : Math.max(0, (left - dependencyLeft) * 32);
+                        const tone =
+                          item.status === "DONE"
+                            ? "bg-emerald-600"
+                            : item.status === "IN_PROGRESS"
+                              ? "bg-sky-600"
+                              : item.blockedBy.length
+                                ? "bg-amber-600"
+                                : "bg-primary";
+                        return (
+                          <button
+                            key={item.id}
+                            className="grid w-full grid-cols-[22rem_minmax(0,1fr)] border-b text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            onClick={() => setTask(item)}
+                          >
+                            <span className="sticky left-0 z-20 grid min-h-11 grid-cols-[1fr_5rem] border-r bg-background">
+                              <span className="flex min-w-0 items-center gap-2 px-3">
+                                <span
+                                  className={`size-2 shrink-0 rounded-full ${tone}`}
+                                  aria-label={statusLabel[item.status]}
+                                />
+                                <strong className="truncate text-sm">{item.title}</strong>
+                              </span>
+                              <time className="self-center px-2 text-xs text-muted-foreground">
+                                {item.endDate ?? "—"}
+                              </time>
                             </span>
-                          )}
-                          <span
-                            className={`absolute top-3 h-6 rounded ${item.startDate && item.endDate ? "bg-primary" : "h-4 w-4 rotate-45 bg-primary"}`}
-                            style={{
-                              left: `${left}%`,
-                              width: item.startDate && item.endDate ? `${width}%` : undefined,
-                            }}
-                            aria-label={`${item.title}: ${itemStart} bis ${itemEnd}`}
-                          />
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                            <span
+                              className="relative grid min-h-11"
+                              style={{
+                                gridTemplateColumns: `repeat(${timelineDays.length}, 32px)`,
+                              }}
+                            >
+                              <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute inset-0 grid"
+                                style={{
+                                  gridTemplateColumns: `repeat(${timelineDays.length}, 32px)`,
+                                }}
+                              >
+                                {timelineDays.map((day) => (
+                                  <span
+                                    key={day.index}
+                                    className={`border-l border-border/40 ${day.weekend ? "bg-muted/60" : ""}`}
+                                  />
+                                ))}
+                              </span>
+                              {todayIndex >= 0 && todayIndex < timelineDays.length && (
+                                <span
+                                  aria-hidden="true"
+                                  className="pointer-events-none absolute inset-y-0 z-10 w-px bg-destructive"
+                                  style={{ left: `${todayIndex * 32 + 16}px` }}
+                                />
+                              )}
+                              {dependencyWidth > 0 && (
+                                <span
+                                  className="absolute top-1 z-10 h-px bg-muted-foreground"
+                                  style={{
+                                    left: `${dependencyLeft! * 32 + 16}px`,
+                                    width: `${dependencyWidth}px`,
+                                  }}
+                                  title={`Voraussetzung: ${predecessor?.title}`}
+                                >
+                                  <span className="absolute -right-1 -top-1.5">›</span>
+                                </span>
+                              )}
+                              <span
+                                className={`absolute top-1/2 z-20 -translate-y-1/2 ${tone} ${item.startDate && item.endDate ? "h-5 rounded-sm" : "size-4 rotate-45"}`}
+                                style={{
+                                  left: `${left * 32 + 4}px`,
+                                  width:
+                                    item.startDate && item.endDate ? `${width - 8}px` : undefined,
+                                }}
+                                aria-label={`${item.title}: ${itemStart} bis ${itemEnd}`}
+                              />
+                              <span
+                                className="absolute top-1/2 z-20 -translate-y-1/2 whitespace-nowrap pl-2 text-xs font-medium"
+                                style={{ left: `${left * 32 + width}px` }}
+                              >
+                                {item.title}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </section>
               ))}
             </div>
           </div>

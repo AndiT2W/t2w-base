@@ -91,6 +91,12 @@ test("keeps categories closed, expands the sequential table and blocks premature
 test("shows the combined overview, desktop Gantt and global work", async ({ page }) => {
   const event = await fixture(page);
   await create(page, event.id, "Event-Aufgabe");
+  const categoryName = `Gantt Kategorie ${randomUUID().slice(0, 6)}`;
+  const category = await page.request.post("/api/v1/pm/groups", {
+    data: { name: categoryName, active: true, sortOrder: 1 },
+  });
+  expect(category.ok()).toBeTruthy();
+  const group = await category.json();
   const globalTitle = `Globale Planung ${randomUUID().slice(0, 6)}`;
   const global = await page.request.post("/api/v1/pm/commands", {
     data: {
@@ -100,6 +106,7 @@ test("shows the combined overview, desktop Gantt and global work", async ({ page
         startDate: "2026-09-15",
         endDate: "2026-09-24",
         priority: "HIGH",
+        groupId: group.id,
       },
     },
   });
@@ -113,6 +120,7 @@ test("shows the combined overview, desktop Gantt and global work", async ({ page
   await expect(page.getByRole("heading", { name: event.name, exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Gantt", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Gantt", exact: true })).toBeVisible();
+  await expect(page.getByTestId("gantt-category").filter({ hasText: categoryName })).toBeVisible();
   await page.getByLabel("Zeitraum").selectOption("6");
   await expect(page.getByLabel("Zeitraum")).toHaveValue("6");
   await expect(page.getByLabel(new RegExp(globalTitle))).toBeVisible();

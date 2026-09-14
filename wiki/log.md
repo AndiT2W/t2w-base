@@ -403,6 +403,8 @@
 
 - Projektmanagement für Issue #55 auf Spezifikation v4 umgestellt: Aufgaben sind global oder eventgebunden, haben drei Status, optionale Start-/Endtage, Voraussetzungen und Kommentare. Die UI zeigt geschlossene Kategorieblöcke, aufklappbare Tabellen/Karten und eine Desktop-Gantt-Ansicht. Migration `0027_simplify_project_management` entfernt bisherige PM-Daten absichtlich; alte `EventTask`-Snapshots bleiben erhalten. Domain-, Service-, Browser- und Produktionsbuild-Prüfungen erfolgreich. Siehe [PM v4](tasks/project-management-spec-v4.md).
 
+- Gantt-Referenz ergänzt: Die Desktopansicht verwendet nun eine fixierte Name-/Endespalte, Kalenderwochen und Tagesraster, Wochenendmarkierung, Heute-Linie und Balkenbeschriftung. Unter jedem Event gliedern Kategoriezeilen die Aufgaben. Quelle: Nutzerreferenz vom 2026-09-14.
+
 - Importdefinition für die ClickUp-Liste `VERANSTALTUNGEN` ergänzt: ClickUp-Task-ID als externe Referenz, Stammdaten zuerst, Rollen danach, IBAN/BIC ausschließlich am Kunden-/Zahlungsempfänger-Stammsatz, keine automatische Kontaktanlage nur wegen einer IBAN, unsichere Matches in Reviewliste und zuerst Vorschau-/Idempotenzlauf. Siehe [ClickUp-Import Veranstaltungen](concepts/clickup-veranstaltungen-import.md).
 
 - Eventserien lassen sich nun im Eventdetail nachträglich mit einem bestehenden Event verknüpfen, auf eine andere Serie verschieben oder lösen. Die transaktionale API aktualisiert die betroffenen Events versionssicher; eine Browser-Regression prüft Verknüpfen und Persistenz nach Reload.

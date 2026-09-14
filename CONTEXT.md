@@ -4,13 +4,13 @@
 
 **Event**: Die konkrete Veranstaltung ist zugleich der operative Projektcontainer. Quelle: [bestätigter Nutzerauftrag vom 10.09.2026](wiki/sources/2026-09-10-user-event-readiness.md).
 
-**Aufgabe**: Eine konkrete Arbeitseinheit innerhalb genau eines Events mit interner Verantwortung und dokumentiertem Ergebnis. Ihr Arbeitsstatus ist vom Lieferstatus und vom Eventstatus getrennt.
+**Aufgabe**: Eine konkrete Arbeitseinheit innerhalb genau eines Planungsbereichs: eines Events oder der globalen Planung. Sie hat interne Verantwortung und ein dokumentiertes Ergebnis. Ihr Arbeitsstatus ist vom Lieferstatus und vom Eventstatus getrennt.
 
 **Kategorie-Readiness**: Die aktuelle Planlage der erfassten Aufgaben eines Eventbereichs; sie belegt weder vollständige Erledigung noch die Vollständigkeit aller Eventanforderungen. Quelle: [PM-Spezifikation v3](wiki/tasks/project-management-spec-v3.md).
 
-**Aufgabenabhängigkeit**: Die notwendige Erledigung einer Vorgängeraufgabe vor Beginn einer Nachfolgeraufgabe innerhalb desselben Events.
+**Aufgabenabhängigkeit**: Die notwendige Erledigung einer Vorgängeraufgabe vor Beginn einer Nachfolgeraufgabe innerhalb desselben Planungsbereichs.
 
-**Aufgabenablauf**: Die aus verbundenen Aufgaben abgeleitete Folge einschließlich paralleler Zweige; Übersicht und Tabelle beschreiben dieselbe Arbeit.
+**Aufgabenablauf**: Die aus verbundenen Aufgaben eines Planungsbereichs abgeleitete Folge einschließlich paralleler Zweige; Übersicht und Tabelle beschreiben dieselbe Arbeit.
 
 ## CRM workspace
 
