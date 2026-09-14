@@ -714,10 +714,10 @@ function HardwarePage() {
                                 onChange={(e) =>
                                   setInlineDraft({ ...inlineDraft, objectNumber: e.target.value })
                                 }
-                                onBlur={() =>
+                                onBlur={(event) =>
                                   void saveInlineEdit(
                                     i,
-                                    objectNumberChanges(inlineDraft.objectNumber),
+                                    objectNumberChanges(event.currentTarget.value),
                                   )
                                 }
                               />
