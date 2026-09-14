@@ -507,7 +507,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           { label: "Veranstaltungen", to: "/veranstaltungen" },
         ]}
         titel={event.name}
-        beschreibung={`${event.veranstalter} · ${formatZeitraum(event.start, event.ende)}`}
+        beschreibung={`${event.veranstalter} · ${formatZeitraum(event.start, event.ende)} · ${event.eventcode}`}
       />
 
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-5">
@@ -582,7 +582,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
-          <TabsList className="min-w-0 w-full max-w-full gap-2 grid grid-cols-3 md:grid-cols-7">
+          <TabsList className="min-w-0 w-full max-w-full gap-2 grid grid-cols-3 md:grid-cols-8">
             <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
             <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
             <TabsTrigger value="finanz">FINANZ</TabsTrigger>
