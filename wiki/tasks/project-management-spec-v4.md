@@ -12,7 +12,7 @@ Stand: 2026-09-14. Quelle: Nutzerentscheidung in dieser Unterhaltung und die dre
 
 ## Ansichten
 
-- Die Standardansicht gruppiert **Event → Kategorie**. Alle Kategorien starten geschlossen und zeigen Statuspunkt, Statuszahlen, nächsten ausführbaren Schritt, nächste Frist und Ablaufstufen.
+- Die Standardansicht gruppiert **Event → Kategorie**. Alle Kategorien starten geschlossen und zeigen Statuspunkt, Statuszahlen, nächsten ausführbaren Schritt, nächste Frist und Ablaufstufen. Nur Aufgaben derselben zusammenhängenden Abhängigkeitsgruppe erscheinen als Ablauf; unabhängige Aufgaben stehen getrennt unter „Weitere Aufgaben“ und werden nicht als implizite Vorgänger dargestellt.
 - Das Aufklappen zeigt Tabelle oder auf Mobilgeräten Karten mit Name, Person, Ende, Priorität und Status.
 - Die globale `/aufgaben`-Ansicht kombiniert Event- und globale Aufgaben. Suche, Event, Status und Person sind permanent sichtbar; Kategorie, Priorität und Endzeitraum liegen unter „Weitere Filter“.
 - Gantt startet mit drei Monaten und lässt drei, sechs oder zwölf Monate wählen, gliedert Event und Kategorie und markiert terminierte Voraussetzungen als Verbindungspfeile. Start+Ende ergeben einen Balken; nur Ende einen Meilenstein; nicht geplante Aufgaben stehen separat. Änderungen erfolgen im Seitenpanel, nicht durch Ziehen.
