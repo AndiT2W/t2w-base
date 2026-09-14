@@ -507,48 +507,42 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           { label: "Veranstaltungen", to: "/veranstaltungen" },
         ]}
         titel={event.name}
-        beschreibung={event.eventcode}
+        beschreibung={`${event.veranstalter} · ${formatZeitraum(event.start, event.ende)}`}
       />
 
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-5">
-          <div className="min-w-0 space-y-2">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span>{event.veranstalter}</span>
-            <span>·</span>
-            <span>{formatZeitraum(event.start, event.ende)}</span>
-            {form.seriesId && (
-              <nav
-                aria-label="Eventserie"
-                data-testid="event-series-navigation"
-                className="flex flex-wrap items-center gap-2"
-              >
-                <span>·</span>
-                <span>Eventserie:</span>
-                {previousEvent ? (
-                  <Link
-                    className="underline"
-                    to="/events/$eventcode"
-                    params={{ eventcode: previousEvent.eventcode }}
-                  >
-                    ← {previousEvent.name}
-                  </Link>
-                ) : (
-                  <span>Kein vorheriges Event</span>
-                )}
-                {nextEvent ? (
-                  <Link
-                    className="underline"
-                    to="/events/$eventcode"
-                    params={{ eventcode: nextEvent.eventcode }}
-                  >
-                    {nextEvent.name} →
-                  </Link>
-                ) : (
-                  <span>Kein nächstes Event</span>
-                )}
-              </nav>
-            )}
-          </div>
+        <div className="min-w-0 space-y-2">
+          {form.seriesId && (
+            <nav
+              aria-label="Eventserie"
+              data-testid="event-series-navigation"
+              className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+            >
+              <span>Eventserie:</span>
+              {previousEvent ? (
+                <Link
+                  className="underline"
+                  to="/events/$eventcode"
+                  params={{ eventcode: previousEvent.eventcode }}
+                >
+                  ← {previousEvent.name}
+                </Link>
+              ) : (
+                <span>Kein vorheriges Event</span>
+              )}
+              {nextEvent ? (
+                <Link
+                  className="underline"
+                  to="/events/$eventcode"
+                  params={{ eventcode: nextEvent.eventcode }}
+                >
+                  {nextEvent.name} →
+                </Link>
+              ) : (
+                <span>Kein nächstes Event</span>
+              )}
+            </nav>
+          )}
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <StatusBadge status={form.status} />
           </div>
@@ -588,35 +582,35 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
-          <TabsList className="min-w-0 w-full max-w-full gap-2 overflow-x-auto whitespace-nowrap grid grid-cols-3 md:grid-cols-7">
+          <TabsList className="min-w-0 w-full max-w-full gap-2 grid grid-cols-3 md:grid-cols-7">
             <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
             <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
             <TabsTrigger value="finanz">FINANZ</TabsTrigger>
             <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
             <TabsTrigger
               id="event-tab-aufgaben"
-              className="sr-only md:not-sr-only md:inline-flex"
+              className="hidden md:inline-flex"
               value="aufgaben"
             >
               PROJEKTMANAGEMENT
             </TabsTrigger>
             <TabsTrigger
               id="event-tab-dateien"
-              className="sr-only md:not-sr-only md:inline-flex"
+              className="hidden md:inline-flex"
               value="dateien"
             >
               DATEIEN
             </TabsTrigger>
             <TabsTrigger
               id="event-tab-kommunikation"
-              className="sr-only md:not-sr-only md:inline-flex"
+              className="hidden md:inline-flex"
               value="kommunikation"
             >
               KOMMUNIKATION
             </TabsTrigger>
             <TabsTrigger
               id="event-tab-hardware"
-              className="sr-only md:not-sr-only md:inline-flex"
+              className="hidden md:inline-flex"
               value="hardware"
             >
               HARDWARE
@@ -1146,7 +1140,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               >
                 <Textarea
                   aria-label="Finanznotizen"
-                  className="mt-3 min-h-24"
+                  className="mt-1 min-h-24"
                   value={form.finanzNotizen ?? ""}
                   onChange={(e) => set("finanzNotizen", e.target.value)}
                   placeholder="z. B. Abweichende Zahlungsvereinbarungen …"
@@ -1263,12 +1257,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 aria-labelledby="kontakte-notizen-heading"
                 className="border-b border-border pb-5"
               >
-                <h3 id="kontakte-notizen-heading" className="font-medium text-foreground">
-                  Kontaktnotizen
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Zusätzliche Informationen zur Kontaktorganisation dieses Events.
-                </p>
                 <Textarea
                   aria-label="Kontaktnotizen"
                   className="mt-3 min-h-24"
