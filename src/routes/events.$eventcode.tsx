@@ -511,10 +511,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       />
 
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-5">
-        <div className="min-w-0 space-y-2">
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span className="break-all font-mono text-xs">{event.eventcode}</span>
-            <span>·</span>
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span>{event.veranstalter}</span>
             <span>·</span>
             <span>{formatZeitraum(event.start, event.ende)}</span>
@@ -553,11 +551,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <StatusBadge status={form.status} />
-            {vergangen && (
-              <span className="rounded bg-secondary px-2 py-1 text-xs text-muted-foreground">
-                Vergangenes Event – weiterhin bearbeitbar
-              </span>
-            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -595,7 +588,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
-          <TabsList className="min-w-0 max-w-full flex-1 gap-2 overflow-x-auto whitespace-nowrap">
+          <TabsList className="min-w-0 w-full max-w-full gap-2 overflow-x-auto whitespace-nowrap grid grid-cols-3 md:grid-cols-7">
             <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
             <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
             <TabsTrigger value="finanz">FINANZ</TabsTrigger>
@@ -704,26 +697,36 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   >
                     Identität &amp; Zeitraum
                   </h3>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-code">
-                      Eventcode{" "}
-                      <span className="text-xs font-normal text-muted-foreground">
-                        (unveränderlich)
-                      </span>
-                    </Label>
-                    <Input
-                      id="d-code"
-                      value={form.eventcode}
-                      readOnly
-                      disabled
-                      className="font-mono"
-                    />
-                  </div>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-start">Startdatum *</Label>
-                    <Input
-                      id="d-start"
-                      type="date"
+                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                  <Label htmlFor="d-code">
+                    Eventcode{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (unveränderlich)
+                    </span>
+                  </Label>
+                  <Input
+                    id="d-code"
+                    value={form.eventcode}
+                    readOnly
+                    disabled
+                    className="font-mono"
+                  />
+                </div>
+                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                  <Label htmlFor="d-t2w-basic">Event Id</Label>
+                  <Input
+                    id="d-t2w-basic"
+                    type="number"
+                    value={form.t2wEventId ?? ""}
+                    readOnly
+                    className="font-mono"
+                  />
+                </div>
+                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                  <Label htmlFor="d-start">Startdatum *</Label>
+                  <Input
+                    id="d-start"
+                    type="date"
                       value={form.start}
                       onChange={(e) => set("start", e.target.value)}
                     />
@@ -908,9 +911,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Ordnerverknüpfungen</CardTitle>
-              <CardDescription>
-                Manuelle Verknüpfung – Outlook nach Quartal, SharePoint direkt im Jahresbereich.
-              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -992,12 +992,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   type="url"
                   value={form.outlookWebUrl ?? ""}
                   placeholder="https://outlook.office.com/mail/..."
+                  readOnly
                   onChange={(e) => set("outlookWebUrl", e.target.value || null)}
                   className="mt-1.5 text-xs"
                 />
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Öffnet den konkreten Ordner direkt in Outlook Web.
-                </p>
               </div>
               <div>
                 <Label htmlFor="d-sp">SharePoint-Ordner</Label>
@@ -1059,22 +1057,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">TIME2WIN</CardTitle>
-              <CardDescription>
-                Lokale Prognose bleibt vom synchronisierten Teilnehmerstand getrennt.
-              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="d-t2w">Event Id</Label>
-                <Input
-                  id="d-t2w"
-                  type="number"
-                  value={form.t2wEventId ?? ""}
-                  onChange={(e) =>
-                    set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))
-                  }
-                  className="mt-1.5"
-                />
+                <p id="d-t2w" className="mt-1.5 text-sm text-muted-foreground">
+                  {form.t2wEventId ?? "—"}
+                </p>
               </div>
               <div className="text-sm">
                 <p>
@@ -1149,22 +1138,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Finanz</CardTitle>
-              <CardDescription>
-                Standardmäßig ist der Veranstalter als Auszahlungs- und Rechnungsempfänger
-                hinterlegt.
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <section
                 aria-labelledby="finanz-notizen-heading"
                 className="border-b border-border pb-5"
               >
-                <h3 id="finanz-notizen-heading" className="font-medium text-foreground">
-                  Finanznotizen
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Zusätzliche Informationen zu Auszahlungen und Rechnungsempfängern.
-                </p>
                 <Textarea
                   aria-label="Finanznotizen"
                   className="mt-3 min-h-24"
@@ -1182,9 +1161,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     <h3 id="auszahlungsempfaenger-heading" className="font-medium text-foreground">
                       Auszahlungsempfänger
                     </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Genau ein Empfänger für Auszahlungen.
-                    </p>
                   </div>
                   <Select
                     value={detail.payoutRecipientId ?? undefined}
@@ -1215,7 +1191,6 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     <h3 id="rechnungsempfaenger-heading" className="font-medium text-foreground">
                       Rechnungsempfänger
                     </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">Mehrere Empfänger möglich.</p>
                   </div>
                   <Popover>
                     <PopoverTrigger asChild>
