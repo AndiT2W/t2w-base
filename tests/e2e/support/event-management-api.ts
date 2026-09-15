@@ -53,6 +53,7 @@ export const event = {
 export async function mockEventManagementApi(
   page: Page,
   eventOverride: Partial<typeof event> = {},
+  relatedEventOverride: Partial<typeof event> = {},
 ) {
   const requests: { method: string; url: string; body?: string }[] = [];
   let mockedEvent = { ...event, ...eventOverride };
@@ -63,6 +64,7 @@ export async function mockEventManagementApi(
     name: "Folgetermin",
     startAt: "2027-08-21T00:00:00.000Z",
     endAt: "2027-08-21T00:00:00.000Z",
+    ...relatedEventOverride,
   };
   let copiedEvents: (typeof mockedEvent)[] = [];
   let eventDeleted = false;

@@ -28,6 +28,13 @@ import {
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
+import {
+  EventDateCollisionIndicator,
+  EventDateCollisionLegend,
+  eventDateCollisionSurfaceClass,
+} from "@/components/t2w/EventDateCollision";
+import { createEventDateCollisionMap } from "@/lib/t2w/event-date-collisions";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -124,6 +131,7 @@ function Veranstaltungen() {
   }, [events, suche, status, zeitraum, archiv, heute]);
   const sortiere = table.sortBy;
   const zeilen = table.rows(gefiltert);
+  const dateCollisions = useMemo(() => createEventDateCollisionMap(gefiltert), [gefiltert]);
   if (ansicht === "kalender") return <KalenderSeite veranstaltungsmenue />;
   if (ansicht === "gantt") return <GanttSeite veranstaltungsmenue />;
 
@@ -219,10 +227,12 @@ function Veranstaltungen() {
           </div>
         </div>
 
+        {dateCollisions.size > 0 && <EventDateCollisionLegend />}
         <EventMobileList
           events={zeilen}
           settings={settings}
           emptyText="Keine Events für die aktuelle Filterauswahl."
+          dateCollisions={dateCollisions}
         />
         <div className="hidden md:block">
           <DataTable className="min-w-[54rem]">
@@ -348,8 +358,18 @@ function Veranstaltungen() {
             <tbody>
               {zeilen.map((e) => {
                 const folders = resolveEventFolderNavigation(e, settings);
+                const dateCollision = dateCollisions.get(e.id);
                 return (
-                  <tr key={e.id} className="h-[34px] border-t border-border hover:bg-accent/50">
+                  <tr
+                    key={e.id}
+                    className={cn(
+                      "h-[34px] border-t border-border hover:bg-accent/50",
+                      eventDateCollisionSurfaceClass(dateCollision, "table"),
+                    )}
+                    data-date-collision-group={
+                      dateCollision ? String(dateCollision.groupIndex + 1) : undefined
+                    }
+                  >
                     {visibleColumns.includes("Status") && (
                       <td className="w-12 max-w-[3rem] !px-1 py-1" title={STATUS_LABEL[e.status]}>
                         <StatusDot status={e.status} />
@@ -414,7 +434,12 @@ function Veranstaltungen() {
                     )}
                     {visibleColumns.includes("Zeitraum") && (
                       <td className="whitespace-nowrap px-2 py-1">
-                        {formatZeitraum(e.start, e.ende)}
+                        <span className="inline-flex items-center gap-1.5">
+                          {formatZeitraum(e.start, e.ende)}
+                          {dateCollision && (
+                            <EventDateCollisionIndicator collision={dateCollision} />
+                          )}
+                        </span>
                       </td>
                     )}
                     {visibleColumns.includes("Tage") && (

@@ -533,6 +533,51 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(overviewRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(2);
 });
 
+test("markiert Events mit überschneidenden Veranstaltungstagen als gemeinsame Farbgruppe", async ({
+  page,
+}) => {
+  await mockApi(
+    page,
+    {
+      startAt: "2026-08-20T00:00:00.000Z",
+      endAt: "2026-08-22T00:00:00.000Z",
+    },
+    {
+      startAt: "2026-08-21T00:00:00.000Z",
+      endAt: "2026-08-21T00:00:00.000Z",
+    },
+  );
+  await page.goto("/veranstaltungen");
+
+  const table = page.locator("table");
+  const existingEvent = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
+  const followUpEvent = table.locator("tbody tr").filter({ hasText: "Folgetermin" });
+
+  await expect(existingEvent).toHaveAttribute("data-date-collision-group", "1");
+  await expect(followUpEvent).toHaveAttribute("data-date-collision-group", "1");
+  await expect(existingEvent.getByLabel(/Terminkollision: 2 Events/)).toContainText("2×");
+  await expect(followUpEvent.getByLabel(/Terminkollision: 2 Events/)).toContainText("2×");
+  await expect(page.getByLabel("Legende für Terminkollisionen")).toBeVisible();
+
+  const rowColors = await Promise.all(
+    [existingEvent, followUpEvent].map((row) =>
+      row.evaluate((element) => getComputedStyle(element).backgroundColor),
+    ),
+  );
+  expect(rowColors[0]).toBe(rowColors[1]);
+  expect(rowColors[0]).not.toBe("rgba(0, 0, 0, 0)");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileList = page.getByLabel("Veranstaltungen mobile Liste");
+  await expect(
+    mobileList.locator("article").filter({ hasText: "Bestehendes Event" }),
+  ).toHaveAttribute("data-date-collision-group", "1");
+  await expect(mobileList.locator("article").filter({ hasText: "Folgetermin" })).toHaveAttribute(
+    "data-date-collision-group",
+    "1",
+  );
+});
+
 test("hält die Statusspalte der Eventtabellen kompakt", async ({ page }) => {
   await mockApi(page);
 

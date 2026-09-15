@@ -44,6 +44,7 @@
 - Users need one overview of all events with their key indicators.
 - Users also need to drill into one event and immediately see its open operational tasks.
 - The event overview should surface critical due items and not only static master data.
+- Die Veranstaltungsansicht gruppiert Events mit überlappenden, inklusiven Datumsbereichen anhand der aktuell gefilterten Liste. Zusammengehörige Zeilen bzw. mobile Karten erhalten dieselbe dezente Farbe sowie ein sichtbares Mengenkennzeichen und einen zugänglichen Hinweis; die Information hängt damit nicht allein von Farbe ab.
 - Migration should preserve the current separation between event overview and event-management tasks, even if the target UX later presents them more seamlessly.
 - The event should become the shared operational context not only for tasks but also for files, organizer-side contacts, and communication history.
 
@@ -62,3 +63,4 @@
 - [../sources/2026-06-30-user-target-model-v1.md](../sources/2026-06-30-user-target-model-v1.md)
 - User clarification dated 2026-08-19: ClickUp field `Teilnehmer` represents the forecast and maps to `Event.participantForecast`, not the current participant count.
 - [Event-Services-Anforderung (2026-09-07)](../sources/2026-09-07-user-event-services.md)
+- Nutzeranforderung vom 2026-09-15; Implementierung: [`../../src/lib/t2w/event-date-collisions.ts`](../../src/lib/t2w/event-date-collisions.ts), [`../../src/routes/veranstaltungen.tsx`](../../src/routes/veranstaltungen.tsx) und [`../../src/components/t2w/EventMobileList.tsx`](../../src/components/t2w/EventMobileList.tsx).

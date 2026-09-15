@@ -1,8 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { CalendarDays, CheckSquare } from "lucide-react";
+import {
+  EventDateCollisionIndicator,
+  eventDateCollisionSurfaceClass,
+} from "@/components/t2w/EventDateCollision";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 import { StatusBadge } from "@/components/t2w/StatusBadge";
+import { cn } from "@/lib/utils";
+import type { EventDateCollision } from "@/lib/t2w/event-date-collisions";
 import { formatZeitraum } from "@/lib/t2w/format";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import type { Settings, T2WEvent } from "@/lib/t2w/types";
@@ -11,10 +17,12 @@ export function EventMobileList({
   events,
   settings,
   emptyText,
+  dateCollisions,
 }: {
   events: T2WEvent[];
   settings: Settings;
   emptyText: string;
+  dateCollisions?: ReadonlyMap<string, EventDateCollision>;
 }) {
   if (!events.length) {
     return (
@@ -29,8 +37,18 @@ export function EventMobileList({
       {events.map((event) => {
         const folders = resolveEventFolderNavigation(event, settings);
         const openTasks = event.taskReadiness.openCount;
+        const dateCollision = dateCollisions?.get(event.id);
         return (
-          <article key={event.id} className="rounded-lg border border-border bg-surface p-3">
+          <article
+            key={event.id}
+            className={cn(
+              "rounded-lg border border-border bg-surface p-3",
+              eventDateCollisionSurfaceClass(dateCollision, "card"),
+            )}
+            data-date-collision-group={
+              dateCollision ? String(dateCollision.groupIndex + 1) : undefined
+            }
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <Link
@@ -52,6 +70,7 @@ export function EventMobileList({
               <span className="inline-flex items-center gap-1.5">
                 <CalendarDays className="size-4" aria-hidden="true" />
                 {formatZeitraum(event.start, event.ende)}
+                {dateCollision && <EventDateCollisionIndicator collision={dateCollision} />}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <CheckSquare className="size-4" aria-hidden="true" />
