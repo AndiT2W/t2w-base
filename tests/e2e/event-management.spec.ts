@@ -632,6 +632,14 @@ test("zeigt die Unveränderlichkeit direkt am Eventcode-Feld", async ({ page }) 
   await expect(page.getByText("(unveränderlich)", { exact: true })).toBeVisible();
 });
 
+test("zeigt die technische ClickUp-ID nicht in den Event-Stammdaten", async ({ page }) => {
+  await mockApi(page, { clickUpId: "86abc-clickup-intern" });
+  await page.goto("/events/260820_demo_event");
+
+  await expect(page.getByText("86abc-clickup-intern", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("ClickUp-ID", { exact: true })).toHaveCount(0);
+});
+
 test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", async ({
   page,
 }) => {

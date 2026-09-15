@@ -30,7 +30,7 @@ describe("ClickUp event import", () => {
 
     expect(item).toMatchObject({
       clickUpId: "86abc",
-      eventCode: "clickup-86abc",
+      eventCode: "260331_musterlauf",
       status: EventStatus.ZUGESAGT,
       location: "Linz, Österreich",
       responsible: "Andi, Julia",
@@ -58,8 +58,11 @@ describe("ClickUp event import", () => {
   it("upserts by ClickUp ID and stores the source in a dedicated relation", async () => {
     const upsert = vi.fn().mockResolvedValue({ id: "event-1" });
     const sportUpsert = vi.fn().mockResolvedValue({ id: "sport-1" });
+    const findMany = vi
+      .fn()
+      .mockResolvedValue([{ clickUpId: "86abc", eventCode: "clickup-86abc" }]);
     const service = new ClickUpEventImportService({
-      event: { upsert },
+      event: { findMany, upsert },
       sport: { upsert: sportUpsert },
     } as any);
 
@@ -76,8 +79,28 @@ describe("ClickUp event import", () => {
           },
         }),
         update: expect.objectContaining({
+          eventCode: "260331_musterlauf",
           clickUpSource: expect.any(Object),
         }),
+      }),
+    );
+  });
+
+  it("allocates suffixes without taking an existing non-ClickUp event code", async () => {
+    const upsert = vi.fn().mockResolvedValue({ id: "event-1" });
+    const service = new ClickUpEventImportService({
+      event: {
+        findMany: vi.fn().mockResolvedValue([{ clickUpId: null, eventCode: "260331_musterlauf" }]),
+        upsert,
+      },
+      sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
+    } as any);
+
+    await service.run([task]);
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ eventCode: "260331_musterlauf_02", clickUpId: "86abc" }),
       }),
     );
   });

@@ -42,6 +42,11 @@ type NormalizedClickUpEvent = {
   sourceData: Prisma.InputJsonValue;
 };
 
+type ExistingEventCode = {
+  clickUpId: string | null;
+  eventCode: string;
+};
+
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -73,9 +78,7 @@ const asInteger = (value: unknown): number | null => {
 
 const customFieldValue = (task: ClickUpTaskRecord, name: string): unknown => {
   if (!Array.isArray(task.custom_fields)) return null;
-  const field = task.custom_fields
-    .map(asRecord)
-    .find((candidate) => candidate?.name === name);
+  const field = task.custom_fields.map(asRecord).find((candidate) => candidate?.name === name);
   if (!field) return null;
   return field.value_richtext ?? field.value ?? null;
 };
@@ -125,6 +128,57 @@ const responsibleValue = (value: unknown): string | null => {
 const jsonValue = (value: unknown): Prisma.InputJsonValue =>
   JSON.parse(JSON.stringify(value ?? null)) as Prisma.InputJsonValue;
 
+const UMLAUTE: Record<string, string> = {
+  ä: "ae",
+  ö: "oe",
+  ü: "ue",
+  Ä: "ae",
+  Ö: "oe",
+  Ü: "ue",
+  ß: "ss",
+  é: "e",
+  è: "e",
+  ê: "e",
+  á: "a",
+  à: "a",
+  â: "a",
+  ó: "o",
+  ò: "o",
+  ô: "o",
+  í: "i",
+  ú: "u",
+  ñ: "n",
+  ç: "c",
+};
+
+const eventSlug = (name: string): string => {
+  let slug = name.toLowerCase();
+  slug = slug.replace(/[äöüßÄÖÜéèêáàâóòôíúñç]/g, (character) => UMLAUTE[character] ?? character);
+  slug = slug.replace(/\b(19|20)\d{2}\b/g, " ");
+  slug = slug.replace(/'\d{2}\b/g, " ");
+  slug = slug
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  return (slug.length > 30 ? slug.slice(0, 30).replace(/_$/, "") : slug) || "event";
+};
+
+/** Uses the same stable YYMMDD_slug convention as the event master-data UI. */
+export const clickUpEventCode = (name: string, startAt: Date): string => {
+  const date = startAt.toISOString().slice(2, 10).replaceAll("-", "");
+  return `${date}_${eventSlug(name)}`;
+};
+
+const clickUpFallbackCode = (eventCode: string, clickUpId: string): boolean =>
+  eventCode === `clickup-${clickUpId}`;
+
+const uniqueEventCode = (candidate: string, occupied: Set<string>): string => {
+  if (!occupied.has(candidate)) return candidate;
+  let sequence = 2;
+  while (occupied.has(`${candidate}_${String(sequence).padStart(2, "0")}`)) sequence += 1;
+  return `${candidate}_${String(sequence).padStart(2, "0")}`;
+};
+
 export const mergeClickUpTaskSnapshots = (
   listTasks: ClickUpTaskRecord[],
   detailedTasks: ClickUpTaskRecord[],
@@ -154,13 +208,14 @@ export const normalizeClickUpEvent = (task: ClickUpTaskRecord): NormalizedClickU
     asDate(task.date_updated);
   if (!startAt) throw new Error("MISSING_EVENT_DATE");
 
+  const name = asString(task.name) ?? `ClickUp ${clickUpId}`;
   const explicitSport = customFieldValue(task, "Sportart");
   return {
     clickUpId,
     clickUpUrl: asString(task.url),
     clickUpUpdatedAt: asDate(task.date_updated),
-    eventCode: "clickup-" + clickUpId,
-    name: asString(task.name) ?? "ClickUp " + clickUpId,
+    eventCode: clickUpEventCode(name, startAt),
+    name,
     status: toEventStatus(task.status),
     startAt,
     endAt: asDate(task.due_date) ?? startAt,
@@ -182,10 +237,49 @@ export class ClickUpEventImportService {
   async run(tasks: ClickUpTaskRecord[]): Promise<ClickUpEventImportReport> {
     const report: ClickUpEventImportReport = { total: tasks.length, imported: 0, errors: [] };
 
+    const items: NormalizedClickUpEvent[] = [];
     for (const task of tasks) {
       const clickUpId = asString(task.id) ?? "(ohne ID)";
       try {
-        const item = normalizeClickUpEvent(task);
+        items.push(normalizeClickUpEvent(task));
+      } catch (error) {
+        report.errors.push({
+          clickUpId,
+          reason: error instanceof Error ? error.message : "INVALID_CLICKUP_TASK",
+        });
+      }
+    }
+
+    const existingEvents = (await this.prisma.event.findMany({
+      select: { clickUpId: true, eventCode: true },
+    })) as ExistingEventCode[];
+    const existingByClickUpId = new Map(
+      existingEvents
+        .filter((event): event is ExistingEventCode & { clickUpId: string } =>
+          Boolean(event.clickUpId),
+        )
+        .map((event) => [event.clickUpId, event]),
+    );
+    const occupiedCodes = new Set(
+      existingEvents
+        .filter(
+          (event) => !event.clickUpId || !clickUpFallbackCode(event.eventCode, event.clickUpId),
+        )
+        .map((event) => event.eventCode),
+    );
+    const codesByClickUpId = new Map<string, string>();
+    for (const item of items) {
+      const existing = existingByClickUpId.get(item.clickUpId);
+      const eventCode =
+        existing && !clickUpFallbackCode(existing.eventCode, item.clickUpId)
+          ? existing.eventCode
+          : uniqueEventCode(item.eventCode, occupiedCodes);
+      occupiedCodes.add(eventCode);
+      codesByClickUpId.set(item.clickUpId, eventCode);
+    }
+
+    for (const item of items) {
+      try {
         const sport = item.sportName
           ? await this.prisma.sport.upsert({
               where: { name: item.sportName },
@@ -215,17 +309,22 @@ export class ClickUpEventImportService {
           notes: item.notes ?? undefined,
           ...(sport ? { sport: { connect: { id: sport.id } } } : {}),
         };
+        const existing = existingByClickUpId.get(item.clickUpId);
+        const eventCode = codesByClickUpId.get(item.clickUpId) ?? item.eventCode;
 
         await this.prisma.event.upsert({
           where: { clickUpId: item.clickUpId },
           create: {
             ...eventData,
-            eventCode: item.eventCode,
+            eventCode,
             clickUpId: item.clickUpId,
             clickUpSource: { create: source },
           },
           update: {
             ...eventData,
+            ...(existing && clickUpFallbackCode(existing.eventCode, item.clickUpId)
+              ? { eventCode }
+              : {}),
             clickUpSource: {
               upsert: {
                 create: source,
@@ -237,7 +336,7 @@ export class ClickUpEventImportService {
         report.imported++;
       } catch (error) {
         report.errors.push({
-          clickUpId,
+          clickUpId: item.clickUpId,
           reason: error instanceof Error ? error.message : "INVALID_CLICKUP_TASK",
         });
       }

@@ -11,6 +11,7 @@ export const event = {
   responsible: "Andi",
   participantForecast: 10,
   participantCurrent: null,
+  clickUpId: null as string | null,
   t2wEventId: null,
   time2winSyncStatus: "NEVER",
   time2winLastSuccessAt: null,
