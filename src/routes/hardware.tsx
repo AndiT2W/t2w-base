@@ -3,11 +3,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bell, PackageOpen, RotateCcw, TriangleAlert } from "lucide-react";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
+import { formatDatum } from "@/lib/t2w/format";
 import { useT2W } from "@/lib/t2w/store";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
@@ -78,14 +79,6 @@ function isOverdue(item: Hardware, today: string) {
     item.status !== "RETURNED" &&
     item.status !== "COMPLETED",
   );
-}
-function formatDate(value?: string) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("de-AT", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(`${value.slice(0, 10)}T12:00:00`));
 }
 function statusBadge(item: Hardware, today: string) {
   const label = labels[item.status] ?? item.status;
@@ -158,7 +151,7 @@ function cell(item: Hardware, column: HardwareColumn, today: string): ReactNode 
   if (column === "Kommentar") return item.note ?? "—";
   return (
     <span className={isOverdue(item, today) ? "font-medium text-destructive" : undefined}>
-      {formatDate(item.dueDate)}
+      {item.dueDate ? formatDatum(item.dueDate) : "—"}
     </span>
   );
 }
@@ -338,7 +331,7 @@ function HardwarePage() {
         }}
         aktion={<Button onClick={() => setNewHardware(true)}>Hardware-Ausgabe anlegen</Button>}
       />
-      <div className="space-y-6">
+      <div className="space-y-3">
         <Sheet
           open={newHardware}
           onOpenChange={(open) => {
@@ -381,7 +374,10 @@ function HardwarePage() {
             </div>
           </SheetContent>
         </Sheet>
-        <section aria-label="Übersicht" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section
+          aria-label="Übersicht"
+          className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pb-3"
+        >
           {[
             [
               "Offen",
@@ -403,17 +399,15 @@ function HardwarePage() {
             ],
             ["Gesamt aktiv", active.length, PackageOpen, "text-foreground"],
           ].map(([title, value, Icon, iconClass]) => (
-            <Card key={String(title)} className="border-border/80 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                <Icon className={`size-4 ${iconClass}`} aria-hidden="true" />
-              </CardHeader>
-              <CardContent className="text-3xl font-semibold tabular-nums">{value}</CardContent>
-            </Card>
+            <div key={String(title)} className="flex items-center gap-2">
+              <Icon className={`size-4 ${iconClass}`} aria-hidden="true" />
+              <span className="text-xs text-muted-foreground">{title}</span>
+              <span className="text-lg font-semibold tabular-nums">{value}</span>
+            </div>
           ))}
         </section>
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="gap-4 border-b border-border/70 pb-4">
+        <Card className="rounded-md border-border shadow-none">
+          <CardHeader className="gap-3 border-b border-border/70 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="font-semibold leading-none tracking-tight">Rückgabevorgänge</h2>
@@ -428,18 +422,19 @@ function HardwarePage() {
               )}
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(14rem,1.2fr)_minmax(10rem,.8fr)_minmax(10rem,.8fr)_auto_auto] xl:items-end">
-              <label className="grid gap-1.5 text-sm font-medium">
+              <label className="grid gap-1 text-[13px] font-medium">
                 Event
                 <Input
                   placeholder="Event filtern …"
                   value={event}
                   onChange={(e) => setEvent(e.target.value)}
+                  className="h-8"
                 />
               </label>
-              <label className="grid gap-1.5 text-sm font-medium">
+              <label className="grid gap-1 text-[13px] font-medium">
                 Status
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -452,10 +447,10 @@ function HardwarePage() {
                   </SelectContent>
                 </Select>
               </label>
-              <label className="grid gap-1.5 text-sm font-medium">
+              <label className="grid gap-1 text-[13px] font-medium">
                 Ausgabeart
                 <Select value={issueType} onValueChange={setIssueType}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -466,7 +461,7 @@ function HardwarePage() {
                   </SelectContent>
                 </Select>
               </label>
-              <label className="flex h-10 items-center gap-2 text-sm font-medium">
+              <label className="flex h-8 items-center gap-2 text-[13px] font-medium">
                 <input
                   type="checkbox"
                   checked={overdue}
@@ -474,7 +469,7 @@ function HardwarePage() {
                 />{" "}
                 Überfällig
               </label>
-              <div className="flex h-10 items-end">
+              <div className="flex h-8 items-end">
                 <ColumnPicker
                   columns={HARDWARE_COLUMNS}
                   visibleColumns={table.visibleColumns}
@@ -484,7 +479,7 @@ function HardwarePage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3">
             {inlineError && (
               <p
                 className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"

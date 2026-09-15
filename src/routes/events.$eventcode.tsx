@@ -70,7 +70,7 @@ import { apiUpdateEventSeries, apiEventByCode } from "@/lib/t2w/api";
 import { useCrm } from "@/lib/crm/store";
 import { eventContactRoleChoices, selectionListChoices } from "@/lib/t2w/selection-list-workspace";
 import { useI18n } from "@/lib/i18n";
-import { formatDatum, formatZeitraum, heuteIso } from "@/lib/t2w/format";
+import { formatDatum, formatDatumMitZeit, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
 import { projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
@@ -126,21 +126,11 @@ function RecipientMasterData({ recipient }: { recipient: Kunde }) {
 }
 
 function formatCommunicationTime(value: string) {
-  return new Intl.DateTimeFormat("de-AT", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatDatumMitZeit(value);
 }
 
 function communicationDate(value: string) {
-  return new Intl.DateTimeFormat("de-AT", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
+  return formatDatum(value);
 }
 
 export const Route = createFileRoute("/events/$eventcode")({

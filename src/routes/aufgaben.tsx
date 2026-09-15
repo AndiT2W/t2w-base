@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { projectTaskPortfolios, type Task } from "@t2w/domain/project-management";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { TaskFlowBadges } from "@/components/t2w/TaskFlowBadges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/t2w/DataTable";
 import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
+import { formatDatum } from "@/lib/t2w/format";
 import { pmRequest, priorityLabel, statusLabel, type PmGlobal } from "@/lib/t2w/project-management";
 import {
   createTaskInteractionWorkspace,
@@ -15,21 +15,8 @@ import {
 } from "@/lib/t2w/task-interaction-workspace";
 
 export const Route = createFileRoute("/aufgaben")({ component: Aufgaben });
-const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
-const healthClass: Record<string, string> = {
-  critical: "bg-destructive",
-  warning: "bg-amber-500",
-  active: "bg-blue-600",
-  done: "bg-emerald-600",
-  neutral: "bg-muted-foreground",
-};
-const healthLabel: Record<string, string> = {
-  critical: "Blockiert oder überfällig",
-  warning: "In 7 Tagen fällig",
-  active: "In Arbeit",
-  done: "Erledigt",
-  neutral: "Offen",
-};
+const control =
+  "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:min-h-8 md:py-1";
 const dateValue = (value: string) => new Date(`${value}T00:00:00Z`).getTime();
 const isoWeek = (date: Date) => {
   const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -39,6 +26,13 @@ const isoWeek = (date: Date) => {
 };
 const dateText = (date: Date, options: Intl.DateTimeFormatOptions) =>
   date.toLocaleDateString("de-AT", { timeZone: "UTC", ...options });
+const taskStatusTone = (task: VisibleTask) => {
+  if (task.overdue || task.blockedBy.length)
+    return "border-destructive/30 bg-destructive/10 text-destructive";
+  if (task.status === "DONE") return "border-emerald-700/25 bg-emerald-700/10 text-emerald-800";
+  if (task.status === "IN_PROGRESS") return "border-sky-700/25 bg-sky-700/10 text-sky-800";
+  return "border-border bg-muted text-muted-foreground";
+};
 type VisibleTask = ReturnType<
   typeof projectTaskPortfolios
 >[number]["portfolio"]["tasks"][number] & {
@@ -83,7 +77,6 @@ function Aufgaben() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [expanded, setExpanded] = useState<string | null>(null);
   const [range, setRange] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -187,7 +180,6 @@ function Aufgaben() {
     () => blocks.flatMap((block) => block.categories.flatMap((category) => category.tasks)),
     [blocks],
   );
-  const taskById = useMemo(() => new Map(tasks.map((item) => [item.id, item])), [tasks]);
   const allTaskById = useMemo(
     () => new Map((data?.tasks ?? []).map((item) => [item.id, item])),
     [data],
@@ -264,7 +256,7 @@ function Aufgaben() {
     }))
     .filter((event) => event.categories.length);
   return (
-    <main className="space-y-5">
+    <main className="space-y-3">
       <PageHeader
         titel="Aufgaben"
         beschreibung="Gesamtübersicht über Event- und globale Aufgaben"
@@ -274,18 +266,26 @@ function Aufgaben() {
           {error}
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <Button variant={view === "table" ? "default" : "outline"} onClick={() => setView("table")}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+        <Button
+          className="min-h-11 md:min-h-8"
+          size="sm"
+          variant={view === "table" ? "default" : "outline"}
+          onClick={() => setView("table")}
+        >
           Übersicht
         </Button>
         <Button
-          className="hidden md:inline-flex"
+          className="hidden min-h-8 md:inline-flex"
+          size="sm"
           variant={view === "gantt" ? "default" : "outline"}
           onClick={() => setView("gantt")}
         >
           Gantt
         </Button>
         <Button
+          className="min-h-11 md:min-h-8"
+          size="sm"
           variant="outline"
           onClick={() => {
             void interaction.open({
@@ -318,6 +318,7 @@ function Aufgaben() {
             id="task-search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            className="h-11 md:h-8"
           />
         </div>
         <div>
@@ -371,7 +372,7 @@ function Aufgaben() {
           </select>
         </div>
       </div>
-      <details className="rounded-md border p-3">
+      <details className="rounded-md border border-border bg-muted/20 px-3 py-2">
         <summary className="cursor-pointer font-medium">Weitere Filter</summary>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
           <div>
@@ -414,6 +415,7 @@ function Aufgaben() {
               type="date"
               value={fromDate}
               onChange={(event) => setFromDate(event.target.value)}
+              className="h-11 md:h-8"
             />
           </div>
           <div>
@@ -423,110 +425,92 @@ function Aufgaben() {
               type="date"
               value={toDate}
               onChange={(event) => setToDate(event.target.value)}
+              className="h-11 md:h-8"
             />
           </div>
         </div>
       </details>
       {view === "table" ? (
-        <div className="space-y-4">
-          {blocks.map((block) => (
-            <section key={block.key} className="rounded-lg border">
-              <header className="border-b px-4 py-3">
-                <h2 className="font-semibold">{block.event?.name ?? "Globale Aufgaben"}</h2>
-              </header>
-              {block.categories.map((category) => {
-                const key = `${block.key}:${category.groupId ?? "none"}`,
-                  shown = expanded === key;
-                return (
-                  <article key={key} className="border-b last:border-0">
-                    <button
-                      className="w-full cursor-pointer p-4 text-left"
-                      aria-expanded={shown}
-                      onClick={() => setExpanded(shown ? null : key)}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={`h-3 w-3 rounded-full ${healthClass[category.health]}`}
-                            aria-hidden="true"
-                          />
-                          <strong>{categoryName(category.groupId)}</strong>
-                          <span className="text-sm text-muted-foreground">
-                            {healthLabel[category.health]}
-                          </span>
-                        </span>
-                        <span className="text-sm">
-                          {category.counts.open} offen · {category.counts.inProgress} in Arbeit ·{" "}
-                          {category.counts.done} erledigt
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Nächster Schritt: {taskById.get(category.nextTaskId ?? "")?.title ?? "—"}
-                        {category.nextEndDate ? ` · Ende ${category.nextEndDate}` : ""}
-                      </p>
-                      <TaskFlowBadges flows={category.flows} taskById={taskById} />
-                    </button>
-                    {shown && (
-                      <div className="hidden overflow-x-auto md:block">
-                        <DataTable>
-                          <thead>
-                            <tr className="border-t text-muted-foreground">
-                              <th className="p-3">Name</th>
-                              <th className="p-3">Person</th>
-                              <th className="p-3">Ende</th>
-                              <th className="p-3">Priorität</th>
-                              <th className="p-3">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {category.tasks.map((item) => (
-                              <tr key={item.id} className="border-t">
-                                <td className="p-3">
-                                  <button
-                                    className="min-h-11 text-left font-medium underline"
-                                    onClick={() => void interaction.open(item)}
-                                  >
-                                    {item.title}
-                                  </button>
-                                  {item.blockedBy.length > 0 && (
-                                    <p className="text-xs text-destructive">Blockiert</p>
-                                  )}
-                                </td>
-                                <td className="p-3">
-                                  {data?.owners.find((owner) => owner.id === item.ownerId)
-                                    ?.displayName ?? "—"}
-                                </td>
-                                <td className="p-3">{item.endDate ?? "—"}</td>
-                                <td className="p-3">{priorityLabel[item.priority]}</td>
-                                <td className="p-3">{statusLabel[item.status]}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </DataTable>
-                      </div>
-                    )}
-                    {shown && (
-                      <div className="space-y-2 p-3 md:hidden">
-                        {category.tasks.map((item) => (
-                          <button
-                            key={item.id}
-                            className="w-full rounded-md border p-3 text-left"
-                            onClick={() => void interaction.open(item)}
-                          >
-                            <strong>{item.title}</strong>
-                            <p className="text-sm text-muted-foreground">
-                              {statusLabel[item.status]} · {item.endDate ?? "Ohne Ende"}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
-            </section>
-          ))}
-        </div>
+        <>
+          <div className="hidden md:block">
+            <DataTable data-testid="dense-task-table" className="min-w-[66rem]">
+              <caption className="sr-only">Aufgabenübersicht</caption>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Aufgabe</th>
+                  <th>Event</th>
+                  <th>Kategorie</th>
+                  <th>Ende</th>
+                  <th>Priorität</th>
+                  <th>Person</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <span
+                        className={`inline-flex rounded border px-1.5 py-0.5 text-[11px] font-medium ${taskStatusTone(item)}`}
+                      >
+                        {item.blockedBy.length ? "Blockiert" : statusLabel[item.status]}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="min-h-8 text-left font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => void interaction.open(item)}
+                      >
+                        {item.title}
+                      </button>
+                    </td>
+                    <td>{item.event?.name ?? "Globale Aufgabe"}</td>
+                    <td>{categoryName(item.groupId)}</td>
+                    <td>{item.endDate ? formatDatum(item.endDate) : "—"}</td>
+                    <td>{priorityLabel[item.priority]}</td>
+                    <td>
+                      {data?.owners.find((owner) => owner.id === item.ownerId)?.displayName ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+                {!tasks.length && (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                      Keine Aufgaben für diese Filter gefunden.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </DataTable>
+          </div>
+          <div className="space-y-2 md:hidden">
+            {tasks.map((item) => (
+              <button
+                key={item.id}
+                className="w-full rounded-md border border-border bg-card p-3 text-left"
+                onClick={() => void interaction.open(item)}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <strong>{item.title}</strong>
+                  <span
+                    className={`shrink-0 rounded border px-1.5 py-0.5 text-[11px] font-medium ${taskStatusTone(item)}`}
+                  >
+                    {item.blockedBy.length ? "Blockiert" : statusLabel[item.status]}
+                  </span>
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  {item.event?.name ?? "Globale Aufgabe"} ·{" "}
+                  {item.endDate ? formatDatum(item.endDate) : "Ohne Ende"}
+                </span>
+              </button>
+            ))}
+            {!tasks.length && (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Keine Aufgaben für diese Filter gefunden.
+              </p>
+            )}
+          </div>
+        </>
       ) : (
         <section className="hidden rounded-lg border p-4 md:block">
           <div className="mb-4 flex items-end justify-between gap-3">
@@ -680,7 +664,7 @@ function Aufgaben() {
                                 <strong className="truncate text-sm">{item.title}</strong>
                               </span>
                               <time className="self-center px-2 text-xs text-muted-foreground">
-                                {item.endDate ?? "—"}
+                                {item.endDate ? formatDatum(item.endDate) : "—"}
                               </time>
                             </span>
                             <span

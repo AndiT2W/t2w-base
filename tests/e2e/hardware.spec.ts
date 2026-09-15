@@ -113,6 +113,7 @@ test("shows central hardware cases, filters them, and links to the event", async
   await expect(page.getByText("+43 660 123456")).toBeVisible();
   await expect(page.getByText("Akkupack mitgeben")).toBeVisible();
   const hardwareRow = page.getByRole("row", { name: /Demo Event.*Max Mustermann/ });
+  await expect(hardwareRow).toContainText("12.09.2026");
   await hardwareRow.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByLabel("Empfänger bearbeiten").fill("Max Mustermann aktualisiert");

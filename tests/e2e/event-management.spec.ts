@@ -451,6 +451,7 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(table.locator("thead")).toContainText("Aufgaben");
   await expect(table.locator("[title='Outlook und SharePoint']")).toBeVisible();
   await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(table.locator("tbody")).toContainText("20.08.2026");
 });
 
 test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async ({ page }) => {

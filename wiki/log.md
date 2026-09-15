@@ -550,3 +550,11 @@ Der fehlgeschlagene GitHub-Deploy von Commit `f114bac3` baute eine im aktuellen 
 ## 2026-09-15 — Aufgabenplanung und Tabellen vertieft
 
 Nach bestätigtem Architektur-Review ist `projectTaskFlows` die kanonische Aufgabenablaufprojektion: verbundene Aufgaben behalten parallele Stufen, unabhängige Aufgaben sind getrennte Abläufe. Das gemeinsame `TaskDetailSheet` ersetzt die doppelte Detailinteraktion in Event- und Gesamtansicht bei erhaltener Event-Graph-Version. `DataTable` bündelt nun Struktur, Tastaturfokus und Tabellenverhalten für Übersicht, Veranstaltungen, Hardware, Auszahlungen und beide Aufgabenlisten. Domain-, Workspace- und PM-Browser-Tests sowie der Produktionsbuild sind erfolgreich. Details: [Aufgabenplanung und Tabellen-Vertiefung](concepts/task-planning-and-table-deepening-2026-09-15.md).
+
+## 2026-09-15 — Dichte Inhaltsseiten (Variante A) umgesetzt
+
+Auf Nutzerentscheidung bleibt die linke Navigation unverändert; die Inhaltsseiten nutzen mehr Arbeitsbreite und verdichten Kopf, Kennzahlen, Filter und Tabellen. Die globale Aufgabenübersicht zeigt alle gefilterten Aufgaben unmittelbar in einer kompakten Tabelle und behält Detail-Sheet, Filter, Gantt und mobile Karten bei. Übersicht, Veranstaltungen, Kontakte, Hardware, Auszahlungen und Einstellungen folgen derselben Hierarchie. Die PM-Browser-Regression wurde auf den direkten Tabellenablauf aktualisiert; ihr Lauf ist lokal ohne gesetzte `PM_TEST_DATABASE_URL` nicht startbar. Lint und Produktionsbuild sind erfolgreich. Quellen: `src/routes/aufgaben.tsx`, `src/routes/index.tsx`, `src/routes/veranstaltungen.tsx`, `src/routes/kontakte.tsx`, `src/routes/hardware.tsx`, `src/routes/auszahlungen.tsx`, `src/routes/einstellungen.tsx`, `tests/pm-e2e/project-management.spec.ts`.
+
+## 2026-09-15 — Datumsformat vereinheitlicht
+
+Alle sichtbaren Datumswerte werden über den gemeinsamen Formatierungsseam als `dd.mm.yyyy` ausgegeben; bei Zeitstempeln folgt die Uhrzeit nach dem Datum. Zeiträume zeigen beide Endpunkte vollständig. ISO-Werte bleiben unverändert für API, Filter und native Datumseingaben. Unit- und Browser-Regressionen sichern die zentrale Formatierung sowie exemplarisch Veranstaltungs- und Hardwaretabellen. Quellen: `src/lib/t2w/format.ts`, `src/lib/t2w/format.test.ts`, `tests/e2e/event-management.spec.ts`, `tests/e2e/hardware.spec.ts`.

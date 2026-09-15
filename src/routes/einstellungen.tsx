@@ -29,6 +29,7 @@ import { apiAuditLog, apiOutlookStatus } from "@/lib/t2w/api";
 import { createAuditLogWorkspace, type AuditLogEntity } from "@/lib/t2w/audit-log-workspace";
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 import { createSelectionListManagementWorkspace } from "@/lib/t2w/selection-list-management-workspace";
+import { formatDatumMitZeit } from "@/lib/t2w/format";
 
 export const Route = createFileRoute("/einstellungen")({
   validateSearch: (search) => ({
@@ -277,13 +278,13 @@ function Einstellungen() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Einstellungen"
         beschreibung="Outlook- und SharePoint-Ordnerkonventionen zentral verwalten."
       />
-      <div className="max-w-5xl space-y-5">
+      <div className="space-y-4">
         <Tabs
           value={tab}
           onValueChange={(nextTab) =>
@@ -297,7 +298,7 @@ function Einstellungen() {
               },
             })
           }
-          className="space-y-5"
+          className="space-y-4"
         >
           <TabsContent value="allgemein" className="space-y-5">
             <Card>
@@ -909,7 +910,7 @@ function Einstellungen() {
                       {audit.visibleEntries.map((entry) => (
                         <tr key={entry.id}>
                           <td className="whitespace-nowrap px-3 py-2">
-                            {new Date(entry.createdAt).toLocaleString("de-AT")}
+                            {formatDatumMitZeit(entry.createdAt)}
                           </td>
                           <td className="px-3 py-2">{entry.entity}</td>
                           <td className="px-3 py-2 font-medium">{entry.action}</td>

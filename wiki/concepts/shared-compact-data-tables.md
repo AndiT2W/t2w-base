@@ -8,6 +8,13 @@ sources:
   - ../../src/components/t2w/table-model.ts
   - ../../src/components/t2w/ProjectManagement.tsx
   - ../../src/routes/aufgaben.tsx
+  - ../../src/routes/index.tsx
+  - ../../src/routes/veranstaltungen.tsx
+  - ../../src/routes/kontakte.tsx
+  - ../../src/routes/hardware.tsx
+  - ../../src/routes/auszahlungen.tsx
+  - ../../src/routes/einstellungen.tsx
+  - ../../src/lib/t2w/format.ts
   - ../../services/event-service/src/table-preferences.controller.ts
   - ../../services/event-service/prisma/schema.prisma
   - ../../docs/adr/0003-shared-compact-data-tables.md
@@ -32,5 +39,17 @@ Die Servertabelle `UserTablePreference` ist je `(userId, tableId)` eindeutig. De
 ## Abdeckung
 
 `DataTable` wird in Übersichts-, Veranstaltungs-, Hardware- und Auszahlungslisten sowie in Event- und Gesamtaufgabenlisten genutzt. Der Modulvertrag setzt Kopfzeilen-, Zeilen-, Zellen- und Fokusverhalten auch für bestehende Tabellenmarkierung zentral durch; Routen behalten nur ihre fachlichen Filter und Zellinhalte.
+
+## Dichte Arbeitsseiten (Variante A)
+
+Die Nutzerentscheidung vom 2026-09-15 legt die A-Richtung für die Inhaltsseiten fest: Die bestehende linke Navigation bleibt, der Arbeitsbereich nutzt seine verfügbare Breite und zeigt Inhalte als dichte, unmittelbar sichtbare Listen. Kennzahlen sind eine schmale Zeile statt großflächiger Karten; Filter und Listenaktionen stehen in einer abgesetzten Kompaktzeile vor der Tabelle.
+
+Die globale Aufgabenübersicht zeigt deshalb alle gefilterten Aufgaben direkt als Tabelle statt sie erst innerhalb aufklappbarer Event- und Kategorieblöcke zu verbergen. Die Task-Detailinteraktion bleibt unverändert im `TaskDetailSheet`; Gantt bleibt eine eigene Desktopansicht. Auf kleinen Bildschirmen bleiben die Listen als bedienbare Karten verfügbar.
+
+Hardware, Auszahlungen, Veranstaltungen, Kontakte und Übersicht verwenden dieselbe vertikale Hierarchie. Einstellungen bleiben formularorientiert, füllen aber die Arbeitsbreite statt sie auf eine schmale Lesespalte zu begrenzen.
+
+## Einheitliches Datumsformat
+
+Sichtbare Datumswerte verwenden zentral `formatDatum` und erscheinen immer als `dd.mm.yyyy`. Zeitstempel ergänzen die Uhrzeit erst nach diesem vollständigen Datum. Das gilt auch für Zeiträume, Aufgaben, Hardware, Auszahlungen, Kommunikation, Auditlog und Änderungsverlauf; ISO-Werte bleiben ausschließlich das Daten- und Eingabeformat.
 
 Siehe auch [Aufgabenplanung und Tabellen-Vertiefung](task-planning-and-table-deepening-2026-09-15.md).

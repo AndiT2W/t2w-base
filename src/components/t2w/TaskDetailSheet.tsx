@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { priorityLabel, statusLabel } from "@/lib/t2w/project-management";
 import type { TaskActivity, TaskComment } from "@/lib/t2w/task-interaction-workspace";
+import { formatDatumMitZeit } from "@/lib/t2w/format";
 
 const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
 
@@ -264,7 +265,7 @@ export function TaskDetailSheet({
                     <p className="whitespace-pre-wrap break-words">{textWithLinks(item.text)}</p>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-muted-foreground">
-                        {new Date(item.updatedAt).toLocaleString("de-AT")}
+                        {formatDatumMitZeit(item.updatedAt)}
                         {item.updatedAt !== item.createdAt ? " · bearbeitet" : ""}
                       </p>
                       <span className="flex gap-1">
@@ -322,7 +323,7 @@ export function TaskDetailSheet({
                 <h3 className="font-medium">Verlauf</h3>
                 {activities.map((item) => (
                   <p key={item.id} className="border-b py-2 text-sm">
-                    {item.action} · {new Date(item.createdAt).toLocaleString("de-AT")}
+                    {item.action} · {formatDatumMitZeit(item.createdAt)}
                   </p>
                 ))}
               </section>

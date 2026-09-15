@@ -18,6 +18,12 @@ describe("locale rendering module", () => {
   });
 
   it("formats through the selected locale", () => {
+    expect(createLocaleRenderer("de", catalogs, legacy).formatDate("2026-09-05")).toBe(
+      "05.09.2026",
+    );
+    expect(createLocaleRenderer("en", catalogs, legacy).formatDate("2026-09-05")).toBe(
+      "05.09.2026",
+    );
     expect(createLocaleRenderer("de", catalogs, legacy).formatNumber(1234.5)).toBe("1.234,5");
     expect(createLocaleRenderer("en", catalogs, legacy).formatNumber(1234.5)).toBe("1,234.5");
   });

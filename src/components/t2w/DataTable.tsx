@@ -18,7 +18,10 @@ import { cn } from "@/lib/utils";
  */
 export const DataTable = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-x-auto rounded-md border border-border bg-card">
+    <div
+      className="relative w-full overflow-x-auto rounded-md border border-border bg-card"
+      data-density="compact"
+    >
       <table
         ref={ref}
         className={cn(

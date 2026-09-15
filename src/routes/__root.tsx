@@ -135,7 +135,7 @@ function AppShell() {
           <SidebarMobileTrigger />
           <span className="text-sm font-semibold tracking-tight text-foreground">TIME2WIN</span>
         </div>
-        <main className="mx-auto min-w-0 max-w-[1600px] overflow-x-hidden px-4 pb-10 sm:px-6">
+        <main className="min-w-0 overflow-x-hidden px-4 pb-10 sm:px-6 lg:px-7">
           <Outlet />
         </main>
       </div>

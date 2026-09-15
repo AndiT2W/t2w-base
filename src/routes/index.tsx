@@ -150,8 +150,8 @@ function Uebersicht() {
           />
         }
       />
-      <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pb-3">
           <Kpi icon={CalendarClock} label="Events nächste 14 Tage" wert={kpi.kommend} />
           <Kpi icon={CheckSquare} label="Offene Aufgaben" wert={kpi.aufgaben} />
         </div>
@@ -171,13 +171,13 @@ function Uebersicht() {
           </button>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
           {SCHNELLFILTER.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                "min-h-11 rounded-full px-3 py-1 text-xs font-medium transition-colors sm:min-h-0",
+                "min-h-9 rounded-md px-3 py-1 text-xs font-medium transition-colors",
                 filter === f.key
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-muted-foreground hover:text-foreground",
@@ -211,11 +211,13 @@ function Uebersicht() {
           emptyText="Keine Events für diese Schnellfilter."
         />
         <div className="hidden md:block">
-          <ColumnPicker
-            columns={OVERVIEW_COLUMNS}
-            visibleColumns={visibleColumns}
-            toggleColumn={toggleColumn}
-          />
+          <div className="mb-2 flex justify-end">
+            <ColumnPicker
+              columns={OVERVIEW_COLUMNS}
+              visibleColumns={visibleColumns}
+              toggleColumn={toggleColumn}
+            />
+          </div>
           <DataTable className="min-w-[54rem]">
             <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <tr className="h-[30px]">
@@ -423,21 +425,17 @@ function Kpi({
   ton?: "warn";
 }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5">
-      <div className="min-w-0">
-        <p className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <p
-          className={cn(
-            "text-2xl font-semibold tabular-nums",
-            ton === "warn" && wert > 0 ? "text-risk-kritisch" : "text-foreground",
-          )}
-        >
-          {wert}
-        </p>
-      </div>
-      <Icon className="size-5 shrink-0 text-muted-foreground" />
+    <div className="flex items-center gap-2">
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p
+        className={cn(
+          "text-lg font-semibold tabular-nums",
+          ton === "warn" && wert > 0 ? "text-risk-kritisch" : "text-foreground",
+        )}
+      >
+        {wert}
+      </p>
     </div>
   );
 }

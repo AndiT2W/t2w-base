@@ -1,16 +1,27 @@
 export function formatDatum(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return `${d}.${m}.${y}`;
+  const parts = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/.exec(iso)?.groups;
+  return parts ? `${parts.day}.${parts.month}.${parts.year}` : iso;
+}
+
+export function formatDatumMitZeit(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const parts = new Intl.DateTimeFormat("de-AT", {
+    timeZone: "Europe/Vienna",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("day")}.${value("month")}.${value("year")}, ${value("hour")}:${value("minute")}`;
 }
 
 export function formatZeitraum(start: string, ende: string): string {
   if (start === ende) return formatDatum(start);
-  const [ys, ms] = start.split("-");
-  const [ye, me] = ende.split("-");
-  if (ys === ye && ms === me) {
-    return `${start.split("-")[2]}.–${formatDatum(ende)}`;
-  }
-  if (ys === ye) return `${start.split("-")[2]}.${ms}. – ${formatDatum(ende)}`;
   return `${formatDatum(start)} – ${formatDatum(ende)}`;
 }
 

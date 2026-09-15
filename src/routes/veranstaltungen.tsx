@@ -142,7 +142,7 @@ function Veranstaltungen() {
         }
       />
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
           <AnsichtsReiter to="/veranstaltungen" aktiv label="Liste" icon={List} />
           <AnsichtsReiter
@@ -161,10 +161,10 @@ function Veranstaltungen() {
         <div
           role="group"
           aria-label="Eventfilter und Tabellenspalten"
-          className="flex flex-wrap gap-3 rounded-lg border border-border bg-surface p-3"
+          className="flex flex-wrap gap-3 border-b border-border pb-3"
         >
           <Select value={status} onValueChange={(v) => setStatus(v as EventStatus | "alle")}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="h-8 w-44">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -178,7 +178,7 @@ function Veranstaltungen() {
           </Select>
 
           <Select value={zeitraum} onValueChange={(v) => setZeitraum(v as Zeitraum)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="h-8 w-44">
               <SelectValue placeholder="Zeitraum" />
             </SelectTrigger>
             <SelectContent>
@@ -191,7 +191,7 @@ function Veranstaltungen() {
           </Select>
 
           <Select value={archiv} onValueChange={(v) => setArchiv(v as ArchivFilter)}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="h-8 w-40">
               <SelectValue placeholder="Archiv" />
             </SelectTrigger>
             <SelectContent>

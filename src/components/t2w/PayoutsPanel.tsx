@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
+import { formatDatum } from "@/lib/t2w/format";
 
 type P = {
   id: string;
@@ -132,8 +133,8 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
                     {label(p)}
                   </span>
                 </td>
-                <td className="px-2 py-1">{p.mailSentAt?.slice(0, 10) ?? "—"}</td>
-                <td className="px-2 py-1">{p.paidAt?.slice(0, 10) ?? "—"}</td>
+                <td className="px-2 py-1">{p.mailSentAt ? formatDatum(p.mailSentAt) : "—"}</td>
+                <td className="px-2 py-1">{p.paidAt ? formatDatum(p.paidAt) : "—"}</td>
                 <td className="px-2 py-2">
                   <Button
                     size="sm"
@@ -198,12 +199,15 @@ export function PayoutCreateForm({
     onCreated();
   }
   return (
-    <section aria-label="Neue Auszahlung" className="mb-4 flex flex-wrap gap-2">
+    <section
+      aria-label="Neue Auszahlung"
+      className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-3"
+    >
       <select
         aria-label="Event für neue Auszahlung"
         value={eventId}
         onChange={(e) => setEventId(e.target.value)}
-        className="rounded border px-2 py-1"
+        className="h-8 rounded border border-border bg-background px-2 text-[13px]"
       >
         <option value="">Event auswählen</option>
         {events.map((e) => (
@@ -217,19 +221,19 @@ export function PayoutCreateForm({
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         placeholder="Betrag"
-        className="w-28 rounded border px-2 py-1"
+        className="h-8 w-28 rounded border border-border bg-background px-2 text-[13px]"
       />
       <select
         aria-label="Neue Auszahlungswährung"
         value={currency}
         onChange={(e) => setCurrency(e.target.value)}
-        className="rounded border px-2 py-1"
+        className="h-8 rounded border border-border bg-background px-2 text-[13px]"
       >
         <option>EUR</option>
         <option>CHF</option>
         <option>USD</option>
       </select>
-      <Button disabled={!eventId || !amount} onClick={() => void create()}>
+      <Button size="sm" disabled={!eventId || !amount} onClick={() => void create()}>
         Auszahlung anlegen
       </Button>
     </section>

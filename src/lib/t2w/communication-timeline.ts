@@ -1,4 +1,5 @@
 import type { T2WEvent } from "./types";
+import { formatDatum } from "./format";
 
 type Communication = T2WEvent["kommunikation"][number];
 type EventContact = T2WEvent["kontakte"][number];
@@ -110,26 +111,9 @@ export function projectCommunicationTimeline(input: {
       dates.set(key, [...(dates.get(key) ?? []), message]);
     });
     dates.forEach((messages, key) => {
-      const date = new Date(`${key}T12:00:00`);
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-      const iso = (candidate: Date) =>
-        new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Vienna" }).format(candidate);
-      const label =
-        key === iso(today)
-          ? "Heute"
-          : key === iso(yesterday)
-            ? "Gestern"
-            : new Intl.DateTimeFormat("de-AT", {
-                weekday: "long",
-                day: "2-digit",
-                month: "long",
-                year: "numeric",
-              }).format(date);
       groups.push({
         key,
-        label,
+        label: formatDatum(key),
         conversation: false,
         messages: [...messages].sort((a, b) => b.datum.localeCompare(a.datum)),
       });

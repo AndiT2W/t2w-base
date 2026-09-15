@@ -133,16 +133,14 @@ test("keeps an Event Task detail editable from the Event and combined planning v
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
 
   await page.goto("/aufgaben");
-  await page.getByRole("button", { name: new RegExp(`Ohne Kategorie.*${title}`) }).click();
-  await page.getByRole("table").getByRole("button", { name: title }).click();
+  await page.getByTestId("dense-task-table").getByRole("button", { name: title }).click();
   await expect(page.getByLabel("Beschreibung")).toHaveValue(detail);
 
   await page.getByLabel("Kommentar").fill("Im gemeinsamen Detail ergänzt.");
   await page.getByRole("button", { name: "Kommentieren" }).click();
   await expect(page.getByText("Im gemeinsamen Detail ergänzt.")).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: new RegExp(`Ohne Kategorie.*${title}`) }).click();
-  await page.getByRole("table").getByRole("button", { name: title }).click();
+  await page.getByTestId("dense-task-table").getByRole("button", { name: title }).click();
   await expect(page.getByText("Im gemeinsamen Detail ergänzt.")).toBeVisible();
 });
 
@@ -161,7 +159,7 @@ test("projects canonical Event tasks into the Event list after reload", async ({
   const row = page.getByRole("row").filter({ hasText: event.name });
   await expect(row).toContainText("1");
 });
-test("shows the combined overview, desktop Gantt and global work", async ({ page }) => {
+test("shows the dense combined overview, desktop Gantt and global work", async ({ page }) => {
   const event = await fixture(page);
   await create(page, event.id, "Event-Aufgabe");
   const categoryName = `Gantt Kategorie ${randomUUID().slice(0, 6)}`;
@@ -186,11 +184,13 @@ test("shows the combined overview, desktop Gantt and global work", async ({ page
   expect(global.ok()).toBeTruthy();
   await page.goto("/aufgaben");
   await expect(page.getByRole("heading", { name: "Aufgaben", exact: true })).toBeVisible();
-  await expect(page.getByText("Globale Aufgaben", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: event.name, exact: true })).toBeVisible();
+  const taskTable = page.getByTestId("dense-task-table");
+  await expect(taskTable).toContainText(globalTitle);
+  await expect(taskTable).toContainText("Event-Aufgabe");
   await page.getByText("Weitere Filter", { exact: true }).click();
   await page.locator("#task-priority").selectOption("HIGH");
-  await expect(page.getByRole("heading", { name: event.name, exact: true })).toHaveCount(0);
+  await expect(taskTable).toContainText(globalTitle);
+  await expect(taskTable).not.toContainText("Event-Aufgabe");
   await page.getByRole("button", { name: "Gantt", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Gantt", exact: true })).toBeVisible();
   await expect(page.getByTestId("gantt-category").filter({ hasText: categoryName })).toBeVisible();
@@ -200,5 +200,5 @@ test("shows the combined overview, desktop Gantt and global work", async ({ page
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(page.getByRole("button", { name: "Gantt", exact: true })).toHaveCount(0);
-  await expect(page.getByText("Globale Aufgaben", { exact: true })).toBeVisible();
+  await expect(page.getByText(globalTitle, { exact: true })).toBeVisible();
 });

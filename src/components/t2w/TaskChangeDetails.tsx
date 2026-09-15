@@ -1,5 +1,6 @@
 import type { Task } from "@t2w/domain/project-management";
 import { priorityLabel, statusLabel, type PmState } from "@/lib/t2w/project-management";
+import { formatDatum } from "@/lib/t2w/format";
 const fields = {
   title: "Titel",
   description: "Beschreibung",
@@ -28,6 +29,7 @@ export function TaskChangeDetails({
     if (key === "groupId")
       return state.groups.find((g) => g.id === value)?.name ?? "Ehemalige Kategorie";
     if (key === "priority") return priorityLabel[value as Task["priority"]];
+    if (key === "startDate" || key === "endDate") return formatDatum(String(value));
     return String(value);
   };
   return (

@@ -201,23 +201,27 @@ function KundenKontakte() {
         titel="Kunden & Kontakte"
         beschreibung="Stammdaten: Kontakte pflegen und Kundenprofile für Organisationen und Abrechnung verwalten"
         suche={{ value: q, onChange: setQ, placeholder: "Name, E-Mail, Telefon, UID, IBAN …" }}
-      />
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
+        aktion={
           <a
             ref={createTriggerRef}
             href="/kontakte?neu=1"
-            className="rounded bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+            className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground"
           >
-            <Plus className="mr-1 inline size-4" />
+            <Plus className="mr-1 size-4" />
             Neu anlegen
           </a>
-          <div className="flex rounded border border-border p-1">
+        }
+      />
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
+          <div className="flex gap-1" role="tablist" aria-label="Kontaktansicht">
             <button
               onClick={() => {
                 setTab("kontakte");
               }}
-              className={`rounded px-3 py-1.5 text-sm ${tab === "kontakte" ? "bg-accent font-medium" : ""}`}
+              role="tab"
+              aria-selected={tab === "kontakte"}
+              className={`rounded-md px-3 py-1.5 text-sm ${tab === "kontakte" ? "bg-accent font-medium" : "hover:bg-secondary"}`}
             >
               Kontakte ({people.length})
             </button>
@@ -225,7 +229,9 @@ function KundenKontakte() {
               onClick={() => {
                 setTab("kunden");
               }}
-              className={`rounded px-3 py-1.5 text-sm ${tab === "kunden" ? "bg-accent font-medium" : ""}`}
+              role="tab"
+              aria-selected={tab === "kunden"}
+              className={`rounded-md px-3 py-1.5 text-sm ${tab === "kunden" ? "bg-accent font-medium" : "hover:bg-secondary"}`}
             >
               Kunden ({customers.length})
             </button>
@@ -453,8 +459,11 @@ function Table({
   onSort: (key: string) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-      <table className="w-full min-w-[54rem] text-xs">
+    <div
+      className="overflow-x-auto rounded-md border border-border bg-surface"
+      data-density="compact"
+    >
+      <table className="w-full min-w-[54rem] text-[13px] leading-4 [&_thead_tr]:h-[30px] [&_tbody_tr]:h-[34px]">
         <thead className="bg-secondary text-left text-[11px] uppercase text-muted-foreground">
           <tr>
             {h.map((x) => (

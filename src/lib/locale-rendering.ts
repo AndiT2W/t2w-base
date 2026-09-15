@@ -1,4 +1,5 @@
 import type { Locale } from "./i18n";
+import { formatDatum } from "./t2w/format";
 
 export type TranslationCatalog = Record<string, string>;
 
@@ -27,7 +28,7 @@ export function createLocaleRenderer(
       catalog[value] ??
       fallback[value] ??
       (locale === "de" ? value : (legacyTextCatalog[value] ?? value)),
-    formatDate: (iso) => new Intl.DateTimeFormat(intlLocale).format(new Date(`${iso}T00:00:00`)),
+    formatDate: formatDatum,
     formatNumber: (value) => new Intl.NumberFormat(intlLocale).format(value),
   };
 }

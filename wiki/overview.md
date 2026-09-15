@@ -6,7 +6,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 ## Current State
 
-- Aktuell ist [PM-Spezifikation v4](tasks/project-management-spec-v4.md) für Issue #55 umgesetzt: vereinfachte Event- oder globale Aufgaben, drei Status, Tagesplanung, Voraussetzungen, Kommentare und eine geschlossene Kategorie-Gesamtübersicht. Die Tabellenansicht ist Standard, Gantt eine Desktop-Zeitansicht. `PmTask` ist die kanonische Aufgabenhaltung; Migration `0028_canonical_task_projection` entfernt den alten `EventTask`-Speicher bewusst ohne Migration und Event-Schnappschüsse liefern nur Task-Readiness.
+- Aktuell ist [PM-Spezifikation v4](tasks/project-management-spec-v4.md) für Issue #55 umgesetzt: vereinfachte Event- oder globale Aufgaben, drei Status, Tagesplanung, Voraussetzungen und Kommentare. Die Gesamtübersicht ist als dichte, direkt sichtbare Aufgabenliste umgesetzt; Gantt bleibt eine Desktop-Zeitansicht. `PmTask` ist die kanonische Aufgabenhaltung; Migration `0028_canonical_task_projection` entfernt den alten `EventTask`-Speicher bewusst ohne Migration und Event-Schnappschüsse liefern nur Task-Readiness.
 
 - Der Aufgabenablauf wird seit 2026-09-15 kanonisch im Domain-Paket projiziert: verbundene Aufgaben bilden einen Ablauf, unabhängige Aufgaben getrennte Abläufe. Event- und Gesamtansicht verwenden ein gemeinsames Task-Detail; der kompakte DataTable-Vertrag gilt für alle sechs operativen Listen. Siehe [Aufgabenplanung und Tabellen-Vertiefung](concepts/task-planning-and-table-deepening-2026-09-15.md).
 
@@ -54,6 +54,8 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 - Der Hardware-Anlegeflow ist als durchgängiger rechter Sheet spezifiziert; das bestehende Inline-Editing bleibt der schnelle Bearbeitungsweg für Tabellenzeilen. Siehe [Hardware-Anlage im seitlichen Sheet](tasks/hardware-create-sheet-spec.md).
 - Das Hardware-Anlegeformular folgt nun dem Muster der Kontakt-Details: sichtbare Feldbeschriftungen, Gruppen für Empfänger, Ausgabe und Details sowie ein responsives Zwei-Spalten-Raster. Die angepasste Browser-Regression prüft die Abschnitte und beschrifteten Felder. Siehe [Hardware-Workspace](../../src/components/t2w/HardwareWorkspace.tsx) und [Hardware-E2E-Test](../../tests/e2e/hardware.spec.ts).
 - Der einheitliche Tabellenstandard folgt einer ClickUp-dichten Desktopansicht: 30-px-Kopfzeilen, 34-px-Datenzeilen, einzeilige 13-px-Zellen und kompakte Status-Tags. Sichtbarkeit, Sortierung und mögliche Spaltenreihenfolge sind als versionierte Benutzerpräferenz im Event-Service hinterlegt. Siehe [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
+- Nutzerentscheidung vom 2026-09-15: Inhaltseiten folgen Variante A – verfügbare Arbeitsbreite, kompakte Kennzahlen und Filterzeilen sowie unmittelbar sichtbare Tabellen. Die linke Navigation bleibt unverändert. Die globale Aufgabenliste, Übersicht, Veranstaltungen, Kontakte, Hardware, Auszahlungen und Einstellungen wurden entsprechend verdichtet. Siehe [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
+- Nutzerentscheidung vom 2026-09-15: Alle sichtbaren Datumswerte folgen dem Format `dd.mm.yyyy`; Zeitstempel zeigen die Uhrzeit erst danach. ISO-Daten bleiben intern und in nativen Datumseingaben erhalten. Siehe [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
 
 ## Next Best Actions
 

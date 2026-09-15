@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PayoutCreateForm } from "@/components/t2w/PayoutsPanel";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
 import { DataTable } from "@/components/t2w/DataTable";
+import { formatDatum } from "@/lib/t2w/format";
 
 type Payout = {
   id: string;
@@ -98,19 +99,19 @@ function Auszahlungen() {
         beschreibung="Nenngeld-Auszahlungen über alle Events"
       />
       <PayoutCreateForm events={events} onCreated={() => void load()} />
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-3">
         <input
           aria-label="Auszahlungen durchsuchen"
           placeholder="Nummer, Event oder Empfänger …"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          className="h-8 rounded-md border border-border bg-background px-3 text-[13px]"
         />
         <select
           aria-label="Status filtern"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          className="h-8 rounded-md border border-border bg-background px-3 text-[13px]"
         >
           <option value="">Alle Status</option>
           <option value="OFFEN">Offen</option>
@@ -123,7 +124,7 @@ function Auszahlungen() {
           aria-label="Event filtern"
           value={eventId}
           onChange={(e) => setEventId(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          className="h-8 rounded-md border border-border bg-background px-3 text-[13px]"
         >
           <option value="">Alle Events</option>
           {events.map((event) => (
@@ -137,13 +138,13 @@ function Auszahlungen() {
           placeholder="Jahr"
           value={year}
           onChange={(e) => setYear(e.target.value)}
-          className="w-24 rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          className="h-8 w-24 rounded-md border border-border bg-background px-3 text-[13px]"
         />
         <select
           aria-label="Empfänger filtern"
           value={recipientId}
           onChange={(e) => setRecipientId(e.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+          className="h-8 rounded-md border border-border bg-background px-3 text-[13px]"
         >
           <option value="">Alle Empfänger</option>
           {recipients.map((recipient) => (
@@ -152,7 +153,7 @@ function Auszahlungen() {
             </option>
           ))}
         </select>
-        <Button disabled={!selected.length} onClick={() => void mark()}>
+        <Button size="sm" disabled={!selected.length} onClick={() => void mark()}>
           Für Mailversand markieren ({selected.length})
         </Button>
       </div>
@@ -233,8 +234,8 @@ function Auszahlungen() {
                   {p.currency}
                 </td>
                 <td className="px-2 py-1">{status(p)}</td>
-                <td className="px-2 py-1">{p.mailSentAt?.slice(0, 10) ?? "—"}</td>
-                <td className="px-2 py-1">{p.paidAt?.slice(0, 10) ?? "—"}</td>
+                <td className="px-2 py-1">{p.mailSentAt ? formatDatum(p.mailSentAt) : "—"}</td>
+                <td className="px-2 py-1">{p.paidAt ? formatDatum(p.paidAt) : "—"}</td>
                 <td className="px-2 py-1">
                   <input
                     aria-label={`${p.payoutNumber} Transaktionsbestätigung`}

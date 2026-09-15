@@ -70,6 +70,7 @@ describe("projectCommunicationTimeline", () => {
     expect(timeline.groups.flatMap((group) => group.messages).map((message) => message.id)).toEqual(
       ["note"],
     );
+    expect(timeline.groups[0]?.label).toBe("02.09.2026");
     expect(timeline.selectedThread("note").map((message) => message.id)).toEqual(["note"]);
   });
 });

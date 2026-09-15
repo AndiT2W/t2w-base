@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/t2w/DataTable";
 import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { TaskFlowBadges } from "@/components/t2w/TaskFlowBadges";
+import { formatDatum } from "@/lib/t2w/format";
 import {
   pmCommand,
   pmRead,
@@ -208,7 +209,9 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                                   {state.owners.find((owner) => owner.id === task.ownerId)
                                     ?.displayName ?? "—"}
                                 </td>
-                                <td className="p-3">{task.endDate ?? "—"}</td>
+                                <td className="p-3">
+                                  {task.endDate ? formatDatum(task.endDate) : "—"}
+                                </td>
                                 <td className="p-3">{priorityLabel[task.priority]}</td>
                                 <td className="p-3">{statusLabel[task.status]}</td>
                               </tr>
@@ -225,7 +228,8 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                           >
                             <strong>{task.title}</strong>
                             <p className="mt-1 text-sm text-muted-foreground">
-                              {statusLabel[task.status]} · {task.endDate ?? "Ohne Ende"} ·{" "}
+                              {statusLabel[task.status]} ·{" "}
+                              {task.endDate ? formatDatum(task.endDate) : "Ohne Ende"} ·{" "}
                               {priorityLabel[task.priority]}
                             </p>
                           </button>

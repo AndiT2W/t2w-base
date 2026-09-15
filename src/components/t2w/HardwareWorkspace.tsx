@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
+import { formatDatum } from "@/lib/t2w/format";
 import { useT2W } from "@/lib/t2w/store";
 
 type Item = {
@@ -432,7 +433,7 @@ export function HardwareWorkspace({
                   <td
                     className={`p-2 ${item.dueDate && item.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10) && item.status !== "RETURNED" && item.status !== "COMPLETED" ? "font-semibold text-destructive" : ""}`}
                   >
-                    {item.dueDate?.slice(0, 10) ?? "—"}
+                    {item.dueDate ? formatDatum(item.dueDate) : "—"}
                   </td>
                   <td className="flex gap-1 p-2">
                     <Button size="sm" variant="outline" onClick={() => setEditing(item)}>

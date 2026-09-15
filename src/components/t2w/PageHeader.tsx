@@ -24,7 +24,7 @@ export function PageHeader({
   const [global, setGlobal] = useState("");
 
   return (
-    <header className="sticky top-16 z-30 -mx-4 mb-5 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0">
+    <header className="sticky top-16 z-30 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-7 lg:top-0 lg:px-7">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <nav
@@ -45,11 +45,11 @@ export function PageHeader({
             ))}
             <span className="font-medium text-foreground">{t(titel)}</span>
           </nav>
-          <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground">
             {t(titel)}
           </h1>
           {beschreibung && (
-            <p className="mt-0.5 text-sm text-muted-foreground">{t(beschreibung)}</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">{t(beschreibung)}</p>
           )}
         </div>
 
