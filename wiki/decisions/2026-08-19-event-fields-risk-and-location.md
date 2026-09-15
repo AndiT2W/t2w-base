@@ -10,7 +10,7 @@
 - Der interne Hauptverantwortliche ist im Anlageformular optional.
 - Die Teilnehmerzahl wird nicht im Anlageformular manuell erfasst. Wenn `t2w_event_id` gesetzt ist, wird sie einmal täglich aus TIME2WIN aktualisiert.
 - Teilnehmerprognose und aktueller Teilnehmerstand werden als zwei getrennte Werte geführt.
-- `t2w_event_id` wird ausschließlich auf der Eventdetailseite im eigenen Reiter `TIME2WIN-Verknüpfung` neben `Stammdaten` gepflegt.
+- Historischer Stand: `t2w_event_id` sollte ausschließlich im Reiter `TIME2WIN-Verknüpfung` gepflegt werden. Diese Pflegeort-Festlegung wurde durch die [Entscheidung vom 2026-09-15](2026-09-15-time2win-event-id-in-stammdaten.md) ersetzt; die ID ist nun in den Stammdaten änderbar.
 - Die Sportart kann aus der TIME2WIN-Event-API stammen, wenn eine `t2w_event_id` verknüpft ist.
 - Ohne `t2w_event_id` wird die Sportart im Event selbst über das erweiterbare Dropdown gepflegt.
 - Wird eine `t2w_event_id` später ergänzt, darf die API-Sportart die manuelle Sportart nicht ungefragt überschreiben; Abweichungen müssen sichtbar sein und bestätigt werden.

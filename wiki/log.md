@@ -590,3 +590,15 @@ Nutzerfeedback bewertet das UI insgesamt und besonders die Tabellenköpfe als zu
 ## 2026-09-15 — Ausgewogene Tabellenkopf-Kontraste umgesetzt
 
 Die bestätigte neutrale Variante ist nun für gemeinsame und fachliche Tabellen umgesetzt: weißer Tabellenkörper, neutralgrauer Kopf, dunkle 12-px-Beschriftung ohne Versalsatz und eine 2-px-Unterkante. Semantische Light-/Dark-Mode-Tokens und der Styleguide halten die Darstellung zentral fest. Der gezielte Browser-Regressionstest, Lint der betroffenen Dateien und der Produktionsbuild sind erfolgreich. Quellen: `src/styles.css`, `src/components/t2w/DataTable.tsx`, `src/components/ui/table.tsx`, `src/routes/styleguide.tsx`, `tests/e2e/table-preferences.spec.ts` und [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
+
+## 2026-09-15 — TIME2WIN-Event-ID in Stammdaten änderbar
+
+Das TIME2WIN-ID-Feld in den Event-Stammdaten war schreibgeschützt. Es ist nun eine ganzzahlige Eingabe und wird mit dem bestehenden Stammdaten-Speichern persistiert. Der E2E-Test prüft die Änderung eines vorhandenen Werts und dessen Erhalt nach Reload. Die frühere Festlegung zum ausschließlichen Pflegeort im TIME2WIN-Reiter ist für die ID abgelöst. Details: [Entscheidung](decisions/2026-09-15-time2win-event-id-in-stammdaten.md), [Implementierung](../src/routes/events.$eventcode.tsx), [Browser-Regression](../tests/e2e/event-management.spec.ts).
+
+## 2026-09-15 — Statusspalte der Eventtabellen verdichtet
+
+Übersicht und Veranstaltungsansicht zeigen in der Statusspalte nur den farbigen Punkt. Die Spalte ist auf 3 rem begrenzt und zeigt im Sortierkopf `St.` bei erhaltenem zugänglichem Namen `Status sortieren`. Der volle Status ist pro Zelle für Screenreader verfügbar. Ein E2E-Test sichert die Breite und Statusbeschriftung in beiden Ansichten. Quellen: `src/routes/index.tsx`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts`.
+
+## 2026-09-15 — TIME2WIN-Backend-Link in Eventtabellen
+
+Übersicht und Veranstaltungsansicht zeigen eine TIME2WIN-Logo-Spalte. Eine vorhandene Event-ID wird als Link zum Backend-Event angezeigt; ohne ID bleibt die Zelle ohne Backend-Link. Browser-Regressionen prüfen Ziel-URL und den Leerzustand in beiden Ansichten. Quellen: `src/routes/index.tsx`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts`.

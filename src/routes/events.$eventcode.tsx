@@ -577,18 +577,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
             <TabsTrigger value="finanz">FINANZ</TabsTrigger>
             <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
-            <TabsTrigger
-              id="event-tab-aufgaben"
-              className="hidden md:inline-flex"
-              value="aufgaben"
-            >
+            <TabsTrigger id="event-tab-aufgaben" className="hidden md:inline-flex" value="aufgaben">
               PROJEKTMANAGEMENT
             </TabsTrigger>
-            <TabsTrigger
-              id="event-tab-dateien"
-              className="hidden md:inline-flex"
-              value="dateien"
-            >
+            <TabsTrigger id="event-tab-dateien" className="hidden md:inline-flex" value="dateien">
               DATEIEN
             </TabsTrigger>
             <TabsTrigger
@@ -598,11 +590,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             >
               KOMMUNIKATION
             </TabsTrigger>
-            <TabsTrigger
-              id="event-tab-hardware"
-              className="hidden md:inline-flex"
-              value="hardware"
-            >
+            <TabsTrigger id="event-tab-hardware" className="hidden md:inline-flex" value="hardware">
               HARDWARE
             </TabsTrigger>
           </TabsList>
@@ -681,36 +669,39 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   >
                     Identität &amp; Zeitraum
                   </h3>
-                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                  <Label htmlFor="d-code">
-                    Eventcode{" "}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      (unveränderlich)
-                    </span>
-                  </Label>
-                  <Input
-                    id="d-code"
-                    value={form.eventcode}
-                    readOnly
-                    disabled
-                    className="font-mono"
-                  />
-                </div>
-                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                  <Label htmlFor="d-t2w-basic">Event Id</Label>
-                  <Input
-                    id="d-t2w-basic"
-                    type="number"
-                    value={form.t2wEventId ?? ""}
-                    readOnly
-                    className="font-mono"
-                  />
-                </div>
-                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                  <Label htmlFor="d-start">Startdatum *</Label>
-                  <Input
-                    id="d-start"
-                    type="date"
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-code">
+                      Eventcode{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        (unveränderlich)
+                      </span>
+                    </Label>
+                    <Input
+                      id="d-code"
+                      value={form.eventcode}
+                      readOnly
+                      disabled
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-t2w-basic">Event Id</Label>
+                    <Input
+                      id="d-t2w-basic"
+                      type="number"
+                      step="1"
+                      value={form.t2wEventId ?? ""}
+                      onChange={(e) =>
+                        set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))
+                      }
+                      className="font-mono"
+                    />
+                  </div>
+                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
+                    <Label htmlFor="d-start">Startdatum *</Label>
+                    <Input
+                      id="d-start"
+                      type="date"
                       value={form.start}
                       onChange={(e) => set("start", e.target.value)}
                     />

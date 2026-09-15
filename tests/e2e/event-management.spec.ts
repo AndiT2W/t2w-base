@@ -469,11 +469,13 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await page.goto("/veranstaltungen");
   const table = page.locator("table");
   await expect(table).toBeVisible();
-  await expect(table.locator("thead th")).toHaveCount(10);
+  await expect(table.locator("thead th")).toHaveCount(11);
   await expect(table.locator("thead")).toContainText("St");
   await expect(table.locator("thead")).toContainText("Aufgaben");
   await expect(table.getByRole("columnheader", { name: "Sportart sortieren" })).toBeVisible();
   await expect(table.getByRole("columnheader", { name: "Services sortieren" })).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "TIME2WIN sortieren" })).toBeVisible();
+  await expect(table.locator("thead img[src='/time2win_logo_button.svg']")).toBeVisible();
   const eventRow = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
   await expect(eventRow.getByRole("cell").nth(3)).toHaveText("Triathlon");
   await expect(eventRow.getByRole("cell").nth(3).locator("svg")).toHaveCount(1);
@@ -498,6 +500,51 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(overviewRow.getByRole("cell").nth(4)).toContainText("UHF");
   await expect(overviewRow.getByRole("cell").nth(4)).toContainText("Video (iRewind)");
   await expect(overviewRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(2);
+});
+
+test("hält die Statusspalte der Eventtabellen kompakt", async ({ page }) => {
+  await mockApi(page);
+
+  for (const path of ["/", "/veranstaltungen"]) {
+    await page.goto(path);
+    const statusHeader = page.getByRole("columnheader", { name: "Status sortieren" });
+    await expect(statusHeader).toBeVisible();
+    expect((await statusHeader.boundingBox())?.width).toBeLessThanOrEqual(56);
+    const eventRow = page.locator("table tbody tr").filter({ hasText: "Bestehendes Event" });
+    await expect(eventRow.getByRole("cell").first()).toContainText("Anfrage");
+  }
+});
+
+test("verlinkt die TIME2WIN-Event-ID aus beiden Eventtabellen mit dem Backend", async ({
+  page,
+}) => {
+  await mockApi(page, { t2wEventId: 57 });
+
+  for (const path of ["/", "/veranstaltungen"]) {
+    await page.goto(path);
+    const table = page.locator("table");
+    const eventRow = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
+    const backendLink = eventRow.getByRole("link", {
+      name: "TIME2WIN Event-ID 57 im Backend öffnen",
+    });
+
+    await expect(table.getByRole("columnheader", { name: "TIME2WIN sortieren" })).toBeVisible();
+    await expect(table.locator("thead img[src='/time2win_logo_button.svg']")).toBeVisible();
+    await expect(backendLink).toHaveText("57");
+    await expect(backendLink).toHaveAttribute("href", "https://time2win.at/backend/event/57");
+    await expect(backendLink).toHaveAttribute("target", "_blank");
+  }
+});
+
+test("zeigt ohne TIME2WIN-Event-ID keinen Backend-Link in den Eventtabellen", async ({ page }) => {
+  await mockApi(page);
+
+  for (const path of ["/", "/veranstaltungen"]) {
+    await page.goto(path);
+    await expect(page.locator("table a[href^='https://time2win.at/backend/event/']")).toHaveCount(
+      0,
+    );
+  }
 });
 
 test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async ({ page }) => {
@@ -919,9 +966,30 @@ test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ pa
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
   await page.getByRole("tab", { name: "TIME2WIN" }).click();
-  await expect(page.getByLabel("Event Id")).toBeVisible();
+  await expect(page.getByText("Event Id", { exact: true })).toBeVisible();
+  await expect(page.locator("#d-t2w")).toBeVisible();
   await expect(page.getByText("Gemeldete TN:")).toBeVisible();
   await expect(page.getByText("Status: NEVER")).toBeVisible();
+});
+
+test("ändert die TIME2WIN-Event-ID in den Stammdaten und behält sie nach Reload", async ({
+  page,
+}) => {
+  const requests = await mockApi(page, { t2wEventId: 42 });
+  await page.goto("/events/260820_demo_event");
+
+  await page.getByLabel("Event Id").fill("1082");
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
+  expect(
+    requests.some(
+      (request) =>
+        request.method === "PATCH" && JSON.parse(request.body ?? "{}").t2wEventId === 1082,
+    ),
+  ).toBeTruthy();
+
+  await page.reload();
+  await expect(page.getByLabel("Event Id")).toHaveValue("1082");
 });
 
 test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben", async ({
