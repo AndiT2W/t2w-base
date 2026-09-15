@@ -15,7 +15,7 @@ export function PageHeader({
 }: {
   krumen?: Krume[];
   titel: string;
-  beschreibung?: string;
+  beschreibung?: ReactNode;
   suche?: { value: string; onChange: (v: string) => void; placeholder?: string };
   aktion?: ReactNode;
 }) {
@@ -49,7 +49,9 @@ export function PageHeader({
             {t(titel)}
           </h1>
           {beschreibung && (
-            <p className="mt-0.5 text-[13px] text-muted-foreground">{t(beschreibung)}</p>
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
+              {typeof beschreibung === "string" ? t(beschreibung) : beschreibung}
+            </p>
           )}
         </div>
 

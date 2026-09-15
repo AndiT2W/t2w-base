@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { CalendarDays, CheckSquare } from "lucide-react";
 import { FolderLink } from "@/components/t2w/FolderLink";
+import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { formatZeitraum } from "@/lib/t2w/format";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
@@ -39,7 +40,9 @@ export function EventMobileList({
                 >
                   <span className="line-clamp-2">{event.name}</span>
                 </Link>
-                <p className="truncate text-sm text-muted-foreground">{event.veranstalter}</p>
+                <p className="truncate text-sm text-muted-foreground">
+                  <OrganizerLink organizerId={event.veranstalterId} name={event.veranstalter} />
+                </p>
               </div>
               <div className="flex items-center gap-1">
                 <StatusBadge status={event.status} />

@@ -81,6 +81,7 @@ import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
 import { ServiceBadge, SelectionBadge } from "@/components/t2w/ServiceBadge";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
   const address = [
@@ -497,7 +498,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           { label: "Veranstaltungen", to: "/veranstaltungen" },
         ]}
         titel={event.name}
-        beschreibung={`${event.veranstalter} · ${formatZeitraum(event.start, event.ende)} · ${event.eventcode}`}
+        beschreibung={
+          <>
+            <OrganizerLink organizerId={event.veranstalterId} name={event.veranstalter} />
+            {` · ${formatZeitraum(event.start, event.ende)} · ${event.eventcode}`}
+          </>
+        }
       />
 
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-5">

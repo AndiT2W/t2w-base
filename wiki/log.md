@@ -602,3 +602,7 @@ Das TIME2WIN-ID-Feld in den Event-Stammdaten war schreibgeschützt. Es ist nun e
 ## 2026-09-15 — TIME2WIN-Backend-Link in Eventtabellen
 
 Übersicht und Veranstaltungsansicht zeigen eine TIME2WIN-Logo-Spalte. Eine vorhandene Event-ID wird als Link zum Backend-Event angezeigt; ohne ID bleibt die Zelle ohne Backend-Link. Browser-Regressionen prüfen Ziel-URL und den Leerzustand in beiden Ansichten. Quellen: `src/routes/index.tsx`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts`.
+
+## 2026-09-15 — Veranstalter mit Kundendatensätzen verlinkt
+
+Alle reinen Veranstalter-Anzeigen in Übersicht, Veranstaltungsliste, mobiler Eventkarte, Angeboten, Rechnungen und Eventkopf führen bei vorhandener Veranstalter-ID dezent zum zugehörigen Kunden-Datensatz. Ohne ID bleibt der Name unverlinkter Text. Der gemeinsame Link besitzt Tastaturfokus; eine Browser-Regression prüft alle Ansichten und öffnet den referenzierten Kundendatensatz. Produktionsbuild, Lint, 60 Unit-Tests und der gezielte Browser-Test sind erfolgreich. Quellen: `src/components/t2w/OrganizerLink.tsx`, `src/components/t2w/EventMobileList.tsx`, `src/routes/index.tsx`, `src/routes/veranstaltungen.tsx`, `src/routes/angebote.tsx`, `src/routes/rechnungen.tsx`, `src/routes/events.$eventcode.tsx`, `tests/e2e/event-management.spec.ts` und Nutzerkonversation vom 2026-09-15.

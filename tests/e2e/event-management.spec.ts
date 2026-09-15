@@ -204,6 +204,37 @@ test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) =>
   await expect(page.locator("table").getByText("Alter Veranstalter")).toBeVisible();
 });
 
+test("verlinkt angezeigte Veranstalter mit ihrem Kundendatensatz", async ({ page }) => {
+  await mockApi(page);
+
+  for (const path of ["/", "/veranstaltungen", "/angebote", "/rechnungen"] as const) {
+    await page.goto(path);
+    if (path === "/") await page.getByRole("button", { name: "Alle aktiven" }).click();
+    const organizers = page.getByRole("link", { name: "Alter Veranstalter", exact: true });
+    await expect(organizers.first()).toBeVisible();
+    for (const organizer of await organizers.all()) {
+      await expect(organizer).toHaveAttribute("href", "/kontakte?kunde=c1");
+    }
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Alle aktiven" }).click();
+  await expect(
+    page.getByRole("link", { name: "Alter Veranstalter", exact: true }).first(),
+  ).toHaveAttribute("href", "/kontakte?kunde=c1");
+
+  await page.goto("/events/260820_demo_event");
+  const organizer = page.getByRole("link", { name: "Alter Veranstalter", exact: true });
+  await expect(organizer).toHaveAttribute("href", "/kontakte?kunde=c1");
+  await organizer.click();
+
+  await expect(page).toHaveURL(/\/kontakte\?kunde=c1$/);
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { name: "Nordwerk GmbH" }),
+  ).toBeVisible();
+});
+
 test("lädt Events in 500er-Seiten und zeigt standardmäßig das aktuelle Jahr", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/veranstaltungen");

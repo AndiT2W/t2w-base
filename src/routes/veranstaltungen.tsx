@@ -27,6 +27,7 @@ import {
 } from "@/lib/t2w/event-catalogue";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
+import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -367,7 +368,9 @@ function Veranstaltungen() {
                       </td>
                     )}
                     {visibleColumns.includes("Veranstalter") && (
-                      <td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td>
+                      <td className="max-w-[10rem] truncate px-2 py-1">
+                        <OrganizerLink organizerId={e.veranstalterId} name={e.veranstalter} />
+                      </td>
                     )}
                     {visibleColumns.includes("Sportart") && (
                       <td className="max-w-[9rem] truncate px-2 py-1" title={e.sportart || "—"}>

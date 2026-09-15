@@ -6,6 +6,7 @@ import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL } from "@/lib/t2w/types";
 import { invoiceReadyEvents } from "@/lib/t2w/event-projections";
+import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 
 export const Route = createFileRoute("/rechnungen")({
   head: () => ({
@@ -73,7 +74,9 @@ function Rechnungen() {
                       {e.name}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{e.veranstalter}</td>
+                  <td className="px-3 py-2">
+                    <OrganizerLink organizerId={e.veranstalterId} name={e.veranstalter} />
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2">{formatZeitraum(e.start, e.ende)}</td>
                   <td className="px-3 py-2">
                     <span className="flex items-center gap-2">

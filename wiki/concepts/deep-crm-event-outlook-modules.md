@@ -1,6 +1,6 @@
 # Deep CRM, Event Workspace, and Outlook Modules
 
-Updated: 2026-08-28
+Updated: 2026-09-15
 
 ## Current architecture
 
@@ -16,6 +16,7 @@ Updated: 2026-08-28
 - Backend Event creation and update invariants live in the Event mutation module. Organizer resolution, payout/invoice-recipient defaults, optimistic version checks, recipient replacement, and persistence execute through one transaction-oriented interface. The Nest controller is the HTTP adapter and Prisma is the production persistence adapter.
 - The Outlook Event-folder module owns the `year folder / quarter / Eventcode` plan, drift detection, mapping resolution, folder creation, and sync status persistence.
 - The event workspace persists event-contact roles, tasks, file/SharePoint references, and manual activities as explicit Event-Service resources. The event detail route uses those resource endpoints; they are not browser-only collections.
+- Read-only Event projections render an organizer through the shared `OrganizerLink`. If the Event contains an organizer ID, the displayed name links to that exact customer record at `/kontakte?kunde=<id>`; without an ID it remains plain text. This applies to overview, Event list, mobile cards, offers, invoices, and the Event header.
 
 ## Test seams
 
@@ -31,6 +32,7 @@ Updated: 2026-08-28
 - `services/event-service/src/time2win.adapter.ts`: TIME2WIN HTTP/authentication and response-normalization adapter.
 - `services/event-service/src/events.controller.ts`: event-workspace subresource endpoints for roles, tasks, files, and manual activities.
 - `tests/e2e/event-management.spec.ts`: browser workflow verifies CRM persistence after reload and Event/Outlook behavior.
+- `tests/e2e/event-management.spec.ts`: organizer-link regression covers all read-only Event projections, the mobile card, and opening the referenced customer detail.
 
 ## Evidence
 
@@ -38,6 +40,7 @@ Updated: 2026-08-28
 - [Local CRM adapter](../../src/lib/crm/local-adapter.ts)
 - [Event workspace implementation](../../src/lib/t2w/event-workspace.ts)
 - [Event mutation implementation](../../services/event-service/src/event-mutations.ts)
+- [Shared organizer link](../../src/components/t2w/OrganizerLink.tsx)
 - [Prisma Event mutation adapter](../../services/event-service/src/prisma-event-mutation.adapter.ts)
 - [Outlook folder implementation](../../services/event-service/src/outlook/outlook.folder.service.ts)
 - [Person, Kundenprofil und Eventrollen decision](../decisions/2026-08-21-person-kundenprofil-und-eventrollen.md)
