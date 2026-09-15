@@ -700,7 +700,7 @@ export async function apiCopyEvent(
 
 export const apiUpdateEventSeries = (
   id: string,
-  input: { targetEventId?: string; version?: number },
+  input: { targetEventIds?: string[]; version?: number },
 ) =>
   eventAction<ApiEvent[]>(`/api/v1/events/${id}/series`, "PATCH", input).then((events) =>
     events.map(mapApiEvent),

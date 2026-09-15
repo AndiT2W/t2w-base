@@ -42,6 +42,9 @@ function adapter(): EventMutationAdapter & { events: Map<string, Record<string, 
     async getEvent(id) {
       return events.get(id);
     },
+    async getEventsBySeries(seriesId) {
+      return [...events.values()].filter((event) => event.seriesId === seriesId);
+    },
     async replaceContactRole(id, contactId, role, nextRole) {
       events.set(id, { ...events.get(id), contactId, previousRole: role, role: nextRole });
     },
@@ -199,17 +202,53 @@ describe("Event mutation module", () => {
     });
   });
 
-  it("links an existing Event to another Event's series and can remove it again", async () => {
+  it("links multiple existing Events as one series and can remove the current Event again", async () => {
     const persistence = adapter();
     persistence.events.set("e1", { id: "e1", version: 1, name: "Race 2026" });
     persistence.events.set("e2", { id: "e2", version: 3, name: "Race 2027" });
+    persistence.events.set("e3", { id: "e3", version: 2, name: "Race 2028" });
     const mutations = new EventMutations(persistence);
 
-    const linked = await mutations.updateSeries("e1", { targetEventId: "e2", version: 1 });
-    expect(linked).toHaveLength(2);
+    const linked = await mutations.updateSeries("e1", {
+      targetEventIds: ["e2", "e3"],
+      version: 1,
+    });
+    expect(linked).toHaveLength(3);
     expect(persistence.events.get("e1")?.seriesId).toBe(persistence.events.get("e2")?.seriesId);
+    expect(persistence.events.get("e1")?.seriesId).toBe(persistence.events.get("e3")?.seriesId);
 
     await mutations.updateSeries("e1", { version: 2 });
     expect(persistence.events.get("e1")?.seriesId).toBeNull();
+  });
+
+  it("replaces the selected members of an existing Event series", async () => {
+    const persistence = adapter();
+    persistence.events.set("e1", { id: "e1", version: 1, seriesId: "series-1" });
+    persistence.events.set("e2", { id: "e2", version: 3, seriesId: "series-1" });
+    persistence.events.set("e3", { id: "e3", version: 2, seriesId: null });
+
+    await new EventMutations(persistence).updateSeries("e1", {
+      targetEventIds: ["e3"],
+      version: 1,
+    });
+
+    expect(persistence.events.get("e1")?.seriesId).toBe("series-1");
+    expect(persistence.events.get("e2")?.seriesId).toBeNull();
+    expect(persistence.events.get("e3")?.seriesId).toBe("series-1");
+  });
+
+  it("keeps the previous single-target series mutation compatible", async () => {
+    const persistence = adapter();
+    persistence.events.set("e1", { id: "e1", version: 1, seriesId: "old-series" });
+    persistence.events.set("e2", { id: "e2", version: 3, seriesId: "old-series" });
+    persistence.events.set("e3", { id: "e3", version: 2, seriesId: null });
+
+    await new EventMutations(persistence).updateSeries("e1", {
+      targetEventId: "e3",
+      version: 1,
+    });
+
+    expect(persistence.events.get("e1")?.seriesId).toBe(persistence.events.get("e3")?.seriesId);
+    expect(persistence.events.get("e2")?.seriesId).toBe("old-series");
   });
 });

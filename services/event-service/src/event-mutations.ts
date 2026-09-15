@@ -33,6 +33,7 @@ export type CopyEventMutation = {
   version?: number;
 };
 export type EventSeriesMutation = {
+  targetEventIds?: string[];
   targetEventId?: string;
   version?: number;
 };
@@ -50,6 +51,7 @@ export interface EventMutationAdapter {
   replaceInvoiceRecipients(id: string, organizerIds: string[]): Promise<void>;
   replaceServices(id: string, serviceIds: string[]): Promise<void>;
   getEvent(id: string): Promise<EventMutationRecord | undefined>;
+  getEventsBySeries(seriesId: string): Promise<EventMutationRecord[]>;
   touchEvent(id: string, version: number | undefined): Promise<boolean>;
   addContact(eventId: string, contactId: string, role: string): Promise<void>;
   removeContact(eventId: string, contactId: string, role: string): Promise<void>;
@@ -121,34 +123,70 @@ export class EventMutations {
     return this.persistence.transaction(async (adapter) => {
       const current = await adapter.getEvent(id);
       if (!current) throw new EventMutationConflict();
-      if (!input.targetEventId) {
+      const requestedTargetIds =
+        input.targetEventIds ?? (input.targetEventId ? [input.targetEventId] : []);
+      const legacySingleTarget = input.targetEventIds === undefined && Boolean(input.targetEventId);
+      const targetEventIds = [...new Set(requestedTargetIds)].filter((targetId) => targetId !== id);
+      if (!targetEventIds.length) {
+        if (requestedTargetIds.length) return [current];
         if (!(await adapter.updateEvent(id, input.version, { seriesId: null })))
           throw new EventMutationConflict();
         const event = await adapter.getEvent(id);
         if (!event) throw new EventMutationConflict();
         return [event];
       }
-      if (input.targetEventId === id) return [current];
-      const target = await adapter.getEvent(input.targetEventId);
-      if (!target) throw new Error("SERIES_TARGET_NOT_FOUND");
-      const targetSeriesId = (target.seriesId as string | null | undefined) ?? crypto.randomUUID();
-      const updatedEvents: EventMutationRecord[] = [];
-      if (!target.seriesId) {
-        if (
-          !(await adapter.updateEvent(input.targetEventId, target.version as number | undefined, {
-            seriesId: targetSeriesId,
-          }))
-        )
-          throw new EventMutationConflict();
-        const updatedTarget = await adapter.getEvent(input.targetEventId);
-        if (!updatedTarget) throw new EventMutationConflict();
-        updatedEvents.push(updatedTarget);
+
+      const targets = await Promise.all(
+        targetEventIds.map((targetId) => adapter.getEvent(targetId)),
+      );
+      if (targets.some((target) => !target)) throw new Error("SERIES_TARGET_NOT_FOUND");
+
+      const currentSeriesId = current.seriesId as string | null | undefined;
+      const legacyTargetSeriesId = (targets[0]?.seriesId as string | null | undefined) ?? undefined;
+      const targetSeriesId = legacySingleTarget
+        ? (legacyTargetSeriesId ?? crypto.randomUUID())
+        : (currentSeriesId ?? crypto.randomUUID());
+      const selectedIds = new Set([id, ...targetEventIds]);
+      const changedEvents = new Map<string, EventMutationRecord>();
+
+      if (currentSeriesId && !legacySingleTarget) {
+        const formerSeriesEvents = await adapter.getEventsBySeries(currentSeriesId);
+        for (const formerEvent of formerSeriesEvents) {
+          const formerId = formerEvent.id as string;
+          if (selectedIds.has(formerId)) continue;
+          if (
+            !(await adapter.updateEvent(formerId, formerEvent.version as number | undefined, {
+              seriesId: null,
+            }))
+          )
+            throw new EventMutationConflict();
+          const detachedEvent = await adapter.getEvent(formerId);
+          if (!detachedEvent) throw new EventMutationConflict();
+          changedEvents.set(formerId, detachedEvent);
+        }
       }
+
+      for (const target of targets as EventMutationRecord[]) {
+        const targetId = target.id as string;
+        if (target.seriesId !== targetSeriesId) {
+          if (
+            !(await adapter.updateEvent(targetId, target.version as number | undefined, {
+              seriesId: targetSeriesId,
+            }))
+          )
+            throw new EventMutationConflict();
+        }
+        const updatedTarget = await adapter.getEvent(targetId);
+        if (!updatedTarget) throw new EventMutationConflict();
+        changedEvents.set(targetId, updatedTarget);
+      }
+
       if (!(await adapter.updateEvent(id, input.version, { seriesId: targetSeriesId })))
         throw new EventMutationConflict();
       const event = await adapter.getEvent(id);
       if (!event) throw new EventMutationConflict();
-      return [event, ...updatedEvents];
+      changedEvents.delete(id);
+      return [event, ...changedEvents.values()];
     });
   }
 

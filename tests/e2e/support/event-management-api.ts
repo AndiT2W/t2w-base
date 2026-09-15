@@ -17,6 +17,7 @@ export const event = {
   time2winLastSuccessAt: null,
   time2winLastError: null,
   time2winSnapshot: null,
+  seriesId: null as string | null,
   notes: "",
   services: [] as { service: { id: string; name: string } }[],
   archived: false,
@@ -54,6 +55,7 @@ export async function mockEventManagementApi(
   page: Page,
   eventOverride: Partial<typeof event> = {},
   relatedEventOverride: Partial<typeof event> = {},
+  additionalEventOverrides: Partial<typeof event>[] = [],
 ) {
   const requests: { method: string; url: string; body?: string }[] = [];
   let mockedEvent = { ...event, ...eventOverride };
@@ -66,6 +68,7 @@ export async function mockEventManagementApi(
     endAt: "2027-08-21T00:00:00.000Z",
     ...relatedEventOverride,
   };
+  let additionalEvents = additionalEventOverrides.map((override) => ({ ...event, ...override }));
   let copiedEvents: (typeof mockedEvent)[] = [];
   let eventDeleted = false;
   let settings = {
@@ -217,6 +220,7 @@ export async function mockEventManagementApi(
         body: JSON.stringify([
           ...(eventDeleted ? [] : [mockedEvent]),
           relatedEvent,
+          ...additionalEvents,
           ...copiedEvents,
         ]),
       });
@@ -352,16 +356,44 @@ export async function mockEventManagementApi(
     if (request.method() === "PATCH") {
       const body = JSON.parse(request.postData() ?? "{}");
       if (request.url().endsWith("/series")) {
-        const targetSeriesId = relatedEvent.seriesId ?? "series-1";
-        relatedEvent = { ...relatedEvent, seriesId: targetSeriesId };
+        const targetEventIds = new Set<string>(
+          body.targetEventIds ?? (body.targetEventId ? [body.targetEventId] : []),
+        );
+        const previousSeriesId = mockedEvent.seriesId;
+        const targetSeriesId = previousSeriesId ?? "series-1";
+        const affectedIds = new Set(
+          [relatedEvent, ...additionalEvents, ...copiedEvents]
+            .filter(
+              (candidate) =>
+                targetEventIds.has(candidate.id) ||
+                (previousSeriesId && candidate.seriesId === previousSeriesId),
+            )
+            .map((candidate) => candidate.id),
+        );
+        const applySeriesSelection = (candidate: typeof mockedEvent) => ({
+          ...candidate,
+          seriesId: targetEventIds.has(candidate.id)
+            ? targetSeriesId
+            : previousSeriesId && candidate.seriesId === previousSeriesId
+              ? null
+              : candidate.seriesId,
+        });
+        relatedEvent = applySeriesSelection(relatedEvent);
+        additionalEvents = additionalEvents.map(applySeriesSelection);
+        copiedEvents = copiedEvents.map(applySeriesSelection);
         mockedEvent = {
           ...mockedEvent,
-          seriesId: body.targetEventId ? targetSeriesId : null,
+          seriesId: targetEventIds.size ? targetSeriesId : null,
           version: (mockedEvent.version ?? 0) + 1,
         };
         return route.fulfill({
           status: 200,
-          json: body.targetEventId ? [mockedEvent, relatedEvent] : [mockedEvent],
+          json: [
+            mockedEvent,
+            ...[relatedEvent, ...additionalEvents, ...copiedEvents].filter((candidate) =>
+              affectedIds.has(candidate.id),
+            ),
+          ],
         });
       }
       const eventContact = request.url().match(/\/events\/[^/]+\/contacts\/([^/]+)\/([^/?]+)$/);

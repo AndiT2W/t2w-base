@@ -87,6 +87,14 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
     return event ? (withTaskReadiness(event) as EventMutationRecord) : undefined;
   }
 
+  async getEventsBySeries(seriesId: string) {
+    const events = await this.prisma.event.findMany({
+      where: { seriesId },
+      include: eventRecordInclude,
+    });
+    return events.map((event) => withTaskReadiness(event) as EventMutationRecord);
+  }
+
   async replaceContactRole(eventId: string, contactId: string, role: string, nextRole: string) {
     await this.prisma.eventContact.deleteMany({ where: { eventId, contactId, role } });
     await this.prisma.eventContact.upsert({

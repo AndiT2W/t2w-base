@@ -20,7 +20,7 @@ export type EventDetailMutations = {
   remove: (id: string) => Promise<void>;
   updateSeries: (
     id: string,
-    input: { targetEventId?: string; version?: number },
+    input: { targetEventIds?: string[]; version?: number },
   ) => Promise<T2WEvent[]>;
   applyEvents: (events: T2WEvent[]) => void;
 };
@@ -360,9 +360,9 @@ export function createEventDetailWorkspace(
     async copy(input: EventCopyInput) {
       return mutations.copy(event.id, { ...input, version: snapshot.form.version });
     },
-    async updateSeries(targetEventId?: string) {
+    async updateSeries(targetEventIds?: string[]) {
       const changed = await mutations.updateSeries(event.id, {
-        ...(targetEventId ? { targetEventId } : {}),
+        ...(targetEventIds ? { targetEventIds } : {}),
         version: snapshot.form.version,
       });
       mutations.applyEvents(changed);

@@ -152,9 +152,9 @@ describe("Event detail workspace", () => {
       expect.objectContaining({ version: 1, createRelationship: true }),
     );
 
-    await workspace.updateSeries("e2");
+    await workspace.updateSeries(["e0", "e2"]);
     expect(mutations.updateSeries).toHaveBeenCalledWith("e1", {
-      targetEventId: "e2",
+      targetEventIds: ["e0", "e2"],
       version: 1,
     });
     expect(mutations.applyEvents).toHaveBeenCalledOnce();

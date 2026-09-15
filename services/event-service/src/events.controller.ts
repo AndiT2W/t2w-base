@@ -15,7 +15,10 @@ import {
 } from "@nestjs/common";
 import { ApiTags, PartialType } from "@nestjs/swagger";
 import {
+  ArrayMaxSize,
+  ArrayUnique,
   IsBoolean,
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -69,6 +72,12 @@ class CopyEventDto {
   @IsOptional() @IsInt() version?: number;
 }
 class EventSeriesDto {
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(500)
+  @ArrayUnique()
+  @IsUUID(undefined, { each: true })
+  targetEventIds?: string[];
   @IsOptional() @IsUUID() targetEventId?: string;
   @IsOptional() @IsInt() version?: number;
 }

@@ -252,29 +252,51 @@ test("lädt Events in 500er-Seiten und zeigt standardmäßig das aktuelle Jahr",
     .toBe(true);
 });
 
-test("verknüpft ein bestehendes Event nachträglich mit einer Eventserie und behält sie nach Reload", async ({
+test("verknüpft mehrere Events per Mehrfachauswahl und zeigt die Seriennachbarn als Badges", async ({
   page,
 }) => {
-  const requests = await mockApi(page);
+  const thirdEvent = {
+    ...event,
+    id: "44444444-4444-4444-8444-444444444444",
+    eventCode: "280822_demo_event",
+    name: "Dritter Termin",
+    startAt: "2028-08-22T00:00:00.000Z",
+    endAt: "2028-08-22T00:00:00.000Z",
+  };
+  const requests = await mockApi(page, {}, {}, [thirdEvent]);
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Eventserie verwalten" }).click();
-  await page.getByLabel("Mit Event verknüpfen").click();
-  await page.getByLabel("Event suchen").fill("Folgetermin");
-  await page.getByRole("button", { name: /Folgetermin/ }).click();
-  await page.getByRole("button", { name: "Verknüpfung speichern" }).click();
+  await page.getByLabel("Events dieser Serie auswählen").click();
+  await page.getByRole("checkbox", { name: /Folgetermin/ }).check();
+  await page.getByRole("checkbox", { name: /Dritter Termin/ }).check();
+  await expect(page.getByLabel("Events dieser Serie auswählen")).toContainText(
+    "2 Events ausgewählt",
+  );
+  await expect(page.getByLabel("Ausgewählte Serientermine")).toContainText("Folgetermin");
+  await expect(page.getByLabel("Ausgewählte Serientermine")).toContainText("Dritter Termin");
+  await page.getByRole("button", { name: "Auswahl übernehmen" }).click();
+  await page.getByRole("button", { name: "Eventserie speichern" }).click();
   await expect(page.getByText("Eventserie gespeichert.")).toBeVisible();
-  await expect(page.getByTestId("event-series-navigation")).toContainText("Folgetermin");
-  expect(
-    requests.some(
-      (request) =>
-        request.method === "PATCH" &&
-        request.url.endsWith("/api/v1/events/11111111-1111-4111-8111-111111111111/series") &&
-        request.body?.includes('"targetEventId":"33333333-3333-4333-8333-333333333333"'),
-    ),
-  ).toBeTruthy();
+  await expect(page.getByTestId("next-series-event")).toContainText("Folgetermin");
+
+  const seriesRequest = requests.find(
+    (request) =>
+      request.method === "PATCH" &&
+      request.url.endsWith("/api/v1/events/11111111-1111-4111-8111-111111111111/series"),
+  );
+  expect(JSON.parse(seriesRequest?.body ?? "{}").targetEventIds).toEqual([
+    "33333333-3333-4333-8333-333333333333",
+    "44444444-4444-4444-8444-444444444444",
+  ]);
 
   await page.reload();
-  await expect(page.getByTestId("event-series-navigation")).toContainText("Folgetermin");
+  await expect(page.getByTestId("next-series-event")).toContainText("Folgetermin");
+
+  await page.goto("/events/270821_demo_event");
+  await expect(page.getByTestId("previous-series-event")).toContainText("Bestehendes Event");
+  await expect(page.getByTestId("next-series-event")).toContainText("Dritter Termin");
+  await expect(page.getByTestId("previous-series-event")).toHaveClass(/rounded-/);
+  await expect(page.getByTestId("next-series-event")).toHaveClass(/rounded-/);
 });
 
 test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) => {

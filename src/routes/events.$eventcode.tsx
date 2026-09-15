@@ -19,7 +19,7 @@ import {
   Rows3,
   StickyNote,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,9 +267,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   }, []);
   const [saving, setSaving] = useState(false);
   const savedEventRef = useRef(event);
-  const [seriesTargetEventId, setSeriesTargetEventId] = useState("");
+  const [seriesTargetEventIds, setSeriesTargetEventIds] = useState<string[]>([]);
   const [seriesSearch, setSeriesSearch] = useState("");
   const [seriesPickerOpen, setSeriesPickerOpen] = useState(false);
+  const [seriesSaving, setSeriesSaving] = useState(false);
   const initialCopy = copyDateSuggestion(event.start, event.ende);
   const [copyStart, setCopyStart] = useState(initialCopy.start);
   const [copyEnde, setCopyEnde] = useState(initialCopy.ende);
@@ -455,14 +456,36 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       .toLocaleLowerCase()
       .includes(query);
   });
-  async function updateSeries(targetEventId?: string) {
+  const selectedSeriesEvents = seriesCandidates.filter((item) =>
+    seriesTargetEventIds.includes(item.id),
+  );
+  function openSeriesManagement() {
+    setSeriesTargetEventIds(
+      seriesEvents.filter((item) => item.id !== event.id).map((item) => item.id),
+    );
+    setSeriesSearch("");
+    setSeriesDialog(true);
+  }
+  function setSeriesTargetSelected(targetEventId: string, selected: boolean) {
+    setSeriesTargetEventIds((current) =>
+      selected
+        ? [...new Set([...current, targetEventId])]
+        : current.filter((eventId) => eventId !== targetEventId),
+    );
+  }
+  async function updateSeries(targetEventIds?: string[]) {
+    setSeriesSaving(true);
     try {
-      await detailWorkspace.updateSeries(targetEventId);
+      await detailWorkspace.updateSeries(targetEventIds);
       setSeriesDialog(false);
-      setSeriesTargetEventId("");
-      toast.success(targetEventId ? "Eventserie gespeichert." : "Event aus der Serie entfernt.");
+      setSeriesTargetEventIds([]);
+      toast.success(
+        targetEventIds?.length ? "Eventserie gespeichert." : "Event aus der Serie entfernt.",
+      );
     } catch {
       toast.error("Eventserie konnte nicht gespeichert werden. Bitte neu laden.");
+    } finally {
+      setSeriesSaving(false);
     }
   }
 
@@ -512,30 +535,48 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <nav
               aria-label="Eventserie"
               data-testid="event-series-navigation"
-              className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+              className="flex flex-wrap items-center gap-2 text-sm"
             >
-              <span>Eventserie:</span>
+              <span className="text-muted-foreground">Eventserie:</span>
               {previousEvent ? (
                 <Link
-                  className="underline"
+                  aria-label={`Vorheriges Event: ${previousEvent.name}`}
+                  data-testid="previous-series-event"
+                  className={badgeVariants({
+                    variant: "outline",
+                    className: "h-7 max-w-full gap-1.5 px-2 font-medium hover:bg-accent",
+                  })}
                   to="/events/$eventcode"
                   params={{ eventcode: previousEvent.eventcode }}
                 >
-                  ← {previousEvent.name}
+                  <span aria-hidden="true">←</span>
+                  <span className="text-muted-foreground">Vorheriges:</span>
+                  <span className="min-w-0 truncate">{previousEvent.name}</span>
                 </Link>
               ) : (
-                <span>Kein vorheriges Event</span>
+                <Badge variant="outline" className="h-7 px-2 font-medium text-muted-foreground">
+                  ← Kein vorheriges Event
+                </Badge>
               )}
               {nextEvent ? (
                 <Link
-                  className="underline"
+                  aria-label={`Nächstes Event: ${nextEvent.name}`}
+                  data-testid="next-series-event"
+                  className={badgeVariants({
+                    variant: "outline",
+                    className: "h-7 max-w-full gap-1.5 px-2 font-medium hover:bg-accent",
+                  })}
                   to="/events/$eventcode"
                   params={{ eventcode: nextEvent.eventcode }}
                 >
-                  {nextEvent.name} →
+                  <span className="text-muted-foreground">Nächstes:</span>
+                  <span className="min-w-0 truncate">{nextEvent.name}</span>
+                  <span aria-hidden="true">→</span>
                 </Link>
               ) : (
-                <span>Kein nächstes Event</span>
+                <Badge variant="outline" className="h-7 px-2 font-medium text-muted-foreground">
+                  Kein nächstes Event →
+                </Badge>
               )}
             </nav>
           )}
@@ -544,7 +585,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setSeriesDialog(true)}>
+          <Button variant="outline" onClick={openSeriesManagement}>
             Eventserie verwalten
           </Button>
           <Button variant="outline" onClick={() => setCopyDialog(true)}>
@@ -2068,38 +2109,35 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         open={seriesDialog}
         onOpenChange={(open) => {
           setSeriesDialog(open);
-          if (!open) setSeriesSearch("");
+          if (!open) {
+            setSeriesSearch("");
+            setSeriesPickerOpen(false);
+          }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eventserie verwalten</AlertDialogTitle>
             <AlertDialogDescription>
-              Verknüpfen Sie dieses Event mit einem bestehenden Termin. Es werden nur die
-              Serienbeziehung und keine Eventdaten, Dateien oder TIME2WIN-Verknüpfungen geändert.
+              Das geöffnete Event ist automatisch enthalten. Wählen Sie alle weiteren Termine, die
+              gemeinsam eine Eventserie bilden sollen. Eventdaten, Dateien und
+              TIME2WIN-Verknüpfungen bleiben unverändert.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid gap-3">
             <div>
-              <Label htmlFor="series-target">Mit Event verknüpfen</Label>
+              <Label htmlFor="series-target">Events dieser Serie</Label>
               <Popover open={seriesPickerOpen} onOpenChange={setSeriesPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     id="series-target"
                     variant="outline"
                     className="mt-1.5 h-10 w-full justify-start font-normal"
-                    aria-label="Mit Event verknüpfen"
+                    aria-label="Events dieser Serie auswählen"
                   >
-                    {seriesTargetEventId
-                      ? (() => {
-                          const selected = seriesCandidates.find(
-                            (item) => item.id === seriesTargetEventId,
-                          );
-                          return selected
-                            ? `${selected.name} · ${formatDatum(selected.start)} · ${selected.eventcode}`
-                            : "Event auswählen";
-                        })()
-                      : "Event auswählen"}
+                    {selectedSeriesEvents.length
+                      ? `${selectedSeriesEvents.length} ${selectedSeriesEvents.length === 1 ? "Event" : "Events"} ausgewählt`
+                      : "Events auswählen"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-[min(36rem,calc(100vw-2rem))] p-2">
@@ -2111,51 +2149,90 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   />
                   <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
                     {visibleSeriesCandidates.length ? (
-                      visibleSeriesCandidates.map((item) => (
-                        <button
-                          type="button"
-                          key={item.id}
-                          className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
-                          onClick={() => {
-                            setSeriesTargetEventId(item.id);
-                            setSeriesPickerOpen(false);
-                          }}
-                        >
-                          {item.name}
-                          <span className="ml-2 text-muted-foreground">
-                            {formatDatum(item.start)} · {item.eventcode}
-                          </span>
-                        </button>
-                      ))
+                      visibleSeriesCandidates.map((item) => {
+                        const checkboxId = `series-target-${item.id}`;
+                        return (
+                          <div
+                            key={item.id}
+                            className="flex min-h-11 items-center gap-3 rounded px-2 hover:bg-accent"
+                          >
+                            <Checkbox
+                              id={checkboxId}
+                              checked={seriesTargetEventIds.includes(item.id)}
+                              onCheckedChange={(checked) =>
+                                setSeriesTargetSelected(item.id, checked === true)
+                              }
+                            />
+                            <Label
+                              htmlFor={checkboxId}
+                              className="min-w-0 flex-1 cursor-pointer py-2 text-sm font-normal"
+                            >
+                              <span className="block truncate font-medium">{item.name}</span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {formatDatum(item.start)} · {item.eventcode}
+                              </span>
+                            </Label>
+                          </div>
+                        );
+                      })
                     ) : (
                       <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
                     )}
                   </div>
+                  <div className="mt-2 flex items-center justify-between gap-3 border-t border-border pt-2">
+                    <span className="text-xs text-muted-foreground" aria-live="polite">
+                      {selectedSeriesEvents.length} ausgewählt
+                    </span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setSeriesPickerOpen(false)}
+                    >
+                      Auswahl übernehmen
+                    </Button>
+                  </div>
                 </PopoverContent>
               </Popover>
+              {selectedSeriesEvents.length ? (
+                <div
+                  aria-label="Ausgewählte Serientermine"
+                  aria-live="polite"
+                  className="mt-2 flex flex-wrap gap-1.5"
+                >
+                  {selectedSeriesEvents.map((item) => (
+                    <Badge key={item.id} variant="secondary" className="h-auto py-1 font-medium">
+                      {item.name} · {formatDatum(item.start)}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-muted-foreground">Keine weiteren Events gewählt.</p>
+              )}
             </div>
             {form.seriesId && (
               <p className="text-sm text-muted-foreground">
                 Dieses Event ist aktuell mit {seriesEvents.length - 1} weiteren Termin(en)
-                verknüpft. Eine neue Auswahl verschiebt nur dieses Event in die gewählte Serie.
+                verknüpft. Nicht ausgewählte bisherige Termine werden beim Speichern aus dieser
+                Serie gelöst.
               </p>
             )}
           </div>
           <AlertDialogFooter>
             {form.seriesId && (
-              <Button variant="outline" onClick={() => void updateSeries()}>
-                Aus Serie entfernen
+              <Button variant="outline" disabled={seriesSaving} onClick={() => void updateSeries()}>
+                {seriesSaving ? "Wird gespeichert …" : "Aus Serie entfernen"}
               </Button>
             )}
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
-              disabled={!seriesTargetEventId}
+              disabled={!selectedSeriesEvents.length || seriesSaving}
               onClick={(e) => {
                 e.preventDefault();
-                void updateSeries(seriesTargetEventId);
+                void updateSeries(selectedSeriesEvents.map((item) => item.id));
               }}
             >
-              Verknüpfung speichern
+              {seriesSaving ? "Wird gespeichert …" : "Eventserie speichern"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
