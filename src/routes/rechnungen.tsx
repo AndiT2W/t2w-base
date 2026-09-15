@@ -49,7 +49,7 @@ function Rechnungen() {
 
         <div className="overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full min-w-[40rem] border-collapse text-sm">
-            <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+            <thead className="t2w-table-header text-left">
               <tr>
                 <th className="px-3 py-2 font-semibold">Eventcode</th>
                 <th className="px-3 py-2 font-semibold">Event</th>

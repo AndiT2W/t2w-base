@@ -464,7 +464,7 @@ function Table({
       data-density="compact"
     >
       <table className="w-full min-w-[54rem] text-[13px] leading-4 [&_thead_tr]:h-[30px] [&_tbody_tr]:h-[34px]">
-        <thead className="bg-secondary text-left text-[11px] uppercase text-muted-foreground">
+        <thead className="t2w-table-header text-left">
           <tr>
             {h.map((x) => (
               <th key={x} className="px-2 py-1.5">

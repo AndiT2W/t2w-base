@@ -897,7 +897,7 @@ function Einstellungen() {
                 <div className="overflow-x-auto rounded-md border">
                   <table className="w-full min-w-[42rem] text-sm">
                     <caption className="sr-only">Auditlog-Einträge</caption>
-                    <thead className="bg-muted/50 text-left text-muted-foreground">
+                    <thead className="t2w-table-header text-left">
                       <tr>
                         <th className="px-3 py-2 font-medium">Zeitpunkt</th>
                         <th className="px-3 py-2 font-medium">Entität</th>

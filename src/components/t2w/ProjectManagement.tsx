@@ -161,7 +161,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                       <div className="hidden overflow-x-auto md:block">
                         <DataTable>
                           <thead>
-                            <tr className="border-b text-muted-foreground">
+                            <tr>
                               <th className="p-3">Name</th>
                               <th className="p-3">Person</th>
                               <th className="p-3">Ende</th>

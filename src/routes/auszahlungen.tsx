@@ -166,7 +166,7 @@ function Auszahlungen() {
       </div>
       <div>
         <DataTable>
-          <thead className="bg-secondary text-left">
+          <thead className="text-left">
             <tr className="h-[30px]">
               <th className="px-2 py-1">
                 <input

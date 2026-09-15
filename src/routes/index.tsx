@@ -224,7 +224,7 @@ function Uebersicht() {
             />
           </div>
           <DataTable className="min-w-[54rem]">
-            <thead className="bg-secondary text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+            <thead className="text-left">
               <tr className="h-[30px]">
                 {visibleColumns.includes("Status") && (
                   <th className="px-2 py-1.5">

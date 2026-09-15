@@ -104,8 +104,8 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
       </div>
       <div className="overflow-x-auto rounded border">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-secondary text-left">
+          <thead className="t2w-table-header">
+            <tr className="text-left">
               <th className="px-2 py-1">Nummer</th>
               <th className="px-2 py-1">Empfänger</th>
               <th className="px-2 py-1">Betrag</th>

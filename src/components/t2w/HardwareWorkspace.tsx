@@ -401,8 +401,8 @@ export function HardwareWorkspace({
       {showList && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
+            <thead className="t2w-table-header">
+              <tr className="text-left">
                 {[
                   "Empfänger",
                   "Art",

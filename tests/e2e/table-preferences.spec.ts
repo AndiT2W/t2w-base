@@ -28,3 +28,33 @@ test("lädt Tabellenspalten aus dem Konto und speichert Änderungen zurück", as
   await days.check();
   await expect.poll(() => putBody).toMatchObject({ visible: expect.arrayContaining(["Tage"]) });
 });
+
+test("hebt kompakte Tabellenköpfe mit der ausgewogenen Kontrastvariante ab", async ({ page }) => {
+  await mockEventManagementApi(page);
+  await page.route("**/api/v1/table-preferences/**", (route) =>
+    route.fulfill({ json: { value: null } }),
+  );
+
+  await page.goto("/");
+  const table = page.locator('[data-density="compact"] table').first();
+  const header = table.locator("thead");
+
+  await expect(header).toHaveCSS("font-size", "12px");
+  await expect(header).toHaveCSS("text-transform", "none");
+  await expect(header.locator("tr")).toHaveCSS("border-bottom-width", "2px");
+
+  const surfaces = await table.evaluate((element) => {
+    const tableElement = element as HTMLTableElement;
+    const tableHeader = tableElement.tHead;
+    const tableContainer = tableElement.parentElement;
+    if (!tableHeader || !tableContainer)
+      throw new Error("Tabelle ist nicht vollständig gerendert.");
+    return {
+      header: getComputedStyle(tableHeader).backgroundColor,
+      body: getComputedStyle(tableContainer).backgroundColor,
+    };
+  });
+
+  expect(surfaces.header).not.toBe("rgba(0, 0, 0, 0)");
+  expect(surfaces.header).not.toBe(surfaces.body);
+});

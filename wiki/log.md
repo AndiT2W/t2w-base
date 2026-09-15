@@ -582,3 +582,11 @@ Der React-Absturz auf `/aufgaben` wurde gegen die Live-Seite und ihre ausgeliefe
 ## 2026-09-15 — Einzelzellenbearbeitung für kompakte Tabellen entschieden
 
 Für das Inline-Editing der Hardwaretabelle ist ein ClickUp-artiges Zellmodell festgelegt: Nur eine Zelle wird zum Editor, während `Tab` speichert und zur nächsten bearbeitbaren Zelle derselben Zeile wechselt; `Shift+Tab` navigiert rückwärts und `Escape` verwirft. Damit bleiben die Spaltenbreiten stabil und der schnelle Tastaturfluss erhalten. Die Entscheidung ist im Konzept [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md) festgehalten; noch keine Produktimplementierung.
+
+## 2026-09-15 — Kontrast der Tabellenköpfe als offene Anforderung erfasst
+
+Nutzerfeedback bewertet das UI insgesamt und besonders die Tabellenköpfe als zu kontrastarm. Die Prüfung des gemeinsamen Tabellenprimitives bestätigt eine nur sehr schwache Flächentrennung zwischen Header und Tabellenkörper; als Ziel sind eine deutlichere Headerfläche, dunklere Beschriftung und eine klarere Unterkante dokumentiert. Noch keine Produktimplementierung. Quelle: Nutzerkonversation vom 2026-09-15 und [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
+
+## 2026-09-15 — Ausgewogene Tabellenkopf-Kontraste umgesetzt
+
+Die bestätigte neutrale Variante ist nun für gemeinsame und fachliche Tabellen umgesetzt: weißer Tabellenkörper, neutralgrauer Kopf, dunkle 12-px-Beschriftung ohne Versalsatz und eine 2-px-Unterkante. Semantische Light-/Dark-Mode-Tokens und der Styleguide halten die Darstellung zentral fest. Der gezielte Browser-Regressionstest, Lint der betroffenen Dateien und der Produktionsbuild sind erfolgreich. Quellen: `src/styles.css`, `src/components/t2w/DataTable.tsx`, `src/components/ui/table.tsx`, `src/routes/styleguide.tsx`, `tests/e2e/table-preferences.spec.ts` und [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).

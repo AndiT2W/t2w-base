@@ -4,7 +4,9 @@ type: concept
 status: active
 updated: 2026-09-15
 sources:
+  - ../../src/styles.css
   - ../../src/components/t2w/DataTable.tsx
+  - ../../src/components/ui/table.tsx
   - ../../src/components/t2w/table-model.ts
   - ../../src/components/t2w/ProjectManagement.tsx
   - ../../src/routes/aufgaben.tsx
@@ -18,6 +20,7 @@ sources:
   - ../../services/event-service/src/table-preferences.controller.ts
   - ../../services/event-service/prisma/schema.prisma
   - ../../docs/adr/0003-shared-compact-data-tables.md
+  - ../../tests/e2e/table-preferences.spec.ts
   - User conversation, 2026-09-14
   - User conversation, 2026-09-15
 ---
@@ -30,6 +33,10 @@ sources:
 - Inhalte einer Zelle bleiben einzeilig und werden bei Bedarf gekürzt.
 - Statuskennzeichen sind rechteckig-kompakt (11 px); Hover und Tastaturfokus bleiben sichtbar.
 - Mobile Eventlisten nutzen Karten; vollständige Detailtabellen dürfen horizontal scrollen.
+
+## Kontrast und visuelle Hierarchie
+
+Nutzerfeedback vom 2026-09-15 bewertete die Anwendung insgesamt und insbesondere die Tabellenköpfe als zu kontrastarm. Daraufhin wurde die bestätigte Variante „Ausgewogen“ umgesetzt: Der Tabellenkörper bleibt weiß, der Kopf verwendet ein neutrales Grau, eine dunkle 12-px-Beschriftung ohne Versalsatz und eine klarere 2-px-Unterkante. Eigene semantische Tokens kapseln Fläche, Schrift und Trennlinie für Light und Dark Mode. `DataTable`, das allgemeine `Table`-Primitive und die verbleibenden fachlichen Tabellen verwenden dieselbe Darstellung. Der Browser-Regressionstest prüft Schriftgröße, Schreibweise, Unterkante und die erkennbare Flächentrennung.
 
 ## Zustands- und Persistenzmodell
 

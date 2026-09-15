@@ -29,6 +29,7 @@ const REGELN = [
   "Alle Inhalte, Filter, Tabellen und Detailseiten liegen im rechten Hauptbereich.",
   "Der Kopfbereich enthält ausschließlich Breadcrumb/Kontext, Seitentitel, globale Suche und die primäre Aktion.",
   "Standardansicht ist das Ops Command Center: KPI-Leiste plus dichte Eventtabelle.",
+  "Tabellenköpfe verwenden Neutralgrau, dunkle 12-px-Beschriftungen und eine klare Unterkante.",
   "Unter 1024 px wird die Sidebar zu einem Drawer, der über das Menüsymbol geöffnet wird.",
   "Farben ausschließlich über semantische Tokens (nav, surface, status-*, risk-*) – keine harten Farbwerte.",
   "Sprache durchgehend Deutsch, ruhiger und sachlicher Ton.",
@@ -42,6 +43,7 @@ const TOKENS = [
   { name: "background", klasse: "bg-background", text: "Seitenhintergrund" },
   { name: "primary", klasse: "bg-primary", text: "Primäraktion" },
   { name: "accent", klasse: "bg-accent", text: "Hover / Hervorhebung" },
+  { name: "table-header", klasse: "bg-table-header", text: "Tabellenkopf" },
 ];
 
 function Styleguide() {
