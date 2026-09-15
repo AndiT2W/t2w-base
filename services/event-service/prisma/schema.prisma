@@ -179,6 +179,9 @@ model Event {
   archived              Boolean     @default(false)
   archivedAt            DateTime?
   t2wEventId            Int?
+  clickUpId             String?     @unique
+  clickUpUrl            String?
+  clickUpUpdatedAt      DateTime?
   time2winSyncStatus    SyncStatus  @default(NEVER)
   time2winLastSuccessAt DateTime?
   time2winLastError     String?
@@ -200,9 +203,22 @@ model Event {
   services              EventService[]
   hardwareIssues        HardwareIssue[]
   payouts               Payout[]
+  clickUpSource         EventClickUpSource?
   @@index([seriesId, startAt])
   @@index([status, archived])
   @@index([startAt, endAt])
+}
+
+model EventClickUpSource {
+  id              String   @id @default(uuid()) @db.Uuid
+  eventId         String   @unique @db.Uuid
+  clickUpId       String   @unique
+  taskUrl         String?
+  taskUpdatedAt   DateTime?
+  sourceData      Json
+  importedAt      DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model PmGroup {
