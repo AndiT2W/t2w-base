@@ -204,6 +204,23 @@ test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) =>
   await expect(page.locator("table").getByText("Alter Veranstalter")).toBeVisible();
 });
 
+test("lädt Events in 500er-Seiten und zeigt standardmäßig das aktuelle Jahr", async ({ page }) => {
+  const requests = await mockApi(page);
+  await page.goto("/veranstaltungen");
+
+  await expect(page.getByText("Aktuelles Jahr", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(page.getByText("Folgetermin", { exact: true })).toHaveCount(0);
+  await expect
+    .poll(() =>
+      requests.some(
+        (request) =>
+          request.method === "GET" && request.url.endsWith("/api/v1/events?limit=500&offset=0"),
+      ),
+    )
+    .toBe(true);
+});
+
 test("verknüpft ein bestehendes Event nachträglich mit einer Eventserie und behält sie nach Reload", async ({
   page,
 }) => {
@@ -442,16 +459,39 @@ test("fügt einen per Combobox angeklickten Kunden im Kontakt hinzu", async ({ p
 test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Übersicht", async ({
   page,
 }) => {
-  await mockApi(page);
+  await mockApi(page, {
+    sport: { id: "s1", name: "Triathlon" },
+    services: [
+      { service: { id: "service-1", name: "UHF" } },
+      { service: { id: "service-5", name: "Video (iRewind)" } },
+    ],
+  });
   await page.goto("/veranstaltungen");
   const table = page.locator("table");
   await expect(table).toBeVisible();
-  await expect(table.locator("thead th")).toHaveCount(8);
+  await expect(table.locator("thead th")).toHaveCount(10);
   await expect(table.locator("thead")).toContainText("St");
   await expect(table.locator("thead")).toContainText("Aufgaben");
+  await expect(table.getByRole("columnheader", { name: "Sportart sortieren" })).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Services sortieren" })).toBeVisible();
+  const eventRow = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
+  await expect(eventRow.getByRole("cell").nth(3)).toHaveText("Triathlon");
+  await expect(eventRow.getByRole("cell").nth(4)).toHaveText("UHF, Video (iRewind)");
   await expect(table.locator("[title='Outlook und SharePoint']")).toBeVisible();
   await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await expect(table.locator("tbody")).toContainText("20.08.2026");
+
+  await page.goto("/");
+  const overviewTable = page.locator("table");
+  await expect(
+    overviewTable.getByRole("columnheader", { name: "Sportart sortieren" }),
+  ).toBeVisible();
+  await expect(
+    overviewTable.getByRole("columnheader", { name: "Services sortieren" }),
+  ).toBeVisible();
+  const overviewRow = overviewTable.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
+  await expect(overviewRow.getByRole("cell").nth(3)).toHaveText("Triathlon");
+  await expect(overviewRow.getByRole("cell").nth(4)).toHaveText("UHF, Video (iRewind)");
 });
 
 test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async ({ page }) => {
@@ -766,10 +806,13 @@ test("navigiert mobil durch Kalender und Gantt ohne verlorenes Hauptmenü", asyn
 });
 
 test("filtert archivierte Events im Kalender und öffnet deren Detailseite", async ({ page }) => {
-  await mockApi(page, { archived: true });
+  const today = new Date();
+  const currentMonthDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-20T00:00:00.000Z`;
+  await mockApi(page, { archived: true, startAt: currentMonthDate, endAt: currentMonthDate });
   const eventsLoaded = page.waitForResponse(
     (response) =>
-      response.url().endsWith("/api/v1/events") && response.request().method() === "GET",
+      new URL(response.url()).pathname === "/api/v1/events" &&
+      response.request().method() === "GET",
   );
   await page.goto("/kalender");
   await eventsLoaded;
@@ -1005,7 +1048,7 @@ test("prüft Mail- und Telefonnummern im Kontakt-Detailformular", async ({ page 
 test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
-  const ordnerSpalte = page.locator("thead th").nth(6).locator("[title='Outlook und SharePoint']");
+  const ordnerSpalte = page.locator("thead th [title='Outlook und SharePoint']");
   await expect(ordnerSpalte).toHaveAttribute("title", "Outlook und SharePoint");
   await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft").first()).toBeVisible();
   await expect(

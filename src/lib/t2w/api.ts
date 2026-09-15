@@ -258,12 +258,22 @@ export async function apiLogin(email: string, password: string) {
 }
 
 export async function apiEvents() {
-  const response = await fetch("/api/v1/events", { credentials: "include" });
-  if (!response.ok)
-    throw new Error(
-      response.status === 401 ? "AUTH_REQUIRED" : "Events konnten nicht geladen werden",
-    );
-  return ((await response.json()) as ApiEvent[]).map(mapApiEvent);
+  const pageSize = 500;
+  const events: ApiEvent[] = [];
+
+  for (let offset = 0; ; offset += pageSize) {
+    const response = await fetch(`/api/v1/events?limit=${pageSize}&offset=${offset}`, {
+      credentials: "include",
+    });
+    if (!response.ok)
+      throw new Error(
+        response.status === 401 ? "AUTH_REQUIRED" : "Events konnten nicht geladen werden",
+      );
+
+    const page = (await response.json()) as ApiEvent[];
+    events.push(...page);
+    if (page.length < pageSize) return events.map(mapApiEvent);
+  }
 }
 export async function apiEventByCode(code: string) {
   const response = await fetch(`/api/v1/events/by-code/${encodeURIComponent(code)}`, {

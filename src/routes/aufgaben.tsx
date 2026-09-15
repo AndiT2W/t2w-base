@@ -1,11 +1,25 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { projectTaskPortfolios, type Task } from "@t2w/domain/project-management";
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  CircleDot,
+  CircleDollarSign,
+  CirclePlay,
+  Clock3,
+  FolderKanban,
+  Package,
+  Ticket,
+  type LucideIcon,
+} from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DataTable } from "@/components/t2w/DataTable";
 import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { formatDatum } from "@/lib/t2w/format";
 import {
@@ -32,8 +46,10 @@ const dateText = (date: Date, options: Intl.DateTimeFormatOptions) =>
 const taskStatusTone = (task: VisibleTask) => {
   if (task.overdue || task.blockedBy.length)
     return "border-destructive/30 bg-destructive/10 text-destructive";
-  if (task.status === "DONE") return "border-emerald-700/25 bg-emerald-700/10 text-emerald-800";
-  if (task.status === "IN_PROGRESS") return "border-sky-700/25 bg-sky-700/10 text-sky-800";
+  if (task.status === "DONE")
+    return "border-emerald-700/25 bg-emerald-700/10 text-emerald-800 dark:text-emerald-300";
+  if (task.status === "IN_PROGRESS")
+    return "border-sky-700/25 bg-sky-700/10 text-sky-800 dark:text-sky-300";
   return "border-border bg-muted text-muted-foreground";
 };
 type VisibleTask = ReturnType<
@@ -41,6 +57,82 @@ type VisibleTask = ReturnType<
 >[number]["portfolio"]["tasks"][number] & {
   event: PmGlobal["eventChoices"][number] | null;
 };
+
+type CategoryPresentation = {
+  Icon: LucideIcon;
+  accent: string;
+  icon: string;
+  tone: string;
+};
+
+function categoryPresentation(name: string): CategoryPresentation {
+  const normalized = name.toLocaleLowerCase("de-AT");
+  if (normalized.includes("hardware")) {
+    return {
+      Icon: Package,
+      accent: "border-l-teal-600",
+      icon: "bg-teal-700/10 text-teal-800 dark:text-teal-300",
+      tone: "hardware",
+    };
+  }
+  if (normalized.includes("startnummer") || normalized.includes("anmeldung")) {
+    return {
+      Icon: Ticket,
+      accent: "border-l-sky-600",
+      icon: "bg-sky-700/10 text-sky-800 dark:text-sky-300",
+      tone: "anmeldung",
+    };
+  }
+  if (normalized.includes("finanz") || normalized.includes("zahlung")) {
+    return {
+      Icon: CircleDollarSign,
+      accent: "border-l-violet-600",
+      icon: "bg-violet-700/10 text-violet-800 dark:text-violet-300",
+      tone: "finanzen",
+    };
+  }
+  return {
+    Icon: FolderKanban,
+    accent: "border-l-primary",
+    icon: "bg-primary/10 text-primary",
+    tone: "standard",
+  };
+}
+
+function categoryHealthPresentation(
+  health: "critical" | "warning" | "active" | "done" | "neutral",
+): { Icon: LucideIcon; label: string; tone: string } {
+  if (health === "critical")
+    return {
+      Icon: AlertTriangle,
+      label: "Blockiert oder überfällig",
+      tone: "border-destructive/30 bg-destructive/10 text-destructive",
+    };
+  if (health === "warning")
+    return {
+      Icon: Clock3,
+      label: "In den nächsten 7 Tagen fällig",
+      tone: "border-amber-700/25 bg-amber-700/10 text-amber-800 dark:text-amber-300",
+    };
+  if (health === "active")
+    return {
+      Icon: CirclePlay,
+      label: "In Arbeit",
+      tone: "border-sky-700/25 bg-sky-700/10 text-sky-800 dark:text-sky-300",
+    };
+  if (health === "done")
+    return {
+      Icon: CheckCircle2,
+      label: "Erledigt",
+      tone: "border-emerald-700/25 bg-emerald-700/10 text-emerald-800 dark:text-emerald-300",
+    };
+  return {
+    Icon: CircleDot,
+    label: "Offen",
+    tone: "border-border bg-muted text-muted-foreground",
+  };
+}
+
 function portfolioBlocks(data: PmGlobal, sourceTasks: PmGlobal["tasks"]) {
   return projectTaskPortfolios(
     sourceTasks,
@@ -77,6 +169,7 @@ function Aufgaben() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   });
   const [months, setMonths] = useState(3);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [loadError, setLoadError] = useState("");
   const interaction = useMemo(
     () =>
@@ -89,13 +182,9 @@ function Aufgaben() {
   );
   const interactionSnapshot = useSyncExternalStore(
     interaction.subscribe,
-    interaction.getSnapshot,
-    interaction.getSnapshot,
+    interaction.snapshot,
+    interaction.snapshot,
   );
-  const task = interactionSnapshot.task;
-  const draft = interactionSnapshot.draft;
-  const comments = interactionSnapshot.comments;
-  const activities = interactionSnapshot.activities;
   const error = loadError || interactionSnapshot.error || "";
   const load = async (): Promise<PmGlobal | undefined> => {
     try {
@@ -147,12 +236,26 @@ function Aufgaben() {
     () => blocks.flatMap((block) => block.categories.flatMap((category) => category.tasks)),
     [blocks],
   );
+  const overviewCounts = useMemo(
+    () => ({
+      blocked: tasks.filter((item) => item.blockedBy.length > 0 || item.overdue).length,
+      dueSoon: tasks.filter((item) => item.dueSoon && !item.overdue && item.blockedBy.length === 0)
+        .length,
+      open: tasks.filter((item) => item.status !== "DONE").length,
+    }),
+    [tasks],
+  );
   const allTaskById = useMemo(
     () => new Map((data?.tasks ?? []).map((item) => [item.id, item])),
     [data],
   );
   const categoryName = (id: string | null) =>
     data?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
+  function toggleCategory(key: string) {
+    setExpandedCategories((current) =>
+      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
+    );
+  }
   const start = new Date(`${range}T00:00:00Z`),
     end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, 1)),
     duration = end.getTime() - start.getTime();
@@ -365,84 +468,223 @@ function Aufgaben() {
       </details>
       {view === "table" ? (
         <>
-          <div className="hidden md:block">
-            <DataTable data-testid="dense-task-table" className="min-w-[66rem]">
-              <caption className="sr-only">Aufgabenübersicht</caption>
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Aufgabe</th>
-                  <th>Event</th>
-                  <th>Kategorie</th>
-                  <th>Ende</th>
-                  <th>Priorität</th>
-                  <th>Person</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <span
-                        className={`inline-flex rounded border px-1.5 py-0.5 text-[11px] font-medium ${taskStatusTone(item)}`}
-                      >
-                        {item.blockedBy.length ? "Blockiert" : statusLabel[item.status]}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className="min-h-8 text-left font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        onClick={() => void interaction.open(item)}
-                      >
-                        {item.title}
-                      </button>
-                    </td>
-                    <td>{item.event?.name ?? "Globale Aufgabe"}</td>
-                    <td>{categoryName(item.groupId)}</td>
-                    <td>{item.endDate ? formatDatum(item.endDate) : "—"}</td>
-                    <td>{priorityLabel[item.priority]}</td>
-                    <td>
-                      {data?.owners.find((owner) => owner.id === item.ownerId)?.displayName ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-                {!tasks.length && (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
-                      Keine Aufgaben für diese Filter gefunden.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </DataTable>
-          </div>
-          <div className="space-y-2 md:hidden">
-            {tasks.map((item) => (
-              <button
-                key={item.id}
-                className="w-full rounded-md border border-border bg-card p-3 text-left"
-                onClick={() => void interaction.open(item)}
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <strong>{item.title}</strong>
-                  <span
-                    className={`shrink-0 rounded border px-1.5 py-0.5 text-[11px] font-medium ${taskStatusTone(item)}`}
-                  >
-                    {item.blockedBy.length ? "Blockiert" : statusLabel[item.status]}
-                  </span>
-                </span>
-                <span className="mt-1 block text-sm text-muted-foreground">
-                  {item.event?.name ?? "Globale Aufgabe"} ·{" "}
-                  {item.endDate ? formatDatum(item.endDate) : "Ohne Ende"}
-                </span>
-              </button>
-            ))}
-            {!tasks.length && (
-              <p className="py-6 text-center text-sm text-muted-foreground">
+          <section
+            aria-label="Aufgabenprioritäten"
+            data-testid="task-priority-summary"
+            className="grid overflow-hidden rounded-lg border border-border bg-card shadow-sm sm:grid-cols-3"
+          >
+            <div className="flex min-h-20 items-center gap-3 px-4 py-3 sm:border-r sm:border-border">
+              <span className="flex size-9 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <AlertTriangle aria-hidden="true" className="size-5" />
+              </span>
+              <span>
+                <strong className="block text-xl font-semibold tabular-nums">
+                  {overviewCounts.blocked}
+                </strong>
+                <span className="text-sm text-muted-foreground">Blockiert oder überfällig</span>
+              </span>
+            </div>
+            <div className="flex min-h-20 items-center gap-3 border-t border-border px-4 py-3 sm:border-t-0 sm:border-r">
+              <span className="flex size-9 items-center justify-center rounded-full bg-amber-700/10 text-amber-800 dark:text-amber-300">
+                <Clock3 aria-hidden="true" className="size-5" />
+              </span>
+              <span>
+                <strong className="block text-xl font-semibold tabular-nums">
+                  {overviewCounts.dueSoon}
+                </strong>
+                <span className="text-sm text-muted-foreground">Fällig diese Woche</span>
+              </span>
+            </div>
+            <div className="flex min-h-20 items-center gap-3 border-t border-border px-4 py-3 sm:border-t-0">
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <CircleDot aria-hidden="true" className="size-5" />
+              </span>
+              <span>
+                <strong className="block text-xl font-semibold tabular-nums">
+                  {overviewCounts.open}
+                </strong>
+                <span className="text-sm text-muted-foreground">Offene Aufgaben</span>
+              </span>
+            </div>
+          </section>
+
+          <section
+            data-testid="task-overview"
+            className="space-y-4"
+            aria-label="Aufgaben nach Event"
+          >
+            {blocks.map((block) => {
+              const eventName = block.event?.name ?? "Globale Aufgaben";
+              const eventTasks = block.categories.flatMap((category) => category.tasks);
+              const eventOpen = eventTasks.filter((item) => item.status !== "DONE").length;
+              const eventDueSoon = eventTasks.filter(
+                (item) => item.dueSoon && !item.overdue && item.blockedBy.length === 0,
+              ).length;
+              return (
+                <section
+                  key={block.key}
+                  data-testid="task-event-card"
+                  aria-label={eventName}
+                  className="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
+                >
+                  <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-nav px-4 py-3 text-nav-foreground">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <CalendarDays aria-hidden="true" className="size-5 shrink-0" />
+                      <h2 className="truncate text-base font-semibold sm:text-lg">{eventName}</h2>
+                    </div>
+                    <p className="text-sm text-nav-foreground/85">
+                      <strong className="font-semibold text-nav-foreground tabular-nums">
+                        {eventOpen} offen
+                      </strong>
+                      {eventDueSoon > 0 && <span> · {eventDueSoon} diese Woche</span>}
+                    </p>
+                  </header>
+                  <div className="space-y-3 bg-muted/25 p-3 sm:p-4">
+                    {block.categories.map((category) => {
+                      const key = `${block.key}:${category.groupId ?? "none"}`;
+                      const expanded = expandedCategories.includes(key);
+                      const categoryNameValue = categoryName(category.groupId);
+                      const categoryStyle = categoryPresentation(categoryNameValue);
+                      const categoryHealth = categoryHealthPresentation(category.health);
+                      const nextTask =
+                        category.tasks.find((item) => item.id === category.nextTaskId) ??
+                        category.tasks[0];
+                      const CategoryIcon = categoryStyle.Icon;
+                      const HealthIcon = categoryHealth.Icon;
+                      return (
+                        <article
+                          key={key}
+                          data-testid="task-category-card"
+                          data-category-tone={categoryStyle.tone}
+                          className={`overflow-hidden rounded-md border border-border border-l-4 bg-card shadow-sm transition-shadow hover:shadow-md ${categoryStyle.accent}`}
+                        >
+                          <div className="flex flex-col gap-4 p-3 sm:flex-row sm:items-center sm:p-4">
+                            <span
+                              aria-hidden="true"
+                              className={`flex size-11 shrink-0 items-center justify-center rounded-md ${categoryStyle.icon}`}
+                            >
+                              <CategoryIcon className="size-6" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-base font-semibold text-foreground">
+                                  {categoryNameValue}
+                                </h3>
+                                <span
+                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${categoryHealth.tone}`}
+                                >
+                                  <HealthIcon aria-hidden="true" className="size-3.5" />
+                                  {categoryHealth.label}
+                                </span>
+                              </div>
+                              {nextTask ? (
+                                <button
+                                  type="button"
+                                  className="mt-1.5 inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-sm text-left text-sm text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  onClick={() => void interaction.open(nextTask)}
+                                >
+                                  <span className="font-medium text-foreground">
+                                    Nächster Schritt:
+                                  </span>
+                                  <span className="truncate">{nextTask.title}</span>
+                                  {nextTask.endDate && (
+                                    <span className="shrink-0">
+                                      · {formatDatum(nextTask.endDate)}
+                                    </span>
+                                  )}
+                                </button>
+                              ) : (
+                                <p className="mt-1.5 text-sm text-muted-foreground">
+                                  Keine Aufgaben
+                                </p>
+                              )}
+                            </div>
+                            <div className="grid shrink-0 grid-cols-3 overflow-hidden rounded-md border border-border text-center text-xs">
+                              <span className="min-w-16 border-r border-border px-2 py-1.5">
+                                <strong className="block text-sm tabular-nums">
+                                  {category.counts.open}
+                                </strong>
+                                offen
+                              </span>
+                              <span className="min-w-16 border-r border-border px-2 py-1.5">
+                                <strong className="block text-sm tabular-nums">
+                                  {category.counts.inProgress}
+                                </strong>
+                                in Arbeit
+                              </span>
+                              <span className="min-w-16 px-2 py-1.5">
+                                <strong className="block text-sm tabular-nums">
+                                  {category.counts.done}
+                                </strong>
+                                erledigt
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="min-h-11 shrink-0"
+                              aria-expanded={expanded}
+                              aria-controls={`${key}-tasks`}
+                              onClick={() => toggleCategory(key)}
+                            >
+                              {expanded
+                                ? "Workflow ausblenden"
+                                : `Workflow anzeigen (${category.count})`}
+                              {expanded ? (
+                                <ChevronUp aria-hidden="true" className="size-4" />
+                              ) : (
+                                <ChevronDown aria-hidden="true" className="size-4" />
+                              )}
+                            </Button>
+                          </div>
+                          {expanded && (
+                            <ul
+                              id={`${key}-tasks`}
+                              aria-label={`Aufgaben in ${categoryNameValue}`}
+                              className="border-t border-border bg-muted/30 p-2 sm:p-3"
+                            >
+                              {category.tasks.map((item) => (
+                                <li key={item.id}>
+                                  <button
+                                    type="button"
+                                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    onClick={() => void interaction.open(item)}
+                                  >
+                                    <span className="min-w-0">
+                                      <strong className="block truncate text-sm">
+                                        {item.title}
+                                      </strong>
+                                      <span className="text-xs text-muted-foreground">
+                                        {item.endDate
+                                          ? `Ende ${formatDatum(item.endDate)}`
+                                          : "Ohne Ende"}
+                                      </span>
+                                    </span>
+                                    <span
+                                      className={`shrink-0 rounded border px-1.5 py-0.5 text-[11px] font-medium ${taskStatusTone(item)}`}
+                                    >
+                                      {item.blockedBy.length
+                                        ? "Blockiert"
+                                        : statusLabel[item.status]}
+                                    </span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+            {!blocks.length && (
+              <p className="rounded-lg border border-border bg-card py-8 text-center text-sm text-muted-foreground">
                 Keine Aufgaben für diese Filter gefunden.
               </p>
             )}
-          </div>
+          </section>
         </>
       ) : (
         <section className="hidden rounded-lg border p-4 md:block">
@@ -683,7 +925,6 @@ function Aufgaben() {
       <TaskDetailSheet
         workspace={interaction}
         planning={{
-          eventNameById,
           owners: data?.owners ?? [],
           groups: data?.groups ?? [],
           tasks: data?.tasks ?? [],

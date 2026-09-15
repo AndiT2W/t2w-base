@@ -164,8 +164,8 @@ export class EventsController {
   }
 
   @Get()
-  list(@Query("q") q?: string, @Query("limit") limit = "200", @Query("offset") offset = "0") {
-    const take = Math.min(Math.max(Number(limit) || 200, 1), 1000);
+  list(@Query("q") q?: string, @Query("limit") limit = "500", @Query("offset") offset = "0") {
+    const take = Math.min(Math.max(Number(limit) || 500, 1), 1000);
     const skip = Math.max(Number(offset) || 0, 0);
     return this.records.list({ q, skip, take });
   }

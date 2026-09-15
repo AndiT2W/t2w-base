@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("zeigt den Auditlog in den Einstellungen und filtert nach Entität", async ({ page }) => {
   await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: { ok: true } }));
-  await page.route("**/api/v1/events", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/events**", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/v1/settings", (route) =>
     route.fulfill({ json: { outlookJahresordner: [], jahresSites: [], outlookMailbox: null } }),
   );

@@ -30,6 +30,7 @@ sources:
 - Der PM-Browsertest bearbeitet dieselbe Event-Aufgabe in Event- und Gesamtansicht, kommentiert sie und prüft die Persistenz nach Reload.
 - Der Workspace-Test prüft, dass bei schnellem Wechsel oder Schließen eines Details keine verspätete Historie einer anderen Aufgabe sichtbar wird.
 - Lokale Workspace-Tests, Domain-Tests, Produktionsbuild und die PM-Browser-Suite sind erfolgreich.
+- Der Produktionsabsturz der Gesamtansicht vom 15.09.2026 entstand durch den veralteten Aufruf `interaction.getSnapshot` anstelle des Workspace-Vertrags `interaction.snapshot`; Diagnose, Bundle-Evidenz und Deploy-Grenze sind im [Quellnachweis](../sources/2026-09-15-aufgaben-produktionsabsturz.md) festgehalten.
 
 ## Related Pages
 

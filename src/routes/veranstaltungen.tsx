@@ -59,6 +59,8 @@ const EVENT_COLUMNS = [
   "Status",
   "Event",
   "Veranstalter",
+  "Sportart",
+  "Services",
   "Zeitraum",
   "Tage",
   "Aufgaben",
@@ -69,6 +71,8 @@ const EVENT_TABLE_COLUMNS = [
   { key: "Status", sortValue: (event: T2WEvent) => STATUS_LABEL[event.status] },
   { key: "Event", sortValue: (event: T2WEvent) => event.name },
   { key: "Veranstalter", sortValue: (event: T2WEvent) => event.veranstalter },
+  { key: "Sportart", sortValue: (event: T2WEvent) => event.sportart ?? "" },
+  { key: "Services", sortValue: (event: T2WEvent) => event.services?.join(", ") ?? "" },
   { key: "Zeitraum", sortValue: (event: T2WEvent) => event.start },
   {
     key: "Tage",
@@ -95,7 +99,7 @@ function Veranstaltungen() {
   const { events, settings } = useT2W();
   const [suche, setSuche] = useState(q);
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
-  const [zeitraum, setZeitraum] = useState<Zeitraum>("alle");
+  const [zeitraum, setZeitraum] = useState<Zeitraum>("jahr");
   const [archiv, setArchiv] = useState<ArchivFilter>("aktiv");
   const table = useTableBehavior<T2WEvent, EventColumn>({
     storageKey: "t2w-event-table-columns",
@@ -182,6 +186,7 @@ function Veranstaltungen() {
               <SelectValue placeholder="Zeitraum" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="jahr">Aktuelles Jahr</SelectItem>
               <SelectItem value="alle">Alle Zeiträume</SelectItem>
               <SelectItem value="kommend">Kommend</SelectItem>
               <SelectItem value="laufend">Laufend</SelectItem>
@@ -246,6 +251,26 @@ function Veranstaltungen() {
                       active={sort.key === "Veranstalter"}
                       direction={sort.direction}
                       onSort={() => sortiere("Veranstalter")}
+                    />
+                  </th>
+                )}
+                {visibleColumns.includes("Sportart") && (
+                  <th className="px-2 py-1.5">
+                    <SortHeader
+                      label="Sportart"
+                      active={sort.key === "Sportart"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("Sportart")}
+                    />
+                  </th>
+                )}
+                {visibleColumns.includes("Services") && (
+                  <th className="px-2 py-1.5">
+                    <SortHeader
+                      label="Services"
+                      active={sort.key === "Services"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("Services")}
                     />
                   </th>
                 )}
@@ -321,6 +346,19 @@ function Veranstaltungen() {
                     {visibleColumns.includes("Veranstalter") && (
                       <td className="max-w-[10rem] truncate px-2 py-1">{e.veranstalter}</td>
                     )}
+                    {visibleColumns.includes("Sportart") && (
+                      <td className="max-w-[9rem] truncate px-2 py-1" title={e.sportart || "—"}>
+                        {e.sportart || "—"}
+                      </td>
+                    )}
+                    {visibleColumns.includes("Services") && (
+                      <td
+                        className="max-w-[12rem] truncate px-2 py-1"
+                        title={e.services?.join(", ") || "—"}
+                      >
+                        {e.services?.join(", ") || "—"}
+                      </td>
+                    )}
                     {visibleColumns.includes("Zeitraum") && (
                       <td className="whitespace-nowrap px-2 py-1">
                         {formatZeitraum(e.start, e.ende)}
@@ -364,7 +402,10 @@ function Veranstaltungen() {
               })}
               {gefiltert.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-2 py-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={visibleColumns.length + 1}
+                    className="px-2 py-8 text-center text-muted-foreground"
+                  >
                     Keine Events für die aktuelle Filterauswahl.
                   </td>
                 </tr>

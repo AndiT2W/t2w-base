@@ -19,6 +19,7 @@ sources:
   - ../../services/event-service/prisma/schema.prisma
   - ../../docs/adr/0003-shared-compact-data-tables.md
   - User conversation, 2026-09-14
+  - User conversation, 2026-09-15
 ---
 
 # Gemeinsame kompakte Datentabellen
@@ -40,6 +41,8 @@ Die Servertabelle `UserTablePreference` ist je `(userId, tableId)` eindeutig. De
 
 `DataTable` wird in Übersichts-, Veranstaltungs-, Hardware- und Auszahlungslisten sowie in Event- und Gesamtaufgabenlisten genutzt. Der Modulvertrag setzt Kopfzeilen-, Zeilen-, Zellen- und Fokusverhalten auch für bestehende Tabellenmarkierung zentral durch; Routen behalten nur ihre fachlichen Filter und Zellinhalte.
 
+Die Eventtabellen in Übersicht und Veranstaltungen zeigen Sportart und Services als getrennte, sortierbare Spalten. Mehrere Services stehen zusammengefasst in einer Zelle; bei langen Werten ist der vollständige Text als Tooltip verfügbar. Siehe [Übersicht](../../src/routes/index.tsx), [Veranstaltungen](../../src/routes/veranstaltungen.tsx) und [Browser-Regression](../../tests/e2e/event-management.spec.ts).
+
 ## Dichte Arbeitsseiten (Variante A)
 
 Die Nutzerentscheidung vom 2026-09-15 legt die A-Richtung für die Inhaltsseiten fest: Die bestehende linke Navigation bleibt, der Arbeitsbereich nutzt seine verfügbare Breite und zeigt Inhalte als dichte, unmittelbar sichtbare Listen. Kennzahlen sind eine schmale Zeile statt großflächiger Karten; Filter und Listenaktionen stehen in einer abgesetzten Kompaktzeile vor der Tabelle.
@@ -47,6 +50,10 @@ Die Nutzerentscheidung vom 2026-09-15 legt die A-Richtung für die Inhaltsseiten
 Die globale Aufgabenübersicht zeigt deshalb alle gefilterten Aufgaben direkt als Tabelle statt sie erst innerhalb aufklappbarer Event- und Kategorieblöcke zu verbergen. Die Task-Detailinteraktion bleibt unverändert im `TaskDetailSheet`; Gantt bleibt eine eigene Desktopansicht. Auf kleinen Bildschirmen bleiben die Listen als bedienbare Karten verfügbar.
 
 Hardware, Auszahlungen, Veranstaltungen, Kontakte und Übersicht verwenden dieselbe vertikale Hierarchie. Einstellungen bleiben formularorientiert, füllen aber die Arbeitsbreite statt sie auf eine schmale Lesespalte zu begrenzen.
+
+## Einzelzellenbearbeitung
+
+Inline-Editing folgt dem ClickUp-artigen Zellmodell: Es ist immer nur die aktive Zelle im Bearbeitungsmodus; die übrigen Zellen derselben Zeile behalten ihre kompakte Anzeige und die Spaltenbreiten verändern sich nicht. `Tab` speichert die aktive Zelle und öffnet die nächste bearbeitbare Zelle derselben Zeile, `Shift+Tab` entsprechend die vorherige. `Escape` verwirft die aktuelle Zelländerung. Diese Nutzerentscheidung ersetzt für die Hardwaretabelle den bisherigen Ansatz, beim Klick alle Felder einer Zeile gleichzeitig als Eingaben darzustellen. Quelle: Nutzerkonversation vom 2026-09-15.
 
 ## Einheitliches Datumsformat
 

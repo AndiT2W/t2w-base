@@ -133,14 +133,15 @@ test("keeps an Event Task detail editable from the Event and combined planning v
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
 
   await page.goto("/aufgaben");
-  await page.getByTestId("dense-task-table").getByRole("button", { name: title }).click();
+  const taskOverview = page.getByTestId("task-overview");
+  await taskOverview.getByRole("button", { name: new RegExp(title) }).click();
   await expect(page.getByLabel("Beschreibung")).toHaveValue(detail);
 
   await page.getByLabel("Kommentar").fill("Im gemeinsamen Detail ergänzt.");
   await page.getByRole("button", { name: "Kommentieren" }).click();
   await expect(page.getByText("Im gemeinsamen Detail ergänzt.")).toBeVisible();
   await page.reload();
-  await page.getByTestId("dense-task-table").getByRole("button", { name: title }).click();
+  await taskOverview.getByRole("button", { name: new RegExp(title) }).click();
   await expect(page.getByText("Im gemeinsamen Detail ergänzt.")).toBeVisible();
 });
 
@@ -159,10 +160,12 @@ test("projects canonical Event tasks into the Event list after reload", async ({
   const row = page.getByRole("row").filter({ hasText: event.name });
   await expect(row).toContainText("1");
 });
-test("shows the dense combined overview, desktop Gantt and global work", async ({ page }) => {
+test("groups the combined overview by event and category, then retains filters and Gantt", async ({
+  page,
+}) => {
   const event = await fixture(page);
   await create(page, event.id, "Event-Aufgabe");
-  const categoryName = `Gantt Kategorie ${randomUUID().slice(0, 6)}`;
+  const categoryName = `Hardware Kategorie ${randomUUID().slice(0, 6)}`;
   const category = await page.request.post("/api/v1/pm/groups", {
     data: { name: categoryName, active: true, sortOrder: 1 },
   });
@@ -184,13 +187,21 @@ test("shows the dense combined overview, desktop Gantt and global work", async (
   expect(global.ok()).toBeTruthy();
   await page.goto("/aufgaben");
   await expect(page.getByRole("heading", { name: "Aufgaben", exact: true })).toBeVisible();
-  const taskTable = page.getByTestId("dense-task-table");
-  await expect(taskTable).toContainText(globalTitle);
-  await expect(taskTable).toContainText("Event-Aufgabe");
+  const taskOverview = page.getByTestId("task-overview");
+  await expect(taskOverview).toContainText(globalTitle);
+  await expect(taskOverview).toContainText("Event-Aufgabe");
+  const globalCategory = taskOverview
+    .getByTestId("task-category-card")
+    .filter({ hasText: globalTitle });
+  await expect(globalCategory).toHaveAttribute("data-category-tone", "hardware");
+  await globalCategory.getByRole("button", { name: /Workflow anzeigen/ }).click();
+  await expect(
+    globalCategory.locator("ul").getByRole("button", { name: new RegExp(globalTitle) }),
+  ).toBeVisible();
   await page.getByText("Weitere Filter", { exact: true }).click();
   await page.locator("#task-priority").selectOption("HIGH");
-  await expect(taskTable).toContainText(globalTitle);
-  await expect(taskTable).not.toContainText("Event-Aufgabe");
+  await expect(taskOverview).toContainText(globalTitle);
+  await expect(taskOverview).not.toContainText("Event-Aufgabe");
   await page.getByRole("button", { name: "Gantt", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Gantt", exact: true })).toBeVisible();
   await expect(page.getByTestId("gantt-category").filter({ hasText: categoryName })).toBeVisible();
