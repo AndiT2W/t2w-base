@@ -118,6 +118,34 @@ test("shows dependent and independent category tasks separately", async ({ page 
     allocationTitle,
   );
 });
+test("keeps an Event Task detail editable from the Event and combined planning views", async ({
+  page,
+}) => {
+  const event = await fixture(page);
+  const title = `Gemeinsames Detail ${randomUUID().slice(0, 6)}`;
+  const detail = "Freigabe für beide Planungsansichten";
+  await create(page, event.id, title);
+
+  await page.goto(`/events/${event.eventCode}?tab=aufgaben`);
+  await page.getByRole("button", { name: /Ohne Kategorie/ }).click();
+  await page.getByRole("table").getByRole("button", { name: title }).click();
+  await page.getByLabel("Beschreibung").fill(detail);
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+
+  await page.goto("/aufgaben");
+  await page.getByRole("button", { name: new RegExp(`Ohne Kategorie.*${title}`) }).click();
+  await page.getByRole("table").getByRole("button", { name: title }).click();
+  await expect(page.getByLabel("Beschreibung")).toHaveValue(detail);
+
+  await page.getByLabel("Kommentar").fill("Im gemeinsamen Detail ergänzt.");
+  await page.getByRole("button", { name: "Kommentieren" }).click();
+  await expect(page.getByText("Im gemeinsamen Detail ergänzt.")).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: new RegExp(`Ohne Kategorie.*${title}`) }).click();
+  await page.getByRole("table").getByRole("button", { name: title }).click();
+  await expect(page.getByText("Im gemeinsamen Detail ergänzt.")).toBeVisible();
+});
+
 test("projects canonical Event tasks into the Event list after reload", async ({ page }) => {
   const event = await fixture(page);
   const title = `Readiness ${randomUUID().slice(0, 6)}`;

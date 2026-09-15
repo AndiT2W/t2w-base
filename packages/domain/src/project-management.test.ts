@@ -49,6 +49,17 @@ describe("project management v4", () => {
       ),
     ).not.toThrow();
   });
+  it("keeps independent work in a category out of a connected Aufgabenablauf", () => {
+    const tasks = [task("design"), task("print"), task("allocation")];
+    const result = projectTaskPortfolio(
+      tasks,
+      [{ predecessorId: "design", successorId: "print" }],
+      catalogue,
+      "2026-09-14T12:00:00Z",
+    );
+
+    expect(result.flows).toEqual([[["design"], ["print"]], [["allocation"]]]);
+  });
   it("rejects cross-context and cyclic prerequisites", () => {
     const tasks = [task("a"), task("b"), task("global", { scope: "GLOBAL", eventId: null })];
     expect(() =>

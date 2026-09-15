@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
+import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

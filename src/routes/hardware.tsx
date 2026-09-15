@@ -10,8 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
-import { DataTable } from "@/components/t2w/DataTable";
+import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
 import {
   Sheet,
   SheetContent,

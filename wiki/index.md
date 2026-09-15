@@ -21,6 +21,7 @@
 - [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md)
 - [Architekturvertiefung vom 2026-08-27](concepts/architecture-deepening-2026-08-27.md)
 - [Architekturvertiefung vom 2026-08-28](concepts/architecture-deepening-2026-08-28.md)
+- [Aufgabenplanung und Tabellen-Vertiefung](concepts/task-planning-and-table-deepening-2026-09-15.md)
 - [Maintenance Log](log.md)
 
 ## Knowledge Areas

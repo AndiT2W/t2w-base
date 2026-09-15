@@ -3,13 +3,8 @@ import type { Task } from "@t2w/domain/project-management";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { DataTable } from "@/components/t2w/DataTable";
+import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { TaskFlowBadges } from "@/components/t2w/TaskFlowBadges";
 import {
   pmCommand,
@@ -19,13 +14,11 @@ import {
   type PmCommand,
   type PmState,
 } from "@/lib/t2w/project-management";
-import { categoryTaskFlows } from "@/lib/t2w/task-flow-display";
 import {
   createTaskInteractionWorkspace,
   createHttpTaskInteractionAdapter,
 } from "@/lib/t2w/task-interaction-workspace";
 
-const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
 const healthLabel: Record<string, string> = {
   critical: "Blockiert oder überfällig",
   warning: "In den nächsten 7 Tagen fällig",
@@ -40,35 +33,10 @@ const healthClass: Record<string, string> = {
   done: "bg-emerald-600",
   neutral: "bg-muted-foreground",
 };
-function links(text: string) {
-  return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) =>
-    /^https?:\/\//.test(part) ? (
-      <a key={index} href={part} target="_blank" rel="noreferrer" className="underline">
-        {part}
-      </a>
-    ) : (
-      part
-    ),
-  );
-}
-function empty(task: Task): Task {
-  return {
-    ...task,
-    description: "",
-    status: "OPEN",
-    priority: "NORMAL",
-    ownerId: null,
-    groupId: null,
-    startDate: null,
-    endDate: null,
-  };
-}
-
 export function ProjectManagement({ eventId }: { eventId: string }) {
   const [state, setState] = useState<PmState>();
   const [open, setOpen] = useState<string | null>(null);
   const [title, setTitle] = useState("");
-  const [comment, setComment] = useState("");
   const [loadError, setLoadError] = useState("");
   const stateRef = useRef<PmState | undefined>(undefined);
   const interaction = useMemo(
@@ -166,7 +134,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
           <div className="space-y-3">
             {state.categories.map((category) => {
               const members = state.tasks.filter((task) => task.groupId === category.groupId);
-              const flows = categoryTaskFlows(members, state.edges);
+              const flows = category.flows;
               const expanded = open === (category.groupId ?? "none");
               const next = category.nextTaskId ? taskById.get(category.nextTaskId) : null;
               return (
@@ -207,7 +175,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                   {expanded && (
                     <div className="border-t">
                       <div className="hidden overflow-x-auto md:block">
-                        <table className="w-full text-left text-sm">
+                        <DataTable>
                           <thead>
                             <tr className="border-b text-muted-foreground">
                               <th className="p-3">Name</th>
@@ -246,7 +214,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                               </tr>
                             ))}
                           </tbody>
-                        </table>
+                        </DataTable>
                       </div>
                       <div className="space-y-2 p-3 md:hidden">
                         {members.map((task) => (
@@ -271,283 +239,53 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
           </div>
         </>
       )}
-      <Sheet open={!!draft} onOpenChange={(shown) => !shown && !busy && interaction.close()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
-          <SheetHeader>
-            <SheetTitle>Aufgabe</SheetTitle>
-            <SheetDescription>Details, Voraussetzungen, Kommentare und Verlauf</SheetDescription>
-          </SheetHeader>
-          {draft && (
-            <div className="space-y-4 p-4">
-              <form
-                className="space-y-3"
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  await mutate({
-                    type: "update",
-                    taskId: draft.id,
-                    taskVersion: draft.version,
-                    task: draft,
-                  });
-                }}
-              >
-                <Label htmlFor="pm-title">Titel</Label>
-                <Input
-                  id="pm-title"
-                  required
-                  value={draft.title}
-                  onChange={(event) => interaction.updateDraft({ title: event.target.value })}
-                />
-                <Label htmlFor="pm-description">Beschreibung</Label>
-                <textarea
-                  id="pm-description"
-                  className={control}
-                  rows={5}
-                  value={draft.description}
-                  onChange={(event) => interaction.updateDraft({ description: event.target.value })}
-                />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="pm-status">Status</Label>
-                    <select
-                      id="pm-status"
-                      className={control}
-                      value={draft.status}
-                      onChange={(event) =>
-                        interaction.updateDraft({ status: event.target.value as Task["status"] })
-                      }
-                    >
-                      {Object.entries(statusLabel).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="pm-priority">Priorität</Label>
-                    <select
-                      id="pm-priority"
-                      className={control}
-                      value={draft.priority}
-                      onChange={(event) =>
-                        interaction.updateDraft({
-                          priority: event.target.value as Task["priority"],
-                        })
-                      }
-                    >
-                      {Object.entries(priorityLabel).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="pm-owner">Verantwortlich</Label>
-                    <select
-                      id="pm-owner"
-                      className={control}
-                      value={draft.ownerId ?? ""}
-                      onChange={(event) =>
-                        interaction.updateDraft({ ownerId: event.target.value || null })
-                      }
-                    >
-                      <option value="">Nicht zugeordnet</option>
-                      {state?.owners
-                        .filter((owner) => owner.active || owner.id === draft.ownerId)
-                        .map((owner) => (
-                          <option key={owner.id} value={owner.id}>
-                            {owner.displayName}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="pm-group">Kategorie</Label>
-                    <select
-                      id="pm-group"
-                      className={control}
-                      value={draft.groupId ?? ""}
-                      onChange={(event) =>
-                        interaction.updateDraft({ groupId: event.target.value || null })
-                      }
-                    >
-                      <option value="">Ohne Kategorie</option>
-                      {state?.groups
-                        .filter((group) => group.active || group.id === draft.groupId)
-                        .map((group) => (
-                          <option key={group.id} value={group.id}>
-                            {group.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="pm-start">Start</Label>
-                    <Input
-                      id="pm-start"
-                      type="date"
-                      value={draft.startDate ?? ""}
-                      onChange={(event) =>
-                        interaction.updateDraft({ startDate: event.target.value || null })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="pm-end">Ende</Label>
-                    <Input
-                      id="pm-end"
-                      type="date"
-                      value={draft.endDate ?? ""}
-                      onChange={(event) =>
-                        interaction.updateDraft({ endDate: event.target.value || null })
-                      }
-                    />
-                  </div>
-                </div>
-                <Button disabled={busy}>Änderungen speichern</Button>
-              </form>
-              <section className="border-t pt-4">
-                <h3 className="font-medium">Voraussetzungen</h3>
-                {state?.edges
-                  .filter((edge) => edge.successorId === draft.id)
-                  .map((edge) => (
-                    <div
-                      key={edge.predecessorId}
-                      className="flex items-center justify-between gap-2 py-2"
-                    >
-                      <span>{taskById.get(edge.predecessorId)?.title}</span>
-                      <Button
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() =>
-                          void mutate({
-                            type: "remove-dependency",
-                            taskId: draft.id,
-                            taskVersion: draft.version,
-                            predecessorId: edge.predecessorId,
-                          })
-                        }
-                      >
-                        Entfernen
-                      </Button>
-                    </div>
-                  ))}
-                <Label htmlFor="pm-predecessor">Vorgänger hinzufügen</Label>
-                <select
-                  id="pm-predecessor"
-                  className={control}
-                  defaultValue=""
-                  onChange={(event) => {
-                    if (event.target.value)
-                      void mutate({
-                        type: "add-dependency",
-                        taskId: draft.id,
-                        taskVersion: draft.version,
-                        predecessorId: event.target.value,
-                      });
-                    event.currentTarget.value = "";
-                  }}
-                >
-                  <option value="">Aufgabe auswählen</option>
-                  {state?.tasks
-                    .filter(
-                      (task) =>
-                        task.id !== draft.id &&
-                        !state.edges.some(
-                          (edge) => edge.successorId === draft.id && edge.predecessorId === task.id,
-                        ),
-                    )
-                    .map((task) => (
-                      <option key={task.id} value={task.id}>
-                        {task.title}
-                      </option>
-                    ))}
-                </select>
-              </section>
-              <section className="border-t pt-4">
-                <h3 className="font-medium">Kommentare</h3>
-                {comments.map((item) => (
-                  <article key={item.id} className="border-b py-2">
-                    <p className="whitespace-pre-wrap break-words">{links(item.text)}</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(item.updatedAt).toLocaleString("de-AT")}
-                        {item.updatedAt !== item.createdAt ? " · bearbeitet" : ""}
-                      </p>
-                      <span className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            const text = window.prompt("Kommentar bearbeiten", item.text);
-                            if (text === null) return;
-                            await interaction.writeComment({ id: item.id, text });
-                          }}
-                        >
-                          Bearbeiten
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            if (!window.confirm("Kommentar dauerhaft löschen?")) return;
-                            await interaction.writeComment({
-                              id: item.id,
-                              delete: true,
-                            });
-                          }}
-                        >
-                          Löschen
-                        </Button>
-                      </span>
-                    </div>
-                  </article>
-                ))}
-                <form
-                  className="mt-3 space-y-2"
-                  onSubmit={async (event) => {
-                    event.preventDefault();
-                    if (!comment.trim()) return;
-                    await interaction.writeComment({ text: comment });
-                    setComment("");
-                  }}
-                >
-                  <Label htmlFor="pm-comment">Kommentar</Label>
-                  <textarea
-                    id="pm-comment"
-                    className={control}
-                    value={comment}
-                    onChange={(event) => setComment(event.target.value)}
-                  />
-                  <Button variant="outline">Kommentieren</Button>
-                </form>
-              </section>
-              <section className="border-t pt-4">
-                <h3 className="font-medium">Verlauf</h3>
-                {activities.map((item) => (
-                  <p key={item.id} className="border-b py-2 text-sm">
-                    {item.action} · {new Date(item.createdAt).toLocaleString("de-AT")}
-                  </p>
-                ))}
-              </section>
-              <Button
-                variant="destructive"
-                disabled={busy}
-                onClick={() => {
-                  if (window.confirm("Aufgabe dauerhaft löschen?"))
-                    void mutate({ type: "delete", taskId: draft.id, taskVersion: draft.version });
-                }}
-              >
-                Aufgabe löschen
-              </Button>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <TaskDetailSheet
+        task={interactionSnapshot.task}
+        draft={draft ?? {}}
+        owners={state?.owners ?? []}
+        groups={state?.groups ?? []}
+        tasks={state?.tasks ?? []}
+        edges={state?.edges ?? []}
+        comments={comments}
+        activities={activities}
+        busy={busy}
+        title="Aufgabe"
+        description="Details, Voraussetzungen, Kommentare und Verlauf"
+        onClose={() => interaction.close()}
+        onDraftChange={(patch) => interaction.updateDraft(patch)}
+        onSubmit={() => {
+          if (!draft) return;
+          return mutate({
+            type: "update",
+            taskId: draft.id,
+            taskVersion: draft.version,
+            task: draft,
+          });
+        }}
+        onAddDependency={(predecessorId) => {
+          if (!draft) return;
+          return mutate({
+            type: "add-dependency",
+            taskId: draft.id,
+            taskVersion: draft.version,
+            predecessorId,
+          });
+        }}
+        onRemoveDependency={(predecessorId) => {
+          if (!draft) return;
+          return mutate({
+            type: "remove-dependency",
+            taskId: draft.id,
+            taskVersion: draft.version,
+            predecessorId,
+          });
+        }}
+        onWriteComment={(input) => interaction.writeComment(input)}
+        onDelete={() => {
+          if (!draft) return;
+          return mutate({ type: "delete", taskId: draft.id, taskVersion: draft.version });
+        }}
+      />
     </section>
   );
 }

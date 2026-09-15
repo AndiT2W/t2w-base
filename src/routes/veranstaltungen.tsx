@@ -13,7 +13,7 @@ import { EventDialog } from "@/components/t2w/EventDialog";
 import { GanttSeite } from "@/routes/gantt";
 import { KalenderSeite } from "@/routes/kalender";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
+import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
@@ -26,7 +26,6 @@ import {
 } from "@/lib/t2w/event-catalogue";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
-import { DataTable } from "@/components/t2w/DataTable";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({

@@ -16,6 +16,7 @@ export type Task = {
   version: number;
 };
 export type Dependency = { predecessorId: string; successorId: string };
+export type TaskFlow = string[][];
 export type Catalogue = {
   owners: { id: string; active: boolean }[];
   groups: { id: string; active: boolean }[];
@@ -105,6 +106,64 @@ export function projectTaskReadiness(
   };
 }
 
+/**
+ * Derives connected Task flows for one category. Independent Tasks stay in
+ * their own flow; dependent Tasks retain their parallel stages.
+ */
+export function projectTaskFlows(
+  tasks: readonly Pick<Task, "id">[],
+  edges: readonly Dependency[],
+): TaskFlow[] {
+  const taskIds = new Set(tasks.map((task) => task.id));
+  const categoryEdges = edges.filter(
+    (edge) => taskIds.has(edge.predecessorId) && taskIds.has(edge.successorId),
+  );
+  const neighbours = new Map<string, Set<string>>(
+    [...taskIds].map((id) => [id, new Set<string>()]),
+  );
+  for (const edge of categoryEdges) {
+    neighbours.get(edge.predecessorId)?.add(edge.successorId);
+    neighbours.get(edge.successorId)?.add(edge.predecessorId);
+  }
+
+  const visited = new Set<string>(),
+    flows: TaskFlow[] = [];
+  for (const start of [...taskIds].sort()) {
+    if (visited.has(start)) continue;
+    const connected = new Set<string>(),
+      pending = [start];
+    while (pending.length) {
+      const id = pending.pop()!;
+      if (visited.has(id)) continue;
+      visited.add(id);
+      connected.add(id);
+      pending.push(...(neighbours.get(id) ?? []));
+    }
+
+    const remaining = new Set(connected),
+      stages: string[][] = [];
+    while (remaining.size) {
+      const stage = [...remaining]
+        .filter(
+          (id) =>
+            !categoryEdges.some(
+              (edge) => edge.successorId === id && remaining.has(edge.predecessorId),
+            ),
+        )
+        .sort();
+      if (!stage.length) throw new Error("Ungültiger zyklischer Aufgabenablauf.");
+      stages.push(stage);
+      stage.forEach((id) => remaining.delete(id));
+    }
+    flows.push(stages);
+  }
+
+  return flows.sort((left, right) => {
+    const byTaskCount = right.flat().length - left.flat().length;
+    return byTaskCount || left.flat().join("\u0000").localeCompare(right.flat().join("\u0000"));
+  });
+}
+
 export function projectTaskPortfolio(
   tasks: Task[],
   edges: Dependency[],
@@ -150,26 +209,10 @@ export function projectTaskPortfolio(
       nextTaskId: next?.id ?? null,
       nextEndDate: next?.endDate ?? null,
       health,
+      flows: projectTaskFlows(members, edges),
     };
   });
-  const flows = groupIds.map((groupId) => {
-    const remaining = new Set(
-        projected.filter((task) => task.groupId === groupId).map((task) => task.id),
-      ),
-      stages: string[][] = [];
-    while (remaining.size) {
-      const stage = [...remaining]
-        .filter(
-          (id) =>
-            !edges.some((edge) => edge.successorId === id && remaining.has(edge.predecessorId)),
-        )
-        .sort();
-      if (!stage.length) throw new Error("Ungültiger zyklischer Aufgabenablauf.");
-      stages.push(stage);
-      stage.forEach((id) => remaining.delete(id));
-    }
-    return stages;
-  });
+  const flows = categories.flatMap((category) => category.flows);
   return { referenceTime, tasks: projected, edges, categories, flows };
 }
 

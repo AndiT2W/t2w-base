@@ -10,7 +10,7 @@
 
 **Aufgabenabhängigkeit**: Die notwendige Erledigung einer Vorgängeraufgabe vor Beginn einer Nachfolgeraufgabe innerhalb desselben Planungsbereichs.
 
-**Aufgabenablauf**: Die aus verbundenen Aufgaben eines Planungsbereichs abgeleitete Folge einschließlich paralleler Zweige; Übersicht und Tabelle beschreiben dieselbe Arbeit.
+**Aufgabenablauf**: Die aus verbundenen Aufgaben eines Planungsbereichs abgeleitete Folge einschließlich paralleler Zweige; Übersicht und Tabelle beschreiben dieselbe Arbeit. Unabhängige Aufgaben bilden jeweils einen eigenen Ablauf. Quelle: Nutzerentscheidung vom 15.09.2026.
 
 ## CRM workspace
 

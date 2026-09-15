@@ -1,4 +1,4 @@
-import type { TaskFlow } from "@/lib/t2w/task-flow-display";
+import type { TaskFlow } from "@t2w/domain/project-management";
 
 type FlowTask = { id: string; title: string };
 

@@ -21,9 +21,8 @@ import { FolderLink } from "@/components/t2w/FolderLink";
 import { useI18n } from "@/lib/i18n";
 import { activeEvents } from "@/lib/t2w/event-projections";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
-import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/TableFeatures";
+import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
-import { DataTable } from "@/components/t2w/DataTable";
 
 export const Route = createFileRoute("/")({
   head: () => ({

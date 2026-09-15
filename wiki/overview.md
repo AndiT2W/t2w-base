@@ -8,6 +8,8 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 - Aktuell ist [PM-Spezifikation v4](tasks/project-management-spec-v4.md) für Issue #55 umgesetzt: vereinfachte Event- oder globale Aufgaben, drei Status, Tagesplanung, Voraussetzungen, Kommentare und eine geschlossene Kategorie-Gesamtübersicht. Die Tabellenansicht ist Standard, Gantt eine Desktop-Zeitansicht. `PmTask` ist die kanonische Aufgabenhaltung; Migration `0028_canonical_task_projection` entfernt den alten `EventTask`-Speicher bewusst ohne Migration und Event-Schnappschüsse liefern nur Task-Readiness.
 
+- Der Aufgabenablauf wird seit 2026-09-15 kanonisch im Domain-Paket projiziert: verbundene Aufgaben bilden einen Ablauf, unabhängige Aufgaben getrennte Abläufe. Event- und Gesamtansicht verwenden ein gemeinsames Task-Detail; der kompakte DataTable-Vertrag gilt für alle sechs operativen Listen. Siehe [Aufgabenplanung und Tabellen-Vertiefung](concepts/task-planning-and-table-deepening-2026-09-15.md).
+
 - Repository scaffold created on 2026-06-15.
 - Initial product brief captured from user conversation on 2026-06-15.
 - Organizer-centric CRM requirement captured from user conversation on 2026-06-15.

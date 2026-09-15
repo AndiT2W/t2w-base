@@ -6,15 +6,9 @@ import { TaskFlowBadges } from "@/components/t2w/TaskFlowBadges";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { DataTable } from "@/components/t2w/DataTable";
+import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { pmRequest, priorityLabel, statusLabel, type PmGlobal } from "@/lib/t2w/project-management";
-import { categoryTaskFlows } from "@/lib/t2w/task-flow-display";
 import {
   createTaskInteractionWorkspace,
   createHttpTaskInteractionAdapter,
@@ -50,17 +44,6 @@ type VisibleTask = ReturnType<
 >[number]["portfolio"]["tasks"][number] & {
   event: PmGlobal["eventChoices"][number] | null;
 };
-function urlText(text: string) {
-  return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) =>
-    /^https?:\/\//.test(part) ? (
-      <a key={index} className="underline" href={part} target="_blank" rel="noreferrer">
-        {part}
-      </a>
-    ) : (
-      part
-    ),
-  );
-}
 function portfolioBlocks(data: PmGlobal, sourceTasks: PmGlobal["tasks"]) {
   return projectTaskPortfolios(
     sourceTasks,
@@ -76,7 +59,7 @@ function portfolioBlocks(data: PmGlobal, sourceTasks: PmGlobal["tasks"]) {
         const tasks = portfolio.tasks
           .filter((task) => task.groupId === category.groupId)
           .map((task) => ({ ...task, event }));
-        return { ...category, tasks, flows: categoryTaskFlows(tasks, data.edges) };
+        return { ...category, tasks, flows: category.flows };
       }),
     };
   });
@@ -101,7 +84,6 @@ function Aufgaben() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [comment, setComment] = useState("");
   const [range, setRange] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -486,7 +468,7 @@ function Aufgaben() {
                     </button>
                     {shown && (
                       <div className="hidden overflow-x-auto md:block">
-                        <table className="w-full text-left text-sm">
+                        <DataTable>
                           <thead>
                             <tr className="border-t text-muted-foreground">
                               <th className="p-3">Name</th>
@@ -520,7 +502,7 @@ function Aufgaben() {
                               </tr>
                             ))}
                           </tbody>
-                        </table>
+                        </DataTable>
                       </div>
                     )}
                     {shown && (
@@ -781,290 +763,36 @@ function Aufgaben() {
           </aside>
         </section>
       )}
-      <Sheet open={!!task} onOpenChange={(shown) => !shown && interaction.close()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
-          <SheetHeader>
-            <SheetTitle>{task?.id ? "Aufgabe bearbeiten" : "Globale Aufgabe anlegen"}</SheetTitle>
-            <SheetDescription>Details, Termine, Voraussetzungen und Kommentare</SheetDescription>
-          </SheetHeader>
-          {task && (
-            <div className="space-y-4 p-4">
-              <form
-                className="space-y-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void (task.id ? save() : createGlobal());
-                }}
-              >
-                <Label htmlFor="global-title">Titel</Label>
-                <Input
-                  id="global-title"
-                  required
-                  value={draft.title ?? ""}
-                  onChange={(event) => interaction.updateDraft({ title: event.target.value })}
-                />
-                <Label htmlFor="global-description">Beschreibung</Label>
-                <textarea
-                  id="global-description"
-                  className={control}
-                  rows={5}
-                  value={draft.description ?? ""}
-                  onChange={(event) => interaction.updateDraft({ description: event.target.value })}
-                />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="global-status">Status</Label>
-                    <select
-                      id="global-status"
-                      className={control}
-                      value={draft.status ?? "OPEN"}
-                      onChange={(event) =>
-                        interaction.updateDraft({ status: event.target.value as Task["status"] })
-                      }
-                    >
-                      {Object.entries(statusLabel).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="global-priority">Priorität</Label>
-                    <select
-                      id="global-priority"
-                      className={control}
-                      value={draft.priority ?? "NORMAL"}
-                      onChange={(event) =>
-                        interaction.updateDraft({
-                          priority: event.target.value as Task["priority"],
-                        })
-                      }
-                    >
-                      {Object.entries(priorityLabel).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="global-owner">Person</Label>
-                    <select
-                      id="global-owner"
-                      className={control}
-                      value={draft.ownerId ?? ""}
-                      onChange={(event) =>
-                        interaction.updateDraft({ ownerId: event.target.value || null })
-                      }
-                    >
-                      <option value="">Nicht zugeordnet</option>
-                      {data?.owners.map((owner) => (
-                        <option key={owner.id} value={owner.id}>
-                          {owner.displayName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="global-category">Kategorie</Label>
-                    <select
-                      id="global-category"
-                      className={control}
-                      value={draft.groupId ?? ""}
-                      onChange={(event) =>
-                        interaction.updateDraft({ groupId: event.target.value || null })
-                      }
-                    >
-                      <option value="">Ohne Kategorie</option>
-                      {data?.groups.map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="global-start">Start</Label>
-                    <Input
-                      id="global-start"
-                      type="date"
-                      value={draft.startDate ?? ""}
-                      onChange={(event) =>
-                        interaction.updateDraft({ startDate: event.target.value || null })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="global-end">Ende</Label>
-                    <Input
-                      id="global-end"
-                      type="date"
-                      value={draft.endDate ?? ""}
-                      onChange={(event) =>
-                        interaction.updateDraft({ endDate: event.target.value || null })
-                      }
-                    />
-                  </div>
-                </div>
-                <Button>{task.id ? "Änderungen speichern" : "Aufgabe anlegen"}</Button>
-              </form>
-              {task.id && (
-                <section className="border-t pt-4">
-                  <h3 className="font-medium">Voraussetzungen</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Eine Aufgabe kann erst erledigt werden, wenn alle Vorgänger erledigt sind.
-                  </p>
-                  <div className="mt-2 space-y-2">
-                    {data?.edges
-                      .filter((edge) => edge.successorId === task.id)
-                      .map((edge) => {
-                        const predecessor = allTaskById.get(edge.predecessorId);
-                        return (
-                          <div
-                            key={edge.predecessorId}
-                            className="flex items-center justify-between gap-3 rounded border p-2 text-sm"
-                          >
-                            <span>{predecessor?.title ?? "Gelöschte Aufgabe"}</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                void updateDependency("remove-dependency", edge.predecessorId)
-                              }
-                            >
-                              Entfernen
-                            </Button>
-                          </div>
-                        );
-                      })}
-                  </div>
-                  <Label className="mt-3 block" htmlFor="global-predecessor">
-                    Vorgänger hinzufügen
-                  </Label>
-                  <select
-                    id="global-predecessor"
-                    className={control}
-                    defaultValue=""
-                    onChange={(event) => {
-                      if (event.target.value)
-                        void updateDependency("add-dependency", event.target.value);
-                      event.currentTarget.value = "";
-                    }}
-                  >
-                    <option value="">Aufgabe auswählen</option>
-                    {data?.tasks
-                      .filter(
-                        (candidate) =>
-                          candidate.id !== task.id &&
-                          candidate.scope === task.scope &&
-                          candidate.eventId === task.eventId &&
-                          !data.edges.some(
-                            (edge) =>
-                              edge.successorId === task.id && edge.predecessorId === candidate.id,
-                          ),
-                      )
-                      .map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>
-                          {candidate.title}
-                        </option>
-                      ))}
-                  </select>
-                </section>
-              )}
-              {task.id && (
-                <section className="border-t pt-4">
-                  <h3 className="font-medium">Beschreibung</h3>
-                  <p className="whitespace-pre-wrap break-words text-sm">
-                    {urlText(task.description)}
-                  </p>
-                  <h3 className="mt-4 font-medium">Kommentare</h3>
-                  {comments.map((item) => (
-                    <article key={item.id} className="border-b py-2">
-                      <p className="whitespace-pre-wrap">{urlText(item.text)}</p>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(item.updatedAt).toLocaleString("de-AT")}
-                          {item.updatedAt !== item.createdAt ? " · bearbeitet" : ""}
-                        </p>
-                        <span className="flex gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={async () => {
-                              const text = window.prompt("Kommentar bearbeiten", item.text);
-                              if (text === null) return;
-                              await interaction.writeComment({ id: item.id, text });
-                            }}
-                          >
-                            Bearbeiten
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={async () => {
-                              if (!window.confirm("Kommentar dauerhaft löschen?")) return;
-                              await interaction.writeComment({
-                                id: item.id,
-                                delete: true,
-                              });
-                            }}
-                          >
-                            Löschen
-                          </Button>
-                        </span>
-                      </div>
-                    </article>
-                  ))}
-                  <form
-                    className="mt-3 space-y-2"
-                    onSubmit={async (event) => {
-                      event.preventDefault();
-                      if (!comment.trim()) return;
-                      await interaction.writeComment({ text: comment });
-                      setComment("");
-                    }}
-                  >
-                    <Label htmlFor="global-comment">Kommentar</Label>
-                    <textarea
-                      id="global-comment"
-                      className={control}
-                      value={comment}
-                      onChange={(event) => setComment(event.target.value)}
-                    />
-                    <Button variant="outline">Kommentieren</Button>
-                  </form>
-                  <h3 className="mt-5 font-medium">Verlauf</h3>
-                  {activities.map((item) => (
-                    <p key={item.id} className="border-b py-2 text-sm">
-                      {item.action} · {new Date(item.createdAt).toLocaleString("de-AT")}
-                    </p>
-                  ))}
-                  <Button
-                    variant="destructive"
-                    className="mt-4"
-                    onClick={async () => {
-                      if (window.confirm("Aufgabe dauerhaft löschen?")) {
-                        const next = await interaction.command({
-                          type: "delete",
-                          taskId: task.id,
-                          taskVersion: task.version,
-                        });
-                        if (next) setData(next);
-                      }
-                    }}
-                  >
-                    Aufgabe löschen
-                  </Button>
-                </section>
-              )}
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <TaskDetailSheet
+        task={task}
+        draft={draft}
+        owners={data?.owners ?? []}
+        groups={data?.groups ?? []}
+        tasks={(data?.tasks ?? []).filter(
+          (candidate) => candidate.scope === task?.scope && candidate.eventId === task?.eventId,
+        )}
+        edges={data?.edges ?? []}
+        comments={comments}
+        activities={activities}
+        busy={interactionSnapshot.busy}
+        title={task?.id ? "Aufgabe bearbeiten" : "Globale Aufgabe anlegen"}
+        description="Details, Termine, Voraussetzungen und Kommentare"
+        onClose={() => interaction.close()}
+        onDraftChange={(patch) => interaction.updateDraft(patch)}
+        onSubmit={() => (task?.id ? save() : createGlobal())}
+        onAddDependency={(predecessorId) => updateDependency("add-dependency", predecessorId)}
+        onRemoveDependency={(predecessorId) => updateDependency("remove-dependency", predecessorId)}
+        onWriteComment={(input) => interaction.writeComment(input)}
+        onDelete={async () => {
+          if (!task) return;
+          const next = await interaction.command({
+            type: "delete",
+            taskId: task.id,
+            taskVersion: task.version,
+          });
+          if (next) setData(next);
+        }}
+      />
     </main>
   );
 }
