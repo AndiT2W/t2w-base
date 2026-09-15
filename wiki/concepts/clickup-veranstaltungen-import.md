@@ -31,6 +31,8 @@ Die Veranstaltungs- und Gantt-Ansicht startet bewusst mit dem aktuellen Kalender
 
 Der Import verwendet ausschließlich die ClickUp-Listenbeziehung `Veranstalter` für die operative Event-Veranstalterrolle. Er gleicht ihren Namen mit aktiven vorhandenen Veranstalter-Stammdaten ab, nach Groß-/Kleinschreibung, Umlauten und Satzzeichen normalisiert. Nur ein einzelner Quellwert mit genau einem Treffer wird gesetzt. Eine bestehende Event-Zuordnung wird niemals durch den Import überschrieben.
 
+`Sportart` wird aus dem ClickUp-Dropdown auf den Sport-Stammdatensatz aufgelöst. Die im Quellstand verifizierten Werte werden als Sportarten angelegt, falls sie im Ziel noch nicht existieren. `Typ` bezeichnet den Event-Service und wird auf die vorhandenen Service-Stammdaten abgebildet: Active, App, UHF, Anmeldung (only), GPS, Virtuell und Jörg. Ein Import ergänzt die zugehörige Event-Service-Zeile idempotent und entfernt keine bestehende Servicezuordnung. Nicht auflösbare Dropdownwerte werden mit ClickUp-ID, Eventcode und Rohwert im Importbericht gesammelt, statt eine Sportart oder einen Service zu raten.
+
 Mehrere Quellveranstalter, fehlende Stammdatentreffer und doppelte Kandidaten werden nicht geraten oder neu angelegt, sondern als Review-Fälle mit ClickUp-ID, Eventcode und Quellwert ausgegeben. Die Felder `Kunde` und `Organisator` bleiben bewusst unberührt, weil sie fachlich von der operativen Veranstalterrolle abweichen können. Kontakte und weitere Rollen werden ebenfalls nicht heuristisch zusammengeführt; die Rohwerte bleiben im Quell-Snapshot für einen späteren, fachlich geprüften CRM-Import erhalten.
 
 ## IBAN/BIC-Regel

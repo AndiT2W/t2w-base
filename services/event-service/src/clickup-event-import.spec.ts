@@ -62,6 +62,18 @@ describe("ClickUp event import", () => {
     expect(item.status).toBe(EventStatus.ZUGESAGT);
   });
 
+  it("maps the captured ClickUp Sportart dropdown value", () => {
+    const item = normalizeClickUpEvent({
+      ...task,
+      custom_fields: [
+        ...task.custom_fields.filter((field) => field.name !== "Sportart"),
+        { name: "Sportart", value: 8 },
+      ],
+    });
+
+    expect(item.sportName).toBe("Triathlon");
+  });
+
   it("merges a full detail response into every list task without dropping list metadata", () => {
     const [merged] = mergeClickUpTaskSnapshots(
       [{ id: "86abc", name: "Musterlauf 2026", date_updated: "1776000000000" }],
@@ -93,6 +105,8 @@ describe("ClickUp event import", () => {
       total: 1,
       imported: 1,
       errors: [],
+      sports: { mapped: 1, sourceMissing: 0, unresolved: [] },
+      services: { mapped: 0, sourceMissing: 1, unresolved: [] },
       organizers: { mapped: 0, preserved: 0, sourceMissing: 1, unresolved: [] },
     });
     expect(upsert).toHaveBeenCalledWith(
@@ -128,6 +142,35 @@ describe("ClickUp event import", () => {
     await service.run([{ ...task, status: "offen" }]);
 
     expect(upsert.mock.calls[0][0].update).not.toHaveProperty("status");
+  });
+
+  it("assigns the service represented by the ClickUp Typ field", async () => {
+    const upsert = vi.fn().mockResolvedValue({ id: "event-1" });
+    const serviceOptionFindMany = vi.fn().mockResolvedValue([{ id: "service-uhf", name: "UHF" }]);
+    const eventServiceUpsert = vi.fn().mockResolvedValue({});
+    const service = new ClickUpEventImportService({
+      event: {
+        findMany: vi.fn().mockResolvedValue([]),
+        upsert,
+      },
+      sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
+      organizer: { findMany: vi.fn().mockResolvedValue([]) },
+      serviceOption: { findMany: serviceOptionFindMany },
+      eventService: { upsert: eventServiceUpsert },
+    } as any);
+
+    await service.run([
+      {
+        ...task,
+        custom_fields: [...task.custom_fields, { name: "Typ", value: 2 }],
+      },
+    ]);
+
+    expect(eventServiceUpsert).toHaveBeenCalledWith({
+      where: { eventId_serviceId: { eventId: "event-1", serviceId: "service-uhf" } },
+      create: { eventId: "event-1", serviceId: "service-uhf" },
+      update: {},
+    });
   });
 
   it("allocates suffixes without taking an existing non-ClickUp event code", async () => {

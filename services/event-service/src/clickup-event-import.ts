@@ -20,12 +20,28 @@ export type ClickUpEventImportReport = {
   total: number;
   imported: number;
   errors: { clickUpId: string; reason: string }[];
+  sports: ClickUpFieldImportReport;
+  services: ClickUpFieldImportReport;
   organizers: {
     mapped: number;
     preserved: number;
     sourceMissing: number;
     unresolved: ClickUpOrganizerReview[];
   };
+};
+
+export type ClickUpFieldImportReport = {
+  mapped: number;
+  sourceMissing: number;
+  unresolved: ClickUpFieldReview[];
+};
+
+export type ClickUpFieldReview = {
+  clickUpId: string;
+  eventCode: string;
+  eventName: string;
+  sourceValue: string;
+  reason: "UNMAPPED_SPORT" | "MISSING_SERVICE_OPTION" | "UNMAPPED_SERVICE";
 };
 
 export type ClickUpOrganizerReview = {
@@ -40,7 +56,10 @@ export type ClickUpOrganizerReview = {
   candidates?: { id: string; name: string }[];
 };
 
-type ClickUpEventImportClient = Pick<PrismaClient, "event" | "sport" | "organizer">;
+type ClickUpEventImportClient = Pick<
+  PrismaClient,
+  "event" | "sport" | "organizer" | "serviceOption" | "eventService"
+>;
 
 type NormalizedClickUpEvent = {
   clickUpId: string;
@@ -58,6 +77,9 @@ type NormalizedClickUpEvent = {
   t2wEventId: number | null;
   notes: string | null;
   sportName: string | null;
+  sourceSportValue: string | null;
+  serviceName: string | null;
+  sourceServiceValue: string | null;
   sourceData: Prisma.InputJsonValue;
 };
 
@@ -68,6 +90,7 @@ type ExistingEventCode = {
 };
 
 type OrganizerRecord = { id: string; name: string };
+type ServiceOptionRecord = { id: string; name: string };
 
 type OrganizerResolution =
   | { kind: "missing" }
@@ -186,6 +209,42 @@ const CLICKUP_EVENTSTATUS_DROPDOWN: Readonly<Record<string, EventStatus>> = {
   "7": EventStatus.ZUGESAGT,
 };
 
+const CLICKUP_SPORT_DROPDOWN: Readonly<Record<string, string>> = {
+  "0": "Skibergsteigen",
+  "1": "Langlauf",
+  "2": "Lauf",
+  "5": "Trail",
+  "6": "Trailrunning",
+  "7": "Dirtrun",
+  "8": "Triathlon",
+  "9": "Rennrad",
+  "11": "MTB",
+  "12": "Bike",
+  "13": "Mountainbike",
+  "14": "Berglauf",
+  "16": "Multisport",
+  "17": "SUP",
+  "18": "CX",
+  "21": "Hyrox",
+};
+
+const CLICKUP_SERVICE_DROPDOWN: Readonly<Record<string, string>> = {
+  "0": "Active",
+  "1": "App",
+  "2": "UHF",
+  "3": "Anmeldung (only)",
+  "4": "GPS",
+  "5": "Virtuell",
+  "7": "Jörg",
+  Anmeldung: "Anmeldung (only)",
+};
+
+const dropdownName = (value: unknown, values: Readonly<Record<string, string>>): string | null => {
+  const raw = asString(value);
+  if (!raw) return null;
+  return values[raw] ?? (Number.isNaN(Number(raw)) ? raw : null);
+};
+
 const mappedEventStatus = (sourceStatus: unknown): EventStatus | null => {
   const status = statusValue(sourceStatus);
   const dropdownStatus = CLICKUP_EVENTSTATUS_DROPDOWN[status];
@@ -297,6 +356,7 @@ export const normalizeClickUpEvent = (task: ClickUpTaskRecord): NormalizedClickU
   const name = asString(task.name) ?? `ClickUp ${clickUpId}`;
   const explicitSport = customFieldValue(task, "Sportart");
   const explicitEventStatus = customFieldValue(task, "Eventstatus");
+  const explicitService = customFieldValue(task, "Typ");
   const mappedExplicitEventStatus = mappedEventStatus(explicitEventStatus);
   return {
     clickUpId,
@@ -315,9 +375,10 @@ export const normalizeClickUpEvent = (task: ClickUpTaskRecord): NormalizedClickU
     participantForecast: asInteger(customFieldValue(task, "Teilnehmer")),
     t2wEventId: asInteger(customFieldValue(task, "Event Id")),
     notes: asString(task.description),
-    // Detail responses retain dropdown values by their stable ClickUp field IDs. Do not
-    // guess display labels from an option index; the raw source snapshot remains canonical.
-    sportName: typeof explicitSport === "string" ? explicitSport.trim() || null : null,
+    sportName: dropdownName(explicitSport, CLICKUP_SPORT_DROPDOWN),
+    sourceSportValue: asString(explicitSport),
+    serviceName: dropdownName(explicitService, CLICKUP_SERVICE_DROPDOWN),
+    sourceServiceValue: asString(explicitService),
     sourceData: jsonValue(task.sourceSnapshots ?? task),
   };
 };
@@ -330,6 +391,8 @@ export class ClickUpEventImportService {
       total: tasks.length,
       imported: 0,
       errors: [],
+      sports: { mapped: 0, sourceMissing: 0, unresolved: [] },
+      services: { mapped: 0, sourceMissing: 0, unresolved: [] },
       organizers: { mapped: 0, preserved: 0, sourceMissing: 0, unresolved: [] },
     };
 
@@ -354,10 +417,21 @@ export class ClickUpEventImportService {
       where: { active: true },
       select: { id: true, name: true },
     })) as OrganizerRecord[];
+    const serviceOptions = items.some((item) => item.sourceServiceValue)
+      ? ((await this.prisma.serviceOption.findMany({
+          where: { active: true },
+          select: { id: true, name: true },
+        })) as ServiceOptionRecord[])
+      : [];
     const organizersByName = new Map<string, OrganizerRecord[]>();
     for (const organizer of organizers) {
       const key = normalizeOrganizerName(organizer.name);
       organizersByName.set(key, [...(organizersByName.get(key) ?? []), organizer]);
+    }
+    const servicesByName = new Map<string, ServiceOptionRecord[]>();
+    for (const service of serviceOptions) {
+      const key = normalizeOrganizerName(service.name);
+      servicesByName.set(key, [...(servicesByName.get(key) ?? []), service]);
     }
     const existingByClickUpId = new Map(
       existingEvents
@@ -399,6 +473,10 @@ export class ClickUpEventImportService {
               select: { id: true },
             })
           : null;
+        const serviceCandidates = item.serviceName
+          ? servicesByName.get(normalizeOrganizerName(item.serviceName)) ?? []
+          : [];
+        const service = serviceCandidates.length === 1 ? serviceCandidates[0] : null;
 
         const source = {
           clickUpId: item.clickUpId,
@@ -457,7 +535,7 @@ export class ClickUpEventImportService {
           });
         }
 
-        await this.prisma.event.upsert({
+        const event = await this.prisma.event.upsert({
           where: { clickUpId: item.clickUpId },
           create: {
             ...eventData,
@@ -479,7 +557,36 @@ export class ClickUpEventImportService {
               },
             },
           },
+          select: { id: true },
         });
+        if (!item.sourceSportValue) report.sports.sourceMissing++;
+        else if (sport) report.sports.mapped++;
+        else {
+          report.sports.unresolved.push({
+            clickUpId: item.clickUpId,
+            eventCode,
+            eventName: item.name,
+            sourceValue: item.sourceSportValue,
+            reason: "UNMAPPED_SPORT",
+          });
+        }
+        if (!item.sourceServiceValue) report.services.sourceMissing++;
+        else if (service) {
+          await this.prisma.eventService.upsert({
+            where: { eventId_serviceId: { eventId: event.id, serviceId: service.id } },
+            create: { eventId: event.id, serviceId: service.id },
+            update: {},
+          });
+          report.services.mapped++;
+        } else {
+          report.services.unresolved.push({
+            clickUpId: item.clickUpId,
+            eventCode,
+            eventName: item.name,
+            sourceValue: item.sourceServiceValue,
+            reason: item.serviceName ? "MISSING_SERVICE_OPTION" : "UNMAPPED_SERVICE",
+          });
+        }
         report.imported++;
         if (organizerResolution.kind === "matched") {
           if (existing?.organizerId) report.organizers.preserved++;
