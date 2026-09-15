@@ -74,6 +74,18 @@ describe("ClickUp event import", () => {
     expect(item.sportName).toBe("Triathlon");
   });
 
+  it("leaves the ClickUp Event Id placeholder zero unset", () => {
+    const item = normalizeClickUpEvent({
+      ...task,
+      custom_fields: [
+        ...task.custom_fields.filter((field) => field.name !== "Event Id"),
+        { name: "Event Id", value: 0 },
+      ],
+    });
+
+    expect(item.t2wEventId).toBeNull();
+  });
+
   it("merges a full detail response into every list task without dropping list metadata", () => {
     const [merged] = mergeClickUpTaskSnapshots(
       [{ id: "86abc", name: "Musterlauf 2026", date_updated: "1776000000000" }],

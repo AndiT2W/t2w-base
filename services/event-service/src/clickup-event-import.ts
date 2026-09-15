@@ -132,6 +132,11 @@ const asInteger = (value: unknown): number | null => {
   return Number.isSafeInteger(parsed) ? parsed : null;
 };
 
+const asPositiveInteger = (value: unknown): number | null => {
+  const parsed = asInteger(value);
+  return parsed && parsed > 0 ? parsed : null;
+};
+
 const customFieldValue = (task: ClickUpTaskRecord, name: string): unknown => {
   if (!Array.isArray(task.custom_fields)) return null;
   const field = task.custom_fields.map(asRecord).find((candidate) => candidate?.name === name);
@@ -373,7 +378,7 @@ export const normalizeClickUpEvent = (task: ClickUpTaskRecord): NormalizedClickU
     location: locationValue(customFieldValue(task, "Ort")),
     responsible: responsibleValue(task.assignees),
     participantForecast: asInteger(customFieldValue(task, "Teilnehmer")),
-    t2wEventId: asInteger(customFieldValue(task, "Event Id")),
+    t2wEventId: asPositiveInteger(customFieldValue(task, "Event Id")),
     notes: asString(task.description),
     sportName: dropdownName(explicitSport, CLICKUP_SPORT_DROPDOWN),
     sourceSportValue: asString(explicitSport),

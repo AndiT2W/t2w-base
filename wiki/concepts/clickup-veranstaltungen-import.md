@@ -23,6 +23,7 @@ Die Veranstaltungs- und Gantt-Ansicht startet bewusst mit dem aktuellen Kalender
 - Hauptaufgaben der Liste importieren; Unteraufgaben und reine Automations-/Buttonfelder nicht als eigene Events importieren.
 - Jede Quelle über `clickUpId` upserten; erneute Läufe dürfen keine Duplikate erzeugen.
 - Name, Beschreibung/Notizen, Start-/Endtermin, Status, Ort, Verantwortlicher, Event-ID, Sportart, Typ und Teilnehmer in die passenden Eventfelder übernehmen, sofern die Quelle den Wert maschinenlesbar liefert. Jeder originale Rohwert bleibt zusätzlich im Source-Snapshot erhalten.
+- Das ClickUp-Feld `Event Id` wird als technische TIME2WIN-Event-ID übernommen, wenn es eine positive ganze Zahl enthält. Der ClickUp-Platzhalter `0` bleibt im Ziel leer.
 - Für den Eventstatus hat das fachliche Custom Field `Eventstatus` Vorrang vor dem ClickUp-Aufgabenworkflow. Textwerte wie `ZUSAGE` und die im Quellstand verifizierten Dropdownwerte werden auf den TIME2WIN-Status abgebildet; nur ohne dieses Feld bleibt der Workflowstatus ein Fallback.
 - Backend-, Outlook- und OneDrive-Links als externe Referenzen bzw. Pfade übernehmen; keine Dateien oder Nachrichten automatisch kopieren.
 - Operative Felder wie Fahrzeug, UHF/TON/GPS und Mitarbeiterzuordnungen nur übernehmen, wenn das Zielmodell dafür ein explizites Feld besitzt; sonst in einem Importprotokoll erhalten.
