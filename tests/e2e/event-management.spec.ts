@@ -853,6 +853,23 @@ test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", 
   expect(organizerSelect!.x).toBeGreaterThan(startInput!.x + startInput!.width);
 });
 
+test("zeigt den Eventstatus in den Stammdaten mit farbigem Kreis und Text", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/events/260820_demo_event");
+
+  const statusSelect = page.getByRole("combobox", { name: "Status", exact: true });
+  await expect(statusSelect).toContainText("Anfrage");
+  await expect(statusSelect.locator('[data-status-dot="anfrage"]')).toBeVisible();
+
+  await statusSelect.click();
+  const confirmedOption = page.getByRole("option", { name: "Zugesagt" });
+  await expect(confirmedOption.locator('[data-status-dot="zugesagt"]')).toBeVisible();
+  await confirmedOption.click();
+
+  await expect(statusSelect).toContainText("Zugesagt");
+  await expect(statusSelect.locator('[data-status-dot="zugesagt"]')).toBeVisible();
+});
+
 test("ordnet die Archivierung kompakt beim Eventnamen ein", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");

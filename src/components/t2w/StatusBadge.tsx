@@ -15,6 +15,7 @@ export function StatusDot({ status, className }: { status: EventStatus; classNam
   return (
     <span
       aria-hidden
+      data-status-dot={status}
       className={cn("inline-block size-2.5 shrink-0 rounded-full", STATUS_BG[status], className)}
     />
   );

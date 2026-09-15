@@ -63,7 +63,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { StatusBadge } from "@/components/t2w/StatusBadge";
+import { StatusBadge, StatusDot } from "@/components/t2w/StatusBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { apiUpdateEventSeries, apiEventByCode } from "@/lib/t2w/api";
@@ -75,7 +75,7 @@ import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
 import { projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
-import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
+import { STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
@@ -915,12 +915,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     onValueChange={(v) => set("status", v as EventStatus)}
                   >
                     <SelectTrigger aria-label="Status">
-                      <SelectValue />
+                      <span className="flex min-w-0 items-center gap-2">
+                        <StatusDot status={form.status} />
+                        <span className="truncate">
+                          {t(`status.${form.status}` as Parameters<typeof t>[0])}
+                        </span>
+                      </span>
                     </SelectTrigger>
                     <SelectContent>
                       {STATUS_ORDER.map((s) => (
                         <SelectItem key={s} value={s}>
-                          {STATUS_LABEL[s]}
+                          <span className="flex items-center gap-2">
+                            <StatusDot status={s} />
+                            <span>{t(`status.${s}` as Parameters<typeof t>[0])}</span>
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
