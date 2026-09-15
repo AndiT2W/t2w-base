@@ -20,9 +20,27 @@ export type ClickUpEventImportReport = {
   total: number;
   imported: number;
   errors: { clickUpId: string; reason: string }[];
+  organizers: {
+    mapped: number;
+    preserved: number;
+    sourceMissing: number;
+    unresolved: ClickUpOrganizerReview[];
+  };
 };
 
-type ClickUpEventImportClient = Pick<PrismaClient, "event" | "sport">;
+export type ClickUpOrganizerReview = {
+  clickUpId: string;
+  eventCode: string;
+  eventName: string;
+  sourceOrganizerNames: string[];
+  reason:
+    | "NO_MATCHING_ORGANIZER"
+    | "MULTIPLE_SOURCE_ORGANIZERS"
+    | "AMBIGUOUS_MATCHING_ORGANIZERS";
+  candidates?: { id: string; name: string }[];
+};
+
+type ClickUpEventImportClient = Pick<PrismaClient, "event" | "sport" | "organizer">;
 
 type NormalizedClickUpEvent = {
   clickUpId: string;
@@ -45,7 +63,21 @@ type NormalizedClickUpEvent = {
 type ExistingEventCode = {
   clickUpId: string | null;
   eventCode: string;
+  organizerId: string | null;
 };
+
+type OrganizerRecord = { id: string; name: string };
+
+type OrganizerResolution =
+  | { kind: "missing" }
+  | { kind: "matched"; organizer: OrganizerRecord; sourceOrganizerNames: string[] }
+  | { kind: "multiple-source"; sourceOrganizerNames: string[] }
+  | { kind: "no-match"; sourceOrganizerNames: string[] }
+  | {
+      kind: "ambiguous-match";
+      sourceOrganizerNames: string[];
+      candidates: OrganizerRecord[];
+    };
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
@@ -81,6 +113,39 @@ const customFieldValue = (task: ClickUpTaskRecord, name: string): unknown => {
   const field = task.custom_fields.map(asRecord).find((candidate) => candidate?.name === name);
   if (!field) return null;
   return field.value_richtext ?? field.value ?? null;
+};
+
+const relationshipNames = (task: ClickUpTaskRecord, name: string): string[] => {
+  const value = customFieldValue(task, name);
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(asRecord)
+    .map((item) => asString(item?.name))
+    .filter((item): item is string => Boolean(item));
+};
+
+const normalizeOrganizerName = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("de-AT")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
+const resolveOrganizer = (
+  task: ClickUpTaskRecord,
+  organizersByName: Map<string, OrganizerRecord[]>,
+): OrganizerResolution => {
+  const sourceOrganizerNames = relationshipNames(task, "Veranstalter");
+  if (!sourceOrganizerNames.length) return { kind: "missing" };
+  if (sourceOrganizerNames.length > 1) return { kind: "multiple-source", sourceOrganizerNames };
+
+  const candidates = organizersByName.get(normalizeOrganizerName(sourceOrganizerNames[0])) ?? [];
+  if (!candidates.length) return { kind: "no-match", sourceOrganizerNames };
+  if (candidates.length > 1)
+    return { kind: "ambiguous-match", sourceOrganizerNames, candidates };
+  return { kind: "matched", sourceOrganizerNames, organizer: candidates[0] };
 };
 
 const locationValue = (value: unknown): string | null => {
@@ -235,7 +300,12 @@ export class ClickUpEventImportService {
   constructor(private readonly prisma: ClickUpEventImportClient) {}
 
   async run(tasks: ClickUpTaskRecord[]): Promise<ClickUpEventImportReport> {
-    const report: ClickUpEventImportReport = { total: tasks.length, imported: 0, errors: [] };
+    const report: ClickUpEventImportReport = {
+      total: tasks.length,
+      imported: 0,
+      errors: [],
+      organizers: { mapped: 0, preserved: 0, sourceMissing: 0, unresolved: [] },
+    };
 
     const items: NormalizedClickUpEvent[] = [];
     for (const task of tasks) {
@@ -249,10 +319,20 @@ export class ClickUpEventImportService {
         });
       }
     }
+    const tasksByClickUpId = new Map(tasks.map((task) => [task.id, task]));
 
     const existingEvents = (await this.prisma.event.findMany({
-      select: { clickUpId: true, eventCode: true },
+      select: { clickUpId: true, eventCode: true, organizerId: true },
     })) as ExistingEventCode[];
+    const organizers = (await this.prisma.organizer.findMany({
+      where: { active: true },
+      select: { id: true, name: true },
+    })) as OrganizerRecord[];
+    const organizersByName = new Map<string, OrganizerRecord[]>();
+    for (const organizer of organizers) {
+      const key = normalizeOrganizerName(organizer.name);
+      organizersByName.set(key, [...(organizersByName.get(key) ?? []), organizer]);
+    }
     const existingByClickUpId = new Map(
       existingEvents
         .filter((event): event is ExistingEventCode & { clickUpId: string } =>
@@ -280,6 +360,10 @@ export class ClickUpEventImportService {
 
     for (const item of items) {
       try {
+        const task = tasksByClickUpId.get(item.clickUpId);
+        const organizerResolution = task
+          ? resolveOrganizer(task, organizersByName)
+          : { kind: "missing" as const };
         const sport = item.sportName
           ? await this.prisma.sport.upsert({
               where: { name: item.sportName },
@@ -311,17 +395,52 @@ export class ClickUpEventImportService {
         };
         const existing = existingByClickUpId.get(item.clickUpId);
         const eventCode = codesByClickUpId.get(item.clickUpId) ?? item.eventCode;
+        const shouldSetOrganizer =
+          organizerResolution.kind === "matched" && !existing?.organizerId;
+        const organizerData = shouldSetOrganizer
+          ? { organizer: { connect: { id: organizerResolution.organizer.id } } }
+          : {};
+
+        if (organizerResolution.kind === "missing") report.organizers.sourceMissing++;
+        else if (organizerResolution.kind === "no-match") {
+          report.organizers.unresolved.push({
+            clickUpId: item.clickUpId,
+            eventCode,
+            eventName: item.name,
+            sourceOrganizerNames: organizerResolution.sourceOrganizerNames,
+            reason: "NO_MATCHING_ORGANIZER",
+          });
+        } else if (organizerResolution.kind === "multiple-source") {
+          report.organizers.unresolved.push({
+            clickUpId: item.clickUpId,
+            eventCode,
+            eventName: item.name,
+            sourceOrganizerNames: organizerResolution.sourceOrganizerNames,
+            reason: "MULTIPLE_SOURCE_ORGANIZERS",
+          });
+        } else if (organizerResolution.kind === "ambiguous-match") {
+          report.organizers.unresolved.push({
+            clickUpId: item.clickUpId,
+            eventCode,
+            eventName: item.name,
+            sourceOrganizerNames: organizerResolution.sourceOrganizerNames,
+            reason: "AMBIGUOUS_MATCHING_ORGANIZERS",
+            candidates: organizerResolution.candidates,
+          });
+        }
 
         await this.prisma.event.upsert({
           where: { clickUpId: item.clickUpId },
           create: {
             ...eventData,
+            ...organizerData,
             eventCode,
             clickUpId: item.clickUpId,
             clickUpSource: { create: source },
           },
           update: {
             ...eventData,
+            ...organizerData,
             ...(existing && clickUpFallbackCode(existing.eventCode, item.clickUpId)
               ? { eventCode }
               : {}),
@@ -334,6 +453,10 @@ export class ClickUpEventImportService {
           },
         });
         report.imported++;
+        if (organizerResolution.kind === "matched") {
+          if (existing?.organizerId) report.organizers.preserved++;
+          else report.organizers.mapped++;
+        }
       } catch (error) {
         report.errors.push({
           clickUpId: item.clickUpId,

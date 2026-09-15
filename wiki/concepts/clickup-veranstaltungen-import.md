@@ -28,7 +28,9 @@ Die Veranstaltungs- und Gantt-Ansicht startet bewusst mit dem aktuellen Kalender
 
 ## Stammdaten und Verknüpfungen
 
-Der Import legt in diesem Schritt nur Events und ihre Quellreferenz an. Kunden, Kontakte und Rollen werden nicht heuristisch zusammengeführt; diese Daten bleiben im Quell-Snapshot für einen späteren, fachlich geprüften CRM-Import erhalten.
+Der Import verwendet ausschließlich die ClickUp-Listenbeziehung `Veranstalter` für die operative Event-Veranstalterrolle. Er gleicht ihren Namen mit aktiven vorhandenen Veranstalter-Stammdaten ab, nach Groß-/Kleinschreibung, Umlauten und Satzzeichen normalisiert. Nur ein einzelner Quellwert mit genau einem Treffer wird gesetzt. Eine bestehende Event-Zuordnung wird niemals durch den Import überschrieben.
+
+Mehrere Quellveranstalter, fehlende Stammdatentreffer und doppelte Kandidaten werden nicht geraten oder neu angelegt, sondern als Review-Fälle mit ClickUp-ID, Eventcode und Quellwert ausgegeben. Die Felder `Kunde` und `Organisator` bleiben bewusst unberührt, weil sie fachlich von der operativen Veranstalterrolle abweichen können. Kontakte und weitere Rollen werden ebenfalls nicht heuristisch zusammengeführt; die Rohwerte bleiben im Quell-Snapshot für einen späteren, fachlich geprüften CRM-Import erhalten.
 
 ## IBAN/BIC-Regel
 

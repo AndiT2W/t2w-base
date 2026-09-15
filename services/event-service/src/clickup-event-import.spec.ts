@@ -60,15 +60,21 @@ describe("ClickUp event import", () => {
     const sportUpsert = vi.fn().mockResolvedValue({ id: "sport-1" });
     const findMany = vi
       .fn()
-      .mockResolvedValue([{ clickUpId: "86abc", eventCode: "clickup-86abc" }]);
+      .mockResolvedValue([{ clickUpId: "86abc", eventCode: "clickup-86abc", organizerId: null }]);
     const service = new ClickUpEventImportService({
       event: { findMany, upsert },
       sport: { upsert: sportUpsert },
+      organizer: { findMany: vi.fn().mockResolvedValue([]) },
     } as any);
 
     const result = await service.run([task]);
 
-    expect(result).toEqual({ total: 1, imported: 1, errors: [] });
+    expect(result).toEqual({
+      total: 1,
+      imported: 1,
+      errors: [],
+      organizers: { mapped: 0, preserved: 0, sourceMissing: 1, unresolved: [] },
+    });
     expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { clickUpId: "86abc" },
@@ -90,10 +96,13 @@ describe("ClickUp event import", () => {
     const upsert = vi.fn().mockResolvedValue({ id: "event-1" });
     const service = new ClickUpEventImportService({
       event: {
-        findMany: vi.fn().mockResolvedValue([{ clickUpId: null, eventCode: "260331_musterlauf" }]),
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ clickUpId: null, eventCode: "260331_musterlauf", organizerId: null }]),
         upsert,
       },
       sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
+      organizer: { findMany: vi.fn().mockResolvedValue([]) },
     } as any);
 
     await service.run([task]);
@@ -103,5 +112,85 @@ describe("ClickUp event import", () => {
         create: expect.objectContaining({ eventCode: "260331_musterlauf_02", clickUpId: "86abc" }),
       }),
     );
+  });
+
+  it("maps one unambiguous Veranstalter and never overwrites an existing organizer", async () => {
+    const organizerTask = {
+      ...task,
+      custom_fields: [
+        ...task.custom_fields,
+        { name: "Veranstalter", value: [{ id: "clickup-organizer", name: "Nördwerk GmbH!" }] },
+      ],
+    };
+    const run = async (organizerId: string | null) => {
+      const upsert = vi.fn().mockResolvedValue({ id: "event-1" });
+      const service = new ClickUpEventImportService({
+        event: {
+          findMany: vi
+            .fn()
+            .mockResolvedValue([{ clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId }]),
+          upsert,
+        },
+        sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
+        organizer: {
+          findMany: vi.fn().mockResolvedValue([{ id: "organizer-1", name: "NORDWERK GmbH" }]),
+        },
+      } as any);
+      return { result: await service.run([organizerTask]), upsert };
+    };
+
+    const mapped = await run(null);
+    expect(mapped.result.organizers).toEqual({
+      mapped: 1,
+      preserved: 0,
+      sourceMissing: 0,
+      unresolved: [],
+    });
+    expect(mapped.upsert.mock.calls[0][0].update).toMatchObject({
+      organizer: { connect: { id: "organizer-1" } },
+    });
+
+    const preserved = await run("manual-organizer");
+    expect(preserved.result.organizers).toEqual({
+      mapped: 0,
+      preserved: 1,
+      sourceMissing: 0,
+      unresolved: [],
+    });
+    expect(preserved.upsert.mock.calls[0][0].update).not.toHaveProperty("organizer");
+  });
+
+  it("reports multiple source organizers for manual review", async () => {
+    const upsert = vi.fn().mockResolvedValue({ id: "event-1" });
+    const service = new ClickUpEventImportService({
+      event: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId: null }]),
+        upsert,
+      },
+      sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
+      organizer: { findMany: vi.fn().mockResolvedValue([]) },
+    } as any);
+
+    const result = await service.run([
+      {
+        ...task,
+        custom_fields: [
+          ...task.custom_fields,
+          {
+            name: "Veranstalter",
+            value: [{ name: "Erster Verein" }, { name: "Zweiter Verein" }],
+          },
+        ],
+      },
+    ]);
+
+    expect(result.organizers.unresolved).toEqual([
+      expect.objectContaining({
+        sourceOrganizerNames: ["Erster Verein", "Zweiter Verein"],
+        reason: "MULTIPLE_SOURCE_ORGANIZERS",
+      }),
+    ]);
   });
 });
