@@ -580,7 +580,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
           <TabsList className="min-w-0 w-full max-w-full gap-2 grid grid-cols-3 md:grid-cols-8">
             <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
-            <TabsTrigger value="time2win">TIME2WIN</TabsTrigger>
+            <TabsTrigger value="time2win">ANMELDUNG</TabsTrigger>
             <TabsTrigger value="finanz">FINANZ</TabsTrigger>
             <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
             <TabsTrigger id="event-tab-aufgaben" className="hidden md:inline-flex" value="aufgaben">

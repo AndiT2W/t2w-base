@@ -183,7 +183,7 @@ test("zeigt vor und nach Outlook-Sync, ob der Ordner neu erstellt oder bereits v
 test("zeigt synchronisierte TIME2WIN-Teilnehmer im Event", async ({ page }) => {
   await mockApi(page, { t2wEventId: 1082, time2winSyncStatus: "NEVER" });
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "TIME2WIN" }).click();
+  await page.getByRole("tab", { name: "ANMELDUNG" }).click();
 
   await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
 
@@ -1041,7 +1041,7 @@ test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async (
 test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "TIME2WIN" }).click();
+  await page.getByRole("tab", { name: "ANMELDUNG" }).click();
   await expect(page.getByText("Event Id", { exact: true })).toBeVisible();
   await expect(page.locator("#d-t2w")).toBeVisible();
   await expect(page.getByText("Gemeldete TN:")).toBeVisible();
@@ -1097,7 +1097,7 @@ test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben
       }),
   );
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "TIME2WIN" }).click();
+  await page.getByRole("tab", { name: "ANMELDUNG" }).click();
   await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
   await expect(page.getByText("TIME2WIN Testevent")).toBeVisible();
   await expect(page.getByText("Hauptbewerb")).toBeVisible();

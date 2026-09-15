@@ -2,7 +2,7 @@
 
 ## Entscheidung
 
-Die TIME2WIN-Event-ID ist direkt im Stammdatenbereich eines Events als ganzzahlige ID änderbar. Änderungen werden mit den übrigen Event-Stammdaten gespeichert. Der TIME2WIN-Reiter zeigt weiterhin die verknüpften Eventdaten und Synchronisierung.
+Die TIME2WIN-Event-ID ist direkt im Stammdatenbereich eines Events als ganzzahlige ID änderbar. Änderungen werden mit den übrigen Event-Stammdaten gespeichert. Der sichtbare Event-Reiter `ANMELDUNG` zeigt weiterhin die verknüpften TIME2WIN-Eventdaten und Synchronisierung.
 
 ## Grund
 

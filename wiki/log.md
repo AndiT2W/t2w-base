@@ -603,6 +603,10 @@ Das TIME2WIN-ID-Feld in den Event-Stammdaten war schreibgeschützt. Es ist nun e
 
 Übersicht und Veranstaltungsansicht zeigen eine TIME2WIN-Logo-Spalte. Eine vorhandene Event-ID wird als Link zum Backend-Event angezeigt; ohne ID bleibt die Zelle ohne Backend-Link. Browser-Regressionen prüfen Ziel-URL und den Leerzustand in beiden Ansichten. Quellen: `src/routes/index.tsx`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts`.
 
+## 2026-09-15 — Event-Reiter in ANMELDUNG umbenannt
+
+Der bisher als `TIME2WIN` beschriftete Reiter im Event-Workspace heißt sichtbar nun `ANMELDUNG`. Die technische Tab-ID und die TIME2WIN-Bezeichnungen innerhalb des Bereichs bleiben unverändert. Die bestehenden Browser-Workflows öffnen den Bereich über die neue Beschriftung. Quellen: Nutzerkonversation vom 2026-09-15, `src/routes/events.$eventcode.tsx`, `tests/e2e/event-management.spec.ts`.
+
 ## 2026-09-15 — Überschneidende Eventtermine farblich gruppiert
 
 Die Veranstaltungsansicht erkennt überlappende, inklusive Datumsbereiche in der aktuell gefilterten Eventliste. Alle Events einer zusammenhängenden Termingruppe erhalten auf Desktop und Mobil dieselbe dezente Farbmarkierung; ein sichtbares `2×`-/`3×`-Kennzeichen, die Legende und zugängliche Hinweise ergänzen die Farbcodierung. Reine Logiktests sichern gleiche Tage, mehrtägige transitive Überschneidungen und getrennte Termine; ein Browser-Test prüft Gruppierung, berechnete Farbe, Legende und mobile Karten. Quellen: `src/lib/t2w/event-date-collisions.ts`, `src/components/t2w/EventDateCollision.tsx`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts`.
