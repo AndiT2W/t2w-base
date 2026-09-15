@@ -13,7 +13,6 @@ export type EventDateCollision = {
 
 type NormalizedEventDateRange = EventDateRange & {
   normalizedStart: string;
-  normalizedEnd: string;
 };
 
 function normalizeIsoDate(value: string): string | null {
@@ -23,19 +22,17 @@ function normalizeIsoDate(value: string): string | null {
 
 function normalizeEventDateRange(event: EventDateRange): NormalizedEventDateRange | null {
   const start = normalizeIsoDate(event.start);
-  const end = normalizeIsoDate(event.ende);
-  if (!start || !end) return null;
+  if (!start) return null;
 
   return {
     ...event,
-    normalizedStart: start <= end ? start : end,
-    normalizedEnd: start <= end ? end : start,
+    normalizedStart: start,
   };
 }
 
 /**
- * Groups visible events whose inclusive date ranges overlap. Transitive overlaps
- * stay in one visual group so connected scheduling conflicts share one color.
+ * Groups visible events that start on the same calendar day. The event end date
+ * is deliberately ignored: a multi-day event must not color unrelated start dates.
  */
 export function createEventDateCollisionMap(
   events: readonly EventDateRange[],
@@ -43,32 +40,22 @@ export function createEventDateCollisionMap(
   const normalizedEvents = events
     .map(normalizeEventDateRange)
     .filter((event): event is NormalizedEventDateRange => event !== null)
-    .sort(
-      (left, right) =>
-        left.normalizedStart.localeCompare(right.normalizedStart) ||
-        left.normalizedEnd.localeCompare(right.normalizedEnd) ||
-        left.id.localeCompare(right.id),
-    );
-
-  const collisionGroups: NormalizedEventDateRange[][] = [];
-  let currentGroup: NormalizedEventDateRange[] = [];
-  let currentGroupEnd = "";
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const eventsByStartDate = new Map<string, NormalizedEventDateRange[]>();
 
   normalizedEvents.forEach((event) => {
-    if (currentGroup.length === 0 || event.normalizedStart <= currentGroupEnd) {
-      currentGroup.push(event);
-      if (event.normalizedEnd > currentGroupEnd) currentGroupEnd = event.normalizedEnd;
-      return;
-    }
-
-    if (currentGroup.length > 1) collisionGroups.push(currentGroup);
-    currentGroup = [event];
-    currentGroupEnd = event.normalizedEnd;
+    eventsByStartDate.set(event.normalizedStart, [
+      ...(eventsByStartDate.get(event.normalizedStart) ?? []),
+      event,
+    ]);
   });
-  if (currentGroup.length > 1) collisionGroups.push(currentGroup);
+
+  const collisionGroups = [...eventsByStartDate.entries()]
+    .filter(([, groupEvents]) => groupEvents.length > 1)
+    .sort(([leftDate], [rightDate]) => leftDate.localeCompare(rightDate));
 
   const collisions = new Map<string, EventDateCollision>();
-  collisionGroups.forEach((groupEvents, groupIndex) => {
+  collisionGroups.forEach(([, groupEvents], groupIndex) => {
     groupEvents.forEach((event) => {
       collisions.set(event.id, {
         groupIndex,

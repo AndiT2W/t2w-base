@@ -22,15 +22,19 @@ describe("createEventDateCollisionMap", () => {
     expect(collisions.has("c")).toBe(false);
   });
 
-  it("keeps transitively overlapping multi-day events in one group", () => {
+  it("groups only events with the same start date", () => {
     const collisions = createEventDateCollisionMap([
-      event("a", "Freitag", "2026-09-18"),
-      event("b", "Wochenende", "2026-09-18", "2026-09-19"),
-      event("c", "Samstag", "2026-09-19"),
+      event("a", "Langzeit-Event", "2026-01-01", "2026-03-01"),
+      event("b", "Samstagslauf", "2026-01-02"),
+      event("c", "Trailrun", "2026-01-02"),
     ]);
 
-    expect([...collisions.values()].map(({ groupIndex }) => groupIndex)).toEqual([0, 0, 0]);
-    expect(collisions.get("a")?.eventCount).toBe(3);
+    expect(collisions.has("a")).toBe(false);
+    expect(collisions.get("b")).toMatchObject({
+      groupIndex: 0,
+      eventCount: 2,
+      peerNames: ["Trailrun"],
+    });
   });
 
   it("ignores separate and invalid date ranges", () => {

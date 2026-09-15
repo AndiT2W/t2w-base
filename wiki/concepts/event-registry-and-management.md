@@ -44,7 +44,7 @@
 - Users need one overview of all events with their key indicators.
 - Users also need to drill into one event and immediately see its open operational tasks.
 - The event overview should surface critical due items and not only static master data.
-- Die Veranstaltungsansicht gruppiert Events mit überlappenden, inklusiven Datumsbereichen anhand der aktuell gefilterten Liste. Zusammengehörige Zeilen bzw. mobile Karten erhalten dieselbe dezente Farbe sowie ein sichtbares Mengenkennzeichen und einen zugänglichen Hinweis; die Information hängt damit nicht allein von Farbe ab.
+- Die Veranstaltungsansicht gruppiert Events mit demselben Startdatum in der aktuell gefilterten Liste. Zusammengehörige Zeilen bzw. mobile Karten erhalten abwechselnd eine von zwei dezenten Farben sowie ein sichtbares Mengenkennzeichen und einen zugänglichen Hinweis; die Information hängt damit nicht allein von Farbe ab. Mehrtägige Events beeinflussen keine anderen Startdaten.
 - Migration should preserve the current separation between event overview and event-management tasks, even if the target UX later presents them more seamlessly.
 - The event should become the shared operational context not only for tasks but also for files, organizer-side contacts, and communication history.
 

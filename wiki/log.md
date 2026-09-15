@@ -609,7 +609,7 @@ Der bisher als `TIME2WIN` beschriftete Reiter im Event-Workspace heißt sichtbar
 
 ## 2026-09-15 — Überschneidende Eventtermine farblich gruppiert
 
-Die Veranstaltungsansicht erkennt überlappende, inklusive Datumsbereiche in der aktuell gefilterten Eventliste. Alle Events einer zusammenhängenden Termingruppe erhalten auf Desktop und Mobil dieselbe dezente Farbmarkierung; ein sichtbares `2×`-/`3×`-Kennzeichen, die Legende und zugängliche Hinweise ergänzen die Farbcodierung. Reine Logiktests sichern gleiche Tage, mehrtägige transitive Überschneidungen und getrennte Termine; ein Browser-Test prüft Gruppierung, berechnete Farbe, Legende und mobile Karten. Quellen: `src/lib/t2w/event-date-collisions.ts`, `src/components/t2w/EventDateCollision.tsx`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts`.
+Die Veranstaltungsansicht gruppiert Events ausschließlich nach demselben Startdatum in der aktuell gefilterten Liste. Zwei abwechselnde, dezente Farben markieren die Gruppen; ein sichtbares `2×`-/`3×`-Kennzeichen, die Legende und zugängliche Hinweise ergänzen die Farbcodierung. Mehrtägige Events markieren keine später startenden Events mehr. Reine Logiktests sichern gleiche Starttage sowie die Abgrenzung langer Zeiträume; ein Browser-Test prüft Gruppierung, berechnete Farbe, Legende und mobile Karten. Quellen: `src/lib/t2w/event-date-collisions.ts`, `src/components/t2w/EventDateCollision.tsx`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts`.
 
 ## 2026-09-15 — Veranstalter mit Kundendatensätzen verlinkt
 
@@ -622,3 +622,7 @@ Das Status-Auswahlfeld der Event-Stammdaten zeigt den gewählten Wert und alle O
 ## 2026-09-15 — Eventserien per Mehrfachauswahl pflegbar
 
 Der Eventdetail-Dialog verbindet nun mehrere ausgewählte Termine in einem atomaren Speichervorgang. Das geöffnete Event ist automatisch enthalten, bestehende Serienmitglieder sind vorausgewählt und bewusst abgewählte bisherige Mitglieder werden gelöst. Oberhalb des Event-Workspace erscheinen der chronologisch vorherige und nächste Termin als beschriftete, klickbare Badges. Service- und Workspace-Unit-Tests, Frontend- und Event-Service-Build sowie der gezielte Browserworkflow mit drei Events und Reload sind erfolgreich. Quellen: Nutzerkonversation vom 2026-09-15, [Eventserie](concepts/event-copy-and-series.md), `services/event-service/src/event-mutations.ts`, `src/routes/events.$eventcode.tsx`, `tests/e2e/event-management.spec.ts`.
+
+## 2026-09-15 — Kundenstamm mit Rechnungsbestand abgeglichen
+
+Die bestehende Importarbeitsmappe mit 114 Kunden und 146 zugeordneten Rechnungsbelegen wurde gegen alle 164 PDFs unter `raw/03_rechnungen/` abgeglichen. Der neue Stand enthält 123 Kunden; 18 Belege wurden ergänzt, vier Dublettenzeilen über UID beziehungsweise identische Anschrift und Kontakt zusammengeführt und die frühere Fehlzuordnung der TIME2WIN-UID bereinigt. Alle 164 Belege sind genau einmal zugeordnet. Fehlende oder abgeleitete Angaben aus den Rechnungen 260087 und 260161 bleiben ausdrücklich markiert. Ergebnis und Evidenz: [Rechnungen-Kundenstamm-Abgleich 2026](sources/2026-09-15-rechnungen-kundenstamm-abgleich.md).

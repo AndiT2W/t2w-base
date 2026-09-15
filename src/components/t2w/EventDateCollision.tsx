@@ -10,27 +10,9 @@ const DATE_COLLISION_STYLES = [
   },
   {
     table:
-      "!bg-chart-3/10 hover:!bg-chart-3/15 [&>td:first-child]:border-l-[3px] [&>td:first-child]:border-l-chart-3",
-    card: "border-l-[3px] border-l-chart-3 bg-chart-3/10",
-    badge: "border-chart-3/40 bg-chart-3/15",
-  },
-  {
-    table:
-      "!bg-chart-4/10 hover:!bg-chart-4/15 [&>td:first-child]:border-l-[3px] [&>td:first-child]:border-l-chart-4",
-    card: "border-l-[3px] border-l-chart-4 bg-chart-4/10",
-    badge: "border-chart-4/40 bg-chart-4/15",
-  },
-  {
-    table:
       "!bg-chart-1/10 hover:!bg-chart-1/15 [&>td:first-child]:border-l-[3px] [&>td:first-child]:border-l-chart-1",
     card: "border-l-[3px] border-l-chart-1 bg-chart-1/10",
     badge: "border-chart-1/40 bg-chart-1/15",
-  },
-  {
-    table:
-      "!bg-chart-5/10 hover:!bg-chart-5/15 [&>td:first-child]:border-l-[3px] [&>td:first-child]:border-l-chart-5",
-    card: "border-l-[3px] border-l-chart-5 bg-chart-5/10",
-    badge: "border-chart-5/40 bg-chart-5/15",
   },
 ] as const;
 
@@ -47,7 +29,7 @@ export function eventDateCollisionSurfaceClass(
 
 export function EventDateCollisionIndicator({ collision }: { collision: EventDateCollision }) {
   const peers = collision.peerNames.join(", ");
-  const label = `Terminkollision: ${collision.eventCount} Events mit überschneidenden Veranstaltungstagen. Weitere Events in der Gruppe: ${peers}.`;
+  const label = `Gleicher Starttag: ${collision.eventCount} Events. Weitere Events am selben Tag: ${peers}.`;
 
   return (
     <span
@@ -69,7 +51,7 @@ export function EventDateCollisionLegend() {
       aria-label="Legende für Terminkollisionen"
     >
       <CalendarRange className="size-3.5" aria-hidden="true" />
-      Gleiche Farbe = überschneidende Veranstaltungstage · 2×/3× = Events in der Gruppe
+      Markierte Zeilen starten am selben Tag · 2×/3× = Events an diesem Datum
     </p>
   );
 }

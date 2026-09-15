@@ -555,34 +555,44 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(overviewRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(2);
 });
 
-test("markiert Events mit überschneidenden Veranstaltungstagen als gemeinsame Farbgruppe", async ({
-  page,
-}) => {
+test("markiert Events mit gleichem Startdatum als gemeinsame Farbgruppe", async ({ page }) => {
   await mockApi(
     page,
     {
-      startAt: "2026-08-20T00:00:00.000Z",
-      endAt: "2026-08-22T00:00:00.000Z",
+      startAt: "2026-01-01T00:00:00.000Z",
+      endAt: "2026-03-01T00:00:00.000Z",
     },
     {
-      startAt: "2026-08-21T00:00:00.000Z",
-      endAt: "2026-08-21T00:00:00.000Z",
+      startAt: "2026-01-02T00:00:00.000Z",
+      endAt: "2026-01-02T00:00:00.000Z",
     },
+    [
+      {
+        id: "44444444-4444-4444-8444-444444444444",
+        eventCode: "260102_gleicher_start",
+        name: "Gleicher Start",
+        startAt: "2026-01-02T00:00:00.000Z",
+        endAt: "2026-01-02T00:00:00.000Z",
+      },
+    ],
   );
   await page.goto("/veranstaltungen");
 
   const table = page.locator("table");
   const existingEvent = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
   const followUpEvent = table.locator("tbody tr").filter({ hasText: "Folgetermin" });
+  const sameStartEvent = table.locator("tbody tr").filter({ hasText: "Gleicher Start" });
 
-  await expect(existingEvent).toHaveAttribute("data-date-collision-group", "1");
+  expect(await existingEvent.getAttribute("data-date-collision-group")).toBeNull();
   await expect(followUpEvent).toHaveAttribute("data-date-collision-group", "1");
-  await expect(existingEvent.getByLabel(/Terminkollision: 2 Events/)).toContainText("2×");
-  await expect(followUpEvent.getByLabel(/Terminkollision: 2 Events/)).toContainText("2×");
+  await expect(sameStartEvent).toHaveAttribute("data-date-collision-group", "1");
+  await expect(existingEvent.locator("[data-date-collision-count]")).toHaveCount(0);
+  await expect(followUpEvent.getByLabel(/Gleicher Starttag: 2 Events/)).toContainText("2×");
+  await expect(sameStartEvent.getByLabel(/Gleicher Starttag: 2 Events/)).toContainText("2×");
   await expect(page.getByLabel("Legende für Terminkollisionen")).toBeVisible();
 
   const rowColors = await Promise.all(
-    [existingEvent, followUpEvent].map((row) =>
+    [followUpEvent, sameStartEvent].map((row) =>
       row.evaluate((element) => getComputedStyle(element).backgroundColor),
     ),
   );
@@ -591,10 +601,11 @@ test("markiert Events mit überschneidenden Veranstaltungstagen als gemeinsame F
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileList = page.getByLabel("Veranstaltungen mobile Liste");
-  await expect(
-    mobileList.locator("article").filter({ hasText: "Bestehendes Event" }),
-  ).toHaveAttribute("data-date-collision-group", "1");
   await expect(mobileList.locator("article").filter({ hasText: "Folgetermin" })).toHaveAttribute(
+    "data-date-collision-group",
+    "1",
+  );
+  await expect(mobileList.locator("article").filter({ hasText: "Gleicher Start" })).toHaveAttribute(
     "data-date-collision-group",
     "1",
   );
@@ -842,15 +853,24 @@ test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", 
 
   const eventcodeLabel = await page.getByText("Eventcode", { exact: false }).first().boundingBox();
   const eventcodeInput = await page.locator("#d-code").boundingBox();
+  const dateRange = await page.getByTestId("event-date-range").boundingBox();
   const startInput = await page.locator("#d-start").boundingBox();
+  const endInput = await page.locator("#d-ende").boundingBox();
   const organizerSelect = await page.getByLabel("Veranstalter aus Stammdaten").boundingBox();
 
   expect(eventcodeLabel).not.toBeNull();
   expect(eventcodeInput).not.toBeNull();
+  expect(dateRange).not.toBeNull();
   expect(startInput).not.toBeNull();
+  expect(endInput).not.toBeNull();
   expect(organizerSelect).not.toBeNull();
   expect(Math.abs(eventcodeLabel!.y - eventcodeInput!.y)).toBeLessThan(12);
-  expect(organizerSelect!.x).toBeGreaterThan(startInput!.x + startInput!.width);
+  await expect(page.getByTestId("event-date-range")).toContainText("–");
+  expect(Math.abs(startInput!.y - endInput!.y)).toBeLessThan(1);
+  expect(endInput!.x).toBeGreaterThan(startInput!.x + startInput!.width);
+  expect(Math.abs(dateRange!.x - eventcodeInput!.x)).toBeLessThan(1);
+  expect(Math.abs(dateRange!.width - eventcodeInput!.width)).toBeLessThan(1);
+  expect(organizerSelect!.x).toBeGreaterThan(dateRange!.x + dateRange!.width);
 });
 
 test("zeigt den Eventstatus in den Stammdaten mit farbigem Kreis und Text", async ({ page }) => {
