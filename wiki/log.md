@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-09-15
+
+- Die Task-Interaktion ist als vertieftes Workspace-Modul vereinheitlicht: Event- und globale Planung übergeben nur noch Adapter und Planungsdaten an das gemeinsame Detail-Sheet. Das Modul kapselt CRUD-, Abhängigkeits- und Kommentar-Intents, die globale Server-Routenwahl sowie das Verwerfen veralteter Verlaufsantworten nach Auswahlwechsel oder Schließen. Unit-Regression sichert den Race-Schutz. Siehe [Task-Planung](concepts/task-planning-and-table-deepening-2026-09-15.md) und [Interaction Workspace](../../src/lib/t2w/task-interaction-workspace.ts).
+
 ## 2026-09-14
 
 - Gemeinsamer Tabellenstandard eingeführt: `DataTable` definiert die kompakte Desktopdichte (30/34 px), Status-Tags und sichtbaren Tastaturfokus; die zentralen Event-, Hardware- und Auszahlungstabellen verwenden ihn. Benutzerpräferenzen für Sichtbarkeit, Sortierung und Reihenfolge werden über die geschützte `UserTablePreference`-Haltung synchronisiert. Unit- und Browser-Regression prüfen sichere Wiederherstellung bzw. Rückspeicherung. Quellen: [Datentabellen-Konzept](concepts/shared-compact-data-tables.md), [ADR-0003](../../docs/adr/0003-shared-compact-data-tables.md), [E2E-Test](../../tests/e2e/table-preferences.spec.ts).

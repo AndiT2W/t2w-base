@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Task } from "@t2w/domain/project-management";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,34 +11,22 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { priorityLabel, statusLabel } from "@/lib/t2w/project-management";
-import type { TaskActivity, TaskComment } from "@/lib/t2w/task-interaction-workspace";
+import type { TaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
 import { formatDatumMitZeit } from "@/lib/t2w/format";
 
 const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
 
-type TaskDetailSheetProps = {
-  task: Task | null;
-  draft: Partial<Task>;
+export type TaskDetailPlanningContext = {
   owners: { id: string; displayName: string; active: boolean }[];
   groups: { id: string; name: string; active: boolean }[];
   tasks: readonly Task[];
   edges: readonly { predecessorId: string; successorId: string }[];
-  comments: readonly TaskComment[];
-  activities: readonly TaskActivity[];
-  busy: boolean;
-  title: string;
-  description: string;
-  onClose: () => void;
-  onDraftChange: (patch: Partial<Task>) => void;
-  onSubmit: () => void | Promise<unknown>;
-  onAddDependency: (predecessorId: string) => void | Promise<unknown>;
-  onRemoveDependency: (predecessorId: string) => void | Promise<unknown>;
-  onWriteComment: (input: {
-    id?: string;
-    text?: string;
-    delete?: boolean;
-  }) => void | Promise<unknown>;
-  onDelete: () => void | Promise<unknown>;
+};
+
+type TaskDetailSheetProps = {
+  workspace: TaskInteractionWorkspace<unknown>;
+  planning: TaskDetailPlanningContext;
+  variant: "event" | "global";
 };
 
 function textWithLinks(text: string) {
@@ -54,45 +42,44 @@ function textWithLinks(text: string) {
 }
 
 /**
- * The Task-detail module owns the shared Task editing interaction. Planning
- * views provide their scope-specific adapter and refreshed Task state.
+ * The Task-detail module owns one editing interaction for Event and global
+ * planning. Callers provide only the current planning context and adapter-backed
+ * workspace; scope filtering and Task intentions stay behind this seam.
  */
-export function TaskDetailSheet({
-  task,
-  draft,
-  owners,
-  groups,
-  tasks,
-  edges,
-  comments,
-  activities,
-  busy,
-  title,
-  description,
-  onClose,
-  onDraftChange,
-  onSubmit,
-  onAddDependency,
-  onRemoveDependency,
-  onWriteComment,
-  onDelete,
-}: TaskDetailSheetProps) {
+export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailSheetProps) {
+  const snapshot = useSyncExternalStore(
+    workspace.subscribe,
+    workspace.snapshot,
+    workspace.snapshot,
+  );
+  const { activities, busy, comments, draft, task } = snapshot;
   const [comment, setComment] = useState("");
   const editable = Boolean(task?.id);
-  const dependencies = task ? edges.filter((edge) => edge.successorId === task.id) : [];
-  const taskById = new Map(tasks.map((candidate) => [candidate.id, candidate]));
+  const scopedTasks = task
+    ? planning.tasks.filter(
+        (candidate) => candidate.scope === task.scope && candidate.eventId === task.eventId,
+      )
+    : [];
+  const dependencies = task ? planning.edges.filter((edge) => edge.successorId === task.id) : [];
+  const taskById = new Map(scopedTasks.map((candidate) => [candidate.id, candidate]));
   const availablePredecessors = task
-    ? tasks.filter(
+    ? scopedTasks.filter(
         (candidate) =>
           candidate.id !== task.id &&
           !dependencies.some((edge) => edge.predecessorId === candidate.id),
       )
     : [];
+  const title =
+    variant === "event" ? "Aufgabe" : editable ? "Aufgabe bearbeiten" : "Globale Aufgabe anlegen";
+  const description =
+    variant === "event"
+      ? "Details, Voraussetzungen, Kommentare und Verlauf"
+      : "Details, Termine, Voraussetzungen und Kommentare";
 
   useEffect(() => setComment(""), [task?.id]);
 
   return (
-    <Sheet open={!!task} onOpenChange={(shown) => !shown && !busy && onClose()}>
+    <Sheet open={!!task} onOpenChange={(shown) => !shown && !busy && workspace.close()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
@@ -104,7 +91,7 @@ export function TaskDetailSheet({
               className="space-y-3"
               onSubmit={(event) => {
                 event.preventDefault();
-                void onSubmit();
+                void workspace.save();
               }}
             >
               <Label htmlFor="task-detail-title">Titel</Label>
@@ -112,7 +99,7 @@ export function TaskDetailSheet({
                 id="task-detail-title"
                 required
                 value={draft.title ?? ""}
-                onChange={(event) => onDraftChange({ title: event.target.value })}
+                onChange={(event) => workspace.updateDraft({ title: event.target.value })}
               />
               <Label htmlFor="task-detail-description">Beschreibung</Label>
               <textarea
@@ -120,7 +107,7 @@ export function TaskDetailSheet({
                 className={control}
                 rows={5}
                 value={draft.description ?? ""}
-                onChange={(event) => onDraftChange({ description: event.target.value })}
+                onChange={(event) => workspace.updateDraft({ description: event.target.value })}
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
@@ -130,7 +117,7 @@ export function TaskDetailSheet({
                     className={control}
                     value={draft.status ?? "OPEN"}
                     onChange={(event) =>
-                      onDraftChange({ status: event.target.value as Task["status"] })
+                      workspace.updateDraft({ status: event.target.value as Task["status"] })
                     }
                   >
                     {Object.entries(statusLabel).map(([value, label]) => (
@@ -147,7 +134,7 @@ export function TaskDetailSheet({
                     className={control}
                     value={draft.priority ?? "NORMAL"}
                     onChange={(event) =>
-                      onDraftChange({ priority: event.target.value as Task["priority"] })
+                      workspace.updateDraft({ priority: event.target.value as Task["priority"] })
                     }
                   >
                     {Object.entries(priorityLabel).map(([value, label]) => (
@@ -163,10 +150,12 @@ export function TaskDetailSheet({
                     id="task-detail-owner"
                     className={control}
                     value={draft.ownerId ?? ""}
-                    onChange={(event) => onDraftChange({ ownerId: event.target.value || null })}
+                    onChange={(event) =>
+                      workspace.updateDraft({ ownerId: event.target.value || null })
+                    }
                   >
                     <option value="">Nicht zugeordnet</option>
-                    {owners
+                    {planning.owners
                       .filter((owner) => owner.active || owner.id === draft.ownerId)
                       .map((owner) => (
                         <option key={owner.id} value={owner.id}>
@@ -181,10 +170,12 @@ export function TaskDetailSheet({
                     id="task-detail-group"
                     className={control}
                     value={draft.groupId ?? ""}
-                    onChange={(event) => onDraftChange({ groupId: event.target.value || null })}
+                    onChange={(event) =>
+                      workspace.updateDraft({ groupId: event.target.value || null })
+                    }
                   >
                     <option value="">Ohne Kategorie</option>
-                    {groups
+                    {planning.groups
                       .filter((group) => group.active || group.id === draft.groupId)
                       .map((group) => (
                         <option key={group.id} value={group.id}>
@@ -199,7 +190,9 @@ export function TaskDetailSheet({
                     id="task-detail-start"
                     type="date"
                     value={draft.startDate ?? ""}
-                    onChange={(event) => onDraftChange({ startDate: event.target.value || null })}
+                    onChange={(event) =>
+                      workspace.updateDraft({ startDate: event.target.value || null })
+                    }
                   />
                 </div>
                 <div>
@@ -208,7 +201,9 @@ export function TaskDetailSheet({
                     id="task-detail-end"
                     type="date"
                     value={draft.endDate ?? ""}
-                    onChange={(event) => onDraftChange({ endDate: event.target.value || null })}
+                    onChange={(event) =>
+                      workspace.updateDraft({ endDate: event.target.value || null })
+                    }
                   />
                 </div>
               </div>
@@ -230,7 +225,7 @@ export function TaskDetailSheet({
                       type="button"
                       variant="outline"
                       disabled={busy}
-                      onClick={() => void onRemoveDependency(edge.predecessorId)}
+                      onClick={() => void workspace.removeDependency(edge.predecessorId)}
                     >
                       Entfernen
                     </Button>
@@ -243,7 +238,7 @@ export function TaskDetailSheet({
                   defaultValue=""
                   onChange={(event) => {
                     const predecessorId = event.target.value;
-                    if (predecessorId) void onAddDependency(predecessorId);
+                    if (predecessorId) void workspace.addDependency(predecessorId);
                     event.currentTarget.value = "";
                   }}
                 >
@@ -275,7 +270,7 @@ export function TaskDetailSheet({
                           size="sm"
                           onClick={() => {
                             const text = window.prompt("Kommentar bearbeiten", item.text);
-                            if (text !== null) void onWriteComment({ id: item.id, text });
+                            if (text !== null) void workspace.writeComment({ id: item.id, text });
                           }}
                         >
                           Bearbeiten
@@ -286,7 +281,7 @@ export function TaskDetailSheet({
                           size="sm"
                           onClick={() => {
                             if (window.confirm("Kommentar dauerhaft löschen?"))
-                              void onWriteComment({ id: item.id, delete: true });
+                              void workspace.writeComment({ id: item.id, delete: true });
                           }}
                         >
                           Löschen
@@ -300,7 +295,7 @@ export function TaskDetailSheet({
                   onSubmit={(event) => {
                     event.preventDefault();
                     if (!comment.trim()) return;
-                    void onWriteComment({ text: comment });
+                    void workspace.writeComment({ text: comment });
                     setComment("");
                   }}
                 >
@@ -335,7 +330,7 @@ export function TaskDetailSheet({
                 variant="destructive"
                 disabled={busy}
                 onClick={() => {
-                  if (window.confirm("Aufgabe dauerhaft löschen?")) void onDelete();
+                  if (window.confirm("Aufgabe dauerhaft löschen?")) void workspace.delete();
                 }}
               >
                 Aufgabe löschen

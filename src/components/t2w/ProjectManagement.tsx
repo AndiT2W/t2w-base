@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Task } from "@t2w/domain/project-management";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,17 +7,13 @@ import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { TaskFlowBadges } from "@/components/t2w/TaskFlowBadges";
 import { formatDatum } from "@/lib/t2w/format";
 import {
-  pmCommand,
+  createEventTaskInteractionAdapter,
   pmRead,
   priorityLabel,
   statusLabel,
-  type PmCommand,
   type PmState,
 } from "@/lib/t2w/project-management";
-import {
-  createTaskInteractionWorkspace,
-  createHttpTaskInteractionAdapter,
-} from "@/lib/t2w/task-interaction-workspace";
+import { createTaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
 
 const healthLabel: Record<string, string> = {
   critical: "Blockiert oder überfällig",
@@ -43,28 +38,22 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
   const interaction = useMemo(
     () =>
       createTaskInteractionWorkspace(
-        createHttpTaskInteractionAdapter<PmState>(async (command) => {
-          const current = stateRef.current;
-          if (!current) throw new Error("Aufgaben sind noch nicht geladen.");
-          const next = await pmCommand(current, command);
-          stateRef.current = next;
-          const task = command.taskId
-            ? command.type === "delete"
-              ? null
-              : (next.tasks.find((candidate) => candidate.id === command.taskId) ?? null)
-            : (next.tasks.find((candidate) => candidate.title === command.task?.title) ?? null);
-          return { state: next, task };
+        createEventTaskInteractionAdapter({
+          current: () => stateRef.current,
+          update: (next) => {
+            stateRef.current = next;
+            setState(next);
+          },
         }),
       ),
     [],
   );
-  const [interactionSnapshot, setInteractionSnapshot] = useState(() => interaction.snapshot());
-  useEffect(
-    () => interaction.subscribe(() => setInteractionSnapshot(interaction.snapshot())),
-    [interaction],
+  const interactionSnapshot = useSyncExternalStore(
+    interaction.subscribe,
+    interaction.snapshot,
+    interaction.snapshot,
   );
-  const draft = interactionSnapshot.task ? (interactionSnapshot.draft as Task) : null;
-  const { activities, busy, comments } = interactionSnapshot;
+  const { busy } = interactionSnapshot;
   const error = loadError || interactionSnapshot.error || "";
   const load = useCallback(async () => {
     try {
@@ -83,12 +72,6 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
     interaction.close();
   }, [eventId, interaction]);
   const taskById = useMemo(() => new Map(state?.tasks.map((task) => [task.id, task])), [state]);
-  async function mutate(command: PmCommand) {
-    const next = await interaction.command(command);
-    if (!next) return false;
-    setState(next);
-    return true;
-  }
   const categoryName = (id: string | null) =>
     state?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
   return (
@@ -117,7 +100,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
             className="flex flex-wrap items-end gap-2"
             onSubmit={async (event) => {
               event.preventDefault();
-              if (await mutate({ type: "create", task: { title } })) setTitle("");
+              if (await interaction.create({ title }, false)) setTitle("");
             }}
           >
             <div className="min-w-48 flex-1">
@@ -244,51 +227,14 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
         </>
       )}
       <TaskDetailSheet
-        task={interactionSnapshot.task}
-        draft={draft ?? {}}
-        owners={state?.owners ?? []}
-        groups={state?.groups ?? []}
-        tasks={state?.tasks ?? []}
-        edges={state?.edges ?? []}
-        comments={comments}
-        activities={activities}
-        busy={busy}
-        title="Aufgabe"
-        description="Details, Voraussetzungen, Kommentare und Verlauf"
-        onClose={() => interaction.close()}
-        onDraftChange={(patch) => interaction.updateDraft(patch)}
-        onSubmit={() => {
-          if (!draft) return;
-          return mutate({
-            type: "update",
-            taskId: draft.id,
-            taskVersion: draft.version,
-            task: draft,
-          });
+        workspace={interaction}
+        planning={{
+          owners: state?.owners ?? [],
+          groups: state?.groups ?? [],
+          tasks: state?.tasks ?? [],
+          edges: state?.edges ?? [],
         }}
-        onAddDependency={(predecessorId) => {
-          if (!draft) return;
-          return mutate({
-            type: "add-dependency",
-            taskId: draft.id,
-            taskVersion: draft.version,
-            predecessorId,
-          });
-        }}
-        onRemoveDependency={(predecessorId) => {
-          if (!draft) return;
-          return mutate({
-            type: "remove-dependency",
-            taskId: draft.id,
-            taskVersion: draft.version,
-            predecessorId,
-          });
-        }}
-        onWriteComment={(input) => interaction.writeComment(input)}
-        onDelete={() => {
-          if (!draft) return;
-          return mutate({ type: "delete", taskId: draft.id, taskVersion: draft.version });
-        }}
+        variant="event"
       />
     </section>
   );

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   createInMemoryTaskInteractionAdapter,
   createTaskInteractionWorkspace,
+  type TaskInteractionAdapter,
+  type TaskHistory,
 } from "./task-interaction-workspace";
 import type { Task } from "@t2w/domain/project-management";
 
@@ -27,7 +29,7 @@ describe("Task interaction workspace", () => {
     );
     await workspace.open(task);
     workspace.updateDraft({ title: "Freigabe" });
-    await workspace.command({ type: "update", taskId: task.id, task: workspace.snapshot().draft });
+    await workspace.save();
     await workspace.writeComment({ text: "Prüfen" });
 
     expect(workspace.snapshot()).toMatchObject({
@@ -35,5 +37,62 @@ describe("Task interaction workspace", () => {
       comments: [{ text: "Prüfen" }],
       activities: [{ action: "comment-create" }],
     });
+  });
+
+  it("keeps history with the newest Task selection and ignores history after close", async () => {
+    const nextTask = { ...task, id: "task-2", title: "Abnahme" };
+    const resolvers = new Map<string, (value: TaskHistory) => void>();
+    const adapter: TaskInteractionAdapter<Task[]> = {
+      create: async () => ({ state: [task, nextTask], task }),
+      update: async (current) => ({ state: [task, nextTask], task: current }),
+      delete: async () => ({ state: [], task: null }),
+      addDependency: async (current) => ({ state: [task, nextTask], task: current }),
+      removeDependency: async (current) => ({ state: [task, nextTask], task: current }),
+      history: (taskId) =>
+        new Promise((resolve) => {
+          resolvers.set(taskId, resolve);
+        }),
+      writeComment: async () => undefined,
+    };
+    const workspace = createTaskInteractionWorkspace(adapter);
+
+    const openingFirst = workspace.open(task);
+    const openingSecond = workspace.open(nextTask);
+    resolvers.get(nextTask.id)!({
+      comments: [
+        {
+          id: "comment-2",
+          authorId: "memory",
+          text: "Nur für Abnahme",
+          createdAt: "2026-09-15T10:00:00Z",
+          updatedAt: "2026-09-15T10:00:00Z",
+        },
+      ],
+      activities: [],
+    });
+    await openingSecond;
+    resolvers.get(task.id)!({
+      comments: [
+        {
+          id: "comment-1",
+          authorId: "memory",
+          text: "Nur für Briefing",
+          createdAt: "2026-09-15T10:00:00Z",
+          updatedAt: "2026-09-15T10:00:00Z",
+        },
+      ],
+      activities: [],
+    });
+    await openingFirst;
+
+    expect(workspace.snapshot().task?.id).toBe(nextTask.id);
+    expect(workspace.snapshot().comments).toMatchObject([{ text: "Nur für Abnahme" }]);
+
+    const reopening = workspace.open(task);
+    workspace.close();
+    resolvers.get(task.id)!({ comments: [], activities: [] });
+    await reopening;
+
+    expect(workspace.snapshot()).toMatchObject({ task: null, comments: [], activities: [] });
   });
 });

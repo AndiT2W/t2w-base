@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { projectTaskPortfolios, type Task } from "@t2w/domain/project-management";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -8,11 +8,14 @@ import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/t2w/DataTable";
 import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { formatDatum } from "@/lib/t2w/format";
-import { pmRequest, priorityLabel, statusLabel, type PmGlobal } from "@/lib/t2w/project-management";
 import {
-  createTaskInteractionWorkspace,
-  createHttpTaskInteractionAdapter,
-} from "@/lib/t2w/task-interaction-workspace";
+  createGlobalTaskInteractionAdapter,
+  pmGlobalRead,
+  priorityLabel,
+  statusLabel,
+  type PmGlobal,
+} from "@/lib/t2w/project-management";
+import { createTaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
 
 export const Route = createFileRoute("/aufgaben")({ component: Aufgaben });
 const control =
@@ -58,14 +61,6 @@ function portfolioBlocks(data: PmGlobal, sourceTasks: PmGlobal["tasks"]) {
     };
   });
 }
-function visibleTask(data: PmGlobal, taskId: string): VisibleTask | null {
-  return (
-    portfolioBlocks(data, data.tasks)
-      .flatMap((block) => block.categories.flatMap((category) => category.tasks))
-      .find((task) => task.id === taskId) ?? null
-  );
-}
-
 function Aufgaben() {
   const [data, setData] = useState<PmGlobal>();
   const [view, setView] = useState<"table" | "gantt">("table");
@@ -83,56 +78,28 @@ function Aufgaben() {
   });
   const [months, setMonths] = useState(3);
   const [loadError, setLoadError] = useState("");
-  const dataRef = useRef<PmGlobal | undefined>(undefined);
   const interaction = useMemo(
     () =>
       createTaskInteractionWorkspace(
-        createHttpTaskInteractionAdapter<PmGlobal, VisibleTask>(async (command) => {
-          const current = dataRef.current;
-          if (!current) throw new Error("Aufgaben sind noch nicht geladen.");
-          const source = command.taskId
-            ? current.tasks.find((candidate) => candidate.id === command.taskId)
-            : null;
-          if (source?.event) {
-            const event = current.events.find((candidate) => candidate.id === source.event?.id);
-            await pmRequest(`/events/${source.event.id}/commands`, {
-              ...command,
-              graphVersion: event?.pmGraphVersion,
-            });
-          } else {
-            await pmRequest("/commands", command);
-          }
-          const next = await pmRequest<PmGlobal>("");
-          dataRef.current = next;
-          return {
-            state: next,
-            task:
-              command.taskId && command.type === "delete"
-                ? null
-                : command.taskId
-                  ? visibleTask(next, command.taskId)
-                  : (next.tasks
-                      .filter((candidate) => candidate.title === command.task?.title)
-                      .map((candidate) => visibleTask(next, candidate.id))
-                      .find(Boolean) ?? null),
-          };
+        createGlobalTaskInteractionAdapter({
+          update: setData,
         }),
       ),
     [],
   );
-  const [interactionSnapshot, setInteractionSnapshot] = useState(() => interaction.snapshot());
-  useEffect(
-    () => interaction.subscribe(() => setInteractionSnapshot(interaction.snapshot())),
-    [interaction],
+  const interactionSnapshot = useSyncExternalStore(
+    interaction.subscribe,
+    interaction.getSnapshot,
+    interaction.getSnapshot,
   );
   const task = interactionSnapshot.task;
   const draft = interactionSnapshot.draft;
-  const { activities, comments } = interactionSnapshot;
+  const comments = interactionSnapshot.comments;
+  const activities = interactionSnapshot.activities;
   const error = loadError || interactionSnapshot.error || "";
   const load = async (): Promise<PmGlobal | undefined> => {
     try {
-      const next = await pmRequest<PmGlobal>("");
-      dataRef.current = next;
+      const next = await pmGlobalRead();
       setData(next);
       setLoadError("");
       return next;
@@ -186,36 +153,6 @@ function Aufgaben() {
   );
   const categoryName = (id: string | null) =>
     data?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
-  async function save() {
-    if (!task) return;
-    const next = await interaction.command({
-      type: "update",
-      taskId: task.id,
-      taskVersion: task.version,
-      task: draft,
-    });
-    if (next) setData(next);
-  }
-  async function createGlobal(): Promise<void> {
-    const next = await interaction.command({
-      type: "create",
-      task: { ...draft, title: draft.title ?? "" },
-    });
-    if (next) setData(next);
-  }
-  async function updateDependency(
-    type: "add-dependency" | "remove-dependency",
-    predecessorId: string,
-  ) {
-    if (!task) return;
-    const next = await interaction.command({
-      type,
-      taskId: task.id,
-      taskVersion: task.version,
-      predecessorId,
-    });
-    if (next) setData(next);
-  }
   const start = new Date(`${range}T00:00:00Z`),
     end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, 1)),
     duration = end.getTime() - start.getTime();
@@ -301,10 +238,6 @@ function Aufgaben() {
               startDate: null,
               endDate: null,
               version: 0,
-              blockedBy: [],
-              overdue: false,
-              dueSoon: false,
-              event: null,
             });
           }}
         >
@@ -748,34 +681,15 @@ function Aufgaben() {
         </section>
       )}
       <TaskDetailSheet
-        task={task}
-        draft={draft}
-        owners={data?.owners ?? []}
-        groups={data?.groups ?? []}
-        tasks={(data?.tasks ?? []).filter(
-          (candidate) => candidate.scope === task?.scope && candidate.eventId === task?.eventId,
-        )}
-        edges={data?.edges ?? []}
-        comments={comments}
-        activities={activities}
-        busy={interactionSnapshot.busy}
-        title={task?.id ? "Aufgabe bearbeiten" : "Globale Aufgabe anlegen"}
-        description="Details, Termine, Voraussetzungen und Kommentare"
-        onClose={() => interaction.close()}
-        onDraftChange={(patch) => interaction.updateDraft(patch)}
-        onSubmit={() => (task?.id ? save() : createGlobal())}
-        onAddDependency={(predecessorId) => updateDependency("add-dependency", predecessorId)}
-        onRemoveDependency={(predecessorId) => updateDependency("remove-dependency", predecessorId)}
-        onWriteComment={(input) => interaction.writeComment(input)}
-        onDelete={async () => {
-          if (!task) return;
-          const next = await interaction.command({
-            type: "delete",
-            taskId: task.id,
-            taskVersion: task.version,
-          });
-          if (next) setData(next);
+        workspace={interaction}
+        planning={{
+          eventNameById,
+          owners: data?.owners ?? [],
+          groups: data?.groups ?? [],
+          tasks: data?.tasks ?? [],
+          edges: data?.edges ?? [],
         }}
+        variant="global"
       />
     </main>
   );
