@@ -476,7 +476,10 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(table.getByRole("columnheader", { name: "Services sortieren" })).toBeVisible();
   const eventRow = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
   await expect(eventRow.getByRole("cell").nth(3)).toHaveText("Triathlon");
-  await expect(eventRow.getByRole("cell").nth(4)).toHaveText("UHF, Video (iRewind)");
+  await expect(eventRow.getByRole("cell").nth(3).locator("svg")).toHaveCount(1);
+  await expect(eventRow.getByRole("cell").nth(4)).toContainText("UHF");
+  await expect(eventRow.getByRole("cell").nth(4)).toContainText("Video (iRewind)");
+  await expect(eventRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(2);
   await expect(table.locator("[title='Outlook und SharePoint']")).toBeVisible();
   await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await expect(table.locator("tbody")).toContainText("20.08.2026");
@@ -491,7 +494,10 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   ).toBeVisible();
   const overviewRow = overviewTable.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
   await expect(overviewRow.getByRole("cell").nth(3)).toHaveText("Triathlon");
-  await expect(overviewRow.getByRole("cell").nth(4)).toHaveText("UHF, Video (iRewind)");
+  await expect(overviewRow.getByRole("cell").nth(3).locator("svg")).toHaveCount(1);
+  await expect(overviewRow.getByRole("cell").nth(4)).toContainText("UHF");
+  await expect(overviewRow.getByRole("cell").nth(4)).toContainText("Video (iRewind)");
+  await expect(overviewRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(2);
 });
 
 test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async ({ page }) => {

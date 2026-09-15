@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot } from "@/components/t2w/StatusBadge";
+import { SelectionBadge, ServiceBadge } from "@/components/t2w/ServiceBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso, tageZwischen } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
@@ -89,7 +90,7 @@ function inTagen(iso: string, tage: number, heute: string) {
 }
 
 function Uebersicht() {
-  const { events, settings } = useT2W();
+  const { events, settings, selectionLists } = useT2W();
   const { t } = useI18n();
   const heute = heuteIso();
   const [filter, setFilter] = useState<Schnellfilter>("alle");
@@ -352,7 +353,15 @@ function Uebersicht() {
                     )}
                     {visibleColumns.includes("Sportart") && (
                       <td className="max-w-[9rem] truncate px-2 py-1" title={e.sportart || "—"}>
-                        {e.sportart || "—"}
+                        {e.sportart ? (
+                          <SelectionBadge
+                            {...(selectionLists.sports.find(
+                              (sport) => sport.id === e.sportartId || sport.name === e.sportart,
+                            ) ?? { name: e.sportart })}
+                          />
+                        ) : (
+                          "—"
+                        )}
                       </td>
                     )}
                     {visibleColumns.includes("Services") && (
@@ -360,7 +369,26 @@ function Uebersicht() {
                         className="max-w-[12rem] truncate px-2 py-1"
                         title={e.services?.join(", ") || "—"}
                       >
-                        {e.services?.join(", ") || "—"}
+                        {e.services?.length ? (
+                          <div className="flex min-w-0 flex-nowrap gap-1 overflow-hidden">
+                            {e.services.map((name, index) => {
+                              const service = selectionLists.services.find(
+                                (item) => item.id === e.serviceIds?.[index] || item.name === name,
+                              );
+                              return (
+                                <div key={service?.id ?? name} className="shrink-0">
+                                  <ServiceBadge
+                                    name={name}
+                                    icon={service?.icon}
+                                    color={service?.color}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                     )}
                     {visibleColumns.includes("Zeitraum") && (

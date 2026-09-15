@@ -15,6 +15,7 @@ import { KalenderSeite } from "@/routes/kalender";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
 import { StatusDot } from "@/components/t2w/StatusBadge";
+import { SelectionBadge, ServiceBadge } from "@/components/t2w/ServiceBadge";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
@@ -96,7 +97,7 @@ const EVENT_TABLE_COLUMNS = [
 
 function Veranstaltungen() {
   const { q, ansicht } = Route.useSearch();
-  const { events, settings } = useT2W();
+  const { events, settings, selectionLists } = useT2W();
   const [suche, setSuche] = useState(q);
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [zeitraum, setZeitraum] = useState<Zeitraum>("jahr");
@@ -348,7 +349,15 @@ function Veranstaltungen() {
                     )}
                     {visibleColumns.includes("Sportart") && (
                       <td className="max-w-[9rem] truncate px-2 py-1" title={e.sportart || "—"}>
-                        {e.sportart || "—"}
+                        {e.sportart ? (
+                          <SelectionBadge
+                            {...(selectionLists.sports.find(
+                              (sport) => sport.id === e.sportartId || sport.name === e.sportart,
+                            ) ?? { name: e.sportart })}
+                          />
+                        ) : (
+                          "—"
+                        )}
                       </td>
                     )}
                     {visibleColumns.includes("Services") && (
@@ -356,7 +365,26 @@ function Veranstaltungen() {
                         className="max-w-[12rem] truncate px-2 py-1"
                         title={e.services?.join(", ") || "—"}
                       >
-                        {e.services?.join(", ") || "—"}
+                        {e.services?.length ? (
+                          <div className="flex min-w-0 flex-nowrap gap-1 overflow-hidden">
+                            {e.services.map((name, index) => {
+                              const service = selectionLists.services.find(
+                                (item) => item.id === e.serviceIds?.[index] || item.name === name,
+                              );
+                              return (
+                                <div key={service?.id ?? name} className="shrink-0">
+                                  <ServiceBadge
+                                    name={name}
+                                    icon={service?.icon}
+                                    color={service?.color}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                     )}
                     {visibleColumns.includes("Zeitraum") && (

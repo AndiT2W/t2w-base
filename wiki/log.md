@@ -2,6 +2,8 @@
 
 ## 2026-09-15
 
+- Nutzerwunsch umgesetzt: Sportart und jeder Service erscheinen in den Eventtabellen mit demselben konfigurierten Badge wie in den Event-Stammdaten. Der Browser-Regressionstest prüft die Badges samt Icons.
+
 - Nutzerwunsch umgesetzt: Die Eventtabellen in Übersicht und Veranstaltungen zeigen Sportart und Services in getrennten, sortierbaren Spalten; mehrere Services teilen sich eine Zelle. Browser-Regression prüft getrennte Spalten und Inhalte. Quellen: [Übersicht](../../src/routes/index.tsx), [Veranstaltungen](../../src/routes/veranstaltungen.tsx), [E2E-Test](../../tests/e2e/event-management.spec.ts).
 
 - Task-Planungsarchitektur vertieft: Der Interaction-Workspace kapselt Erstellen, Ändern, Voraussetzungen, Kommentare und Aktualisierung hinter Intent-Methoden. Die HTTP-Adapter kapseln Versionen und Persistenzpfade. `TaskDetailSheet` bezieht seine Interaktion über einen kompakten Planungskontext; die globale Ansicht verwendet nur noch den serverautoritativen Task-Adapter. Eine Workspace-Regression verhindert, dass verspätete Historie nach schnellem Auswahlwechsel oder Schließen sichtbar wird. Fokussierter Workspace-Test, ESLint und Produktionsbuild bestanden; der PM-Browsertest benötigt weiterhin `PM_TEST_DATABASE_URL`. Quellen: [Workspace](../../src/lib/t2w/task-interaction-workspace.ts), [Task-Detail](../../src/components/t2w/TaskDetailSheet.tsx), [Globaler Adapter](../../src/lib/t2w/project-management.ts), [Konzept](concepts/task-planning-and-table-deepening-2026-09-15.md).
