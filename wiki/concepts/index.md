@@ -22,3 +22,4 @@ Use this section for recurring ideas, workflows, business rules, technical patte
 - [Ticket #34: UI und Outlook-Sync-Rückmeldung](ticket-34-ui-and-outlook-sync-feedback.md)
 - [Architekturvertiefung vom 2026-08-28](architecture-deepening-2026-08-28.md)
 - [Aufgabenplanung und Tabellen-Vertiefung](task-planning-and-table-deepening-2026-09-15.md)
+- [ClickUp-Import Veranstaltungen](clickup-veranstaltungen-import.md)

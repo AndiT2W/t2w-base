@@ -4,6 +4,10 @@ Track ingested evidence and source summaries here.
 
 ## Active Sources
 
+- [ClickUp Live-Veranstaltungen (2026-09-15)](2026-09-15-clickup-live-veranstaltungen.md)
+
+- [Nutzerentscheidung zur Aufgabenübersicht (2026-09-15)](2026-09-15-user-task-overview-hierarchy.md)
+
 - [Projektmanagement v3: Auftrag und ursprüngliches Issue #55](2026-09-10-project-management-spec-v3.md)
 
 - [Event-Readiness-Anforderung (2026-09-10)](2026-09-10-user-event-readiness.md)

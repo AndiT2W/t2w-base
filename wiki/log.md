@@ -2,7 +2,9 @@
 
 ## 2026-09-15
 
-- Die Task-Interaktion ist als vertieftes Workspace-Modul vereinheitlicht: Event- und globale Planung übergeben nur noch Adapter und Planungsdaten an das gemeinsame Detail-Sheet. Das Modul kapselt CRUD-, Abhängigkeits- und Kommentar-Intents, die globale Server-Routenwahl sowie das Verwerfen veralteter Verlaufsantworten nach Auswahlwechsel oder Schließen. Unit-Regression sichert den Race-Schutz. Siehe [Task-Planung](concepts/task-planning-and-table-deepening-2026-09-15.md) und [Interaction Workspace](../../src/lib/t2w/task-interaction-workspace.ts).
+- Task-Planungsarchitektur vertieft: Der Interaction-Workspace kapselt Erstellen, Ändern, Voraussetzungen, Kommentare und Aktualisierung hinter Intent-Methoden. Die HTTP-Adapter kapseln Versionen und Persistenzpfade. `TaskDetailSheet` bezieht seine Interaktion über einen kompakten Planungskontext; die globale Ansicht verwendet nur noch den serverautoritativen Task-Adapter. Eine Workspace-Regression verhindert, dass verspätete Historie nach schnellem Auswahlwechsel oder Schließen sichtbar wird. Fokussierter Workspace-Test, ESLint und Produktionsbuild bestanden; der PM-Browsertest benötigt weiterhin `PM_TEST_DATABASE_URL`. Quellen: [Workspace](../../src/lib/t2w/task-interaction-workspace.ts), [Task-Detail](../../src/components/t2w/TaskDetailSheet.tsx), [Globaler Adapter](../../src/lib/t2w/project-management.ts), [Konzept](concepts/task-planning-and-table-deepening-2026-09-15.md).
+
+- Nutzerentscheidung umgesetzt: Die globale Aufgabenübersicht verwendet nun die kontrastreiche Kartenansicht. Dunkle Event-Köpfe trennen Planungsbereiche; Kategorien kombinieren Akzentleiste, Lucide-Icon, nächsten Schritt, Zählwerte und einklappbaren Workflow. Dringlichkeit bleibt über getrennte beschriftete Status-Tags erkennbar. Filter, Detail-Sheet und Gantt bleiben erhalten. Der echte PM-Browserlauf gegen isolierte PostgreSQL-Testdatenbank bestand mit 5/5 Tests. Quellen: [Entscheidung](decisions/2026-09-15-kontrastorientierte-aufgabenuebersicht.md), [Aufgabenroute](../../src/routes/aufgaben.tsx), [PM-Browser-Regression](../../tests/pm-e2e/project-management.spec.ts).
 
 ## 2026-09-14
 
@@ -562,3 +564,9 @@ Auf Nutzerentscheidung bleibt die linke Navigation unverändert; die Inhaltsseit
 ## 2026-09-15 — Datumsformat vereinheitlicht
 
 Alle sichtbaren Datumswerte werden über den gemeinsamen Formatierungsseam als `dd.mm.yyyy` ausgegeben; bei Zeitstempeln folgt die Uhrzeit nach dem Datum. Zeiträume zeigen beide Endpunkte vollständig. ISO-Werte bleiben unverändert für API, Filter und native Datumseingaben. Unit- und Browser-Regressionen sichern die zentrale Formatierung sowie exemplarisch Veranstaltungs- und Hardwaretabellen. Quellen: `src/lib/t2w/format.ts`, `src/lib/t2w/format.test.ts`, `tests/e2e/event-management.spec.ts`, `tests/e2e/hardware.spec.ts`.
+
+## 2026-09-15 — ClickUp-Veranstaltungen importiert
+
+Die Live-Liste `TIME2WIN > Office > VERANSTALTUNGEN` mit 756 Hauptaufgaben als Rohquelle erfasst. Migration `0030_clickup_event_import` ergänzt die eindeutige `Event.clickUpId` sowie `EventClickUpSource` für den vollständig erhaltenen Quellstand. Der Import upsert über die ClickUp-ID und legte 756 Events ohne Fehler an; alle 756 Quellen sind eindeutig verknüpft, 494 enthalten zusätzlich eine Detailantwort. 500 Detailantworten und die vollständige Listenantwort sind als Evidenz abgelegt. Service-Regressionen und die Validierung des kompletten 756er-Quellstands liefen erfolgreich. Siehe [Quellnachweis](sources/2026-09-15-clickup-live-veranstaltungen.md) und [Importkonzept](concepts/clickup-veranstaltungen-import.md).
+
+Korrektur: Die ClickUp-ID bleibt ausschließlich im technischen Feld `clickUpId` und ist auf der Stammdaten-Seite nicht sichtbar. Da die Quelle keinen eigenen Slug liefert, ersetzt die Rückmigration die ehemaligen `clickup-<id>`-Platzhalter mit der bestehenden `YYMMDD_slug`-Konvention; bereits manuell gesetzte Codes bleiben geschützt.

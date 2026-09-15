@@ -2,26 +2,27 @@
 
 ## Status
 
-Importdefinition, Stand 2026-09-09. Die Live-Liste konnte in dieser Sitzung nicht geprüft werden, weil ClickUp auf die Anmeldung umgeleitet hat. Grundlage ist der vorhandene ClickUp-Export unter `outputs/clickup-import/t2w-events-import.csv` sowie die bisher dokumentierte Datenstruktur.
+Live-Import, Stand 2026-09-15. Die Liste wurde direkt in ClickUp geprüft und als Quellstand gesichert; siehe [Quellnachweis](../sources/2026-09-15-clickup-live-veranstaltungen.md).
 
 ## Ziel
 
-Veranstaltungen aus der ClickUp-Liste `TIME2WIN > Office > VERANSTALTUNGEN` werden als Events importiert. ClickUp bleibt dabei nur Quelle; die ClickUp-Task-ID wird als unveränderliche externe Referenz gespeichert.
+Veranstaltungen aus der ClickUp-Liste `TIME2WIN > Office > VERANSTALTUNGEN` werden als Events importiert. `Event.clickUpId` ist die eindeutige, unveränderliche Sync-Referenz. `EventClickUpSource` hält den Quellstand getrennt als JSON, damit unbekannte Custom Fields und spätere Feldzuordnungen nicht verloren gehen.
+
+## Eventcode und technische Referenz
+
+Die ClickUp-Quelle enthält keinen eigenen Eventcode/Slug (`custom_id` ist in allen erfassten Aufgaben leer). Der Eventcode wird deshalb wie bei nativ angelegten Events aus Startdatum und Eventname gebildet: `YYMMDD_slug`; Kollisionen erhalten `_02`, `_03` usw. Die ClickUp-ID steht ausschließlich in `Event.clickUpId` und wird nicht auf der Stammdaten-Seite dargestellt. Ein Wiederholungslauf ersetzt nur die früheren Platzhalter-Codes `clickup-<id>`; nachträglich gepflegte Eventcodes bleiben unverändert.
 
 ## Importumfang
 
 - Hauptaufgaben der Liste importieren; Unteraufgaben und reine Automations-/Buttonfelder nicht als eigene Events importieren.
-- `task_id` als `externalSource=clickup` und `externalId` übernehmen.
-- Name, Beschreibung/Notizen, Start-/Endtermin, Status, Ort, Verantwortlicher, Event-ID, Sportart, Typ und Teilnehmer übernehmen.
+- Jede Quelle über `clickUpId` upserten; erneute Läufe dürfen keine Duplikate erzeugen.
+- Name, Beschreibung/Notizen, Start-/Endtermin, Status, Ort, Verantwortlicher, Event-ID, Sportart, Typ und Teilnehmer in die passenden Eventfelder übernehmen, sofern die Quelle den Wert maschinenlesbar liefert. Jeder originale Rohwert bleibt zusätzlich im Source-Snapshot erhalten.
 - Backend-, Outlook- und OneDrive-Links als externe Referenzen bzw. Pfade übernehmen; keine Dateien oder Nachrichten automatisch kopieren.
 - Operative Felder wie Fahrzeug, UHF/TON/GPS und Mitarbeiterzuordnungen nur übernehmen, wenn das Zielmodell dafür ein explizites Feld besitzt; sonst in einem Importprotokoll erhalten.
 
 ## Stammdaten und Verknüpfungen
 
-1. Kunden zuerst deduplizieren und anlegen/aktualisieren.
-2. Danach Personen/Kontakte anlegen oder matchen.
-3. Anschließend Events importieren und Rollen verknüpfen: Kunde, Veranstalter, Organisator, Rechnungsempfänger, Auszahlungsempfänger.
-4. Matching-Reihenfolge: stabile vorhandene ID, danach normalisierte E-Mail, danach UID, danach IBAN, danach Name plus Adresse. Unsichere Treffer nie automatisch zusammenführen; als Prüfkonflikt ausgeben.
+Der Import legt in diesem Schritt nur Events und ihre Quellreferenz an. Kunden, Kontakte und Rollen werden nicht heuristisch zusammengeführt; diese Daten bleiben im Quell-Snapshot für einen späteren, fachlich geprüften CRM-Import erhalten.
 
 ## IBAN/BIC-Regel
 
@@ -39,11 +40,11 @@ Leere Felder bleiben leer/null. ClickUp-Status werden über eine Mappingtabelle 
 
 ## Abnahme
 
-Vor dem produktiven Import erforderlich: aktueller ClickUp-CSV-Export inklusive Custom Fields, Mapping-Review, Stichprobe über mindestens zehn Events, Prüfung der IBAN-Konflikte und ein Wiederholungslauf ohne zusätzliche Datensätze (Idempotenz). Der produktive Import darf keine ClickUp-Daten löschen oder verändern.
+Vor dem produktiven Import erforderlich: Prüfung des aktuellen Quellstands, Stichprobe über Events verschiedener Jahre und ein Wiederholungslauf ohne zusätzliche Datensätze (Idempotenz). Der produktive Import darf keine ClickUp-Daten löschen oder verändern.
 
 ## Quellen
 
-- [ClickUp-Import-CSV](../../outputs/clickup-import/t2w-events-import.csv)
-- [Event-Datenmodell](../../src/lib/t2w/types.ts)
-- [CRM-Datenmodell](../../src/lib/crm/types.ts)
-- [Importentscheidungen im Log](../log.md)
+- [ClickUp-Live-Quellstand vom 2026-09-15](../sources/2026-09-15-clickup-live-veranstaltungen.md)
+- [Prisma-Eventdatenmodell](../../services/event-service/prisma/schema.prisma)
+- [Importmodul](../../services/event-service/src/clickup-event-import.ts)
+- Nutzerentscheidung vom 2026-09-15 (ClickUp-ID getrennt vom sichtbaren Eventcode)
