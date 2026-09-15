@@ -49,6 +49,7 @@ type NormalizedClickUpEvent = {
   eventCode: string;
   name: string;
   status: EventStatus;
+  hasMappedEventStatus: boolean;
   startAt: Date;
   endAt: Date;
   location: string | null;
@@ -171,15 +172,35 @@ const statusValue = (value: unknown): string => {
   ).toLocaleLowerCase("de-AT");
 };
 
-const toEventStatus = (sourceStatus: unknown): EventStatus => {
+/**
+ * Verified against the ClickUp export captured on 2026-08-19 and the live
+ * snapshot from 2026-09-15. ClickUp returns a dropdown's selected option as
+ * its numeric order index, not its label, in the task-detail response.
+ */
+const CLICKUP_EVENTSTATUS_DROPDOWN: Readonly<Record<string, EventStatus>> = {
+  "0": EventStatus.ANFRAGE,
+  "1": EventStatus.ZUGESAGT,
+  "2": EventStatus.ANGEBOT_GESENDET,
+  "3": EventStatus.ANGEBOT_GESENDET,
+  "4": EventStatus.ZUGESAGT,
+  "7": EventStatus.ZUGESAGT,
+};
+
+const mappedEventStatus = (sourceStatus: unknown): EventStatus | null => {
   const status = statusValue(sourceStatus);
+  const dropdownStatus = CLICKUP_EVENTSTATUS_DROPDOWN[status];
+  if (dropdownStatus) return dropdownStatus;
   if (/(abgesag|absage|storniert)/.test(status)) return EventStatus.ABGESAGT;
   if (/(angebot|rückmeldung)/.test(status)) return EventStatus.ANGEBOT_GESENDET;
   if (status.includes("akquise")) return EventStatus.AKQUISE;
   if (status.includes("datum")) return EventStatus.DATUM_PRUEFEN;
   if (/(zusage|zugesag|abgeschlossen|closed|done)/.test(status)) return EventStatus.ZUGESAGT;
-  return EventStatus.ANFRAGE;
+  if (/(anfrage|offen)/.test(status)) return EventStatus.ANFRAGE;
+  return null;
 };
+
+const toEventStatus = (sourceStatus: unknown): EventStatus =>
+  mappedEventStatus(sourceStatus) ?? EventStatus.ANFRAGE;
 
 const responsibleValue = (value: unknown): string | null => {
   if (!Array.isArray(value)) return null;
@@ -275,13 +296,18 @@ export const normalizeClickUpEvent = (task: ClickUpTaskRecord): NormalizedClickU
 
   const name = asString(task.name) ?? `ClickUp ${clickUpId}`;
   const explicitSport = customFieldValue(task, "Sportart");
+  const explicitEventStatus = customFieldValue(task, "Eventstatus");
+  const mappedExplicitEventStatus = mappedEventStatus(explicitEventStatus);
   return {
     clickUpId,
     clickUpUrl: asString(task.url),
     clickUpUpdatedAt: asDate(task.date_updated),
     eventCode: clickUpEventCode(name, startAt),
     name,
-    status: toEventStatus(task.status),
+    // Eventstatus is the business status. The ClickUp task workflow is only
+    // a fallback when creating a record without that custom field.
+    status: mappedExplicitEventStatus ?? toEventStatus(task.status),
+    hasMappedEventStatus: mappedExplicitEventStatus !== null,
     startAt,
     endAt: asDate(task.due_date) ?? startAt,
     location: locationValue(customFieldValue(task, "Ort")),
@@ -361,6 +387,7 @@ export class ClickUpEventImportService {
     for (const item of items) {
       try {
         const task = tasksByClickUpId.get(item.clickUpId);
+        const existing = existingByClickUpId.get(item.clickUpId);
         const organizerResolution = task
           ? resolveOrganizer(task, organizersByName)
           : { kind: "missing" as const };
@@ -383,7 +410,9 @@ export class ClickUpEventImportService {
           clickUpUrl: item.clickUpUrl,
           clickUpUpdatedAt: item.clickUpUpdatedAt,
           name: item.name,
-          status: item.status,
+          // A partial ClickUp snapshot must not revert an existing business
+          // status merely because it lacks the Eventstatus custom field.
+          ...(!existing || item.hasMappedEventStatus ? { status: item.status } : {}),
           startAt: item.startAt,
           endAt: item.endAt,
           location: item.location ?? undefined,
@@ -393,7 +422,6 @@ export class ClickUpEventImportService {
           notes: item.notes ?? undefined,
           ...(sport ? { sport: { connect: { id: sport.id } } } : {}),
         };
-        const existing = existingByClickUpId.get(item.clickUpId);
         const eventCode = codesByClickUpId.get(item.clickUpId) ?? item.eventCode;
         const shouldSetOrganizer =
           organizerResolution.kind === "matched" && !existing?.organizerId;

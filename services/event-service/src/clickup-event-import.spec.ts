@@ -42,6 +42,26 @@ describe("ClickUp event import", () => {
     expect(item.sourceData).toEqual(task);
   });
 
+  it("uses the business Eventstatus before the ClickUp workflow status", () => {
+    const item = normalizeClickUpEvent({
+      ...task,
+      status: "offen",
+      custom_fields: [...task.custom_fields, { name: "Eventstatus", value: "ZUSAGE" }],
+    });
+
+    expect(item.status).toBe(EventStatus.ZUGESAGT);
+  });
+
+  it("maps the captured ClickUp Eventstatus dropdown value for Zusage", () => {
+    const item = normalizeClickUpEvent({
+      ...task,
+      status: "offen",
+      custom_fields: [...task.custom_fields, { name: "Eventstatus", value: 1 }],
+    });
+
+    expect(item.status).toBe(EventStatus.ZUGESAGT);
+  });
+
   it("merges a full detail response into every list task without dropping list metadata", () => {
     const [merged] = mergeClickUpTaskSnapshots(
       [{ id: "86abc", name: "Musterlauf 2026", date_updated: "1776000000000" }],
@@ -90,6 +110,24 @@ describe("ClickUp event import", () => {
         }),
       }),
     );
+  });
+
+  it("does not revert an existing status when a partial snapshot lacks Eventstatus", async () => {
+    const upsert = vi.fn().mockResolvedValue({ id: "event-1" });
+    const service = new ClickUpEventImportService({
+      event: {
+        findMany: vi.fn().mockResolvedValue([
+          { clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId: null },
+        ]),
+        upsert,
+      },
+      sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
+      organizer: { findMany: vi.fn().mockResolvedValue([]) },
+    } as any);
+
+    await service.run([{ ...task, status: "offen" }]);
+
+    expect(upsert.mock.calls[0][0].update).not.toHaveProperty("status");
   });
 
   it("allocates suffixes without taking an existing non-ClickUp event code", async () => {

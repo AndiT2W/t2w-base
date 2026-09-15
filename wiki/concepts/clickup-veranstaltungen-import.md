@@ -23,6 +23,7 @@ Die Veranstaltungs- und Gantt-Ansicht startet bewusst mit dem aktuellen Kalender
 - Hauptaufgaben der Liste importieren; Unteraufgaben und reine Automations-/Buttonfelder nicht als eigene Events importieren.
 - Jede Quelle über `clickUpId` upserten; erneute Läufe dürfen keine Duplikate erzeugen.
 - Name, Beschreibung/Notizen, Start-/Endtermin, Status, Ort, Verantwortlicher, Event-ID, Sportart, Typ und Teilnehmer in die passenden Eventfelder übernehmen, sofern die Quelle den Wert maschinenlesbar liefert. Jeder originale Rohwert bleibt zusätzlich im Source-Snapshot erhalten.
+- Für den Eventstatus hat das fachliche Custom Field `Eventstatus` Vorrang vor dem ClickUp-Aufgabenworkflow. Textwerte wie `ZUSAGE` und die im Quellstand verifizierten Dropdownwerte werden auf den TIME2WIN-Status abgebildet; nur ohne dieses Feld bleibt der Workflowstatus ein Fallback.
 - Backend-, Outlook- und OneDrive-Links als externe Referenzen bzw. Pfade übernehmen; keine Dateien oder Nachrichten automatisch kopieren.
 - Operative Felder wie Fahrzeug, UHF/TON/GPS und Mitarbeiterzuordnungen nur übernehmen, wenn das Zielmodell dafür ein explizites Feld besitzt; sonst in einem Importprotokoll erhalten.
 
@@ -45,6 +46,8 @@ Der Rechnungsempfänger wird bevorzugt aus der ClickUp-Beziehung übernommen. Is
 ## Fehlende oder unklare Daten
 
 Leere Felder bleiben leer/null. ClickUp-Status werden über eine Mappingtabelle auf die TIME2WIN-Eventstatus abgebildet. Nicht eindeutig zuordenbare Kunden, Kontakte und Rollen landen in einer Fehler-/Reviewliste mit Task-ID, Rohwert und vorgeschlagenem Treffer. Der Import ist zunächst als Vorschau mit Anzahl Neu/Update/Konflikt/Übersprungen auszuführen; erst danach erfolgt der produktive Lauf.
+
+Der Live-Quellstand vom 2026-09-15 enthält wegen einer ausgeschöpften ClickUp-Connector-Quote Detaildaten für 494 der 756 Listeneinträge. Bei nachträglichen Statuskorrekturen ist deshalb ein vollständigerer Quellstand vorzuziehen, wenn ein Listeneintrag kein `Eventstatus` enthält. Der geprüfte Export in `outputs/clickup-import/t2w-events-import.csv` enthält beispielsweise für ClickUp-ID `86c6a8t7d` den Wert `ZUSAGE`, obwohl der Workflowstatus `OFFEN` lautet.
 
 ## Abnahme
 
