@@ -15,7 +15,8 @@ TIME2WIN contains operational lists in several workspaces. They had separate tab
 - Keep sorting, safe column recovery, visibility and optional column order behind `table-model.ts`; routes own their domain filters and cell content.
 - Store a versioned table view per authenticated user and table identifier via `GET/PUT /api/v1/table-preferences/:tableId`. Browser `localStorage` remains a one-time fallback/migration source when no server value exists.
 - Inline editing remains an explicit workspace decision. The shared table primitive never saves on focus changes.
+- Every rendered data table uses `DataTable` with a required export name. Its Excel export serializes the current visible table state to `.xlsx` and omits selection and action columns.
 
 ## Consequences
 
-The visual and keyboard contract has one implementation point. Column settings follow a signed-in user across devices, malformed or obsolete saved columns are ignored safely, and routes can migrate incrementally without a second preference format.
+The visual, keyboard, and export contract has one implementation point. Column settings follow a signed-in user across devices, malformed or obsolete saved columns are ignored safely, and routes can migrate incrementally without a second preference format. A new `DataTable` cannot compile without naming its Excel export.

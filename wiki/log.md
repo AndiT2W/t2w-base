@@ -630,3 +630,7 @@ Die bestehende Importarbeitsmappe mit 114 Kunden und 146 zugeordneten Rechnungsb
 ## 2026-09-15 — Datumsbereich in Event-Stammdaten verdichtet
 
 Start- und Enddatum stehen im Stammdatenbereich eines Events nun als zwei gleich breite Datumsfelder in einer gemeinsamen Zeile mit sichtbarem Trennstrich. Die Feldgruppe ist insgesamt genauso breit wie die angrenzenden Einzelfelder, bleibt auch in der schmalen Ansicht einzeilig und besitzt weiterhin getrennte zugängliche Feldbezeichnungen. Der Browser-Regressionstest prüft Ausrichtung und Breite auf Desktop und bei 390 px. Quellen: Nutzerkonversation vom 2026-09-15, `src/routes/events.$eventcode.tsx`, `src/lib/i18n.tsx`, `tests/e2e/event-management.spec.ts`.
+
+## 2026-09-15 — Excel-Export für alle Datentabellen
+
+Der gemeinsame `DataTable`-Vertrag verlangt nun einen fachlichen Exportnamen und stellt an jeder Tabelle einen beschrifteten Excel-Export bereit. Die `.xlsx`-Arbeitsmappe entspricht dem sichtbaren, gefilterten und sortierten Tabellenstand; Auswahl- und Aktionsspalten werden ausgelassen. Bestehende fachliche Tabellen in Übersichten, Stammdaten, Hardware, Auszahlungen, Angeboten/Rechnungen, Auditlog und Eventdetails wurden auf den gemeinsamen Vertrag geführt. Der Auditlog behält den CSV-Export zusätzlich. Die Browser-Regression lädt eine Arbeitsmappe herunter und validiert ihre Kopfzeile sowie Eventdaten. Quellen: Nutzerkonversation vom 2026-09-15, `src/components/t2w/DataTable.tsx`, `tests/e2e/table-preferences.spec.ts` und [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).

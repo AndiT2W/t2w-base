@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { ColumnPicker, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
+import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -341,6 +341,7 @@ function PeopleTable({
         toggleColumn={toggleColumn}
       />
       <Table
+        exportName="Kontakte"
         h={PEOPLE_COLUMNS.filter((column) => visibleColumns.includes(column))}
         sort={table.sort}
         onSort={table.sortBy}
@@ -411,6 +412,7 @@ function CustomerTable({
         toggleColumn={toggleColumn}
       />
       <Table
+        exportName="Kunden"
         h={CUSTOMER_COLUMNS.filter((column) => visibleColumns.includes(column))}
         sort={table.sort}
         onSort={table.sortBy}
@@ -448,39 +450,39 @@ function CustomerTable({
   );
 }
 function Table({
+  exportName,
   h,
   children,
   sort,
   onSort,
 }: {
+  exportName: string;
   h: string[];
   children: ReactNode;
   sort: { key: string; direction: "asc" | "desc" };
   onSort: (key: string) => void;
 }) {
   return (
-    <div
-      className="overflow-x-auto rounded-md border border-border bg-surface"
-      data-density="compact"
+    <DataTable
+      exportName={exportName}
+      className="min-w-[54rem] text-[13px] leading-4 [&_thead_tr]:h-[30px] [&_tbody_tr]:h-[34px]"
     >
-      <table className="w-full min-w-[54rem] text-[13px] leading-4 [&_thead_tr]:h-[30px] [&_tbody_tr]:h-[34px]">
-        <thead className="t2w-table-header text-left">
-          <tr>
-            {h.map((x) => (
-              <th key={x} className="px-2 py-1.5">
-                <SortHeader
-                  label={x}
-                  active={sort.key === x}
-                  direction={sort.direction}
-                  onSort={() => onSort(x)}
-                />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="[&_td]:px-2 [&_td]:py-1">{children}</tbody>
-      </table>
-    </div>
+      <thead className="t2w-table-header text-left">
+        <tr>
+          {h.map((x) => (
+            <th key={x} className="px-2 py-1.5">
+              <SortHeader
+                label={x}
+                active={sort.key === x}
+                direction={sort.direction}
+                onSort={() => onSort(x)}
+              />
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody className="[&_td]:px-2 [&_td]:py-1">{children}</tbody>
+    </DataTable>
   );
 }
 function Empty({ text, open, label }: { text: string; open: () => void; label: string }) {

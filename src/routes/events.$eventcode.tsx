@@ -1,4 +1,5 @@
 import { ProjectManagement } from "@/components/t2w/ProjectManagement";
+import { DataTable } from "@/components/t2w/DataTable";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
@@ -28,7 +29,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
   TableBody,
   TableCell,
   TableFooter,
@@ -1147,7 +1147,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <div className="sm:col-span-2">
                 <h3 className="text-sm font-medium text-foreground">Teilnehmer nach Bewerb</h3>
                 {form.time2winSnapshot?.races.length ? (
-                  <Table
+                  <DataTable
+                    exportName={`${form.name} Teilnehmer nach Bewerb`}
                     className="mt-2 min-w-[22rem]"
                     aria-label="TIME2WIN Teilnehmer nach Bewerb"
                   >
@@ -1175,7 +1176,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                         </TableCell>
                       </TableRow>
                     </TableFooter>
-                  </Table>
+                  </DataTable>
                 ) : (
                   <p className="mt-2 text-sm text-muted-foreground">
                     Noch keine TIME2WIN-Bewerbe geladen.
@@ -1453,77 +1454,75 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 <p className="text-sm text-muted-foreground">Noch keine Kontakte hinterlegt.</p>
               )}
               {form.kontakte.length > 0 && (
-                <div className="overflow-x-auto rounded-md border border-border">
-                  <table className="w-full text-sm">
-                    <thead className="t2w-table-header text-left">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">Kontakt</th>
-                        <th className="px-3 py-2 font-medium">Rolle</th>
-                        <th className="px-3 py-2 font-medium">E-Mail</th>
-                        <th className="px-3 py-2 font-medium">Telefon</th>
-                        <th className="px-3 py-2">
-                          <span className="sr-only">Aktion</span>
-                        </th>
+                <DataTable exportName={`${form.name} Kontakte`} className="text-sm">
+                  <thead className="t2w-table-header text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Kontakt</th>
+                      <th className="px-3 py-2 font-medium">Rolle</th>
+                      <th className="px-3 py-2 font-medium">E-Mail</th>
+                      <th className="px-3 py-2 font-medium">Telefon</th>
+                      <th className="px-3 py-2">
+                        <span className="sr-only">Aktion</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {form.kontakte.map((k) => (
+                      <tr key={k.id}>
+                        <td className="whitespace-nowrap px-3 py-2 font-medium text-foreground">
+                          {k.name}
+                        </td>
+                        <td className="min-w-48 px-3 py-2">
+                          <Select
+                            value={k.rolle}
+                            onValueChange={(role) => void updateContactRole(k, role)}
+                          >
+                            <SelectTrigger
+                              aria-label={`Eventrolle für ${k.name}`}
+                              className="min-h-11 sm:min-h-9"
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {eventContactRoleChoices(selectionLists.eventRoles, k.rolle).map(
+                                (role) => (
+                                  <SelectItem key={role} value={role}>
+                                    <SelectionBadge
+                                      {...(selectionLists.eventRoles.find(
+                                        (item) => item.name === role,
+                                      ) ?? { name: role })}
+                                    />
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                          {k.email || "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                          {k.telefon || "—"}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              void detailWorkspace
+                                .removeContact(k.id, k.rolle)
+                                .catch(() =>
+                                  toast.error("Kontaktrolle konnte nicht entfernt werden."),
+                                )
+                            }
+                          >
+                            Entfernen
+                          </Button>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {form.kontakte.map((k) => (
-                        <tr key={k.id}>
-                          <td className="whitespace-nowrap px-3 py-2 font-medium text-foreground">
-                            {k.name}
-                          </td>
-                          <td className="min-w-48 px-3 py-2">
-                            <Select
-                              value={k.rolle}
-                              onValueChange={(role) => void updateContactRole(k, role)}
-                            >
-                              <SelectTrigger
-                                aria-label={`Eventrolle für ${k.name}`}
-                                className="min-h-11 sm:min-h-9"
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {eventContactRoleChoices(selectionLists.eventRoles, k.rolle).map(
-                                  (role) => (
-                                    <SelectItem key={role} value={role}>
-                                      <SelectionBadge
-                                        {...(selectionLists.eventRoles.find(
-                                          (item) => item.name === role,
-                                        ) ?? { name: role })}
-                                      />
-                                    </SelectItem>
-                                  ),
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
-                            {k.email || "—"}
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
-                            {k.telefon || "—"}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                void detailWorkspace
-                                  .removeContact(k.id, k.rolle)
-                                  .catch(() =>
-                                    toast.error("Kontaktrolle konnte nicht entfernt werden."),
-                                  )
-                              }
-                            >
-                              Entfernen
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </DataTable>
               )}
             </CardContent>
           </Card>

@@ -1,5 +1,38 @@
 import { expect, test } from "@playwright/test";
+import readXlsxFile from "read-excel-file/node";
 import { mockEventManagementApi } from "./support/event-management-api";
+
+test("exportiert die sichtbare Tabelle als Excel-Arbeitsmappe", async ({ page }) => {
+  await mockEventManagementApi(page);
+  await page.route("**/api/v1/table-preferences/**", (route) =>
+    route.fulfill({ json: { value: null } }),
+  );
+
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Bestehendes Event" }).first()).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Übersicht als Excel exportieren" }).click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename()).toBe("uebersicht.xlsx");
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  const [{ data: rows }] = await readXlsxFile(downloadPath!);
+
+  expect(rows[0]).toEqual([
+    "Status",
+    "Event",
+    "Veranstalter",
+    "Sportart",
+    "Services",
+    "Zeitraum",
+    "Tage",
+    "Aufgaben",
+    "Ordner",
+    "TIME2WIN",
+  ]);
+  expect(rows.some((row) => row.includes("Bestehendes Event"))).toBe(true);
+});
 
 test("lädt Tabellenspalten aus dem Konto und speichert Änderungen zurück", async ({ page }) => {
   await mockEventManagementApi(page);

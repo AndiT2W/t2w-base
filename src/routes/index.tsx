@@ -226,7 +226,7 @@ function Uebersicht() {
               toggleColumn={toggleColumn}
             />
           </div>
-          <DataTable className="min-w-[54rem]">
+          <DataTable exportName="Übersicht" className="min-w-[54rem]">
             <thead className="text-left">
               <tr className="h-[30px]">
                 {visibleColumns.includes("Status") && (

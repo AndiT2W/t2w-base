@@ -159,7 +159,7 @@ export function ProjectManagement({ eventId }: { eventId: string }) {
                   {expanded && (
                     <div className="border-t">
                       <div className="hidden overflow-x-auto md:block">
-                        <DataTable>
+                        <DataTable exportName={`${categoryName(category.groupId)} Aufgaben`}>
                           <thead>
                             <tr>
                               <th className="p-3">Name</th>

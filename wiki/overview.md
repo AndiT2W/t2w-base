@@ -6,6 +6,8 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 ## Current State
 
+- Alle gerenderten Datentabellen bieten einen gemeinsamen Excel-Export als `.xlsx`. Exportiert wird der aktuell sichtbare Tabellenstand; Auswahl- und Aktionsspalten bleiben ausgenommen. Der Auditlog behält zusätzlich seinen CSV-Export. Siehe [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
+
 - Aktuell ist [PM-Spezifikation v4](tasks/project-management-spec-v4.md) für Issue #55 umgesetzt: vereinfachte Event- oder globale Aufgaben, drei Status, Tagesplanung, Voraussetzungen und Kommentare. Die Gesamtübersicht ist nach Event und Kategorie gruppiert; Event-Köpfe, Kategorienkarten und beschriftete Status-Tags sichern die Scanbarkeit. Gantt bleibt eine Desktop-Zeitansicht. `PmTask` ist die kanonische Aufgabenhaltung; Migration `0028_canonical_task_projection` entfernt den alten `EventTask`-Speicher bewusst ohne Migration und Event-Schnappschüsse liefern nur Task-Readiness. Siehe [Kontrastorientierte Aufgabenübersicht](decisions/2026-09-15-kontrastorientierte-aufgabenuebersicht.md).
 
 - Die ClickUp-Liste `TIME2WIN > Office > VERANSTALTUNGEN` wurde am 2026-09-15 mit 756 Hauptaufgaben erfasst. Events führen nun eine eindeutige technische `clickUpId`; ein separater Quellspeicher bewahrt den ClickUp-Rohstand für spätere Synchronisationen. Der sichtbare Eventcode bleibt der aus Datum und Eventname gebildete `YYMMDD_slug`. Siehe [ClickUp-Import Veranstaltungen](concepts/clickup-veranstaltungen-import.md).

@@ -12,6 +12,7 @@ import {
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { formatDatum } from "@/lib/t2w/format";
 import { useT2W } from "@/lib/t2w/store";
+import { DataTable } from "@/components/t2w/DataTable";
 
 type Item = {
   id: string;
@@ -399,73 +400,71 @@ export function HardwareWorkspace({
         </div>
       )}
       {showList && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="t2w-table-header">
-              <tr className="text-left">
-                {[
-                  "Empfänger",
-                  "Art",
-                  "Objekt",
-                  "Nummer",
-                  "Anzahl",
-                  "Status",
-                  "Due Date",
-                  "Aktionen",
-                ].map((h) => (
-                  <th className="p-2" key={h}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr className="border-b" key={item.id}>
-                  <td className="p-2">{item.recipientName}</td>
-                  <td className="p-2">{issueLabels[item.issueType] ?? item.issueType}</td>
-                  <td className="p-2">{item.objectName}</td>
-                  <td className="p-2 font-mono">{displayNumber(item)}</td>
-                  <td className="p-2">{item.quantity}</td>
-                  <td className="p-2">
-                    <Badge>{statusLabels[item.status] ?? item.status}</Badge>
-                  </td>
-                  <td
-                    className={`p-2 ${item.dueDate && item.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10) && item.status !== "RETURNED" && item.status !== "COMPLETED" ? "font-semibold text-destructive" : ""}`}
-                  >
-                    {item.dueDate ? formatDatum(item.dueDate) : "—"}
-                  </td>
-                  <td className="flex gap-1 p-2">
-                    <Button size="sm" variant="outline" onClick={() => setEditing(item)}>
-                      Bearbeiten
-                    </Button>
-                    {item.status !== "RETURNED" && item.status !== "COMPLETED" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            void fetch(`/api/v1/events/${eventId}/hardware/${item.id}`, {
-                              method: "PATCH",
-                              credentials: "include",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ status: "RETURNED" }),
-                            }).then(load);
-                          }}
-                        >
-                          Retourniert
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => void remove(item.id)}>
-                          Löschen
-                        </Button>
-                      </>
-                    )}
-                  </td>
-                </tr>
+        <DataTable exportName={eventId ? "Event-Hardware" : "Hardware"} className="text-sm">
+          <thead className="t2w-table-header">
+            <tr className="text-left">
+              {[
+                "Empfänger",
+                "Art",
+                "Objekt",
+                "Nummer",
+                "Anzahl",
+                "Status",
+                "Due Date",
+                "Aktionen",
+              ].map((h) => (
+                <th className="p-2" key={h}>
+                  {h}
+                </th>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr className="border-b" key={item.id}>
+                <td className="p-2">{item.recipientName}</td>
+                <td className="p-2">{issueLabels[item.issueType] ?? item.issueType}</td>
+                <td className="p-2">{item.objectName}</td>
+                <td className="p-2 font-mono">{displayNumber(item)}</td>
+                <td className="p-2">{item.quantity}</td>
+                <td className="p-2">
+                  <Badge>{statusLabels[item.status] ?? item.status}</Badge>
+                </td>
+                <td
+                  className={`p-2 ${item.dueDate && item.dueDate.slice(0, 10) < new Date().toISOString().slice(0, 10) && item.status !== "RETURNED" && item.status !== "COMPLETED" ? "font-semibold text-destructive" : ""}`}
+                >
+                  {item.dueDate ? formatDatum(item.dueDate) : "—"}
+                </td>
+                <td className="flex gap-1 p-2">
+                  <Button size="sm" variant="outline" onClick={() => setEditing(item)}>
+                    Bearbeiten
+                  </Button>
+                  {item.status !== "RETURNED" && item.status !== "COMPLETED" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          void fetch(`/api/v1/events/${eventId}/hardware/${item.id}`, {
+                            method: "PATCH",
+                            credentials: "include",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ status: "RETURNED" }),
+                          }).then(load);
+                        }}
+                      >
+                        Retourniert
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => void remove(item.id)}>
+                        Löschen
+                      </Button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTable>
       )}
     </div>
   );

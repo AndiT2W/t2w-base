@@ -235,7 +235,7 @@ function Veranstaltungen() {
           dateCollisions={dateCollisions}
         />
         <div className="hidden md:block">
-          <DataTable className="min-w-[54rem]">
+          <DataTable exportName="Veranstaltungen" className="min-w-[54rem]">
             <thead className="text-left">
               <tr className="h-[30px]">
                 {visibleColumns.includes("Status") && (

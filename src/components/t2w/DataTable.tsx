@@ -1,6 +1,15 @@
 import * as React from "react";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpDown, ArrowUpToLine } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type ForwardedRef, type ReactNode } from "react";
+import {
+  ArrowDown,
+  ArrowDownToLine,
+  ArrowUp,
+  ArrowUpDown,
+  ArrowUpToLine,
+  FileSpreadsheet,
+  LoaderCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -16,22 +25,199 @@ import { cn } from "@/lib/utils";
  * TIME2WIN's compact, desktop-first table primitive.  It owns table rhythm and
  * focus treatment; domain workspaces only provide columns and cell content.
  */
-export const DataTable = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      className="relative w-full overflow-x-auto rounded-md border border-border bg-card"
-      data-density="compact"
+type DataTableProps = React.HTMLAttributes<HTMLTableElement> & {
+  exportName: string;
+  exportFileName?: string;
+};
+
+function assignRef<T>(ref: ForwardedRef<T>, value: T | null) {
+  if (typeof ref === "function") ref(value);
+  else if (ref) ref.current = value;
+}
+
+function normalizedText(value: string) {
+  return value.replaceAll(/\s+/g, " ").trim();
+}
+
+function cellText(cell: HTMLTableCellElement) {
+  const explicitValue = cell.dataset["exportValue"];
+  if (explicitValue != null) return explicitValue;
+  if (cell.tagName === "TH") {
+    const sortButton = cell.querySelector<HTMLElement>('[aria-label$=" sortieren"]');
+    if (sortButton?.ariaLabel) return sortButton.ariaLabel.replace(/ sortieren$/, "");
+  }
+
+  const clone = cell.cloneNode(true) as HTMLTableCellElement;
+  const originalControls = cell.querySelectorAll<
+    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+  >("input, select, textarea");
+  clone
+    .querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      "input, select, textarea",
+    )
+    .forEach((control, index) => {
+      const original = originalControls[index];
+      let value = "";
+      if (original instanceof HTMLInputElement && original.type === "checkbox") {
+        value = original.checked ? "Ja" : "Nein";
+      } else if (original instanceof HTMLSelectElement) {
+        value = original.selectedOptions[0]?.text ?? "";
+      } else if (original) {
+        value = original.value;
+      }
+      control.replaceWith(document.createTextNode(value));
+    });
+  clone
+    .querySelectorAll("svg, [aria-hidden='true'], [data-export-ignore]")
+    .forEach((node) => node.remove());
+  const text = normalizedText(clone.textContent ?? "");
+  if (text) return text.replace(/:$/, "");
+
+  return normalizedText(
+    [...cell.querySelectorAll<HTMLElement>("[aria-label], [title]")]
+      .map((node) => node.ariaLabel || node.title)
+      .filter(Boolean)
+      .join(", "),
+  );
+}
+
+const ignoredHeader = /^(aktion|aktionen)$/i;
+
+function tableData(table: HTMLTableElement) {
+  const headerCells = [...(table.tHead?.rows[table.tHead.rows.length - 1]?.cells ?? [])];
+  const ignoredColumns = new Set(
+    headerCells.flatMap((cell, index) => {
+      const text = cellText(cell);
+      return cell.dataset["exportIgnore"] != null || !text || ignoredHeader.test(text)
+        ? [index]
+        : [];
+    }),
+  );
+  const rows = [...table.rows].map((row, rowIndex) =>
+    [...row.cells]
+      .filter((cell, index) => !ignoredColumns.has(index) && cell.dataset["exportIgnore"] == null)
+      .map((cell) => {
+        const value = cellText(cell);
+        return rowIndex < (table.tHead?.rows.length ?? 0)
+          ? { value, fontWeight: "bold" as const, backgroundColor: "#E9EDF2" }
+          : value;
+      }),
+  );
+  return rows.filter((row) => row.length > 0);
+}
+
+function excelFileName(name: string) {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replaceAll("ä", "ae")
+    .replaceAll("ö", "oe")
+    .replaceAll("ü", "ue")
+    .replaceAll("ß", "ss")
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/^-|-$/g, "");
+  return `${slug || "tabelle"}.xlsx`;
+}
+
+function ExcelExportButton({
+  tableRef,
+  exportName,
+  exportFileName,
+}: {
+  tableRef: React.RefObject<HTMLTableElement | null>;
+  exportName: string;
+  exportFileName?: string | undefined;
+}) {
+  const [exporting, setExporting] = useState(false);
+  async function exportTable() {
+    if (!tableRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const data = tableData(tableRef.current);
+      const columnCount = data.reduce((maximum, row) => Math.max(maximum, row.length), 0);
+      const columns = Array.from({ length: columnCount }, (_, columnIndex) => ({
+        width: Math.min(
+          50,
+          Math.max(
+            10,
+            ...data.map((row) => {
+              const cell = row[columnIndex];
+              return (
+                String(typeof cell === "object" && cell ? cell.value : (cell ?? "")).length + 2
+              );
+            }),
+          ),
+        ),
+      }));
+      const { default: writeExcelFile } = await import("write-excel-file/browser");
+      const blob = await writeExcelFile(data, {
+        columns,
+        sheet: exportName.replaceAll(/[\\/?*[\]:]/g, " ").slice(0, 31) || "Tabelle",
+        stickyRowsCount: tableRef.current.tHead?.rows.length ?? 0,
+      }).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = exportFileName ?? excelFileName(exportName);
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (error) {
+      console.error("Excel export failed", error);
+      toast.error("Excel-Export konnte nicht erstellt werden.");
+    } finally {
+      setExporting(false);
+    }
+  }
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      disabled={exporting}
+      aria-label={`${exportName} als Excel exportieren`}
+      onClick={() => void exportTable()}
     >
-      <table
-        ref={ref}
-        className={cn(
-          "w-full caption-bottom text-[13px] leading-4 [&_thead]:bg-table-header [&_thead]:text-[12px] [&_thead]:normal-case [&_thead]:tracking-[0.025em] [&_thead]:text-table-header-foreground [&_thead_tr]:h-[30px] [&_thead_tr]:border-b-2 [&_thead_tr]:border-table-header-border [&_th]:h-[30px] [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-middle [&_th]:font-semibold [&_tbody_tr]:h-[34px] [&_tbody_tr]:border-b [&_tbody_tr]:border-border/80 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-muted/55 [&_tbody_tr:last-child]:border-b-0 [&_td]:h-[34px] [&_td]:max-w-0 [&_td]:truncate [&_td]:px-2 [&_td]:py-1 [&_td]:align-middle [&_a:focus-visible]:outline-none [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-ring [&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-2 [&_input:focus-visible]:ring-ring",
-          className,
-        )}
-        {...props}
-      />
-    </div>
-  ),
+      {exporting ? (
+        <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+      ) : (
+        <FileSpreadsheet className="size-4" aria-hidden="true" />
+      )}
+      {exporting ? "Excel wird erstellt …" : "Excel exportieren"}
+    </Button>
+  );
+}
+
+export const DataTable = React.forwardRef<HTMLTableElement, DataTableProps>(
+  ({ className, exportName, exportFileName, ...props }, ref) => {
+    const tableRef = useRef<HTMLTableElement>(null);
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-end">
+          <ExcelExportButton
+            tableRef={tableRef}
+            exportName={exportName}
+            exportFileName={exportFileName}
+          />
+        </div>
+        <div
+          className="relative w-full overflow-x-auto rounded-md border border-border bg-card"
+          data-density="compact"
+        >
+          <table
+            ref={(value) => {
+              tableRef.current = value;
+              assignRef(ref, value);
+            }}
+            className={cn(
+              "w-full caption-bottom text-[13px] leading-4 [&_thead]:bg-table-header [&_thead]:text-[12px] [&_thead]:normal-case [&_thead]:tracking-[0.025em] [&_thead]:text-table-header-foreground [&_thead_tr]:h-[30px] [&_thead_tr]:border-b-2 [&_thead_tr]:border-table-header-border [&_th]:h-[30px] [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-middle [&_th]:font-semibold [&_tbody_tr]:h-[34px] [&_tbody_tr]:border-b [&_tbody_tr]:border-border/80 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-muted/55 [&_tbody_tr:last-child]:border-b-0 [&_td]:h-[34px] [&_td]:max-w-0 [&_td]:truncate [&_td]:px-2 [&_td]:py-1 [&_td]:align-middle [&_a:focus-visible]:outline-none [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-ring [&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-2 [&_input:focus-visible]:ring-ring",
+              className,
+            )}
+            {...props}
+          />
+        </div>
+      </div>
+    );
+  },
 );
 DataTable.displayName = "DataTable";
 

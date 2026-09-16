@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { Button } from "@/components/ui/button";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
 import { formatDatum } from "@/lib/t2w/format";
+import { DataTable } from "@/components/t2w/DataTable";
 
 type P = {
   id: string;
@@ -102,70 +103,68 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
           <Button onClick={() => void create()}>Auszahlung anlegen</Button>
         </div>
       </div>
-      <div className="overflow-x-auto rounded border">
-        <table className="w-full text-sm">
-          <thead className="t2w-table-header">
-            <tr className="text-left">
-              <th className="px-2 py-1">Nummer</th>
-              <th className="px-2 py-1">Empfänger</th>
-              <th className="px-2 py-1">Betrag</th>
-              <th className="px-2 py-1">Status</th>
-              <th className="px-2 py-1">Maildatum</th>
-              <th className="px-2 py-1">Auszahlungsdatum</th>
-              <th className="px-2 py-1">Aktionen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((p) => (
-              <tr key={p.id} className="border-t align-middle">
-                <td className="px-2 py-1 font-mono">{p.payoutNumber}</td>
-                <td className="px-2 py-1">
-                  {p.recipient?.name ?? p.mailRecipient ?? recipientEmail ?? "—"}
-                </td>
-                <td className="px-2 py-1">
-                  {p.amount} {p.currency}
-                </td>
-                <td className="px-2 py-2">
-                  <span
-                    aria-label={`${p.payoutNumber} Status`}
-                    className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClasses(p)}`}
-                  >
-                    {label(p)}
-                  </span>
-                </td>
-                <td className="px-2 py-1">{p.mailSentAt ? formatDatum(p.mailSentAt) : "—"}</td>
-                <td className="px-2 py-1">{p.paidAt ? formatDatum(p.paidAt) : "—"}</td>
-                <td className="px-2 py-2">
+      <DataTable exportName="Event-Auszahlungen" className="text-sm">
+        <thead className="t2w-table-header">
+          <tr className="text-left">
+            <th className="px-2 py-1">Nummer</th>
+            <th className="px-2 py-1">Empfänger</th>
+            <th className="px-2 py-1">Betrag</th>
+            <th className="px-2 py-1">Status</th>
+            <th className="px-2 py-1">Maildatum</th>
+            <th className="px-2 py-1">Auszahlungsdatum</th>
+            <th className="px-2 py-1">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((p) => (
+            <tr key={p.id} className="border-t align-middle">
+              <td className="px-2 py-1 font-mono">{p.payoutNumber}</td>
+              <td className="px-2 py-1">
+                {p.recipient?.name ?? p.mailRecipient ?? recipientEmail ?? "—"}
+              </td>
+              <td className="px-2 py-1">
+                {p.amount} {p.currency}
+              </td>
+              <td className="px-2 py-2">
+                <span
+                  aria-label={`${p.payoutNumber} Status`}
+                  className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClasses(p)}`}
+                >
+                  {label(p)}
+                </span>
+              </td>
+              <td className="px-2 py-1">{p.mailSentAt ? formatDatum(p.mailSentAt) : "—"}</td>
+              <td className="px-2 py-1">{p.paidAt ? formatDatum(p.paidAt) : "—"}</td>
+              <td className="px-2 py-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void update(p.id, { mailStatus: "VERSENDEN" })}
+                >
+                  Für Mail markieren
+                </Button>
+                {p.paymentStatus === "OFFEN" && p.mailStatus === "GESENDET" && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => void update(p.id, { mailStatus: "VERSENDEN" })}
+                    onClick={() =>
+                      void update(p.id, {
+                        paymentStatus: "AUSBEZAHLT",
+                        paidAt: new Date().toISOString(),
+                      })
+                    }
                   >
-                    Für Mail markieren
+                    Als ausgezahlt markieren
                   </Button>
-                  {p.paymentStatus === "OFFEN" && p.mailStatus === "GESENDET" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        void update(p.id, {
-                          paymentStatus: "AUSBEZAHLT",
-                          paidAt: new Date().toISOString(),
-                        })
-                      }
-                    >
-                      Als ausgezahlt markieren
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => void remove(p.id)}>
-                    Löschen
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => void remove(p.id)}>
+                  Löschen
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </DataTable>
     </section>
   );
 }

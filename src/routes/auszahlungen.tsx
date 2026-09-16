@@ -165,7 +165,7 @@ function Auszahlungen() {
         ))}
       </div>
       <div>
-        <DataTable>
+        <DataTable exportName="Auszahlungen">
           <thead className="text-left">
             <tr className="h-[30px]">
               <th className="px-2 py-1">

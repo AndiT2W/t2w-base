@@ -16,6 +16,11 @@ sources:
   - ../../src/routes/hardware.tsx
   - ../../src/routes/auszahlungen.tsx
   - ../../src/routes/einstellungen.tsx
+  - ../../src/routes/angebote.tsx
+  - ../../src/routes/rechnungen.tsx
+  - ../../src/routes/events.$eventcode.tsx
+  - ../../src/components/t2w/HardwareWorkspace.tsx
+  - ../../src/components/t2w/PayoutsPanel.tsx
   - ../../src/lib/t2w/format.ts
   - ../../services/event-service/src/table-preferences.controller.ts
   - ../../services/event-service/prisma/schema.prisma
@@ -44,9 +49,15 @@ Nutzerfeedback vom 2026-09-15 bewertete die Anwendung insgesamt und insbesondere
 
 Die Servertabelle `UserTablePreference` ist je `(userId, tableId)` eindeutig. Der geschützte Endpunkt gibt ausschließlich die Präferenz des angemeldeten Benutzers zurück. Ein bestehender Browserwert wird nur dann hochgeladen, wenn der Benutzer noch keine serverseitige Präferenz besitzt.
 
+## Excel-Export
+
+Jede gerenderte Datentabelle verwendet `DataTable` mit einem fachlichen Exportnamen und bietet die beschriftete Aktion `Excel exportieren`. Die erzeugte `.xlsx`-Arbeitsmappe übernimmt den aktuellen sichtbaren Tabellenstand einschließlich Filter, Sortierung, Spaltenauswahl und bearbeiteter Eingabewerte. Reine Auswahl- und Aktionsspalten werden ausgelassen. Der Auditlog behält seinen bestehenden CSV-Export zusätzlich.
+
+`exportName` ist ein verpflichtender Teil des `DataTable`-Vertrags. Dadurch kann eine neue Tabelle nicht über das gemeinsame Primitive angelegt werden, ohne zugleich einen Excel-Export zu benennen. Die Browser-Regression lädt die Arbeitsmappe herunter und liest Kopfzeile sowie einen bekannten Eventwert wieder ein.
+
 ## Abdeckung
 
-`DataTable` wird in Übersichts-, Veranstaltungs-, Hardware- und Auszahlungslisten sowie in Event- und Gesamtaufgabenlisten genutzt. Der Modulvertrag setzt Kopfzeilen-, Zeilen-, Zellen- und Fokusverhalten auch für bestehende Tabellenmarkierung zentral durch; Routen behalten nur ihre fachlichen Filter und Zellinhalte.
+`DataTable` wird in Übersichts-, Veranstaltungs-, Kontakt-/Kunden-, Hardware-, Auszahlungs-, Angebots- und Rechnungslisten sowie in Event-Detail- und Event-Aufgabentabellen genutzt. Der Modulvertrag setzt Kopfzeilen-, Zeilen-, Zellen-, Fokus- und Exportverhalten zentral durch; Routen behalten nur ihre fachlichen Filter und Zellinhalte. Die globale Aufgabenübersicht ist eine gruppierte Kartenansicht und keine Datentabelle.
 
 Die Eventtabellen in Übersicht und Veranstaltungen zeigen Sportart und Services als getrennte, sortierbare Spalten. Beide verwenden die konfigurierten Auswahl-Badges wie die Event-Stammdaten. Jeder Service hat ein eigenes Badge in der Services-Zelle; bei langen Werten ist der vollständige Text als Tooltip verfügbar. Die Statusspalte zeigt nur den Punkt und ist auf 3 rem begrenzt; die sichtbare Kurzform `St.` behält den Sortierknopf mit dem zugänglichen Namen `Status sortieren`. Der volle Status bleibt für Screenreader als Text verfügbar. Die sortierbare TIME2WIN-Spalte zeigt das TIME2WIN-Logo im Kopf und verlinkt eine vorhandene Event-ID auf das zugehörige Backend-Event. Siehe [Übersicht](../../src/routes/index.tsx), [Veranstaltungen](../../src/routes/veranstaltungen.tsx) und [Browser-Regression](../../tests/e2e/event-management.spec.ts).
 

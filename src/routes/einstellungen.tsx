@@ -30,6 +30,7 @@ import { createAuditLogWorkspace, type AuditLogEntity } from "@/lib/t2w/audit-lo
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 import { createSelectionListManagementWorkspace } from "@/lib/t2w/selection-list-management-workspace";
 import { formatDatumMitZeit } from "@/lib/t2w/format";
+import { DataTable } from "@/components/t2w/DataTable";
 
 export const Route = createFileRoute("/einstellungen")({
   validateSearch: (search) => ({
@@ -894,8 +895,8 @@ function Einstellungen() {
                     <Download className="size-4" /> Exportieren ({audit.visibleEntries.length})
                   </Button>
                 </div>
-                <div className="overflow-x-auto rounded-md border">
-                  <table className="w-full min-w-[42rem] text-sm">
+                <div className="space-y-2">
+                  <DataTable exportName="Auditlog" className="min-w-[42rem] text-sm">
                     <caption className="sr-only">Auditlog-Einträge</caption>
                     <thead className="t2w-table-header text-left">
                       <tr>
@@ -926,7 +927,7 @@ function Einstellungen() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </DataTable>
                   {!audit.loading && audit.visibleEntries.length === 0 && (
                     <p className="px-3 py-8 text-center text-sm text-muted-foreground">
                       Keine Auditlog-Einträge gefunden.

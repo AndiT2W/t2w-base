@@ -489,7 +489,7 @@ function HardwarePage() {
               </p>
             )}
             <div>
-              <DataTable className="min-w-[1100px]">
+              <DataTable exportName="Hardware" className="min-w-[1100px]">
                 <caption className="sr-only">Aktive Hardware-Rückgabevorgänge</caption>
                 <thead>
                   <tr className="h-[30px] border-b text-left">
