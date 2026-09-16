@@ -626,3 +626,7 @@ Der Eventdetail-Dialog verbindet nun mehrere ausgewählte Termine in einem atoma
 ## 2026-09-15 — Kundenstamm mit Rechnungsbestand abgeglichen
 
 Die bestehende Importarbeitsmappe mit 114 Kunden und 146 zugeordneten Rechnungsbelegen wurde gegen alle 164 PDFs unter `raw/03_rechnungen/` abgeglichen. Der neue Stand enthält 123 Kunden; 18 Belege wurden ergänzt, vier Dublettenzeilen über UID beziehungsweise identische Anschrift und Kontakt zusammengeführt und die frühere Fehlzuordnung der TIME2WIN-UID bereinigt. Alle 164 Belege sind genau einmal zugeordnet. Fehlende oder abgeleitete Angaben aus den Rechnungen 260087 und 260161 bleiben ausdrücklich markiert. Ergebnis und Evidenz: [Rechnungen-Kundenstamm-Abgleich 2026](sources/2026-09-15-rechnungen-kundenstamm-abgleich.md).
+
+## 2026-09-15 — Datumsbereich in Event-Stammdaten verdichtet
+
+Start- und Enddatum stehen im Stammdatenbereich eines Events nun als zwei gleich breite Datumsfelder in einer gemeinsamen Zeile mit sichtbarem Trennstrich. Die Feldgruppe ist insgesamt genauso breit wie die angrenzenden Einzelfelder, bleibt auch in der schmalen Ansicht einzeilig und besitzt weiterhin getrennte zugängliche Feldbezeichnungen. Der Browser-Regressionstest prüft Ausrichtung und Breite auf Desktop und bei 390 px. Quellen: Nutzerkonversation vom 2026-09-15, `src/routes/events.$eventcode.tsx`, `src/lib/i18n.tsx`, `tests/e2e/event-management.spec.ts`.

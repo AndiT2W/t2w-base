@@ -842,9 +842,7 @@ test("zeigt die technische ClickUp-ID nicht in den Event-Stammdaten", async ({ p
   await expect(page.getByText("ClickUp-ID", { exact: true })).toHaveCount(0);
 });
 
-test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", async ({
-  page,
-}) => {
+test("zeigt die Event-Stammdaten kompakt und den Zeitraum in einer Zeile", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
 
@@ -871,6 +869,21 @@ test("zeigt die Event-Stammdaten am Desktop kompakt gruppiert und zweispaltig", 
   expect(Math.abs(dateRange!.x - eventcodeInput!.x)).toBeLessThan(1);
   expect(Math.abs(dateRange!.width - eventcodeInput!.width)).toBeLessThan(1);
   expect(organizerSelect!.x).toBeGreaterThan(dateRange!.x + dateRange!.width);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileEventcodeInput = await page.locator("#d-code").boundingBox();
+  const mobileDateRange = await page.getByTestId("event-date-range").boundingBox();
+  const mobileStartInput = await page.locator("#d-start").boundingBox();
+  const mobileEndInput = await page.locator("#d-ende").boundingBox();
+
+  expect(mobileEventcodeInput).not.toBeNull();
+  expect(mobileDateRange).not.toBeNull();
+  expect(mobileStartInput).not.toBeNull();
+  expect(mobileEndInput).not.toBeNull();
+  expect(Math.abs(mobileStartInput!.y - mobileEndInput!.y)).toBeLessThan(1);
+  expect(Math.abs(mobileDateRange!.x - mobileEventcodeInput!.x)).toBeLessThan(1);
+  expect(Math.abs(mobileDateRange!.width - mobileEventcodeInput!.width)).toBeLessThan(1);
+  expect(mobileDateRange!.x + mobileDateRange!.width).toBeLessThanOrEqual(390);
 });
 
 test("zeigt den Eventstatus in den Stammdaten mit farbigem Kreis und Text", async ({ page }) => {

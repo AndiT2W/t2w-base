@@ -745,22 +745,44 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     />
                   </div>
                   <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-start">Startdatum *</Label>
-                    <Input
-                      id="d-start"
-                      type="date"
-                      value={form.start}
-                      onChange={(e) => set("start", e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-ende">Enddatum</Label>
-                    <Input
-                      id="d-ende"
-                      type="date"
-                      value={form.ende}
-                      onChange={(e) => set("ende", e.target.value)}
-                    />
+                    <span id="event-date-range-label" className="text-sm font-medium">
+                      {t("Start-/Enddatum")} <span aria-hidden="true">*</span>
+                      <span className="sr-only"> {t("Das Startdatum ist verpflichtend.")}</span>
+                    </span>
+                    <div
+                      data-testid="event-date-range"
+                      role="group"
+                      aria-labelledby="event-date-range-label"
+                      className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2"
+                    >
+                      <div className="min-w-0">
+                        <Label htmlFor="d-start" className="sr-only">
+                          {t("Startdatum *")}
+                        </Label>
+                        <Input
+                          id="d-start"
+                          type="date"
+                          value={form.start}
+                          onChange={(e) => set("start", e.target.value)}
+                          className="min-w-0"
+                        />
+                      </div>
+                      <span aria-hidden="true" className="text-muted-foreground">
+                        –
+                      </span>
+                      <div className="min-w-0">
+                        <Label htmlFor="d-ende" className="sr-only">
+                          {t("Enddatum")}
+                        </Label>
+                        <Input
+                          id="d-ende"
+                          type="date"
+                          value={form.ende}
+                          onChange={(e) => set("ende", e.target.value)}
+                          className="min-w-0"
+                        />
+                      </div>
+                    </div>
                   </div>
                   <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
                     <Label htmlFor="d-forecast">Teilnehmerprognose</Label>

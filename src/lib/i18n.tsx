@@ -200,6 +200,7 @@ const pageTextTranslations: TranslationCatalog = {
   Eventname: "Event name",
   Startdatum: "Start date",
   Enddatum: "End date",
+  "Start-/Enddatum": "Start/end date",
   "Änderungen speichern": "Save changes",
   "Änderungen gespeichert.": "Changes saved.",
   "Das Startdatum ist verpflichtend.": "Start date is required.",
