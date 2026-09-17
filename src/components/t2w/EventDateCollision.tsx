@@ -29,7 +29,7 @@ export function eventDateCollisionSurfaceClass(
 
 export function EventDateCollisionIndicator({ collision }: { collision: EventDateCollision }) {
   const peers = collision.peerNames.join(", ");
-  const label = `Gleicher Starttag: ${collision.eventCount} Events. Weitere Events am selben Tag: ${peers}.`;
+  const label = `Gleicher Starttag: ${collision.eventCount} Active-/UHF-Events. Weitere Events am selben Tag: ${peers}.`;
 
   return (
     <span
@@ -51,7 +51,7 @@ export function EventDateCollisionLegend() {
       aria-label="Legende für Terminkollisionen"
     >
       <CalendarRange className="size-3.5" aria-hidden="true" />
-      Markierte Zeilen starten am selben Tag · 2×/3× = Events an diesem Datum
+      Markierte Active-/UHF-Events starten am selben Tag · 2×/3× = relevante Events an diesem Datum
     </p>
   );
 }

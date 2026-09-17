@@ -3,6 +3,7 @@ export type EventDateRange = {
   name: string;
   start: string;
   ende: string;
+  services: readonly string[];
 };
 
 export type EventDateCollision = {
@@ -14,6 +15,12 @@ export type EventDateCollision = {
 type NormalizedEventDateRange = EventDateRange & {
   normalizedStart: string;
 };
+
+const COLLISION_SERVICES = new Set(["active", "uhf"]);
+
+function hasCollisionService(event: EventDateRange): boolean {
+  return event.services.some((service) => COLLISION_SERVICES.has(service.trim().toLowerCase()));
+}
 
 function normalizeIsoDate(value: string): string | null {
   const match = /^\d{4}-\d{2}-\d{2}/.exec(value);
@@ -31,13 +38,15 @@ function normalizeEventDateRange(event: EventDateRange): NormalizedEventDateRang
 }
 
 /**
- * Groups visible events that start on the same calendar day. The event end date
- * is deliberately ignored: a multi-day event must not color unrelated start dates.
+ * Groups visible Active/UHF events that start on the same calendar day. The event
+ * end date is deliberately ignored: a multi-day event must not color unrelated
+ * start dates. Events with other services do not participate in the count.
  */
 export function createEventDateCollisionMap(
   events: readonly EventDateRange[],
 ): Map<string, EventDateCollision> {
   const normalizedEvents = events
+    .filter(hasCollisionService)
     .map(normalizeEventDateRange)
     .filter((event): event is NormalizedEventDateRange => event !== null)
     .sort((left, right) => left.id.localeCompare(right.id));

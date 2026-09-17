@@ -555,7 +555,7 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(overviewRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(2);
 });
 
-test("markiert Events mit gleichem Startdatum als gemeinsame Farbgruppe", async ({ page }) => {
+test("markiert nur Active- und UHF-Events am gleichen Starttag", async ({ page }) => {
   await mockApi(
     page,
     {
@@ -565,6 +565,7 @@ test("markiert Events mit gleichem Startdatum als gemeinsame Farbgruppe", async 
     {
       startAt: "2026-01-02T00:00:00.000Z",
       endAt: "2026-01-02T00:00:00.000Z",
+      services: [{ service: { id: "service-1", name: "UHF" } }],
     },
     [
       {
@@ -573,6 +574,15 @@ test("markiert Events mit gleichem Startdatum als gemeinsame Farbgruppe", async 
         name: "Gleicher Start",
         startAt: "2026-01-02T00:00:00.000Z",
         endAt: "2026-01-02T00:00:00.000Z",
+        services: [{ service: { id: "service-2", name: "Active" } }],
+      },
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        eventCode: "260102_anderer_service",
+        name: "Anderer Service",
+        startAt: "2026-01-02T00:00:00.000Z",
+        endAt: "2026-01-02T00:00:00.000Z",
+        services: [{ service: { id: "service-5", name: "Video (iRewind)" } }],
       },
     ],
   );
@@ -582,13 +592,20 @@ test("markiert Events mit gleichem Startdatum als gemeinsame Farbgruppe", async 
   const existingEvent = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
   const followUpEvent = table.locator("tbody tr").filter({ hasText: "Folgetermin" });
   const sameStartEvent = table.locator("tbody tr").filter({ hasText: "Gleicher Start" });
+  const otherServiceEvent = table.locator("tbody tr").filter({ hasText: "Anderer Service" });
 
   expect(await existingEvent.getAttribute("data-date-collision-group")).toBeNull();
   await expect(followUpEvent).toHaveAttribute("data-date-collision-group", "1");
   await expect(sameStartEvent).toHaveAttribute("data-date-collision-group", "1");
   await expect(existingEvent.locator("[data-date-collision-count]")).toHaveCount(0);
-  await expect(followUpEvent.getByLabel(/Gleicher Starttag: 2 Events/)).toContainText("2×");
-  await expect(sameStartEvent.getByLabel(/Gleicher Starttag: 2 Events/)).toContainText("2×");
+  await expect(followUpEvent.getByLabel(/Gleicher Starttag: 2 Active-\/UHF-Events/)).toContainText(
+    "2×",
+  );
+  await expect(sameStartEvent.getByLabel(/Gleicher Starttag: 2 Active-\/UHF-Events/)).toContainText(
+    "2×",
+  );
+  expect(await otherServiceEvent.getAttribute("data-date-collision-group")).toBeNull();
+  await expect(otherServiceEvent.locator("[data-date-collision-count]")).toHaveCount(0);
   await expect(page.getByLabel("Legende für Terminkollisionen")).toBeVisible();
 
   const rowColors = await Promise.all(

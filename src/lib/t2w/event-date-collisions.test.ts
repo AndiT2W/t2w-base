@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createEventDateCollisionMap, type EventDateRange } from "./event-date-collisions";
 
-function event(id: string, name: string, start: string, ende = start): EventDateRange {
-  return { id, name, start, ende };
+function event(
+  id: string,
+  name: string,
+  start: string,
+  ende = start,
+  services: string[] = ["UHF"],
+): EventDateRange {
+  return { id, name, start, ende, services };
 }
 
 describe("createEventDateCollisionMap", () => {
@@ -45,5 +51,19 @@ describe("createEventDateCollisionMap", () => {
     ]);
 
     expect(collisions.size).toBe(0);
+  });
+
+  it("counts only events with the Active or UHF service", () => {
+    const collisions = createEventDateCollisionMap([
+      event("a", "Active-Lauf", "2026-09-20", "2026-09-20", ["Active"]),
+      event("b", "UHF-Lauf", "2026-09-20", "2026-09-20", ["UHF"]),
+      event("c", "Video-Lauf", "2026-09-20", "2026-09-20", ["Video (iRewind)"]),
+      event("d", "Ohne Service", "2026-09-20", "2026-09-20", []),
+    ]);
+
+    expect(collisions.get("a")).toMatchObject({ eventCount: 2, peerNames: ["UHF-Lauf"] });
+    expect(collisions.get("b")).toMatchObject({ eventCount: 2, peerNames: ["Active-Lauf"] });
+    expect(collisions.has("c")).toBe(false);
+    expect(collisions.has("d")).toBe(false);
   });
 });
