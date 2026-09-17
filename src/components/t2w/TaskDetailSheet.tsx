@@ -1,4 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { Check, ChevronDown, History, Plus, Trash2, X } from "lucide-react";
 import type { Task } from "@t2w/domain/project-management";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,11 @@ import {
 } from "@/components/ui/sheet";
 import { priorityLabel, statusLabel } from "@/lib/t2w/project-management";
 import type { TaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
-import { formatDatumMitZeit } from "@/lib/t2w/format";
+import { formatDatum, formatDatumMitZeit } from "@/lib/t2w/format";
+import { successorIds } from "@/lib/t2w/task-flow-view";
+import { taskState } from "@/lib/t2w/task-state";
+import { TaskStateChip } from "@/components/t2w/TaskState";
+import { cn } from "@/lib/utils";
 
 const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
 
@@ -28,6 +33,21 @@ type TaskDetailSheetProps = {
   planning: TaskDetailPlanningContext;
   variant: "event" | "global";
 };
+
+/** Felder, deren Änderung die Fußleiste als ungespeichert meldet. */
+const TRACKED = [
+  ["title", "Titel"],
+  ["description", "Beschreibung"],
+  ["status", "Status"],
+  ["priority", "Priorität"],
+  ["ownerId", "Verantwortlich"],
+  ["groupId", "Kategorie"],
+  ["startDate", "Start"],
+  ["endDate", "Ende"],
+] as const;
+
+const STATUS_ORDER: Task["status"][] = ["OPEN", "IN_PROGRESS", "DONE"];
+const PRIORITY_ORDER: Task["priority"][] = ["LOW", "NORMAL", "HIGH"];
 
 function textWithLinks(text: string) {
   return text.split(/(https?:\/\/[^\s]+)/g).map((part, index) =>
@@ -52,8 +72,13 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
     workspace.snapshot,
     workspace.snapshot,
   );
-  const { activities, busy, comments, draft, task } = snapshot;
+  const { activities, busy, comments, draft, error, task } = snapshot;
   const [comment, setComment] = useState("");
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const editable = Boolean(task?.id);
   const scopedTasks = task
     ? planning.tasks.filter(
@@ -69,227 +94,392 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
           !dependencies.some((edge) => edge.predecessorId === candidate.id),
       )
     : [];
-  const title =
-    variant === "event" ? "Aufgabe" : editable ? "Aufgabe bearbeiten" : "Globale Aufgabe anlegen";
-  const description =
-    variant === "event"
-      ? "Details, Voraussetzungen, Kommentare und Verlauf"
-      : "Details, Termine, Voraussetzungen und Kommentare";
+  const blockedAfter = task
+    ? successorIds(task.id, planning.edges)
+        .map((id) => taskById.get(id)?.title)
+        .filter((title): title is string => Boolean(title))
+    : [];
+  const groupName = planning.groups.find((group) => group.id === draft.groupId)?.name ?? null;
+  const unsaved = editable
+    ? TRACKED.filter(
+        ([field]) => task && draft[field] !== undefined && draft[field] !== task[field],
+      )
+    : [];
 
-  useEffect(() => setComment(""), [task?.id]);
+  useEffect(() => {
+    setComment("");
+    setEditingComment(null);
+    setConfirmDelete(null);
+    setHistoryOpen(false);
+  }, [task?.id]);
 
   return (
     <Sheet open={!!task} onOpenChange={(shown) => !shown && !busy && workspace.close()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description}</SheetDescription>
+      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+        <SheetHeader className="space-y-0 border-b p-0">
+          <SheetTitle className="sr-only">
+            {editable ? "Aufgabe bearbeiten" : "Neue Aufgabe"}
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            Details, Voraussetzungen, Kommentare und Verlauf
+          </SheetDescription>
+
+          {task && (
+            <div className="space-y-3 px-5 pb-4 pt-5">
+              <div className="flex flex-wrap items-center gap-2 pr-8">
+                {editable ? (
+                  <TaskStateChip state={taskState(task)} />
+                ) : (
+                  <span className="rounded-[5px] bg-primary/15 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground/90 text-foreground">
+                    Neu
+                  </span>
+                )}
+                {groupName && <span className="text-xs text-muted-foreground">{groupName}</span>}
+                {variant === "global" && (
+                  <span className="text-xs text-muted-foreground">Globale Planung</span>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="task-detail-title" className="sr-only">
+                  Titel
+                </Label>
+                <Input
+                  id="task-detail-title"
+                  required
+                  autoComplete="off"
+                  placeholder="Was ist zu tun?"
+                  value={draft.title ?? ""}
+                  onChange={(event) => workspace.updateDraft({ title: event.target.value })}
+                  className="h-auto border-transparent bg-transparent px-2 py-1 text-xl font-semibold tracking-tight shadow-none focus-visible:border-input"
+                />
+              </div>
+
+              <div>
+                <div
+                  role="group"
+                  aria-label="Status"
+                  className="flex gap-1 rounded-lg bg-muted p-1"
+                >
+                  {STATUS_ORDER.map((value) => {
+                    const active = (draft.status ?? "OPEN") === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={active}
+                        disabled={busy}
+                        onClick={() => workspace.updateDraft({ status: value })}
+                        className={cn(
+                          "min-h-11 flex-1 rounded-md px-3 text-sm transition-colors md:min-h-8",
+                          active
+                            ? "bg-background font-semibold shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {statusLabel[value]}
+                      </button>
+                    );
+                  })}
+                </div>
+                {editable && blockedAfter.length > 0 && (
+                  <p className="mt-2 text-xs text-task-waiting-strong">
+                    Blockiert danach: {blockedAfter.join(" · ")}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </SheetHeader>
+
         {task && (
-          <div className="space-y-4 p-4">
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void workspace.save();
-              }}
-            >
-              <Label htmlFor="task-detail-title">Titel</Label>
-              <Input
-                id="task-detail-title"
-                required
-                value={draft.title ?? ""}
-                onChange={(event) => workspace.updateDraft({ title: event.target.value })}
-              />
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
+            {error && (
+              <p role="alert" className="rounded-md border border-destructive p-3 text-destructive">
+                {error}
+              </p>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="task-detail-owner">Verantwortlich</Label>
+                <select
+                  id="task-detail-owner"
+                  className={control}
+                  value={draft.ownerId ?? ""}
+                  onChange={(event) =>
+                    workspace.updateDraft({ ownerId: event.target.value || null })
+                  }
+                >
+                  <option value="">Nicht zugeordnet</option>
+                  {planning.owners
+                    .filter((owner) => owner.active || owner.id === draft.ownerId)
+                    .map((owner) => (
+                      <option key={owner.id} value={owner.id}>
+                        {owner.displayName}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="task-detail-group">Kategorie</Label>
+                <select
+                  id="task-detail-group"
+                  className={control}
+                  value={draft.groupId ?? ""}
+                  onChange={(event) =>
+                    workspace.updateDraft({ groupId: event.target.value || null })
+                  }
+                >
+                  <option value="">Ohne Kategorie</option>
+                  {planning.groups
+                    .filter((group) => group.active || group.id === draft.groupId)
+                    .map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="task-detail-start">Start</Label>
+                <Input
+                  id="task-detail-start"
+                  type="date"
+                  value={draft.startDate ?? ""}
+                  onChange={(event) =>
+                    workspace.updateDraft({ startDate: event.target.value || null })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="task-detail-end">Ende</Label>
+                <Input
+                  id="task-detail-end"
+                  type="date"
+                  value={draft.endDate ?? ""}
+                  onChange={(event) =>
+                    workspace.updateDraft({ endDate: event.target.value || null })
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-sm font-medium">Priorität</span>
+              <div role="group" aria-label="Priorität" className="mt-1.5 flex flex-wrap gap-2">
+                {PRIORITY_ORDER.map((value) => {
+                  const active = (draft.priority ?? "NORMAL") === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={active}
+                      disabled={busy}
+                      onClick={() => workspace.updateDraft({ priority: value })}
+                      className={cn(
+                        "min-h-11 rounded-full border px-3 text-sm transition-colors md:min-h-8",
+                        active
+                          ? "border-primary bg-primary/15 font-semibold text-foreground"
+                          : "border-input text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {priorityLabel[value]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
               <Label htmlFor="task-detail-description">Beschreibung</Label>
               <textarea
                 id="task-detail-description"
                 className={control}
-                rows={5}
+                rows={3}
                 value={draft.description ?? ""}
                 onChange={(event) => workspace.updateDraft({ description: event.target.value })}
               />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="task-detail-status">Status</Label>
-                  <select
-                    id="task-detail-status"
-                    className={control}
-                    value={draft.status ?? "OPEN"}
-                    onChange={(event) =>
-                      workspace.updateDraft({ status: event.target.value as Task["status"] })
-                    }
-                  >
-                    {Object.entries(statusLabel).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="task-detail-priority">Priorität</Label>
-                  <select
-                    id="task-detail-priority"
-                    className={control}
-                    value={draft.priority ?? "NORMAL"}
-                    onChange={(event) =>
-                      workspace.updateDraft({ priority: event.target.value as Task["priority"] })
-                    }
-                  >
-                    {Object.entries(priorityLabel).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="task-detail-owner">Verantwortlich</Label>
-                  <select
-                    id="task-detail-owner"
-                    className={control}
-                    value={draft.ownerId ?? ""}
-                    onChange={(event) =>
-                      workspace.updateDraft({ ownerId: event.target.value || null })
-                    }
-                  >
-                    <option value="">Nicht zugeordnet</option>
-                    {planning.owners
-                      .filter((owner) => owner.active || owner.id === draft.ownerId)
-                      .map((owner) => (
-                        <option key={owner.id} value={owner.id}>
-                          {owner.displayName}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="task-detail-group">Kategorie</Label>
-                  <select
-                    id="task-detail-group"
-                    className={control}
-                    value={draft.groupId ?? ""}
-                    onChange={(event) =>
-                      workspace.updateDraft({ groupId: event.target.value || null })
-                    }
-                  >
-                    <option value="">Ohne Kategorie</option>
-                    {planning.groups
-                      .filter((group) => group.active || group.id === draft.groupId)
-                      .map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="task-detail-start">Start</Label>
-                  <Input
-                    id="task-detail-start"
-                    type="date"
-                    value={draft.startDate ?? ""}
-                    onChange={(event) =>
-                      workspace.updateDraft({ startDate: event.target.value || null })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="task-detail-end">Ende</Label>
-                  <Input
-                    id="task-detail-end"
-                    type="date"
-                    value={draft.endDate ?? ""}
-                    onChange={(event) =>
-                      workspace.updateDraft({ endDate: event.target.value || null })
-                    }
-                  />
-                </div>
-              </div>
-              <Button disabled={busy}>
-                {editable ? "Änderungen speichern" : "Aufgabe anlegen"}
-              </Button>
-            </form>
+            </div>
 
-            {editable && (
-              <section className="border-t pt-4">
-                <h3 className="font-medium">Voraussetzungen</h3>
-                {dependencies.map((edge) => (
-                  <div
-                    key={edge.predecessorId}
-                    className="flex items-center justify-between gap-2 py-2"
-                  >
-                    <span>{taskById.get(edge.predecessorId)?.title ?? edge.predecessorId}</span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => void workspace.removeDependency(edge.predecessorId)}
-                    >
-                      Entfernen
-                    </Button>
+            <section className="border-t pt-4">
+              <h3 className="text-sm font-medium">Voraussetzungen</h3>
+              <p className="text-xs text-muted-foreground">
+                Vorgänger, die vorher fertig sein müssen
+              </p>
+
+              {editable ? (
+                <>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {dependencies.map((edge) => {
+                      const predecessor = taskById.get(edge.predecessorId);
+                      const overdue = predecessor ? taskState(predecessor) === "overdue" : false;
+                      return (
+                        <span
+                          key={edge.predecessorId}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full border py-1 pl-3 pr-1 text-sm",
+                            overdue
+                              ? "border-task-overdue/40 bg-task-overdue-soft text-task-overdue-strong"
+                              : "border-input",
+                          )}
+                        >
+                          {predecessor?.title ?? edge.predecessorId}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-6 rounded-full"
+                            aria-label={`${predecessor?.title ?? "Vorgänger"} entfernen`}
+                            disabled={busy}
+                            onClick={() => void workspace.removeDependency(edge.predecessorId)}
+                          >
+                            <X aria-hidden="true" className="size-3.5" />
+                          </Button>
+                        </span>
+                      );
+                    })}
+                    {!dependencies.length && (
+                      <span className="text-sm text-muted-foreground">Keine</span>
+                    )}
                   </div>
-                ))}
-                <Label htmlFor="task-detail-predecessor">Vorgänger hinzufügen</Label>
-                <select
-                  id="task-detail-predecessor"
-                  className={control}
-                  defaultValue=""
-                  onChange={(event) => {
-                    const predecessorId = event.target.value;
-                    if (predecessorId) void workspace.addDependency(predecessorId);
-                    event.currentTarget.value = "";
-                  }}
-                >
-                  <option value="">Aufgabe auswählen</option>
-                  {availablePredecessors.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.title}
-                    </option>
-                  ))}
-                </select>
-              </section>
-            )}
+
+                  <Label htmlFor="task-detail-predecessor" className="mt-3 block">
+                    Vorgänger hinzufügen
+                  </Label>
+                  <select
+                    id="task-detail-predecessor"
+                    className={control}
+                    defaultValue=""
+                    disabled={busy || !availablePredecessors.length}
+                    onChange={(event) => {
+                      const predecessorId = event.target.value;
+                      if (predecessorId) void workspace.addDependency(predecessorId);
+                      event.currentTarget.value = "";
+                    }}
+                  >
+                    <option value="">Aufgabe auswählen</option>
+                    {availablePredecessors.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.title}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Lassen sich setzen, sobald die Aufgabe angelegt ist.
+                </p>
+              )}
+            </section>
 
             {editable && (
               <section className="border-t pt-4">
-                <h3 className="font-medium">Kommentare</h3>
-                {comments.map((item) => (
-                  <article key={item.id} className="border-b py-2">
-                    <p className="whitespace-pre-wrap break-words">{textWithLinks(item.text)}</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted-foreground">
-                        {formatDatumMitZeit(item.updatedAt)}
-                        {item.updatedAt !== item.createdAt ? " · bearbeitet" : ""}
-                      </p>
-                      <span className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const text = window.prompt("Kommentar bearbeiten", item.text);
-                            if (text !== null) void workspace.writeComment({ id: item.id, text });
+                <h3 className="text-sm font-medium">Kommentare</h3>
+
+                <div className="mt-2 space-y-3">
+                  {comments.map((item) => (
+                    <article key={item.id} className="rounded-md border p-3">
+                      {editingComment === item.id ? (
+                        <form
+                          className="space-y-2"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void workspace.writeComment({ id: item.id, text: commentDraft });
+                            setEditingComment(null);
                           }}
                         >
-                          Bearbeiten
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (window.confirm("Kommentar dauerhaft löschen?"))
-                              void workspace.writeComment({ id: item.id, delete: true });
-                          }}
-                        >
-                          Löschen
-                        </Button>
-                      </span>
-                    </div>
-                  </article>
-                ))}
+                          <Label htmlFor={`comment-${item.id}`} className="sr-only">
+                            Kommentar bearbeiten
+                          </Label>
+                          <textarea
+                            id={`comment-${item.id}`}
+                            className={control}
+                            rows={3}
+                            value={commentDraft}
+                            onChange={(event) => setCommentDraft(event.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <Button type="submit" size="sm" disabled={busy}>
+                              Speichern
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingComment(null)}
+                            >
+                              Abbrechen
+                            </Button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <p className="whitespace-pre-wrap break-words text-sm">
+                            {textWithLinks(item.text)}
+                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <p className="flex-1 text-xs text-muted-foreground">
+                              {formatDatumMitZeit(item.updatedAt)}
+                              {item.updatedAt !== item.createdAt ? " · bearbeitet" : ""}
+                            </p>
+                            {confirmDelete === item.id ? (
+                              <>
+                                <span className="text-xs text-destructive">Wirklich löschen?</span>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    void workspace.writeComment({ id: item.id, delete: true });
+                                    setConfirmDelete(null);
+                                  }}
+                                >
+                                  Löschen
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setConfirmDelete(null)}
+                                >
+                                  Abbrechen
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingComment(item.id);
+                                    setCommentDraft(item.text);
+                                  }}
+                                >
+                                  Bearbeiten
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setConfirmDelete(item.id)}
+                                >
+                                  Löschen
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </article>
+                  ))}
+                  {!comments.length && (
+                    <p className="text-sm text-muted-foreground">Noch keine Kommentare.</p>
+                  )}
+                </div>
+
                 <form
                   className="mt-3 space-y-2"
                   onSubmit={(event) => {
@@ -299,14 +489,18 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                     setComment("");
                   }}
                 >
-                  <Label htmlFor="task-detail-comment">Kommentar</Label>
+                  <Label htmlFor="task-detail-comment" className="sr-only">
+                    Kommentar schreiben
+                  </Label>
                   <textarea
                     id="task-detail-comment"
                     className={control}
+                    rows={2}
+                    placeholder="Kommentar schreiben …"
                     value={comment}
                     onChange={(event) => setComment(event.target.value)}
                   />
-                  <Button type="submit" variant="outline" disabled={busy}>
+                  <Button type="submit" variant="outline" size="sm" disabled={busy}>
                     Kommentieren
                   </Button>
                 </form>
@@ -315,27 +509,119 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
 
             {editable && (
               <section className="border-t pt-4">
-                <h3 className="font-medium">Verlauf</h3>
-                {activities.map((item) => (
-                  <p key={item.id} className="border-b py-2 text-sm">
-                    {item.action} · {formatDatumMitZeit(item.createdAt)}
-                  </p>
-                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-expanded={historyOpen}
+                  onClick={() => setHistoryOpen((open) => !open)}
+                  className="px-0"
+                >
+                  <History aria-hidden="true" className="size-4" />
+                  Verlauf ({activities.length})
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={cn("size-4 transition-transform", historyOpen && "rotate-180")}
+                  />
+                </Button>
+                {historyOpen && (
+                  <ul className="mt-2 space-y-1">
+                    {activities.map((item) => (
+                      <li key={item.id} className="text-xs text-muted-foreground">
+                        {item.action} · {formatDatumMitZeit(item.createdAt)}
+                      </li>
+                    ))}
+                    {!activities.length && (
+                      <li className="text-xs text-muted-foreground">Kein Verlauf.</li>
+                    )}
+                  </ul>
+                )}
               </section>
             )}
 
             {editable && (
+              <section className="border-t pt-4">
+                {confirmDelete === "task" ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="flex-1 text-sm text-destructive">
+                      Aufgabe dauerhaft löschen?
+                    </span>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void workspace.delete()}
+                    >
+                      Löschen
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmDelete(null)}
+                    >
+                      Abbrechen
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="px-0 text-destructive hover:text-destructive"
+                    onClick={() => setConfirmDelete("task")}
+                  >
+                    <Trash2 aria-hidden="true" className="size-4" />
+                    Aufgabe löschen
+                  </Button>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+
+        {task && (
+          <div className="flex flex-wrap items-center gap-2 border-t bg-muted/20 px-5 py-3">
+            <p className="flex-1 text-xs text-muted-foreground">
+              {unsaved.length > 0 ? (
+                <span className="font-medium text-task-waiting-strong">
+                  Nicht gespeichert: {unsaved.map(([, label]) => label).join(", ")}
+                </span>
+              ) : editable ? (
+                task.endDate ? (
+                  `Ende ${formatDatum(task.endDate)}`
+                ) : (
+                  "Ohne Ende"
+                )
+              ) : (
+                "Wird beim Anlegen gespeichert"
+              )}
+            </p>
+
+            {editable && unsaved.length > 0 && (
               <Button
                 type="button"
-                variant="destructive"
+                variant="outline"
                 disabled={busy}
-                onClick={() => {
-                  if (window.confirm("Aufgabe dauerhaft löschen?")) void workspace.delete();
-                }}
+                onClick={() => workspace.updateDraft(task)}
               >
-                Aufgabe löschen
+                Verwerfen
               </Button>
             )}
+            <Button type="button" disabled={busy} onClick={() => void workspace.save()}>
+              {editable ? (
+                <>
+                  <Check aria-hidden="true" className="size-4" />
+                  Änderungen speichern
+                </>
+              ) : (
+                <>
+                  <Plus aria-hidden="true" className="size-4" />
+                  Aufgabe anlegen
+                </>
+              )}
+            </Button>
           </div>
         )}
       </SheetContent>
