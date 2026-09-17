@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Button } from "@/components/ui/button";
 import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { TaskSummary } from "@/components/t2w/TaskSummary";
+import { TaskTimeline } from "@/components/t2w/TaskTimeline";
 import {
   CategoryRow,
   TaskFlowChain,
@@ -25,6 +26,7 @@ export function ProjectManagement({
 }) {
   const [state, setState] = useState<PmState>();
   const [open, setOpen] = useState<string | null>(null);
+  const [view, setView] = useState<"kategorien" | "zeitachse">("kategorien");
   const [loadError, setLoadError] = useState("");
   const stateRef = useRef<PmState | undefined>(undefined);
   const interaction = useMemo(
@@ -116,67 +118,96 @@ export function ProjectManagement({
       ) : (
         <>
           <TaskSummary tasks={state.tasks} {...(eventStart ? { eventStart } : {})} />
-          <div className="overflow-hidden rounded-lg border bg-card">
-            {state.categories.map((category) => {
-              const key = category.groupId ?? "none";
-              const members = categoryTasks(state.tasks, category.groupId);
-              const expanded = open === key;
-              const name = categoryName(category.groupId);
-              return (
-                <div key={key} className="border-b last:border-0">
-                  <CategoryRow
-                    category={{ ...category, name }}
-                    tasks={members}
-                    expanded={expanded}
-                    onToggle={() => setOpen(expanded ? null : key)}
-                    ownerName={ownerName}
-                    taskById={taskById}
-                  />
-                  {expanded && (
-                    <div className="space-y-3 border-t bg-muted/20 px-4 py-3 sm:pl-11">
-                      <TaskFlowChain
-                        flows={category.flows}
-                        groupId={category.groupId}
-                        taskById={taskById}
-                        edges={state.edges}
-                        groupName={categoryName}
-                        onOpen={(task) => void interaction.open(task)}
-                        busy={busy}
-                        {...(state.event.archived
-                          ? {}
-                          : {
-                              onAppend: async (predecessorId: string, title: string) => {
-                                const created = await interaction.create(
-                                  { title, groupId: category.groupId, eventId: state.event.id },
-                                  true,
-                                );
-                                if (created) await interaction.addDependency(predecessorId);
-                                interaction.close();
-                              },
-                            })}
-                      />
-                      <TaskTable
-                        tasks={singleTasks(category.flows, taskById)}
-                        ownerName={ownerName}
-                        onOpen={(task) => void interaction.open(task)}
-                        busy={busy}
-                        categoryName={name}
-                        {...(state.event.archived
-                          ? {}
-                          : {
-                              onCreate: (title: string) =>
-                                interaction.create(
-                                  { title, groupId: category.groupId, eventId: state.event.id },
-                                  false,
-                                ),
-                            })}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+
+          <div className="flex gap-1 self-start rounded-lg bg-muted p-1">
+            {(["kategorien", "zeitachse"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={view === value}
+                onClick={() => setView(value)}
+                className={`min-h-11 rounded-md px-3 text-sm transition-colors md:min-h-8 ${
+                  view === value
+                    ? "bg-background font-semibold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {value === "kategorien" ? "Kategorien" : "Zeitachse"}
+              </button>
+            ))}
           </div>
+
+          {view === "zeitachse" ? (
+            <TaskTimeline
+              categories={state.categories}
+              tasks={state.tasks}
+              {...(eventStart ? { eventStart } : {})}
+              onOpen={(task) => void interaction.open(task)}
+              categoryName={categoryName}
+            />
+          ) : (
+            <div className="overflow-hidden rounded-lg border bg-card">
+              {state.categories.map((category) => {
+                const key = category.groupId ?? "none";
+                const members = categoryTasks(state.tasks, category.groupId);
+                const expanded = open === key;
+                const name = categoryName(category.groupId);
+                return (
+                  <div key={key} className="border-b last:border-0">
+                    <CategoryRow
+                      category={{ ...category, name }}
+                      tasks={members}
+                      expanded={expanded}
+                      onToggle={() => setOpen(expanded ? null : key)}
+                      ownerName={ownerName}
+                      taskById={taskById}
+                    />
+                    {expanded && (
+                      <div className="space-y-3 border-t bg-muted/20 px-4 py-3 sm:pl-11">
+                        <TaskFlowChain
+                          flows={category.flows}
+                          groupId={category.groupId}
+                          taskById={taskById}
+                          edges={state.edges}
+                          groupName={categoryName}
+                          onOpen={(task) => void interaction.open(task)}
+                          busy={busy}
+                          {...(state.event.archived
+                            ? {}
+                            : {
+                                onAppend: async (predecessorId: string, title: string) => {
+                                  const created = await interaction.create(
+                                    { title, groupId: category.groupId, eventId: state.event.id },
+                                    true,
+                                  );
+                                  if (created) await interaction.addDependency(predecessorId);
+                                  interaction.close();
+                                },
+                              })}
+                        />
+                        <TaskTable
+                          tasks={singleTasks(category.flows, taskById)}
+                          ownerName={ownerName}
+                          onOpen={(task) => void interaction.open(task)}
+                          busy={busy}
+                          categoryName={name}
+                          {...(state.event.archived
+                            ? {}
+                            : {
+                                onCreate: (title: string) =>
+                                  interaction.create(
+                                    { title, groupId: category.groupId, eventId: state.event.id },
+                                    false,
+                                  ),
+                              })}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
       <TaskDetailSheet
