@@ -34,3 +34,9 @@ playwright-report/
 *.sln
 *.sw?
 
+
+# Local environment
+.env
+.env.*
+!.env.example
+docker-compose.local.yml

@@ -82,6 +82,21 @@ html[lang="en"] .lang-en-only {
   --color-status-storniert: var(--status-storniert);
   --color-risk-beobachten: var(--risk-beobachten);
   --color-risk-kritisch: var(--risk-kritisch);
+  --color-task-done: var(--task-done);
+  --color-task-done-soft: var(--task-done-soft);
+  --color-task-done-strong: var(--task-done-strong);
+  --color-task-active: var(--task-active);
+  --color-task-active-soft: var(--task-active-soft);
+  --color-task-active-strong: var(--task-active-strong);
+  --color-task-waiting: var(--task-waiting);
+  --color-task-waiting-soft: var(--task-waiting-soft);
+  --color-task-waiting-strong: var(--task-waiting-strong);
+  --color-task-overdue: var(--task-overdue);
+  --color-task-overdue-soft: var(--task-overdue-soft);
+  --color-task-overdue-strong: var(--task-overdue-strong);
+  --color-task-open: var(--task-open);
+  --color-task-open-soft: var(--task-open-soft);
+  --color-task-open-strong: var(--task-open-strong);
   --font-sans: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -106,6 +121,29 @@ html[lang="en"] .lang-en-only {
   --status-storniert: oklch(0.62 0.19 25);
   --risk-beobachten: oklch(0.75 0.16 82);
   --risk-kritisch: oklch(0.6 0.21 25);
+
+  /*
+   * Arbeitszustand einer Aufgabe. Getrennt von den Eventstatus-Farben oben,
+   * weil Lieferstatus und Arbeitsstatus fachlich verschieden sind.
+   * <name>       Fläche: Farbkante, Fortschrittsbalken, Punkt
+   * <name>-soft  Hintergrund eines Chips
+   * <name>-strong Text auf -soft (mindestens 4,5:1)
+   */
+  --task-done: oklch(0.58 0.11 165);
+  --task-done-soft: oklch(0.95 0.028 165);
+  --task-done-strong: oklch(0.45 0.09 165);
+  --task-active: oklch(0.58 0.09 235);
+  --task-active-soft: oklch(0.95 0.022 235);
+  --task-active-strong: oklch(0.42 0.09 245);
+  --task-waiting: oklch(0.67 0.13 70);
+  --task-waiting-soft: oklch(0.95 0.045 80);
+  --task-waiting-strong: oklch(0.45 0.09 70);
+  --task-overdue: oklch(0.6 0.19 27);
+  --task-overdue-soft: oklch(0.94 0.033 27);
+  --task-overdue-strong: oklch(0.45 0.16 27);
+  --task-open: oklch(0.84 0.012 255);
+  --task-open-soft: oklch(0.96 0.005 250);
+  --task-open-strong: oklch(0.45 0.02 255);
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.24 0.02 255);
@@ -158,6 +196,23 @@ html[lang="en"] .lang-en-only {
   --table-header: oklch(0.3235 0.012 258.37);
   --table-header-foreground: oklch(0.9607 0.0017 247.84);
   --table-header-border: oklch(0.4866 0.0149 255.57);
+
+  /* Auf dunklem Grund heller und weniger gesättigt, sonst glühen die Flächen. */
+  --task-done: oklch(0.72 0.12 165);
+  --task-done-soft: oklch(0.28 0.05 165);
+  --task-done-strong: oklch(0.82 0.11 165);
+  --task-active: oklch(0.7 0.09 235);
+  --task-active-soft: oklch(0.28 0.045 235);
+  --task-active-strong: oklch(0.82 0.08 235);
+  --task-waiting: oklch(0.75 0.12 75);
+  --task-waiting-soft: oklch(0.3 0.05 75);
+  --task-waiting-strong: oklch(0.85 0.1 80);
+  --task-overdue: oklch(0.7 0.16 27);
+  --task-overdue-soft: oklch(0.3 0.07 27);
+  --task-overdue-strong: oklch(0.82 0.12 27);
+  --task-open: oklch(0.5 0.02 255);
+  --task-open-soft: oklch(0.3 0.02 255);
+  --task-open-strong: oklch(0.78 0.02 255);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.984 0.003 247.858);
   --border: oklch(1 0 0 / 10%);

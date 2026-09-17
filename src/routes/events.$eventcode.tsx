@@ -1529,7 +1529,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         </TabsContent>
 
         <TabsContent value="aufgaben">
-          <ProjectManagement eventId={form.id} />
+          <ProjectManagement eventId={form.id} eventStart={form.start} />
         </TabsContent>
 
         <TabsContent value="dateien">
