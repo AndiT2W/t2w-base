@@ -245,19 +245,25 @@ html[lang="en"] .lang-en-only {
 }
 
 @layer components {
+  /*
+   * Spaltenkopf: keine graue Fläche mehr, sondern Kleinbuchstaben in
+   * Versalien. Die Trennung zur ersten Zeile übernimmt eine Haarlinie
+   * statt eines 2px-Balkens — der Kopf soll die Daten einordnen, nicht
+   * mit ihnen um Aufmerksamkeit streiten.
+   */
   .t2w-table-header {
-    background-color: var(--color-table-header);
-    color: var(--color-table-header-foreground);
-    font-size: 0.75rem;
-    letter-spacing: 0.025em;
-    text-transform: none;
+    background-color: color-mix(in oklab, var(--color-muted) 40%, transparent);
+    color: var(--color-muted-foreground);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .t2w-table-header > tr {
-    border-bottom: 2px solid var(--color-table-header-border);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .t2w-table-header th {
-    font-weight: 600;
+    font-weight: 700;
   }
 }
