@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { projectTaskPortfolios, type Task } from "@t2w/domain/project-management";
 import {
@@ -13,6 +13,7 @@ import {
   Clock3,
   FolderKanban,
   Package,
+  Search,
   Ticket,
   type LucideIcon,
 } from "lucide-react";
@@ -39,6 +40,75 @@ import {
 } from "@/lib/t2w/task-queue";
 
 export const Route = createFileRoute("/aufgaben")({ component: Aufgaben });
+/**
+ * Ein Filter als Chip. Die Auswahl bleibt ein natives select: es bringt
+ * Tastaturbedienung, Bildschirmleser und die Mobilauswahl des Systems mit,
+ * ein nachgebautes Menü müsste das alles erst wieder herstellen.
+ */
+function FilterChip({
+  label,
+  value,
+  inaktiv,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  inaktiv: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+}) {
+  const aktiv = value !== inaktiv;
+  return (
+    <label
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm md:min-h-8 ${
+        aktiv ? "border-primary/50 bg-primary/10" : "border-input bg-card"
+      }`}
+    >
+      <span className="text-muted-foreground">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={label}
+        className={`max-w-40 cursor-pointer truncate bg-transparent pr-1 outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          aktiv ? "font-semibold" : ""
+        }`}
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function DateChip({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm md:min-h-8 ${
+        value ? "border-primary/50 bg-primary/10" : "border-input bg-card"
+      }`}
+    >
+      <span className="text-muted-foreground">{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={label}
+        className={`cursor-pointer bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          value ? "font-semibold" : "text-muted-foreground"
+        }`}
+      />
+    </label>
+  );
+}
+
 const FOKUS = [
   {
     key: "overdue" as const,
@@ -264,6 +334,16 @@ function Aufgaben() {
     () => blocks.flatMap((block) => block.categories.flatMap((category) => category.tasks)),
     [blocks],
   );
+  const aktiveFilter = [
+    search,
+    eventFilter === "all" ? "" : eventFilter,
+    statusFilter === "all" ? "" : statusFilter,
+    ownerFilter === "all" ? "" : ownerFilter,
+    categoryFilter === "all" ? "" : categoryFilter,
+    priorityFilter === "all" ? "" : priorityFilter,
+    fromDate,
+    toDate,
+  ].filter(Boolean).length;
   const counts = useMemo(() => queueCounts(tasks), [tasks]);
   const sichtbareAufgaben = useMemo(
     () => (focus === "all" ? tasks : tasks.filter((item) => queueGroupOf(item) === focus)),
@@ -377,125 +457,102 @@ function Aufgaben() {
           Globale Aufgabe anlegen
         </Button>
       </div>
-      <div className="grid gap-3 md:grid-cols-4">
-        <div>
-          <Label htmlFor="task-search">Suche</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative">
+          <span className="sr-only">Aufgaben durchsuchen</span>
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          />
           <Input
             id="task-search"
             value={search}
+            placeholder="Aufgabe, Event oder Person …"
             onChange={(event) => setSearch(event.target.value)}
-            className="h-11 md:h-8"
+            className="h-9 w-64 rounded-full pl-8"
           />
-        </div>
-        <div>
-          <Label htmlFor="task-event">Event</Label>
-          <select
-            id="task-event"
-            className={control}
-            value={eventFilter}
-            onChange={(event) => setEventFilter(event.target.value)}
+        </label>
+
+        <FilterChip label="Event" value={eventFilter} onChange={setEventFilter} inaktiv="all">
+          <option value="all">alle</option>
+          <option value="global">Global</option>
+          {data?.eventChoices.map((event) => (
+            <option key={event.id} value={event.id}>
+              {event.name}
+            </option>
+          ))}
+        </FilterChip>
+
+        <FilterChip label="Status" value={statusFilter} onChange={setStatusFilter} inaktiv="all">
+          <option value="all">alle</option>
+          {Object.entries(statusLabel).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </FilterChip>
+
+        <FilterChip label="Person" value={ownerFilter} onChange={setOwnerFilter} inaktiv="all">
+          <option value="all">alle</option>
+          <option value="none">nicht zugeordnet</option>
+          {data?.owners.map((owner) => (
+            <option key={owner.id} value={owner.id}>
+              {owner.displayName}
+            </option>
+          ))}
+        </FilterChip>
+
+        <FilterChip
+          label="Kategorie"
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          inaktiv="all"
+        >
+          <option value="all">alle</option>
+          <option value="none">ohne</option>
+          {data?.groups.map((group) => (
+            <option key={group.id} value={group.id}>
+              {group.name}
+            </option>
+          ))}
+        </FilterChip>
+
+        <FilterChip
+          label="Priorität"
+          value={priorityFilter}
+          onChange={setPriorityFilter}
+          inaktiv="all"
+        >
+          <option value="all">alle</option>
+          {Object.entries(priorityLabel).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </FilterChip>
+
+        <DateChip label="Ende ab" value={fromDate} onChange={setFromDate} />
+        <DateChip label="Ende bis" value={toDate} onChange={setToDate} />
+
+        {aktiveFilter > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              setEventFilter("all");
+              setStatusFilter("all");
+              setOwnerFilter("all");
+              setCategoryFilter("all");
+              setPriorityFilter("all");
+              setFromDate("");
+              setToDate("");
+            }}
+            className="min-h-11 rounded-full px-3 text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline md:min-h-8"
           >
-            <option value="all">Alle Events</option>
-            <option value="global">Global</option>
-            {data?.eventChoices.map((event) => (
-              <option key={event.id} value={event.id}>
-                {event.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="task-status">Status</Label>
-          <select
-            id="task-status"
-            className={control}
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-          >
-            <option value="all">Alle Status</option>
-            {Object.entries(statusLabel).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="task-owner">Person</Label>
-          <select
-            id="task-owner"
-            className={control}
-            value={ownerFilter}
-            onChange={(event) => setOwnerFilter(event.target.value)}
-          >
-            <option value="all">Alle Personen</option>
-            <option value="none">Nicht zugeordnet</option>
-            {data?.owners.map((owner) => (
-              <option key={owner.id} value={owner.id}>
-                {owner.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
+            {aktiveFilter} Filter zurücksetzen
+          </button>
+        )}
       </div>
-      <details className="rounded-md border border-border bg-muted/20 px-3 py-2">
-        <summary className="cursor-pointer font-medium">Weitere Filter</summary>
-        <div className="mt-3 grid gap-3 md:grid-cols-4">
-          <div>
-            <Label htmlFor="task-category">Kategorie</Label>
-            <select
-              id="task-category"
-              className={control}
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-            >
-              <option value="all">Alle Kategorien</option>
-              <option value="none">Ohne Kategorie</option>
-              {data?.groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="task-priority">Priorität</Label>
-            <select
-              id="task-priority"
-              className={control}
-              value={priorityFilter}
-              onChange={(event) => setPriorityFilter(event.target.value)}
-            >
-              <option value="all">Alle Prioritäten</option>
-              {Object.entries(priorityLabel).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="task-from">Ende ab</Label>
-            <Input
-              id="task-from"
-              type="date"
-              value={fromDate}
-              onChange={(event) => setFromDate(event.target.value)}
-              className="h-11 md:h-8"
-            />
-          </div>
-          <div>
-            <Label htmlFor="task-to">Ende bis</Label>
-            <Input
-              id="task-to"
-              type="date"
-              value={toDate}
-              onChange={(event) => setToDate(event.target.value)}
-              className="h-11 md:h-8"
-            />
-          </div>
-        </div>
-      </details>
       {view === "table" ? (
         <>
           <section
