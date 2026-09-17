@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { ChevronDown, ChevronRight, ArrowRight, Check, Plus } from "lucide-react";
 import type { Dependency, Task, TaskFlow } from "@t2w/domain/project-management";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { formatDatum } from "@/lib/t2w/format";
 import { taskProgressCounts, taskState, TASK_STATE_LABEL } from "@/lib/t2w/task-state";
@@ -225,8 +228,75 @@ function FlowCard({
   );
 }
 
-function Arrow() {
-  return <ArrowRight aria-hidden="true" className="mx-1.5 size-4 shrink-0 text-border" />;
+function Arrow({ faint }: { faint?: boolean }) {
+  return (
+    <ArrowRight
+      aria-hidden="true"
+      className={cn("mx-1.5 size-4 shrink-0", faint ? "text-border/60" : "text-border")}
+    />
+  );
+}
+
+/**
+ * Eingabe für eine neue Aufgabe. Legt an und bleibt offen, damit mehrere
+ * Aufgaben hintereinander erfasst werden können, ohne das Sheet zu öffnen.
+ */
+function QuickAdd({
+  label,
+  placeholder,
+  busy,
+  onCreate,
+  className,
+}: {
+  label: string;
+  placeholder: string;
+  busy?: boolean;
+  onCreate: (title: string) => Promise<unknown> | unknown;
+  className?: string;
+}) {
+  const [title, setTitle] = useState("");
+  const inputId = `quick-add-${label.replace(/\W+/g, "-").toLowerCase()}`;
+
+  const submit = async () => {
+    const value = title.trim();
+    if (!value) return;
+    await onCreate(value);
+    setTitle("");
+  };
+
+  return (
+    <form
+      className={cn("flex items-center gap-2", className)}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submit();
+      }}
+    >
+      <label htmlFor={inputId} className="sr-only">
+        {label}
+      </label>
+      <Input
+        id={inputId}
+        value={title}
+        placeholder={placeholder}
+        autoComplete="off"
+        disabled={busy ?? false}
+        onChange={(event) => setTitle(event.target.value)}
+        // Enter legt an und lässt das Feld offen. Das implizite Absenden des
+        // Formulars reicht nicht überall, deshalb ausdrücklich.
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+          event.preventDefault();
+          void submit();
+        }}
+        className="h-9 flex-1"
+      />
+      <Button type="submit" size="sm" disabled={(busy ?? false) || !title.trim()}>
+        <Plus aria-hidden="true" className="size-4" />
+        Anlegen
+      </Button>
+    </form>
+  );
 }
 
 /**
@@ -241,6 +311,8 @@ export function TaskFlowChain({
   edges,
   groupName,
   onOpen,
+  onAppend,
+  busy,
 }: {
   flows: readonly TaskFlow[];
   groupId: string | null;
@@ -248,7 +320,10 @@ export function TaskFlowChain({
   edges: readonly Dependency[];
   groupName: (groupId: string | null) => string;
   onOpen: (task: CategoryTask) => void;
+  onAppend?: (predecessorId: string, title: string) => Promise<unknown> | unknown;
+  busy?: boolean;
 }) {
+  const [appendTo, setAppendTo] = useState<string | null>(null);
   const { chains } = splitFlows(flows);
   if (!chains.length) return null;
 
@@ -264,6 +339,10 @@ export function TaskFlowChain({
           (taskId) => taskById.get(taskId)?.groupId ?? null,
           groupId,
         );
+        // Anfügen nur, wenn die letzte Stufe eine einzige Aufgabe ist. Bei
+        // mehreren parallelen Enden wäre nicht bestimmt, an welches.
+        const lastStage = chain[chain.length - 1] ?? [];
+        const last = lastStage.length === 1 ? (lastStage[0] ?? null) : null;
 
         return (
           <div key={chain.flat().join("-")} className="flex items-center overflow-x-auto pb-1">
@@ -312,6 +391,33 @@ export function TaskFlowChain({
                 </div>
               </div>
             ))}
+
+            {onAppend && last && (
+              <div className="flex items-center">
+                <Arrow faint />
+                {appendTo === last ? (
+                  <QuickAdd
+                    label={`Nachfolger von ${taskById.get(last)?.title ?? "Aufgabe"}`}
+                    placeholder="Was kommt danach?"
+                    {...(busy === undefined ? {} : { busy })}
+                    className="w-[300px] shrink-0"
+                    onCreate={async (title) => {
+                      await onAppend(last, title);
+                      setAppendTo(null);
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAppendTo(last)}
+                    className="flex h-[58px] w-[184px] shrink-0 items-center justify-center gap-1.5 rounded-lg border border-dashed text-[12.5px] text-muted-foreground hover:text-foreground"
+                  >
+                    <Plus aria-hidden="true" className="size-4" />
+                    Nachfolger
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
@@ -337,17 +443,19 @@ export function TaskTable({
   ownerName,
   onOpen,
   onCreate,
+  busy,
   limit = 6,
   categoryName,
 }: {
   tasks: readonly CategoryTask[];
   ownerName: OwnerName;
   onOpen: (task: CategoryTask) => void;
-  onCreate?: () => void;
+  onCreate?: (title: string) => Promise<unknown> | unknown;
+  busy?: boolean;
   limit?: number;
   categoryName: string;
 }) {
-  if (!tasks.length) return null;
+  if (!tasks.length && !onCreate) return null;
 
   const sorted = [...tasks].sort((a, b) => {
     const order = STATE_ORDER[taskState(a)] - STATE_ORDER[taskState(b)];
@@ -360,81 +468,78 @@ export function TaskTable({
 
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
-      <table className="w-full text-sm">
-        <caption className="sr-only">Aufgaben ohne Vorgänger in {categoryName}</caption>
-        <thead>
-          <tr className="border-b bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            <th scope="col" className="px-3 py-1.5 text-left">
-              Aufgabe
-            </th>
-            <th scope="col" className="w-24 px-3 py-1.5 text-left">
-              Status
-            </th>
-            <th scope="col" className="w-20 px-3 py-1.5 text-right">
-              Fällig
-            </th>
-            <th scope="col" className="w-10 px-3 py-1.5">
-              <span className="sr-only">Verantwortlich</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {shown.map((task) => {
-            const state = taskState(task);
-            return (
-              <tr key={task.id} className="border-b last:border-0">
-                <td className="px-3 py-1.5">
-                  <button
-                    type="button"
-                    onClick={() => onOpen(task)}
+      {sorted.length > 0 && (
+        <table className="w-full text-sm">
+          <caption className="sr-only">Aufgaben ohne Vorgänger in {categoryName}</caption>
+          <thead>
+            <tr className="border-b bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <th scope="col" className="px-3 py-1.5 text-left">
+                Aufgabe
+              </th>
+              <th scope="col" className="w-24 px-3 py-1.5 text-left">
+                Status
+              </th>
+              <th scope="col" className="w-20 px-3 py-1.5 text-right">
+                Fällig
+              </th>
+              <th scope="col" className="w-10 px-3 py-1.5">
+                <span className="sr-only">Verantwortlich</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((task) => {
+              const state = taskState(task);
+              return (
+                <tr key={task.id} className="border-b last:border-0">
+                  <td className="px-3 py-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onOpen(task)}
+                      className={cn(
+                        "min-h-11 text-left font-medium hover:underline md:min-h-0",
+                        state === "done" && "text-muted-foreground line-through",
+                      )}
+                    >
+                      {task.title}
+                    </button>
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <TaskStateChip state={state} />
+                  </td>
+                  <td
                     className={cn(
-                      "min-h-11 text-left font-medium hover:underline md:min-h-0",
-                      state === "done" && "text-muted-foreground line-through",
+                      "px-3 py-1.5 text-right tabular-nums",
+                      state === "overdue" ? "font-semibold text-task-overdue-strong" : "",
                     )}
                   >
-                    {task.title}
-                  </button>
-                </td>
-                <td className="px-3 py-1.5">
-                  <TaskStateChip state={state} />
-                </td>
-                <td
-                  className={cn(
-                    "px-3 py-1.5 text-right tabular-nums",
-                    state === "overdue" ? "font-semibold text-task-overdue-strong" : "",
-                  )}
-                >
-                  {task.endDate ? formatDatum(task.endDate) : "—"}
-                </td>
-                <td className="px-3 py-1.5">
-                  <Owner name={ownerName(task.ownerId)} />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    {task.endDate ? formatDatum(task.endDate) : "—"}
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <Owner name={ownerName(task.ownerId)} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
 
-      {(hidden.length > 0 || onCreate) && (
-        <div className="flex flex-wrap items-center gap-2 bg-muted/20 px-3 py-1.5 text-xs">
-          {hidden.length > 0 && (
-            <span className="text-muted-foreground">
-              {hidden.length} weitere
-              {hiddenDone ? `, davon ${hiddenDone} erledigt` : ""}
-            </span>
-          )}
-          <span className="flex-1" />
-          {onCreate && (
-            <button
-              type="button"
-              onClick={onCreate}
-              className="inline-flex min-h-11 items-center gap-1 font-semibold text-primary hover:underline md:min-h-8"
-            >
-              <Plus aria-hidden="true" className="size-3.5" />
-              Aufgabe
-            </button>
-          )}
-        </div>
+      {hidden.length > 0 && (
+        <p className="bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground">
+          {hidden.length} weitere
+          {hiddenDone ? `, davon ${hiddenDone} erledigt` : ""}
+        </p>
+      )}
+
+      {onCreate && (
+        <QuickAdd
+          label={`Neue Aufgabe in ${categoryName}`}
+          placeholder={`Neue Aufgabe in ${categoryName} …`}
+          {...(busy === undefined ? {} : { busy })}
+          onCreate={onCreate}
+          className="border-t bg-muted/20 px-3 py-2"
+        />
       )}
     </div>
   );

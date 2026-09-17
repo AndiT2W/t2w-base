@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { TaskSummary } from "@/components/t2w/TaskSummary";
 import {
@@ -27,7 +25,6 @@ export function ProjectManagement({
 }) {
   const [state, setState] = useState<PmState>();
   const [open, setOpen] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
   const [loadError, setLoadError] = useState("");
   const stateRef = useRef<PmState | undefined>(undefined);
   const interaction = useMemo(
@@ -80,9 +77,34 @@ export function ProjectManagement({
             Kategorien, nächste Schritte und Voraussetzungen
           </p>
         </div>
-        <a className="min-h-11 py-2 underline" href="/aufgaben">
-          Gesamtübersicht öffnen
-        </a>
+        <div className="flex items-center gap-3">
+          <a className="min-h-11 py-2 underline" href="/aufgaben">
+            Gesamtübersicht öffnen
+          </a>
+          <Button
+            type="button"
+            disabled={!state || state.event.archived}
+            onClick={() => {
+              if (!state) return;
+              void interaction.open({
+                id: "",
+                scope: "EVENT",
+                eventId: state.event.id,
+                title: "",
+                description: "",
+                status: "OPEN",
+                priority: "NORMAL",
+                ownerId: null,
+                groupId: null,
+                startDate: null,
+                endDate: null,
+                version: 0,
+              });
+            }}
+          >
+            Neue Aufgabe
+          </Button>
+        </div>
       </header>
       {error && (
         <p role="alert" className="rounded-md border border-destructive p-3 text-destructive">
@@ -93,25 +115,6 @@ export function ProjectManagement({
         <p role="status">Aufgaben werden geladen …</p>
       ) : (
         <>
-          <form
-            className="flex flex-wrap items-end gap-2"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (await interaction.create({ title }, false)) setTitle("");
-            }}
-          >
-            <div className="min-w-48 flex-1">
-              <Label htmlFor="pm-new-title">Neue Aufgabe</Label>
-              <Input
-                id="pm-new-title"
-                required
-                value={title}
-                disabled={busy || state.event.archived}
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            </div>
-            <Button disabled={busy || state.event.archived}>Aufgabe anlegen</Button>
-          </form>
           <TaskSummary tasks={state.tasks} {...(eventStart ? { eventStart } : {})} />
           <div className="overflow-hidden rounded-lg border bg-card">
             {state.categories.map((category) => {
@@ -138,18 +141,36 @@ export function ProjectManagement({
                         edges={state.edges}
                         groupName={categoryName}
                         onOpen={(task) => void interaction.open(task)}
+                        busy={busy}
+                        {...(state.event.archived
+                          ? {}
+                          : {
+                              onAppend: async (predecessorId: string, title: string) => {
+                                const created = await interaction.create(
+                                  { title, groupId: category.groupId, eventId: state.event.id },
+                                  true,
+                                );
+                                if (created) await interaction.addDependency(predecessorId);
+                                interaction.close();
+                              },
+                            })}
                       />
                       <TaskTable
                         tasks={singleTasks(category.flows, taskById)}
                         ownerName={ownerName}
                         onOpen={(task) => void interaction.open(task)}
+                        busy={busy}
                         categoryName={name}
+                        {...(state.event.archived
+                          ? {}
+                          : {
+                              onCreate: (title: string) =>
+                                interaction.create(
+                                  { title, groupId: category.groupId, eventId: state.event.id },
+                                  false,
+                                ),
+                            })}
                       />
-                      {!members.length && (
-                        <p className="text-sm text-muted-foreground">
-                          Keine Aufgaben in dieser Kategorie.
-                        </p>
-                      )}
                     </div>
                   )}
                 </div>
