@@ -30,8 +30,36 @@ import {
   type PmGlobal,
 } from "@/lib/t2w/project-management";
 import { createTaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
+import { TaskQueue } from "@/components/t2w/TaskQueue";
+import {
+  QUEUE_GROUP_LABEL,
+  queueCounts,
+  queueGroupOf,
+  type QueueGroupKey,
+} from "@/lib/t2w/task-queue";
 
 export const Route = createFileRoute("/aufgaben")({ component: Aufgaben });
+const FOKUS = [
+  {
+    key: "overdue" as const,
+    label: QUEUE_GROUP_LABEL.overdue.toLowerCase(),
+    dot: "bg-task-overdue",
+    activeClass: "border-task-overdue/50 bg-task-overdue-soft",
+  },
+  {
+    key: "thisWeek" as const,
+    label: QUEUE_GROUP_LABEL.thisWeek.toLowerCase(),
+    dot: "bg-task-waiting",
+    activeClass: "border-task-waiting/50 bg-task-waiting-soft",
+  },
+  {
+    key: "blocked" as const,
+    label: QUEUE_GROUP_LABEL.blocked.toLowerCase(),
+    dot: "bg-task-open",
+    activeClass: "border-input bg-muted",
+  },
+];
+
 const control =
   "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:min-h-8 md:py-1";
 const dateValue = (value: string) => new Date(`${value}T00:00:00Z`).getTime();
@@ -169,7 +197,7 @@ function Aufgaben() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   });
   const [months, setMonths] = useState(3);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [focus, setFocus] = useState<QueueGroupKey | "all">("all");
   const [loadError, setLoadError] = useState("");
   const interaction = useMemo(
     () =>
@@ -236,6 +264,13 @@ function Aufgaben() {
     () => blocks.flatMap((block) => block.categories.flatMap((category) => category.tasks)),
     [blocks],
   );
+  const counts = useMemo(() => queueCounts(tasks), [tasks]);
+  const sichtbareAufgaben = useMemo(
+    () => (focus === "all" ? tasks : tasks.filter((item) => queueGroupOf(item) === focus)),
+    [tasks, focus],
+  );
+  const ownerName = (id: string | null) =>
+    data?.owners.find((owner) => owner.id === id)?.displayName ?? "—";
   const overviewCounts = useMemo(
     () => ({
       blocked: tasks.filter((item) => item.blockedBy.length > 0 || item.overdue).length,
@@ -251,11 +286,6 @@ function Aufgaben() {
   );
   const categoryName = (id: string | null) =>
     data?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
-  function toggleCategory(key: string) {
-    setExpandedCategories((current) =>
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
-    );
-  }
   const start = new Date(`${range}T00:00:00Z`),
     end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, 1)),
     duration = end.getTime() - start.getTime();
@@ -471,219 +501,41 @@ function Aufgaben() {
           <section
             aria-label="Aufgabenprioritäten"
             data-testid="task-priority-summary"
-            className="grid overflow-hidden rounded-lg border border-border bg-card shadow-sm sm:grid-cols-3"
+            className="flex flex-wrap gap-2"
           >
-            <div className="flex min-h-20 items-center gap-3 px-4 py-3 sm:border-r sm:border-border">
-              <span className="flex size-9 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-                <AlertTriangle aria-hidden="true" className="size-5" />
-              </span>
-              <span>
-                <strong className="block text-xl font-semibold tabular-nums">
-                  {overviewCounts.blocked}
-                </strong>
-                <span className="text-sm text-muted-foreground">Blockiert oder überfällig</span>
-              </span>
-            </div>
-            <div className="flex min-h-20 items-center gap-3 border-t border-border px-4 py-3 sm:border-t-0 sm:border-r">
-              <span className="flex size-9 items-center justify-center rounded-full bg-amber-700/10 text-amber-800 dark:text-amber-300">
-                <Clock3 aria-hidden="true" className="size-5" />
-              </span>
-              <span>
-                <strong className="block text-xl font-semibold tabular-nums">
-                  {overviewCounts.dueSoon}
-                </strong>
-                <span className="text-sm text-muted-foreground">Fällig diese Woche</span>
-              </span>
-            </div>
-            <div className="flex min-h-20 items-center gap-3 border-t border-border px-4 py-3 sm:border-t-0">
-              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <CircleDot aria-hidden="true" className="size-5" />
-              </span>
-              <span>
-                <strong className="block text-xl font-semibold tabular-nums">
-                  {overviewCounts.open}
-                </strong>
-                <span className="text-sm text-muted-foreground">Offene Aufgaben</span>
-              </span>
-            </div>
-          </section>
-
-          <section
-            data-testid="task-overview"
-            className="space-y-4"
-            aria-label="Aufgaben nach Event"
-          >
-            {blocks.map((block) => {
-              const eventName = block.event?.name ?? "Globale Aufgaben";
-              const eventTasks = block.categories.flatMap((category) => category.tasks);
-              const eventOpen = eventTasks.filter((item) => item.status !== "DONE").length;
-              const eventDueSoon = eventTasks.filter(
-                (item) => item.dueSoon && !item.overdue && item.blockedBy.length === 0,
-              ).length;
+            {FOKUS.map((fokus) => {
+              const aktiv = focus === fokus.key;
               return (
-                <section
-                  key={block.key}
-                  data-testid="task-event-card"
-                  aria-label={eventName}
-                  className="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
+                <button
+                  key={fokus.key}
+                  type="button"
+                  aria-pressed={aktiv}
+                  onClick={() => setFocus(aktiv ? "all" : fokus.key)}
+                  className={`flex min-h-11 min-w-44 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${
+                    aktiv ? fokus.activeClass : "border-border bg-card hover:bg-muted/40"
+                  }`}
                 >
-                  <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-nav px-4 py-3 text-nav-foreground">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <CalendarDays aria-hidden="true" className="size-5 shrink-0" />
-                      <h2 className="truncate text-base font-semibold sm:text-lg">{eventName}</h2>
-                    </div>
-                    <p className="text-sm text-nav-foreground/85">
-                      <strong className="font-semibold text-nav-foreground tabular-nums">
-                        {eventOpen} offen
-                      </strong>
-                      {eventDueSoon > 0 && <span> · {eventDueSoon} diese Woche</span>}
-                    </p>
-                  </header>
-                  <div className="space-y-3 bg-muted/25 p-3 sm:p-4">
-                    {block.categories.map((category) => {
-                      const key = `${block.key}:${category.groupId ?? "none"}`;
-                      const expanded = expandedCategories.includes(key);
-                      const categoryNameValue = categoryName(category.groupId);
-                      const categoryStyle = categoryPresentation(categoryNameValue);
-                      const categoryHealth = categoryHealthPresentation(category.health);
-                      const nextTask =
-                        category.tasks.find((item) => item.id === category.nextTaskId) ??
-                        category.tasks[0];
-                      const CategoryIcon = categoryStyle.Icon;
-                      const HealthIcon = categoryHealth.Icon;
-                      return (
-                        <article
-                          key={key}
-                          data-testid="task-category-card"
-                          data-category-tone={categoryStyle.tone}
-                          className={`overflow-hidden rounded-md border border-border border-l-4 bg-card shadow-sm transition-shadow hover:shadow-md ${categoryStyle.accent}`}
-                        >
-                          <div className="flex flex-col gap-4 p-3 sm:flex-row sm:items-center sm:p-4">
-                            <span
-                              aria-hidden="true"
-                              className={`flex size-11 shrink-0 items-center justify-center rounded-md ${categoryStyle.icon}`}
-                            >
-                              <CategoryIcon className="size-6" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-base font-semibold text-foreground">
-                                  {categoryNameValue}
-                                </h3>
-                                <span
-                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${categoryHealth.tone}`}
-                                >
-                                  <HealthIcon aria-hidden="true" className="size-3.5" />
-                                  {categoryHealth.label}
-                                </span>
-                              </div>
-                              {nextTask ? (
-                                <button
-                                  type="button"
-                                  className="mt-1.5 inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-sm text-left text-sm text-muted-foreground hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                  onClick={() => void interaction.open(nextTask)}
-                                >
-                                  <span className="font-medium text-foreground">
-                                    Nächster Schritt:
-                                  </span>
-                                  <span className="truncate">{nextTask.title}</span>
-                                  {nextTask.endDate && (
-                                    <span className="shrink-0">
-                                      · {formatDatum(nextTask.endDate)}
-                                    </span>
-                                  )}
-                                </button>
-                              ) : (
-                                <p className="mt-1.5 text-sm text-muted-foreground">
-                                  Keine Aufgaben
-                                </p>
-                              )}
-                            </div>
-                            <div className="grid shrink-0 grid-cols-3 overflow-hidden rounded-md border border-border text-center text-xs">
-                              <span className="min-w-16 border-r border-border px-2 py-1.5">
-                                <strong className="block text-sm tabular-nums">
-                                  {category.counts.open}
-                                </strong>
-                                offen
-                              </span>
-                              <span className="min-w-16 border-r border-border px-2 py-1.5">
-                                <strong className="block text-sm tabular-nums">
-                                  {category.counts.inProgress}
-                                </strong>
-                                in Arbeit
-                              </span>
-                              <span className="min-w-16 px-2 py-1.5">
-                                <strong className="block text-sm tabular-nums">
-                                  {category.counts.done}
-                                </strong>
-                                erledigt
-                              </span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="min-h-11 shrink-0"
-                              aria-expanded={expanded}
-                              aria-controls={`${key}-tasks`}
-                              onClick={() => toggleCategory(key)}
-                            >
-                              {expanded
-                                ? "Workflow ausblenden"
-                                : `Workflow anzeigen (${category.count})`}
-                              {expanded ? (
-                                <ChevronUp aria-hidden="true" className="size-4" />
-                              ) : (
-                                <ChevronDown aria-hidden="true" className="size-4" />
-                              )}
-                            </Button>
-                          </div>
-                          {expanded && (
-                            <ul
-                              id={`${key}-tasks`}
-                              aria-label={`Aufgaben in ${categoryNameValue}`}
-                              className="border-t border-border bg-muted/30 p-2 sm:p-3"
-                            >
-                              {category.tasks.map((item) => (
-                                <li key={item.id}>
-                                  <button
-                                    type="button"
-                                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                    onClick={() => void interaction.open(item)}
-                                  >
-                                    <span className="min-w-0">
-                                      <strong className="block truncate text-sm">
-                                        {item.title}
-                                      </strong>
-                                      <span className="text-xs text-muted-foreground">
-                                        {item.endDate
-                                          ? `Ende ${formatDatum(item.endDate)}`
-                                          : "Ohne Ende"}
-                                      </span>
-                                    </span>
-                                    <span
-                                      className={`shrink-0 rounded border px-1.5 py-0.5 text-[11px] font-medium ${taskStatusTone(item)}`}
-                                    >
-                                      {item.blockedBy.length
-                                        ? "Blockiert"
-                                        : statusLabel[item.status]}
-                                    </span>
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </article>
-                      );
-                    })}
-                  </div>
-                </section>
+                  <span
+                    className={`size-2.5 shrink-0 rounded-full ${fokus.dot}`}
+                    aria-hidden="true"
+                  />
+                  <strong className="text-xl font-semibold tabular-nums">
+                    {counts[fokus.key]}
+                  </strong>
+                  <span className="text-sm text-muted-foreground">{fokus.label}</span>
+                </button>
               );
             })}
-            {!blocks.length && (
-              <p className="rounded-lg border border-border bg-card py-8 text-center text-sm text-muted-foreground">
-                Keine Aufgaben für diese Filter gefunden.
-              </p>
-            )}
+          </section>
+
+          <section data-testid="task-overview" aria-label="Aufgaben nach Dringlichkeit">
+            <TaskQueue
+              tasks={sichtbareAufgaben}
+              categoryName={categoryName}
+              ownerName={ownerName}
+              taskTitle={(taskId) => allTaskById.get(taskId)?.title ?? taskId}
+              onOpen={(task) => void interaction.open(task)}
+            />
           </section>
         </>
       ) : (
