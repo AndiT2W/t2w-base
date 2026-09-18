@@ -47,6 +47,7 @@ export const Route = createFileRoute("/")({
 type Schnellfilter = "alle" | "diese-woche" | "offen" | "ueberfaellig" | "ohne-ordner";
 const OVERVIEW_COLUMNS = [
   "Status",
+  "TIME2WIN",
   "Event",
   "Veranstalter",
   "Sportart",
@@ -55,11 +56,11 @@ const OVERVIEW_COLUMNS = [
   "Tage",
   "Aufgaben",
   "Ordner",
-  "TIME2WIN",
 ] as const;
 type OverviewColumn = (typeof OVERVIEW_COLUMNS)[number];
 const OVERVIEW_TABLE_COLUMNS = [
   { key: "Status", sortValue: (event: T2WEvent) => STATUS_LABEL[event.status] },
+  { key: "TIME2WIN", sortValue: (event: T2WEvent) => event.t2wEventId ?? 0 },
   { key: "Event", sortValue: (event: T2WEvent) => event.name },
   { key: "Veranstalter", sortValue: (event: T2WEvent) => event.veranstalter },
   { key: "Sportart", sortValue: (event: T2WEvent) => event.sportart ?? "" },
@@ -75,7 +76,6 @@ const OVERVIEW_TABLE_COLUMNS = [
     sortValue: (event: T2WEvent) =>
       Number(Boolean(event.outlookOrdner)) + Number(Boolean(event.sharepointOrdner)),
   },
-  { key: "TIME2WIN", sortValue: (event: T2WEvent) => event.t2wEventId ?? 0 },
 ] as const;
 
 const SCHNELLFILTER: { key: Schnellfilter; label: string }[] = [
@@ -241,6 +241,23 @@ function Uebersicht() {
                     </SortHeader>
                   </th>
                 )}
+                {visibleColumns.includes("TIME2WIN") && (
+                  <th className="w-14 max-w-14 whitespace-nowrap !px-1 py-1.5">
+                    <SortHeader
+                      label="TIME2WIN"
+                      active={sort.key === "TIME2WIN"}
+                      direction={sort.direction}
+                      onSort={() => sortiere("TIME2WIN")}
+                    >
+                      <img
+                        src="/time2win_logo_button.svg"
+                        alt=""
+                        aria-hidden="true"
+                        className="size-4"
+                      />
+                    </SortHeader>
+                  </th>
+                )}
                 {visibleColumns.includes("Event") && (
                   <th className="px-2 py-1.5">
                     <SortHeader
@@ -324,23 +341,6 @@ function Uebersicht() {
                     </span>
                   </th>
                 )}
-                {visibleColumns.includes("TIME2WIN") && (
-                  <th className="whitespace-nowrap px-2 py-1.5">
-                    <SortHeader
-                      label="TIME2WIN"
-                      active={sort.key === "TIME2WIN"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("TIME2WIN")}
-                    >
-                      <img
-                        src="/time2win_logo_button.svg"
-                        alt=""
-                        aria-hidden="true"
-                        className="size-4"
-                      />
-                    </SortHeader>
-                  </th>
-                )}
                 <th className="px-2 py-1.5 text-right font-semibold">Aktion</th>
               </tr>
             </thead>
@@ -357,6 +357,24 @@ function Uebersicht() {
                       >
                         <StatusDot status={e.status} />
                         <span className="sr-only">{STATUS_LABEL[e.status]}</span>
+                      </td>
+                    )}
+                    {visibleColumns.includes("TIME2WIN") && (
+                      <td className="w-14 max-w-14 whitespace-nowrap !px-1 py-1 tabular-nums">
+                        {e.t2wEventId != null ? (
+                          <a
+                            href={`https://time2win.at/backend/event/${e.t2wEventId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            aria-label={`TIME2WIN Event-ID ${e.t2wEventId} im Backend öffnen`}
+                            title="TIME2WIN Backend öffnen"
+                          >
+                            {e.t2wEventId}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">–</span>
+                        )}
                       </td>
                     )}
                     {visibleColumns.includes("Event") && (
@@ -441,24 +459,6 @@ function Uebersicht() {
                             <FolderLink key={destination.id} destination={destination} />
                           ))}
                         </span>
-                      </td>
-                    )}
-                    {visibleColumns.includes("TIME2WIN") && (
-                      <td className="whitespace-nowrap px-2 py-1 tabular-nums">
-                        {e.t2wEventId != null ? (
-                          <a
-                            href={`https://time2win.at/backend/event/${e.t2wEventId}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label={`TIME2WIN Event-ID ${e.t2wEventId} im Backend öffnen`}
-                            title="TIME2WIN Backend öffnen"
-                          >
-                            {e.t2wEventId}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )}
                       </td>
                     )}
                     <td className="whitespace-nowrap px-2 py-1 text-right">

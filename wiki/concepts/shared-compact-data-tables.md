@@ -2,11 +2,13 @@
 title: Gemeinsame kompakte Datentabellen
 type: concept
 status: active
-updated: 2026-09-15
+updated: 2026-09-17
 sources:
   - ../../src/styles.css
   - ../../src/components/t2w/DataTable.tsx
+  - ../../src/components/t2w/PageHeader.tsx
   - ../../src/components/ui/table.tsx
+  - ../../src/styles.css
   - ../../src/components/t2w/table-model.ts
   - ../../src/components/t2w/ProjectManagement.tsx
   - ../../src/routes/aufgaben.tsx
@@ -38,6 +40,7 @@ sources:
 - Inhalte einer Zelle bleiben einzeilig und werden bei Bedarf gekürzt.
 - Statuskennzeichen sind rechteckig-kompakt (11 px); Hover und Tastaturfokus bleiben sichtbar.
 - Mobile Eventlisten nutzen Karten; vollständige Detailtabellen dürfen horizontal scrollen.
+- Beim vertikalen Scrollen bleiben der Seitenkopf mit Suche und der Tabellenkopf sichtbar. Der Tabellenkopf wird dynamisch direkt unterhalb des sticky Seitenkopfs positioniert. Auf schmaleren Viewports bleibt der horizontale Tabellen-Scroller erhalten; ab Desktopbreite wird dessen Overflow freigegeben, damit der Tabellenkopf am Seiten-Viewport haftet und keine Tabellenzeilen überlagert.
 
 ## Kontrast und visuelle Hierarchie
 
@@ -59,7 +62,7 @@ Jede gerenderte Datentabelle verwendet `DataTable` mit einem fachlichen Exportna
 
 `DataTable` wird in Übersichts-, Veranstaltungs-, Kontakt-/Kunden-, Hardware-, Auszahlungs-, Angebots- und Rechnungslisten sowie in Event-Detail- und Event-Aufgabentabellen genutzt. Der Modulvertrag setzt Kopfzeilen-, Zeilen-, Zellen-, Fokus- und Exportverhalten zentral durch; Routen behalten nur ihre fachlichen Filter und Zellinhalte. Die globale Aufgabenübersicht ist eine gruppierte Kartenansicht und keine Datentabelle.
 
-Die Eventtabellen in Übersicht und Veranstaltungen zeigen Sportart und Services als getrennte, sortierbare Spalten. Beide verwenden die konfigurierten Auswahl-Badges wie die Event-Stammdaten. Jeder Service hat ein eigenes Badge in der Services-Zelle; bei langen Werten ist der vollständige Text als Tooltip verfügbar. Die Statusspalte zeigt nur den Punkt und ist auf 3 rem begrenzt; die sichtbare Kurzform `St.` behält den Sortierknopf mit dem zugänglichen Namen `Status sortieren`. Der volle Status bleibt für Screenreader als Text verfügbar. Die sortierbare TIME2WIN-Spalte zeigt das TIME2WIN-Logo im Kopf und verlinkt eine vorhandene Event-ID auf das zugehörige Backend-Event. Siehe [Übersicht](../../src/routes/index.tsx), [Veranstaltungen](../../src/routes/veranstaltungen.tsx) und [Browser-Regression](../../tests/e2e/event-management.spec.ts).
+Die Eventtabellen in Übersicht und Veranstaltungen zeigen Sportart und Services als getrennte, sortierbare Spalten. Beide verwenden die konfigurierten Auswahl-Badges wie die Event-Stammdaten. Jeder Service hat ein eigenes Badge in der Services-Zelle; bei langen Werten ist der vollständige Text als Tooltip verfügbar. Die Statusspalte zeigt nur den Punkt und ist auf 3 rem begrenzt; die sichtbare Kurzform `St.` behält den Sortierknopf mit dem zugänglichen Namen `Status sortieren`. Der volle Status bleibt für Screenreader als Text verfügbar. Die sortierbare TIME2WIN-Spalte steht direkt zwischen Status und Event, ist auf 3,5 rem begrenzt, zeigt das TIME2WIN-Logo im Kopf und verlinkt eine vorhandene Event-ID auf das zugehörige Backend-Event. Siehe [Übersicht](../../src/routes/index.tsx), [Veranstaltungen](../../src/routes/veranstaltungen.tsx) und [Browser-Regression](../../tests/e2e/event-management.spec.ts).
 
 ## Dichte Arbeitsseiten (Variante A)
 

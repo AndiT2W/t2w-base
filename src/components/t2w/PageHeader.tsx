@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,34 @@ export function PageHeader({
   const navigate = useNavigate();
   const { t } = useI18n();
   const [global, setGlobal] = useState("");
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    const updateOffset = () => {
+      const bottom = Math.ceil(header.getBoundingClientRect().bottom);
+      document.documentElement.style.setProperty("--t2w-page-header-bottom", `${bottom}px`);
+    };
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateOffset) : null;
+
+    resizeObserver?.observe(header);
+    window.addEventListener("resize", updateOffset);
+    updateOffset();
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateOffset);
+      document.documentElement.style.removeProperty("--t2w-page-header-bottom");
+    };
+  }, []);
 
   return (
-    <header className="sticky top-16 z-30 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-7 lg:top-0 lg:px-7">
+    <header
+      ref={headerRef}
+      className="sticky top-16 z-30 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-7 lg:top-0 lg:px-7"
+    >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <nav

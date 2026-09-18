@@ -16,6 +16,9 @@
 - The operational organizer is not always the same as the legal or financial entity used for invoicing or payout.
 - `Nenngeld` payouts introduce a second financial direction: money must also be paid out to the organizer side, not only billed outward.
 - Contacts are primarily real people, but they may carry additional functional mail addresses used in current operations.
+- Der Rechnungsabgleich 2026 bestätigt, dass Rechnungsempfänger sowohl Organisationen als auch einzelne Personen sein können und nicht zwingend mit dem operativen Veranstalter identisch sind.
+- Rechnungsquellen können für dasselbe Kundenkonto unterschiedliche Namen, Kontakte und historische Anschriften enthalten. Eine identische UID ist ein starker Zusammenführungsindikator; abweichende ältere Angaben bleiben als Herkunftsinformation erhalten.
+- Fehlende oder widersprüchliche Rechnungsfelder werden markiert. Insbesondere darf die UID des Rechnungsstellers nicht als Kunden-UID übernommen werden.
 
 ## Modeling Implications
 
@@ -34,9 +37,11 @@
 - [../sources/2026-06-15-user-customer-model.md](../sources/2026-06-15-user-customer-model.md)
 - [../sources/2026-06-29-user-finance-role-model.md](../sources/2026-06-29-user-finance-role-model.md)
 - [../sources/2026-06-30-user-target-model-v1.md](../sources/2026-06-30-user-target-model-v1.md)
+- [../sources/2026-09-15-rechnungen-kundenstamm-abgleich.md](../sources/2026-09-15-rechnungen-kundenstamm-abgleich.md)
 
 ## Evidence
 
 - [../sources/2026-06-15-user-customer-model.md](../sources/2026-06-15-user-customer-model.md)
 - [../sources/2026-06-29-user-finance-role-model.md](../sources/2026-06-29-user-finance-role-model.md)
 - [../sources/2026-06-30-user-target-model-v1.md](../sources/2026-06-30-user-target-model-v1.md)
+- [../sources/2026-09-15-rechnungen-kundenstamm-abgleich.md](../sources/2026-09-15-rechnungen-kundenstamm-abgleich.md)

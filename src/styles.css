@@ -252,7 +252,10 @@ html[lang="en"] .lang-en-only {
    * mit ihnen um Aufmerksamkeit streiten.
    */
   .t2w-table-header {
-    background-color: color-mix(in oklab, var(--color-muted) 40%, transparent);
+    /* Deckend, nicht durchscheinend: der Kopf klebt beim Scrollen
+       (.t2w-data-table > thead), durchsichtig würden die Zeilen darunter
+       durchscheinen. */
+    background-color: color-mix(in oklab, var(--color-muted) 55%, var(--color-card));
     color: var(--color-muted-foreground);
     font-size: 0.625rem;
     letter-spacing: 0.08em;
@@ -261,6 +264,13 @@ html[lang="en"] .lang-en-only {
 
   .t2w-table-header > tr {
     border-bottom: 1px solid var(--color-border);
+  }
+
+  .t2w-sticky-table-header,
+  .t2w-data-table > thead {
+    position: sticky;
+    top: var(--t2w-page-header-bottom, 0px);
+    z-index: 20;
   }
 
   .t2w-table-header th {

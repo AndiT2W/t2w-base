@@ -4,6 +4,8 @@ Track ingested evidence and source summaries here.
 
 ## Active Sources
 
+- [Rechnungen-Kundenstamm-Abgleich 2026 (2026-09-15)](2026-09-15-rechnungen-kundenstamm-abgleich.md)
+
 - [ClickUp Live-Veranstaltungen (2026-09-15)](2026-09-15-clickup-live-veranstaltungen.md)
 
 - [Nutzerentscheidung zur Aufgabenübersicht (2026-09-15)](2026-09-15-user-task-overview-hierarchy.md)

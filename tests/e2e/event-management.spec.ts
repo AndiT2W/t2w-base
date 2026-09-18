@@ -252,6 +252,32 @@ test("lädt Events in 500er-Seiten und zeigt standardmäßig das aktuelle Jahr",
     .toBe(true);
 });
 
+test("filtert Veranstaltungen nach dem nächsten Kalenderjahr", async ({ page }) => {
+  await mockApi(page, {}, {}, [
+    {
+      id: "66666666-6666-4666-8666-666666666666",
+      eventCode: "270115_naechstes_jahr",
+      name: "Nächstes Jahr Event",
+      startAt: "2027-01-15T00:00:00.000Z",
+      endAt: "2027-01-15T00:00:00.000Z",
+    },
+  ]);
+  await page.goto("/veranstaltungen");
+
+  const table = page.locator("table");
+  await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(table.getByRole("link", { name: "Nächstes Jahr Event", exact: true })).toHaveCount(
+    0,
+  );
+
+  await page.getByRole("combobox").filter({ hasText: "Aktuelles Jahr" }).click();
+  await page.getByRole("option", { name: "Nächstes Jahr", exact: true }).click();
+
+  await expect(page.getByRole("combobox").filter({ hasText: "Nächstes Jahr" })).toBeVisible();
+  await expect(table.getByRole("link", { name: "Nächstes Jahr Event", exact: true })).toBeVisible();
+  await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toHaveCount(0);
+});
+
 test("verknüpft mehrere Events per Mehrfachauswahl und zeigt die Seriennachbarn als Badges", async ({
   page,
 }) => {
@@ -530,11 +556,11 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(table.getByRole("columnheader", { name: "TIME2WIN sortieren" })).toBeVisible();
   await expect(table.locator("thead img[src='/time2win_logo_button.svg']")).toBeVisible();
   const eventRow = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
-  await expect(eventRow.getByRole("cell").nth(3)).toHaveText("Triathlon");
-  await expect(eventRow.getByRole("cell").nth(3).locator("svg")).toHaveCount(1);
-  await expect(eventRow.getByRole("cell").nth(4)).toContainText("UHF");
-  await expect(eventRow.getByRole("cell").nth(4)).toContainText("Video (iRewind)");
-  await expect(eventRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(2);
+  await expect(eventRow.getByRole("cell").nth(4)).toHaveText("Triathlon");
+  await expect(eventRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(1);
+  await expect(eventRow.getByRole("cell").nth(5)).toContainText("UHF");
+  await expect(eventRow.getByRole("cell").nth(5)).toContainText("Video (iRewind)");
+  await expect(eventRow.getByRole("cell").nth(5).locator("svg")).toHaveCount(2);
   await expect(table.locator("[title='Outlook und SharePoint']")).toBeVisible();
   await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await expect(table.locator("tbody")).toContainText("20.08.2026");
@@ -548,11 +574,11 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
     overviewTable.getByRole("columnheader", { name: "Services sortieren" }),
   ).toBeVisible();
   const overviewRow = overviewTable.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
-  await expect(overviewRow.getByRole("cell").nth(3)).toHaveText("Triathlon");
-  await expect(overviewRow.getByRole("cell").nth(3).locator("svg")).toHaveCount(1);
-  await expect(overviewRow.getByRole("cell").nth(4)).toContainText("UHF");
-  await expect(overviewRow.getByRole("cell").nth(4)).toContainText("Video (iRewind)");
-  await expect(overviewRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(2);
+  await expect(overviewRow.getByRole("cell").nth(4)).toHaveText("Triathlon");
+  await expect(overviewRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(1);
+  await expect(overviewRow.getByRole("cell").nth(5)).toContainText("UHF");
+  await expect(overviewRow.getByRole("cell").nth(5)).toContainText("Video (iRewind)");
+  await expect(overviewRow.getByRole("cell").nth(5).locator("svg")).toHaveCount(2);
 });
 
 test("markiert nur Active- und UHF-Events am gleichen Starttag", async ({ page }) => {
@@ -641,7 +667,7 @@ test("hält die Statusspalte der Eventtabellen kompakt", async ({ page }) => {
   }
 });
 
-test("verlinkt die TIME2WIN-Event-ID aus beiden Eventtabellen mit dem Backend", async ({
+test("platziert die schmale TIME2WIN-Spalte nach dem Status und verlinkt die Event-ID", async ({
   page,
 }) => {
   await mockApi(page, { t2wEventId: 57 });
@@ -653,9 +679,15 @@ test("verlinkt die TIME2WIN-Event-ID aus beiden Eventtabellen mit dem Backend", 
     const backendLink = eventRow.getByRole("link", {
       name: "TIME2WIN Event-ID 57 im Backend öffnen",
     });
+    const columnHeaders = table.getByRole("columnheader");
+    const time2winHeader = columnHeaders.nth(1);
 
-    await expect(table.getByRole("columnheader", { name: "TIME2WIN sortieren" })).toBeVisible();
+    await expect(columnHeaders.nth(0)).toHaveAccessibleName("Status sortieren");
+    await expect(time2winHeader).toHaveAccessibleName("TIME2WIN sortieren");
+    await expect(columnHeaders.nth(2)).toHaveAccessibleName("Event sortieren");
+    expect((await time2winHeader.boundingBox())?.width).toBeLessThanOrEqual(56);
     await expect(table.locator("thead img[src='/time2win_logo_button.svg']")).toBeVisible();
+    await expect(eventRow.getByRole("cell").nth(1)).toContainText("57");
     await expect(backendLink).toHaveText("57");
     await expect(backendLink).toHaveAttribute("href", "https://time2win.at/backend/event/57");
     await expect(backendLink).toHaveAttribute("target", "_blank");
