@@ -42,6 +42,7 @@ describe("Event workspace", () => {
     const transport = {
       create: vi.fn().mockResolvedValue(created),
       save: vi.fn(),
+      remove: vi.fn(),
       syncOutlook: vi.fn(),
       outlookPlan: vi.fn(),
     };
@@ -89,6 +90,7 @@ describe("Event workspace", () => {
     const transport = {
       create: vi.fn(),
       save: vi.fn().mockResolvedValue(saved),
+      remove: vi.fn(),
       syncOutlook: vi.fn(),
       outlookPlan: vi.fn(),
     };
@@ -113,6 +115,7 @@ describe("Event workspace", () => {
         .mockRejectedValue(
           Object.assign(new Error("conflict"), { code: "EVENT_VERSION_CONFLICT" }),
         ),
+      remove: vi.fn(),
       syncOutlook: vi.fn(),
       outlookPlan: vi.fn(),
     };
@@ -132,6 +135,7 @@ describe("Event workspace", () => {
     const transport = {
       create: vi.fn(),
       save: vi.fn(),
+      remove: vi.fn(),
       syncOutlook: vi.fn().mockResolvedValue(synced),
       outlookPlan: vi.fn(),
     };
@@ -149,6 +153,7 @@ describe("Event workspace", () => {
     const transport = {
       create: vi.fn(),
       save: vi.fn(),
+      remove: vi.fn(),
       syncOutlook: vi.fn(),
       outlookPlan: vi.fn().mockResolvedValue(plan),
     };

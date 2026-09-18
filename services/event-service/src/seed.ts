@@ -18,6 +18,8 @@ if (!existing)
       email: email.toLowerCase(),
       displayName: "Administrator",
       role: "ADMIN",
+      status: "ACTIVE",
+      financeAccess: true,
       passwordHash: await auth.hashPassword(password),
     },
   });

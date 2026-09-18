@@ -41,7 +41,7 @@ export function GanttSeite({
     return {
       datum,
       iso: datum.toISOString().slice(0, 10),
-      feiertag,
+      ...(feiertag ? { feiertag } : {}),
       wochenende: datum.getDay() === 0 || datum.getDay() === 6,
     };
   });
@@ -83,7 +83,7 @@ export function GanttSeite({
             search={{ ansicht: "gantt" }}
             label="Gantt"
             icon={GanttChartSquare}
-            aktiv={veranstaltungsmenue || undefined}
+            aktiv={veranstaltungsmenue}
           />
         </nav>
         <div className="flex items-center justify-end gap-2 rounded-t-lg border border-b-0 border-border bg-surface px-3 pt-3 text-sm">
@@ -249,16 +249,16 @@ function Reiter({
   aktiv = false,
 }: {
   to: "/veranstaltungen" | "/kalender" | "/gantt";
-  search?: { ansicht: "kalender" | "gantt" };
+  search?: { ansicht: "kalender" | "gantt" } | undefined;
   label: string;
   icon: typeof List;
-  aktiv?: boolean;
+  aktiv?: boolean | undefined;
 }) {
   return (
     <Link
       to={to}
-      search={search}
-      aria-current={aktiv ? "page" : undefined}
+      {...(search ? { search } : {})}
+      {...(aktiv ? { "aria-current": "page" as const } : {})}
       className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${aktiv ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
     >
       <Icon className="size-4" />

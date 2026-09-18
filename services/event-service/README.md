@@ -16,7 +16,11 @@ Readiness unter `/ready` verfügbar.
 
 Der erste Admin wird ausschließlich über `SEED_ADMIN_EMAIL` und
 `SEED_ADMIN_PASSWORD` im geschützten Deployment-Umfeld mit `npm run seed`
-angelegt. Das Passwort wird nur als Hash gespeichert.
+angelegt. Das Passwort wird nur als Hash gespeichert. Links für Einladungen,
+Passwort-Resets und E-Mail-Änderungen verwenden `APP_BASE_URL`. Sicherheitsmails
+werden über Microsoft Graph aus `SECURITY_MAIL_SENDER` (alternativ
+`OUTLOOK_MAILBOX`) versendet; ohne konfigurierte Absenderadresse werden sie
+nachvollziehbar als übersprungen gespeichert.
 
 ## API
 

@@ -4,7 +4,9 @@ import { AuditService } from "./audit.service.js";
 import { PayoutService } from "./payout.service.js";
 import { PayoutImportService } from "./payout-import.service.js";
 import { AutomationService } from "./automation.service.js";
+import { FinanceAccess, Roles } from "./authorization.js";
 
+@FinanceAccess()
 @Controller("api/v1/payouts")
 export class PayoutController {
   constructor(
@@ -35,6 +37,7 @@ export class PayoutController {
   }
 }
 
+@FinanceAccess()
 @Controller("api/v1/automation")
 export class AutomationController {
   constructor(
@@ -68,6 +71,7 @@ export class AutomationController {
   }
 }
 
+@Roles("ADMIN")
 @Controller("api/v1/audit-log")
 export class AuditLogController {
   constructor(private readonly audit: AuditService) {}

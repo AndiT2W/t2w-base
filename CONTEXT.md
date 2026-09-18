@@ -4,7 +4,7 @@
 
 **Event**: Die konkrete Veranstaltung ist zugleich der operative Projektcontainer. Quelle: [bestätigter Nutzerauftrag vom 10.09.2026](wiki/sources/2026-09-10-user-event-readiness.md).
 
-**Aufgabe**: Eine konkrete Arbeitseinheit innerhalb genau eines Planungsbereichs: eines Events oder der globalen Planung. Sie hat interne Verantwortung und ein dokumentiertes Ergebnis. Ihr Arbeitsstatus ist vom Lieferstatus und vom Eventstatus getrennt.
+**Aufgabe**: Eine konkrete Arbeitseinheit innerhalb genau eines Planungsbereichs: eines Events oder der globalen Planung. Sie kann einem internen Benutzer oder bei Eventaufgaben einem Veranstalterkonto zugewiesen sein und besitzt ein dokumentiertes Ergebnis. Ihr Arbeitsstatus ist vom Lieferstatus und vom Eventstatus getrennt.
 
 **Kategorie-Readiness**: Die aktuelle Planlage der erfassten Aufgaben eines Eventbereichs; sie belegt weder vollständige Erledigung noch die Vollständigkeit aller Eventanforderungen. Quelle: [PM-Spezifikation v3](wiki/tasks/project-management-spec-v3.md).
 
@@ -39,6 +39,17 @@ A selection list is a centrally managed set of domain-named values offered as ch
 Each selection list has one persisted order. Reordering is atomic: a list shows either its complete prior order or its complete new order. Existing values receive a deterministic alphabetical initial order when ordering is introduced.
 
 An inactive Event role remains visible for an existing Event-contact assignment, but is not available for a new assignment.
+
+## Benutzerzugriff
+
+**Systemrolle**: Die Zugriffsart eines Benutzerkontos. `Admin` und `Benutzer` sind interne Rollen; `Veranstalter` ist eine externe, auf konkret zugewiesene Eventaufgaben begrenzte Rolle.
+_Avoid_: Eventrolle, Finanzrolle
+
+**Finanzzugriff**: Die benutzerbezogene Berechtigung, Finanzmodule und geschützte Finanzdaten zu sehen. Admins besitzen den Finanzzugriff immer; bei normalen internen Benutzern wird er ausdrücklich ein- oder ausgeschaltet; Veranstalterkonten besitzen ihn nie.
+_Avoid_: Rolle Finanzen
+
+**Veranstalterkonto**: Ein externes Login, das genau einem Veranstalter-Stammsatz zugeordnet ist. Sein Zugriff entsteht ausschließlich durch persönlich zugewiesene Eventaufgaben, nicht allein durch die Veranstalterbeziehung zum Event.
+_Avoid_: Veranstalter-Stammsatz, Eventrolle Veranstalter
 
 ## Architectural vocabulary
 

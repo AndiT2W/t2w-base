@@ -131,7 +131,13 @@ function Veranstaltungen() {
   }, [events, suche, status, zeitraum, archiv, heute]);
   const sortiere = table.sortBy;
   const zeilen = table.rows(gefiltert);
-  const dateCollisions = useMemo(() => createEventDateCollisionMap(gefiltert), [gefiltert]);
+  const dateCollisions = useMemo(
+    () =>
+      createEventDateCollisionMap(
+        gefiltert.map((event) => ({ ...event, services: event.services ?? [] })),
+      ),
+    [gefiltert],
+  );
   if (ansicht === "kalender") return <KalenderSeite veranstaltungsmenue />;
   if (ansicht === "gantt") return <GanttSeite veranstaltungsmenue />;
 
@@ -523,16 +529,16 @@ function AnsichtsReiter({
   aktiv = false,
 }: {
   to: "/veranstaltungen" | "/kalender" | "/gantt";
-  search?: { ansicht: "kalender" | "gantt" };
+  search?: { ansicht: "kalender" | "gantt" } | undefined;
   label: string;
   icon: typeof List;
-  aktiv?: boolean;
+  aktiv?: boolean | undefined;
 }) {
   return (
     <Link
       to={to}
-      search={search}
-      aria-current={aktiv ? "page" : undefined}
+      {...(search ? { search } : {})}
+      {...(aktiv ? { "aria-current": "page" as const } : {})}
       className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
         aktiv
           ? "border-primary text-foreground"

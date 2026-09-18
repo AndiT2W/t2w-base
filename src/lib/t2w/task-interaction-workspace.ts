@@ -6,6 +6,7 @@ export type TaskComment = {
   text: string;
   createdAt: string;
   updatedAt: string;
+  author?: { id: string; displayName: string };
 };
 export type TaskActivity = { id: string; action: string; createdAt: string };
 export type TaskHistory = { comments: TaskComment[]; activities: TaskActivity[] };

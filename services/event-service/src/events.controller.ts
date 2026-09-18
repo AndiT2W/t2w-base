@@ -173,21 +173,36 @@ export class EventsController {
   }
 
   @Get()
-  list(@Query("q") q?: string, @Query("limit") limit = "500", @Query("offset") offset = "0") {
+  list(
+    @Req() req: { user: { role: string; financeAccess: boolean } },
+    @Query("q") q?: string,
+    @Query("limit") limit = "500",
+    @Query("offset") offset = "0",
+  ) {
     const take = Math.min(Math.max(Number(limit) || 500, 1), 1000);
     const skip = Math.max(Number(offset) || 0, 0);
-    return this.records.list({ q, skip, take });
+    return this.records.list({ q, skip, take }, this.hasFinance(req.user));
   }
 
-  @Get(":id") get(@Param("id", ParseUUIDPipe) id: string) {
-    return this.records.read(id);
+  @Get(":id") get(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Req() req: { user: { role: string; financeAccess: boolean } },
+  ) {
+    return this.records.read(id, this.hasFinance(req.user));
   }
-  @Get("by-code/:code") byCode(@Param("code") code: string) {
-    return this.records.readByCode(code);
+  @Get("by-code/:code") byCode(
+    @Param("code") code: string,
+    @Req() req: { user: { role: string; financeAccess: boolean } },
+  ) {
+    return this.records.readByCode(code, this.hasFinance(req.user));
   }
 
   @Post()
-  create(@Body() dto: CreateEventDto) {
+  create(
+    @Body() dto: CreateEventDto,
+    @Req() req: { user: { role: string; financeAccess: boolean } },
+  ) {
+    this.assertFinanceWrite(req.user, dto);
     return this.eventMutations.create(dto);
   }
 
@@ -204,6 +219,7 @@ export class EventsController {
     @Body() dto: UpdateEventDto,
     @Req() req: { user: PmActor },
   ) {
+    this.assertFinanceWrite(req.user, dto);
     if (
       dto.archived === false &&
       req.user.role !== "ADMIN" &&
@@ -325,5 +341,20 @@ export class EventsController {
         throw new ConflictException("EVENT_VERSION_CONFLICT");
       throw error;
     });
+  }
+
+  private hasFinance(user: { role: string; financeAccess: boolean }) {
+    return user.role === "ADMIN" || user.financeAccess;
+  }
+
+  private assertFinanceWrite(
+    user: { role: string; financeAccess: boolean },
+    dto: { financeNotes?: string; payoutRecipientId?: string },
+  ) {
+    if (
+      !this.hasFinance(user) &&
+      (dto.financeNotes !== undefined || dto.payoutRecipientId !== undefined)
+    )
+      throw new ForbiddenException("Kein Zugriff auf Finanzen.");
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { Check, ChevronDown, History, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Download, History, Paperclip, Plus, Trash2, X } from "lucide-react";
 import type { Task } from "@t2w/domain/project-management";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,11 +18,23 @@ import { successorIds } from "@/lib/t2w/task-flow-view";
 import { taskState } from "@/lib/t2w/task-state";
 import { TaskStateChip } from "@/components/t2w/TaskState";
 import { cn } from "@/lib/utils";
+import {
+  pmAttachments,
+  pmDownloadAttachment,
+  pmUploadAttachment,
+  type PmAttachment,
+} from "@/lib/t2w/project-management";
 
 const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
 
 export type TaskDetailPlanningContext = {
-  owners: { id: string; displayName: string; active: boolean }[];
+  owners: {
+    id: string;
+    displayName: string;
+    active: boolean;
+    role?: string;
+    organizerId?: string | null;
+  }[];
   groups: { id: string; name: string; active: boolean }[];
   tasks: readonly Task[];
   edges: readonly { predecessorId: string; successorId: string }[];
@@ -32,6 +44,8 @@ type TaskDetailSheetProps = {
   workspace: TaskInteractionWorkspace<unknown>;
   planning: TaskDetailPlanningContext;
   variant: "event" | "global";
+  readOnly?: boolean;
+  currentUserId?: string;
 };
 
 /** Felder, deren Änderung die Fußleiste als ungespeichert meldet. */
@@ -66,7 +80,13 @@ function textWithLinks(text: string) {
  * planning. Callers provide only the current planning context and adapter-backed
  * workspace; scope filtering and Task intentions stay behind this seam.
  */
-export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailSheetProps) {
+export function TaskDetailSheet({
+  workspace,
+  planning,
+  variant,
+  readOnly = false,
+  currentUserId,
+}: TaskDetailSheetProps) {
   const snapshot = useSyncExternalStore(
     workspace.subscribe,
     workspace.snapshot,
@@ -78,8 +98,11 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
   const [commentDraft, setCommentDraft] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [attachments, setAttachments] = useState<PmAttachment[]>([]);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
 
   const editable = Boolean(task?.id);
+  const canEdit = editable && !readOnly;
   const scopedTasks = task
     ? planning.tasks.filter(
         (candidate) => candidate.scope === task.scope && candidate.eventId === task.eventId,
@@ -100,6 +123,12 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
         .filter((title): title is string => Boolean(title))
     : [];
   const groupName = planning.groups.find((group) => group.id === draft.groupId)?.name ?? null;
+  const selectedOwner = planning.owners.find((owner) => owner.id === draft.ownerId);
+  const exposesTaskToOrganizer =
+    canEdit &&
+    variant === "event" &&
+    selectedOwner?.role === "ORGANIZER" &&
+    task?.ownerId !== selectedOwner.id;
   const unsaved = editable
     ? TRACKED.filter(
         ([field]) => task && draft[field] !== undefined && draft[field] !== task[field],
@@ -111,6 +140,11 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
     setEditingComment(null);
     setConfirmDelete(null);
     setHistoryOpen(false);
+    setAttachments([]);
+    if (task?.id)
+      void pmAttachments(task.id)
+        .then(setAttachments)
+        .catch(() => undefined);
   }, [task?.id]);
 
   return (
@@ -150,6 +184,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                   autoComplete="off"
                   placeholder="Was ist zu tun?"
                   value={draft.title ?? ""}
+                  disabled={readOnly}
                   onChange={(event) => workspace.updateDraft({ title: event.target.value })}
                   className="h-auto border-transparent bg-transparent px-2 py-1 text-xl font-semibold tracking-tight shadow-none focus-visible:border-input"
                 />
@@ -168,7 +203,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                         key={value}
                         type="button"
                         aria-pressed={active}
-                        disabled={busy}
+                        disabled={busy || readOnly}
                         onClick={() => workspace.updateDraft({ status: value })}
                         className={cn(
                           "min-h-11 flex-1 rounded-md px-3 text-sm transition-colors md:min-h-8",
@@ -207,6 +242,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                   id="task-detail-owner"
                   className={control}
                   value={draft.ownerId ?? ""}
+                  disabled={readOnly}
                   onChange={(event) =>
                     workspace.updateDraft({ ownerId: event.target.value || null })
                   }
@@ -220,6 +256,12 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                       </option>
                     ))}
                 </select>
+                {exposesTaskToOrganizer && (
+                  <p role="alert" className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    Mit der Zuweisung werden Aufgabeninhalt sowie vorhandene Kommentare und Dateien
+                    für dieses Veranstalterkonto sichtbar.
+                  </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="task-detail-group">Kategorie</Label>
@@ -227,6 +269,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                   id="task-detail-group"
                   className={control}
                   value={draft.groupId ?? ""}
+                  disabled={readOnly}
                   onChange={(event) =>
                     workspace.updateDraft({ groupId: event.target.value || null })
                   }
@@ -247,6 +290,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                   id="task-detail-start"
                   type="date"
                   value={draft.startDate ?? ""}
+                  disabled={readOnly}
                   onChange={(event) =>
                     workspace.updateDraft({ startDate: event.target.value || null })
                   }
@@ -258,6 +302,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                   id="task-detail-end"
                   type="date"
                   value={draft.endDate ?? ""}
+                  disabled={readOnly}
                   onChange={(event) =>
                     workspace.updateDraft({ endDate: event.target.value || null })
                   }
@@ -275,7 +320,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                       key={value}
                       type="button"
                       aria-pressed={active}
-                      disabled={busy}
+                      disabled={busy || readOnly}
                       onClick={() => workspace.updateDraft({ priority: value })}
                       className={cn(
                         "min-h-11 rounded-full border px-3 text-sm transition-colors md:min-h-8",
@@ -298,6 +343,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                 className={control}
                 rows={3}
                 value={draft.description ?? ""}
+                disabled={readOnly}
                 onChange={(event) => workspace.updateDraft({ description: event.target.value })}
               />
             </div>
@@ -308,7 +354,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                 Vorgänger, die vorher fertig sein müssen
               </p>
 
-              {editable ? (
+              {canEdit ? (
                 <>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {dependencies.map((edge) => {
@@ -420,56 +466,60 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
                           </p>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <p className="flex-1 text-xs text-muted-foreground">
+                              {item.author?.displayName ? `${item.author.displayName} · ` : ""}
                               {formatDatumMitZeit(item.updatedAt)}
                               {item.updatedAt !== item.createdAt ? " · bearbeitet" : ""}
                             </p>
-                            {confirmDelete === item.id ? (
-                              <>
-                                <span className="text-xs text-destructive">Wirklich löschen?</span>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="destructive"
-                                  disabled={busy}
-                                  onClick={() => {
-                                    void workspace.writeComment({ id: item.id, delete: true });
-                                    setConfirmDelete(null);
-                                  }}
-                                >
-                                  Löschen
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setConfirmDelete(null)}
-                                >
-                                  Abbrechen
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingComment(item.id);
-                                    setCommentDraft(item.text);
-                                  }}
-                                >
-                                  Bearbeiten
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setConfirmDelete(item.id)}
-                                >
-                                  Löschen
-                                </Button>
-                              </>
-                            )}
+                            {item.authorId === currentUserId &&
+                              (confirmDelete === item.id ? (
+                                <>
+                                  <span className="text-xs text-destructive">
+                                    Wirklich löschen?
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="destructive"
+                                    disabled={busy}
+                                    onClick={() => {
+                                      void workspace.writeComment({ id: item.id, delete: true });
+                                      setConfirmDelete(null);
+                                    }}
+                                  >
+                                    Löschen
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setConfirmDelete(null)}
+                                  >
+                                    Abbrechen
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingComment(item.id);
+                                      setCommentDraft(item.text);
+                                    }}
+                                  >
+                                    Bearbeiten
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setConfirmDelete(item.id)}
+                                  >
+                                    Löschen
+                                  </Button>
+                                </>
+                              ))}
                           </div>
                         </>
                       )}
@@ -509,6 +559,70 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
 
             {editable && (
               <section className="border-t pt-4">
+                <h3 className="flex items-center gap-2 text-sm font-medium">
+                  <Paperclip className="size-4" /> Dateien
+                </h3>
+                <ul className="mt-2 space-y-2">
+                  {attachments.map((attachment) => (
+                    <li
+                      key={attachment.id}
+                      className="flex items-center gap-2 rounded-md border p-2 text-sm"
+                    >
+                      <span className="min-w-0 flex-1 truncate">{attachment.fileName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {Math.ceil(attachment.size / 1024)} KB
+                      </span>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label={`${attachment.fileName} herunterladen`}
+                        onClick={() => void pmDownloadAttachment(task.id, attachment)}
+                      >
+                        <Download className="size-4" />
+                      </Button>
+                    </li>
+                  ))}
+                  {!attachments.length && (
+                    <li className="text-sm text-muted-foreground">Noch keine Dateien.</li>
+                  )}
+                </ul>
+                <Label htmlFor="task-attachment" className="mt-3 block">
+                  Datei hochladen
+                </Label>
+                <Input
+                  id="task-attachment"
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.docx,.xlsx"
+                  disabled={attachmentBusy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.currentTarget.value = "";
+                    if (!file || !task.id) return;
+                    setAttachmentBusy(true);
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const contentBase64 = String(reader.result).split(",")[1] ?? "";
+                      void pmUploadAttachment(task.id, {
+                        fileName: file.name,
+                        mimeType: file.type || "text/plain",
+                        contentBase64,
+                      })
+                        .then((saved) => setAttachments((current) => [...current, saved]))
+                        .finally(() => setAttachmentBusy(false));
+                    };
+                    reader.onerror = () => setAttachmentBusy(false);
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  PDF, Bilder, Text, CSV, Word oder Excel · maximal 5 MB
+                </p>
+              </section>
+            )}
+
+            {canEdit && (
+              <section className="border-t pt-4">
                 <Button
                   type="button"
                   variant="ghost"
@@ -539,7 +653,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
               </section>
             )}
 
-            {editable && (
+            {canEdit && (
               <section className="border-t pt-4">
                 {confirmDelete === "task" ? (
                   <div className="flex flex-wrap items-center gap-2">
@@ -581,7 +695,7 @@ export function TaskDetailSheet({ workspace, planning, variant }: TaskDetailShee
           </div>
         )}
 
-        {task && (
+        {task && !readOnly && (
           <div className="flex flex-wrap items-center gap-2 border-t bg-muted/20 px-5 py-3">
             <p className="flex-1 text-xs text-muted-foreground">
               {unsaved.length > 0 ? (

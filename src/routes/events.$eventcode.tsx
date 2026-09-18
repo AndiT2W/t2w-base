@@ -204,6 +204,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     kopiereEvent,
     loescheEvent,
     uebernehmeEvents,
+    currentUser,
   } = useT2W();
   const { personen, kunden, neuLaden } = useCrm();
   const { t } = useI18n();
@@ -237,6 +238,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [deleteAreaOpen, setDeleteAreaOpen] = useState(false);
   const [activeTab, updateActiveTab] = useState("stammdaten");
   const setActiveTab = (tab: string) => {
+    if (tab === "finanz" && !currentUser.financeAccess) return;
     updateActiveTab(tab);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", tab);
@@ -254,7 +256,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             "dateien",
             "kommunikation",
             "hardware",
-            "finanz",
+            ...(currentUser.financeAccess ? ["finanz"] : []),
             "time2win",
           ].includes(tab)
           ? tab
@@ -264,7 +266,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     sync();
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
-  }, []);
+  }, [currentUser.financeAccess]);
   const [saving, setSaving] = useState(false);
   const savedEventRef = useRef(event);
   const [seriesTargetEventIds, setSeriesTargetEventIds] = useState<string[]>([]);
@@ -314,9 +316,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         contacts: personen.map((person) => ({
           id: person.id,
           name: personName(person),
-          email: person.email,
+          ...(person.email ? { email: person.email } : {}),
         })),
-        mailbox: form.outlookMailbox ?? settings.outlookMailbox,
+        ...((form.outlookMailbox ?? settings.outlookMailbox)
+          ? { mailbox: form.outlookMailbox ?? settings.outlookMailbox ?? "" }
+          : {}),
         criteria: {
           kind: communicationFilter,
           contactId: communicationContactFilter,
@@ -622,7 +626,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <TabsList className="min-w-0 w-full max-w-full gap-2 grid grid-cols-3 md:grid-cols-8">
             <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
             <TabsTrigger value="time2win">ANMELDUNG</TabsTrigger>
-            <TabsTrigger value="finanz">FINANZ</TabsTrigger>
+            {currentUser.financeAccess && <TabsTrigger value="finanz">FINANZ</TabsTrigger>}
             <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
             <TabsTrigger id="event-tab-aufgaben" className="hidden md:inline-flex" value="aufgaben">
               PROJEKTMANAGEMENT
@@ -815,7 +819,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
                     <Label htmlFor="d-ver">Veranstalter</Label>
                     <Select
-                      value={form.veranstalterId}
+                      value={form.veranstalterId ?? ""}
                       onValueChange={(id) => {
                         const customer = kunden.find((item) => item.id === id);
                         if (customer) {
@@ -838,7 +842,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   </div>
                   <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
                     <Label>Sportart</Label>
-                    <Select value={form.sportartId} onValueChange={(id) => set("sportartId", id)}>
+                    <Select
+                      value={form.sportartId ?? ""}
+                      onValueChange={(id) => set("sportartId", id)}
+                    >
                       <SelectTrigger aria-label="Sportart">
                         <SelectValue placeholder="Sportart auswählen" />
                       </SelectTrigger>
@@ -1187,124 +1194,131 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="finanz">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Finanz</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <section
-                aria-labelledby="finanz-notizen-heading"
-                className="border-b border-border pb-5"
-              >
-                <Textarea
-                  aria-label="Finanznotizen"
-                  className="mt-1 min-h-24"
-                  value={form.finanzNotizen ?? ""}
-                  onChange={(e) => set("finanzNotizen", e.target.value)}
-                  placeholder="z. B. Abweichende Zahlungsvereinbarungen …"
-                />
-              </section>
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        {currentUser.financeAccess && (
+          <TabsContent value="finanz">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Finanz</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <section
-                  aria-labelledby="auszahlungsempfaenger-heading"
-                  className="rounded-lg border border-border bg-muted/20 p-4"
+                  aria-labelledby="finanz-notizen-heading"
+                  className="border-b border-border pb-5"
                 >
-                  <div className="mb-3">
-                    <h3 id="auszahlungsempfaenger-heading" className="font-medium text-foreground">
-                      Auszahlungsempfänger
-                    </h3>
-                  </div>
-                  <Select
-                    value={detail.payoutRecipientId ?? undefined}
-                    onValueChange={(id) => set("auszahlungsempfaengerId", id)}
+                  <Textarea
+                    aria-label="Finanznotizen"
+                    className="mt-1 min-h-24"
+                    value={form.finanzNotizen ?? ""}
+                    onChange={(e) => set("finanzNotizen", e.target.value)}
+                    placeholder="z. B. Abweichende Zahlungsvereinbarungen …"
+                  />
+                </section>
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                  <section
+                    aria-labelledby="auszahlungsempfaenger-heading"
+                    className="rounded-lg border border-border bg-muted/20 p-4"
                   >
-                    <SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5">
-                      <SelectValue placeholder="Veranstalter" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {kunden.map((kunde) => (
-                        <SelectItem key={kunde.id} value={kunde.id}>
-                          {kunde.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {detail.payoutRecipient && (
-                    <div aria-label="Stammdaten Auszahlungsempfänger" className="mt-3">
-                      <RecipientMasterData recipient={detail.payoutRecipient} />
-                    </div>
-                  )}
-                </section>
-                <section
-                  aria-labelledby="rechnungsempfaenger-heading"
-                  className="rounded-lg border border-border bg-muted/20 p-4"
-                >
-                  <div className="mb-3">
-                    <h3 id="rechnungsempfaenger-heading" className="font-medium text-foreground">
-                      Rechnungsempfänger
-                    </h3>
-                  </div>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        aria-label="Rechnungsempfänger auswählen"
-                        variant="outline"
-                        className="mt-2 w-full justify-start font-normal"
+                    <div className="mb-3">
+                      <h3
+                        id="auszahlungsempfaenger-heading"
+                        className="font-medium text-foreground"
                       >
-                        {detail.invoiceRecipients.length
-                          ? detail.invoiceRecipients.map((kunde) => kunde.name).join(", ")
-                          : "Rechnungsempfänger auswählen"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
-                      <Input
-                        aria-label="Rechnungsempfänger suchen"
-                        placeholder="Rechnungsempfänger suchen …"
-                        value={detail.invoiceRecipientSearch}
-                        onChange={(e) =>
-                          detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)
-                        }
-                      />
-                      <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                        {detail.visibleInvoiceRecipients.length ? (
-                          detail.visibleInvoiceRecipients.map((kunde) => (
-                            <label
-                              key={kunde.id}
-                              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
-                            >
-                              <Checkbox
-                                checked={detail.invoiceRecipientIds.includes(kunde.id)}
-                                onCheckedChange={() =>
-                                  detailWorkspace.toggleInvoiceRecipient(kunde.id)
-                                }
-                              />
-                              {kunde.name}
-                            </label>
-                          ))
-                        ) : (
-                          <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  {detail.invoiceRecipients.length > 0 && (
-                    <div aria-label="Stammdaten Rechnungsempfänger" className="mt-3 space-y-3">
-                      {detail.invoiceRecipients.map((kunde) => (
-                        <RecipientMasterData key={kunde.id} recipient={kunde} />
-                      ))}
+                        Auszahlungsempfänger
+                      </h3>
                     </div>
-                  )}
-                </section>
-              </div>
-              <PayoutsPanel
-                eventId={event.id}
-                recipientId={detail.payoutRecipientId}
-                recipientEmail={detail.payoutRecipient?.email}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    <Select
+                      value={detail.payoutRecipientId ?? ""}
+                      onValueChange={(id) => set("auszahlungsempfaengerId", id)}
+                    >
+                      <SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5">
+                        <SelectValue placeholder="Veranstalter" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {kunden.map((kunde) => (
+                          <SelectItem key={kunde.id} value={kunde.id}>
+                            {kunde.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {detail.payoutRecipient && (
+                      <div aria-label="Stammdaten Auszahlungsempfänger" className="mt-3">
+                        <RecipientMasterData recipient={detail.payoutRecipient} />
+                      </div>
+                    )}
+                  </section>
+                  <section
+                    aria-labelledby="rechnungsempfaenger-heading"
+                    className="rounded-lg border border-border bg-muted/20 p-4"
+                  >
+                    <div className="mb-3">
+                      <h3 id="rechnungsempfaenger-heading" className="font-medium text-foreground">
+                        Rechnungsempfänger
+                      </h3>
+                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          aria-label="Rechnungsempfänger auswählen"
+                          variant="outline"
+                          className="mt-2 w-full justify-start font-normal"
+                        >
+                          {detail.invoiceRecipients.length
+                            ? detail.invoiceRecipients.map((kunde) => kunde.name).join(", ")
+                            : "Rechnungsempfänger auswählen"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
+                        <Input
+                          aria-label="Rechnungsempfänger suchen"
+                          placeholder="Rechnungsempfänger suchen …"
+                          value={detail.invoiceRecipientSearch}
+                          onChange={(e) =>
+                            detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)
+                          }
+                        />
+                        <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                          {detail.visibleInvoiceRecipients.length ? (
+                            detail.visibleInvoiceRecipients.map((kunde) => (
+                              <label
+                                key={kunde.id}
+                                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                              >
+                                <Checkbox
+                                  checked={detail.invoiceRecipientIds.includes(kunde.id)}
+                                  onCheckedChange={() =>
+                                    detailWorkspace.toggleInvoiceRecipient(kunde.id)
+                                  }
+                                />
+                                {kunde.name}
+                              </label>
+                            ))
+                          ) : (
+                            <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    {detail.invoiceRecipients.length > 0 && (
+                      <div aria-label="Stammdaten Rechnungsempfänger" className="mt-3 space-y-3">
+                        {detail.invoiceRecipients.map((kunde) => (
+                          <RecipientMasterData key={kunde.id} recipient={kunde} />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </div>
+                <PayoutsPanel
+                  eventId={event.id}
+                  recipientId={detail.payoutRecipientId ?? null}
+                  {...(detail.payoutRecipient?.email
+                    ? { recipientEmail: detail.payoutRecipient.email }
+                    : {})}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="kontakte">
           <Card>

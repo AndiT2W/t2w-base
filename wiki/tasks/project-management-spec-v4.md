@@ -7,9 +7,11 @@ Stand: 2026-09-14. Quelle: Nutzerentscheidung in dieser Unterhaltung und die dre
 ## Aufgabe
 
 - Eine Aufgabe ist entweder global oder unveränderlich einem Event zugeordnet.
-- Sie enthält Titel, einfache Beschreibung, Status `OPEN`/`IN_PROGRESS`/`DONE`, Priorität `LOW`/`NORMAL`/`HIGH`, eine Person, Kategorie und optionale Start-/Endtage.
+- Sie enthält Titel, einfache Beschreibung, Status `OPEN`/`IN_PROGRESS`/`DONE`, Priorität `LOW`/`NORMAL`/`HIGH`, eine verantwortliche Person, Kategorie und optionale Start-/Endtage. Bei Eventaufgaben darf die Person auch ein Veranstalterkonto sein, das mit dem Veranstalter dieses Events verknüpft ist; globale Aufgaben bleiben intern.
 - Unerledigte Vorgänger erzeugen den abgeleiteten Hinweis „Blockiert“, verhindern jedoch nur den Abschluss.
 - Kommentare können vom Autor bearbeitet oder gelöscht werden. Änderungen sind im Aufgabenverlauf nachvollziehbar; eine Löschung entfernt Kommentar und dessen sichtbaren Verlauf.
+- Ein Veranstalterkonto sieht ausschließlich persönlich zugewiesene Eventaufgaben mit minimalem Eventkontext. Es darf den gemeinsamen Kommentarverlauf verwenden und Aufgabenanhänge lesen beziehungsweise hochladen, aber derzeit weder Status noch andere Aufgabenfelder ändern. Neuzuweisung oder Deaktivierung entzieht den Zugriff sofort; Beiträge bleiben erhalten.
+- Vor der ersten Zuweisung einer bereits befüllten Aufgabe wird sichtbar darauf hingewiesen, dass Aufgabeninhalt, Kommentare und Aufgabenanhänge mit dem Veranstalter geteilt werden.
 - Der alte `EventTask`-Speicher wird beim Rollout bewusst ohne Migration entfernt. `PmTask` ist die einzige Aufgabenhaltung; Event-Schnappschüsse enthalten ausschließlich eine kompakte Readiness-Projektion.
 
 ## Ansichten vom 14.09.2026 (historischer Entwurf)
@@ -23,7 +25,7 @@ Stand: 2026-09-14. Quelle: Nutzerentscheidung in dieser Unterhaltung und die dre
 ## Bewertung und Tests
 
 - Kategoriepunkt: kritisch bei Blockade oder Überfälligkeit, gelb bis sieben Tage vor offenem Ende, blau bei laufender Arbeit, grün bei ausschließlich erledigten Aufgaben.
-- Reale Browser-Regressionen prüfen geschlossene Kategorien, Ablauf/Blockade, kombinierte Übersicht, Gantt und mobile Ausblendung. Domain- und PostgreSQL-Tests sichern Regeln, Speicherung, Kommentare und Löschen.
+- Reale Browser-Regressionen prüfen geschlossene Kategorien, Ablauf/Blockade, kombinierte Übersicht, Gantt, mobile Ausblendung und den eingeschränkten Veranstalterzugang mit Kommentar und Datei-Upload nach Reload. Domain-, API- und PostgreSQL-Tests sichern Regeln, Speicherung, Kommentare, Anhänge, sofortigen Zugriffsentzug und den Schutz vor fremden Task-IDs.
 
 Diese Angaben beschreiben den damaligen Stand. Die aktuelle Gestaltung verwendet die Anzeigezustände und Fortschrittsbalken der [Designgrundlage](../concepts/project-management-design.md); die vorhandenen Browser-Erwartungen sind teilweise veraltet. Siehe [Prüfung vom 18.09.2026](../sources/2026-09-18-claude-pm-design.md).
 

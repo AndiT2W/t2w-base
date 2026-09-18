@@ -27,6 +27,31 @@ const task = (id: string, changes: Partial<Task> = {}): Task => ({
   ...changes,
 });
 describe("project management v4", () => {
+  it("preserves inactive categories on existing tasks while rejecting new assignments", () => {
+    const inactive = { ...catalogue, groups: [{ id: "group", active: false }] };
+    const existing = task("existing");
+    expect(() =>
+      validateTaskChange(existing, { ...existing, status: "DONE" }, [existing], [], inactive),
+    ).not.toThrow();
+    expect(() => validateTaskChange(null, existing, [], [], inactive)).toThrow("inaktiv");
+    expect(() =>
+      validateTaskChange({ ...existing, groupId: null }, existing, [], [], inactive),
+    ).toThrow("inaktiv");
+  });
+  it("uses the configured category order for event and timeline projections", () => {
+    const ordered = { ...catalogue, groups: [{ id: "second", active: true }, ...catalogue.groups] };
+    const result = projectTaskPortfolio(
+      [task("a"), task("b", { groupId: null }), task("c", { groupId: "second" })],
+      [],
+      ordered,
+      "2026-09-18T12:00:00Z",
+    );
+    expect(result.categories.map((category) => category.groupId)).toEqual([
+      "second",
+      "group",
+      null,
+    ]);
+  });
   it("models a sequential workflow with parallel stages and blocks only completion", () => {
     const tasks = [task("design"), task("setup"), task("print")];
     const edges = [

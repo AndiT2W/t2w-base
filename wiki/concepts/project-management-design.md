@@ -41,6 +41,14 @@ Referenzen: [TaskSummary](../../src/components/t2w/TaskSummary.tsx), [TaskCatego
 
 ## Aufgaben im Kontext anlegen
 
+### Kategorien zentral pflegen
+
+Unter **Einstellungen → Auswahllisten → Projektmanagement / Aufgaben** werden gemeinsame Aufgabenkategorien angelegt, umbenannt, aktiviert/deaktiviert und sortiert. Die Reihenfolge lässt sich per Ziehen oder beschrifteten Auf-/Ab-Schaltflächen ändern und gilt für Kategorieauswahl, Event-Kategorien und Zeitansichten. Namensänderungen werden ausdrücklich gespeichert; Konflikte erhalten den Entwurf und bieten erneutes Laden an. Kategorienmutationen bleiben serverseitig auf Admins beschränkt.
+
+Inaktive Kategorien bleiben in vorhandenen Aufgaben und Filtern sichtbar; die Aufgaben bleiben bearbeitbar. Neue Zuordnungen sowie Schnellanlage/Nachfolger in einer inaktiven Kategorie sind ausgeschlossen. Quelle: Nutzerkonversation vom 2026-09-18; [Kategorienverwaltung](../../src/components/t2w/PmCategorySettings.tsx), [PM-Service](../../services/event-service/src/project-management.service.ts), [Domain-Regeln](../../packages/domain/src/project-management.ts), [Browser-Regression](../../tests/pm-e2e/category-settings.spec.ts).
+
+### Erfassungswege
+
 | Weg | Übernommener Kontext | Interaktion |
 | --- | --- | --- |
 | Schnellzeile in geöffneter Kategorie | Event und Kategorie | Titel + Enter/„Anlegen“; Eingabe bleibt für die nächste Aufgabe verfügbar |

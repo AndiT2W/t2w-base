@@ -77,7 +77,10 @@ export function validateTaskChange(
     throw new Error("Gültiges Start- oder Enddatum erforderlich.");
   if (after.startDate && after.endDate && after.startDate > after.endDate)
     throw new Error("Das Ende darf nicht vor dem Start liegen.");
-  if (!active(catalogue.owners, after.ownerId) || !active(catalogue.groups, after.groupId))
+  if (
+    !active(catalogue.owners, after.ownerId) ||
+    (after.groupId !== before?.groupId && !active(catalogue.groups, after.groupId))
+  )
     throw new Error("Zuweisung prüfen: Person oder Kategorie ist inaktiv.");
   if (!before && after.status !== "OPEN") throw new Error("Neue Aufgaben beginnen als offen.");
   if (after.status === "DONE") {
@@ -181,7 +184,11 @@ export function projectTaskPortfolio(
         isOpen(task) && !!task.endDate && task.endDate >= today && task.endDate <= warningDate;
     return { ...task, blockedBy, overdue, dueSoon };
   });
-  const groupIds = [...new Set(projected.map((task) => task.groupId))];
+  const usedGroupIds = new Set(projected.map((task) => task.groupId));
+  const groupIds = [
+    ...catalogue.groups.filter((group) => usedGroupIds.has(group.id)).map((group) => group.id),
+    ...[...usedGroupIds].filter((id) => !catalogue.groups.some((group) => group.id === id)),
+  ];
   const categories = groupIds.map((groupId) => {
     const members = projected.filter((task) => task.groupId === groupId);
     const counts = {

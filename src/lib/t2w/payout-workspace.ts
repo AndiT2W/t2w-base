@@ -15,7 +15,7 @@ export type PayoutAdapter<T> = {
 export function createPayoutWorkspace<T>(adapter: PayoutAdapter<T>) {
   let rows: T[] = [];
   let error: string | null = null;
-  let snapshot = { rows, error };
+  let snapshot: { rows: T[]; error: string | null } = { rows, error };
   const listeners = new Set<() => void>();
   const publish = () => {
     snapshot = { rows, error };
@@ -58,8 +58,9 @@ export function createHttpPayoutAdapter<T>(): PayoutAdapter<T> {
     const response = await fetch(url, {
       method,
       credentials: "include",
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      ...(body === undefined
+        ? {}
+        : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
     });
     if (!response.ok) throw new Error("PAYOUT_REQUEST_FAILED");
     return response.status === 204 ? undefined : response.json();

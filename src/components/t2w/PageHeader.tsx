@@ -85,7 +85,8 @@ export function PageHeader({
             className="relative w-64"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!suche) navigate({ to: "/veranstaltungen", search: { q: global } });
+              if (!suche)
+                navigate({ to: "/veranstaltungen", search: { q: global, ansicht: "liste" } });
             }}
           >
             <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -106,7 +107,8 @@ export function PageHeader({
           className="relative flex-1"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!suche) navigate({ to: "/veranstaltungen", search: { q: global } });
+            if (!suche)
+              navigate({ to: "/veranstaltungen", search: { q: global, ansicht: "liste" } });
           }}
         >
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

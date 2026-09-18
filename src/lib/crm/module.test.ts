@@ -124,7 +124,7 @@ describe("CRM module", () => {
     };
 
     const linking = crm.link("p1", "c1");
-    expect(state.personen[0].kundenIds).toEqual([]);
+    expect(state.personen[0]!.kundenIds).toEqual([]);
     release();
 
     await expect(linking).resolves.toBeUndefined();
@@ -167,7 +167,7 @@ describe("CRM module", () => {
       },
     );
 
-    expect(JSON.parse(request.mock.calls[0][1].body)).toMatchObject({
+    expect(JSON.parse(String(request.mock.calls[0]![1]!.body))).toMatchObject({
       syncSource: "outlook",
       externalId: "contact-42",
       syncStatus: "SUCCESS",
@@ -187,8 +187,8 @@ describe("CRM module", () => {
 
     await local.link("p1", "c1");
     const linked = await local.load();
-    expect(linked.personen[0].kundenIds).toEqual(["c1"]);
-    expect(linked.kunden[0].kontaktIds).toEqual(["p1"]);
+    expect(linked.personen[0]!.kundenIds).toEqual(["c1"]);
+    expect(linked.kunden[0]!.kontaktIds).toEqual(["p1"]);
 
     await expect(createLocalCrmAdapter(storage, "crm-test", seed).load()).resolves.toEqual(linked);
   });
@@ -200,9 +200,13 @@ function statePerson() {
     vorname: "M",
     nachname: "K",
     email: "",
-    telefon: "",
+    telefonPrivat: "",
+    telefonBeruflich: "",
     funktion: "",
     ort: "",
+    land: "",
+    strasse: "",
+    plz: "",
     notiz: "",
     kundenprofilId: null,
     kundenIds: [],

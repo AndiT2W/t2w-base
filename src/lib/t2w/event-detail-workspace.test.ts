@@ -17,7 +17,7 @@ const event = {
   dateien: [],
   kommunikation: [],
   rechnungsempfaengerIds: ["c1"],
-} as T2WEvent;
+} as unknown as T2WEvent;
 const person = {
   id: "p1",
   vorname: "Marion",
@@ -36,6 +36,7 @@ function setup(
   const transport = {
     create: vi.fn(),
     save: vi.fn().mockResolvedValue(saved),
+    remove: vi.fn().mockResolvedValue(undefined),
     syncOutlook: vi.fn().mockResolvedValue(saved),
     syncTime2win,
     outlookPlan: vi

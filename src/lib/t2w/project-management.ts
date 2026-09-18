@@ -6,9 +6,24 @@ import type {
 } from "./task-interaction-workspace";
 
 export type PmState = ReturnType<typeof projectTaskPortfolio> & {
-  event: { id: string; eventCode: string; name: string; archived: boolean; pmGraphVersion: number };
-  owners: { id: string; displayName: string; active: boolean }[];
+  event: {
+    id: string;
+    eventCode: string;
+    name: string;
+    archived: boolean;
+    pmGraphVersion: number;
+    startAt?: string;
+    endAt?: string;
+  };
+  owners: {
+    id: string;
+    displayName: string;
+    active: boolean;
+    role?: string;
+    organizerId?: string | null;
+  }[];
   groups: { id: string; name: string; active: boolean; sortOrder: number; version: number }[];
+  readOnly?: boolean;
 };
 export type PmGlobal = {
   referenceTime: string;
@@ -16,8 +31,9 @@ export type PmGlobal = {
   groups: PmState["groups"];
   eventChoices: PmState["event"][];
   events: PmState["event"][];
-  tasks: (Task & { event: PmState["event"] | null })[];
+  tasks: (Task & { event: PmState["event"] | null; externalBlocked?: boolean })[];
   edges: PmState["edges"];
+  readOnly?: boolean;
 };
 type PmCommand = {
   type: "create" | "update" | "delete" | "add-dependency" | "remove-dependency";
@@ -55,6 +71,43 @@ const pmCommand = (state: PmState, command: PmCommand) =>
     graphVersion: state.event.pmGraphVersion,
   });
 export const pmGlobalRead = () => pmRequest<PmGlobal>("");
+export type PmAttachment = {
+  id: string;
+  taskId: string;
+  authorId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+  author?: { id: string; displayName: string };
+};
+export const pmAttachments = (taskId: string) =>
+  pmRequest<PmAttachment[]>(`/tasks/${taskId}/attachments`);
+export const pmUploadAttachment = (
+  taskId: string,
+  input: { fileName: string; mimeType: string; contentBase64: string },
+) => pmRequest<PmAttachment>(`/tasks/${taskId}/attachments`, input);
+export async function pmDownloadAttachment(taskId: string, attachment: PmAttachment) {
+  const response = await fetch(`/api/v1/pm/tasks/${taskId}/attachments/${attachment.id}`, {
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Datei konnte nicht geladen werden.");
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = attachment.fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+export type PmGroup = PmState["groups"][number];
+export const pmGroupsRead = () => pmRequest<Pick<PmState, "groups">>("/groups");
+export const pmGroupSave = (
+  group: Omit<PmGroup, "id" | "version"> & { id?: string; version?: number },
+) => pmRequest<PmGroup>("/groups", group);
+export const pmGroupsReorder = (groups: PmGroup[]) =>
+  pmRequest<Pick<PmState, "groups">>("/groups/reorder", {
+    groups: groups.map(({ id, version }) => ({ id, version })),
+  });
 const pmGlobalCommand = (command: PmCommand) => pmRequest<unknown>("/commands", command);
 
 const history = async (taskId: string) => {

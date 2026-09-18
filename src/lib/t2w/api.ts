@@ -2,6 +2,11 @@ import type { Settings, T2WEvent } from "./types";
 import type { SyncResult } from "./event-workspace";
 import type { EventTransport } from "@t2w/domain/event";
 
+let financeView = true;
+export const configureApiAccess = (access: { financeAccess: boolean }) => {
+  financeView = access.financeAccess;
+};
+
 type ApiEvent = {
   id: string;
   version?: number;
@@ -87,13 +92,13 @@ function dateOnly(value: string) {
 export function mapApiEvent(event: ApiEvent): T2WEvent {
   return {
     id: event.id,
-    version: event.version,
+    ...(event.version === undefined ? {} : { version: event.version }),
     seriesId: event.seriesId ?? null,
     eventcode: event.eventCode,
     name: event.name,
     veranstalter: event.organizer?.name ?? "—",
-    veranstalterId: event.organizer?.id,
-    sportartId: event.sport?.id,
+    ...(event.organizer?.id ? { veranstalterId: event.organizer.id } : {}),
+    ...(event.sport?.id ? { sportartId: event.sport.id } : {}),
     serviceIds: event.services?.map(({ service }) => service.id) ?? [],
     services: event.services?.map(({ service }) => service.name) ?? [],
     ort: event.location ?? "",
@@ -114,25 +119,36 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     kontakteNotizen: event.contactsNotes ?? "",
     outlookOrdner: event.outlookFolder,
     outlookWebUrl: event.outlookWebUrl,
-    outlookMailbox: event.outlookMailbox,
-    outlookRootFolderId: event.outlookRootFolderId,
-    outlookYearFolderId: event.outlookYearFolderId,
-    outlookQuarterFolderId: event.outlookQuarterFolderId,
-    outlookFolderId: event.outlookFolderId,
-    outlookFolderSyncStatus: event.outlookFolderSyncStatus,
-    outlookFolderLastSuccessAt: event.outlookFolderLastSuccessAt,
-    outlookFolderLastError: event.outlookFolderLastError,
-    outlookMessageSyncStatus:
-      event.outlookMessageSyncStatus as T2WEvent["outlookMessageSyncStatus"],
-    outlookMessageLastSuccessAt: event.outlookMessageLastSuccessAt,
-    outlookMessageLastError: event.outlookMessageLastError,
+    outlookMailbox: event.outlookMailbox ?? null,
+    outlookRootFolderId: event.outlookRootFolderId ?? null,
+    outlookYearFolderId: event.outlookYearFolderId ?? null,
+    outlookQuarterFolderId: event.outlookQuarterFolderId ?? null,
+    outlookFolderId: event.outlookFolderId ?? null,
+    ...(event.outlookFolderSyncStatus
+      ? {
+          outlookFolderSyncStatus: event.outlookFolderSyncStatus as NonNullable<
+            T2WEvent["outlookFolderSyncStatus"]
+          >,
+        }
+      : {}),
+    outlookFolderLastSuccessAt: event.outlookFolderLastSuccessAt ?? null,
+    outlookFolderLastError: event.outlookFolderLastError ?? null,
+    ...(event.outlookMessageSyncStatus
+      ? {
+          outlookMessageSyncStatus: event.outlookMessageSyncStatus as NonNullable<
+            T2WEvent["outlookMessageSyncStatus"]
+          >,
+        }
+      : {}),
+    outlookMessageLastSuccessAt: event.outlookMessageLastSuccessAt ?? null,
+    outlookMessageLastError: event.outlookMessageLastError ?? null,
     sharepointOrdner: event.sharepointFolder,
     t2wEventId: event.t2wEventId ?? null,
-    time2winSyncStatus: event.time2winSyncStatus,
+    ...(event.time2winSyncStatus ? { time2winSyncStatus: event.time2winSyncStatus } : {}),
     time2winLastSuccessAt: event.time2winLastSuccessAt ?? null,
     time2winLastError: event.time2winLastError ?? null,
     time2winSnapshot: event.time2winSnapshot ?? null,
-    auszahlungsempfaengerId: event.payoutRecipient?.id ?? event.organizer?.id ?? null,
+    auszahlungsempfaengerId: event.payoutRecipient?.id ?? null,
     rechnungsempfaengerIds:
       event.invoiceRecipients?.map((recipient) => recipient.organizer.id) ??
       (event.organizer?.id ? [event.organizer.id] : []),
@@ -169,8 +185,8 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
         richtung: message.direction,
         empfaenger: message.recipients,
         hatAnlagen: message.hasAttachments,
-        outlookWebUrl: message.webUrl ?? undefined,
-        conversationId: message.conversationId ?? undefined,
+        ...(message.webUrl ? { outlookWebUrl: message.webUrl } : {}),
+        ...(message.conversationId ? { conversationId: message.conversationId } : {}),
       })),
     ].sort((left, right) => right.datum.localeCompare(left.datum)),
     sportart: event.sport?.name ?? "",
@@ -186,7 +202,7 @@ async function eventAction<T>(
     method,
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   if (!response.ok) {
     const error = new Error("Event-Arbeitsfläche konnte nicht gespeichert werden") as Error & {
@@ -247,15 +263,80 @@ export const apiCreateEventActivity = (
     mapApiEvent,
   );
 
-export async function apiLogin(email: string, password: string) {
+export type CurrentUser = {
+  id: string;
+  displayName: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  pendingEmail: string | null;
+  role: "ADMIN" | "USER" | "ORGANIZER";
+  status: "INVITED" | "ACTIVE" | "DISABLED";
+  financeAccess: boolean;
+  organizerId: string | null;
+  organizer?: { id: string; name: string } | null;
+};
+
+export async function apiLogin(email: string, password: string, rememberMe = false) {
   const response = await fetch("/api/v1/auth/login", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, rememberMe }),
   });
   if (!response.ok) throw new Error("Login fehlgeschlagen");
+  return response.json() as Promise<CurrentUser>;
 }
+
+export async function apiCurrentUser() {
+  const response = await fetch("/api/v1/auth/me", { credentials: "include" });
+  if (!response.ok)
+    throw new Error(
+      response.status === 401 ? "AUTH_REQUIRED" : "Profil konnte nicht geladen werden",
+    );
+  return response.json() as Promise<CurrentUser>;
+}
+
+export async function apiLogout() {
+  await fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" });
+}
+
+async function publicAuthAction(path: string, body: unknown) {
+  const response = await fetch(`/api/v1/auth/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await response.json().catch(() => ({}))) as { message?: string };
+  if (!response.ok) throw new Error(data.message || "Aktion fehlgeschlagen");
+  return data;
+}
+export const apiActivate = (token: string, password: string, firstName: string, lastName: string) =>
+  publicAuthAction("activate", { token, password, firstName, lastName });
+export const apiRequestPasswordReset = (email: string) =>
+  publicAuthAction("password-reset/request", { email });
+export const apiCompletePasswordReset = (token: string, password: string) =>
+  publicAuthAction("password-reset/complete", { token, password });
+export const apiConfirmEmailChange = (token: string) =>
+  publicAuthAction("email-change/confirm", { token });
+
+async function privateAuthAction(path: string, method: "POST" | "PATCH", body: unknown) {
+  const response = await fetch(`/api/v1/auth/${path}`, {
+    method,
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await response.json().catch(() => ({}))) as { message?: string };
+  if (!response.ok) throw new Error(data.message || "Kontoänderung fehlgeschlagen");
+  return data;
+}
+export const apiUpdateProfile = (firstName: string, lastName: string) =>
+  privateAuthAction("profile", "PATCH", { firstName, lastName });
+export const apiChangePassword = (currentPassword: string, password: string) =>
+  privateAuthAction("password/change", "POST", { currentPassword, password });
+export const apiRequestEmailChange = (email: string) =>
+  privateAuthAction("email-change/request", "POST", { email });
 
 export async function apiEvents() {
   const pageSize = 500;
@@ -293,6 +374,8 @@ export async function apiCreateEvent(input: {
   verantwortlicher: string;
   teilnehmerprognose: number;
   notizen: string;
+  finanzNotizen?: string;
+  kontakteNotizen?: string;
   status: string;
   veranstalterId?: string;
   sportartId?: string;
@@ -326,7 +409,7 @@ export async function apiCreateEvent(input: {
       responsible: input.verantwortlicher,
       participantForecast: input.teilnehmerprognose,
       notes: input.notizen,
-      financeNotes: input.finanzNotizen,
+      ...(financeView ? { financeNotes: input.finanzNotizen } : {}),
       contactsNotes: input.kontakteNotizen,
       status,
     }),
@@ -335,10 +418,9 @@ export async function apiCreateEvent(input: {
   const created = (await response.json()) as ApiEvent;
   return mapApiEvent({
     ...created,
-    organizer:
-      created.organizer?.id || !input.veranstalterId
-        ? created.organizer
-        : { id: input.veranstalterId, name: input.veranstalter },
+    ...(created.organizer?.id || !input.veranstalterId
+      ? {}
+      : { organizer: { id: input.veranstalterId, name: input.veranstalter } }),
   });
 }
 
@@ -595,7 +677,7 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       responsible: patch.verantwortlicher,
       participantForecast: patch.teilnehmerwerte?.prognose ?? patch.teilnehmer,
       notes: patch.notizen,
-      financeNotes: patch.finanzNotizen,
+      ...(financeView ? { financeNotes: patch.finanzNotizen } : {}),
       contactsNotes: patch.kontakteNotizen,
       organizerId: patch.veranstalterId,
       sportId: patch.sportartId,
@@ -614,7 +696,7 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
                   : "ZUGESAGT",
       archived: patch.archiviert,
       t2wEventId: patch.t2wEventId,
-      payoutRecipientId: patch.auszahlungsempfaengerId,
+      ...(financeView ? { payoutRecipientId: patch.auszahlungsempfaengerId } : {}),
       invoiceRecipientIds: patch.rechnungsempfaengerIds,
       outlookFolder: patch.outlookOrdner,
       outlookWebUrl: patch.outlookWebUrl,
@@ -656,7 +738,7 @@ export async function apiSyncOutlookMessages(id: string) {
   return mapApiEvent(outcome.event);
 }
 
-export async function apiSyncTime2win(id: string) {
+export async function apiSyncTime2win(id: string): Promise<SyncResult> {
   const response = await fetch(`/api/v1/events/${id}/time2win/sync`, {
     method: "POST",
     credentials: "include",
@@ -666,7 +748,7 @@ export async function apiSyncTime2win(id: string) {
     { kind: "synced"; event: ApiEvent } | { kind: "failed"; event: ApiEvent; error: string };
   return outcome.kind === "synced"
     ? { kind: "synced", event: mapApiEvent(outcome.event) }
-    : ({ kind: "failed", error: new Error(outcome.error) } satisfies SyncResult<T2WEvent>);
+    : ({ kind: "failed", error: new Error(outcome.error) } satisfies SyncResult);
 }
 
 export async function apiOutlookFolderPlan(id: string) {

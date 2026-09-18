@@ -1,6 +1,6 @@
 export function formatDatum(iso: string): string {
   const parts = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/.exec(iso)?.groups;
-  return parts ? `${parts.day}.${parts.month}.${parts.year}` : iso;
+  return parts ? `${parts["day"]}.${parts["month"]}.${parts["year"]}` : iso;
 }
 
 export function formatDatumMitZeit(iso: string): string {

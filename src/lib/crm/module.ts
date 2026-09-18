@@ -9,6 +9,10 @@ import {
 } from "@t2w/domain/crm";
 
 type Request = typeof fetch;
+let financeView = true;
+export const configureCrmAccess = (access: { financeAccess: boolean }) => {
+  financeView = access.financeAccess;
+};
 export type CrmModule = CrmAdapter;
 export type { CrmState, KundeInput, PersonInput } from "@t2w/domain/crm";
 
@@ -82,7 +86,9 @@ function mapPerson(value: ApiPerson): Person {
     notiz: value.note ?? "",
     syncQuelle: value.syncSource ?? "",
     externeId: value.externalId ?? "",
-    syncStatus: value.syncStatus?.toLowerCase() as Person["syncStatus"],
+    ...(value.syncStatus
+      ? { syncStatus: value.syncStatus.toLowerCase() as NonNullable<Person["syncStatus"]> }
+      : {}),
     zuletztSynchronisiertAm: value.lastSyncedAt ?? null,
     externeUrl: value.externalUrl ?? "",
     kundenprofilId: value.customerProfile?.id ?? null,
@@ -192,9 +198,7 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             street: input.strasse,
             postalCode: input.plz,
             uid: input.uid,
-            iban: input.iban,
-            bic: input.bic,
-            bankName: input.bank,
+            ...(financeView ? { iban: input.iban, bic: input.bic, bankName: input.bank } : {}),
             email: input.email,
           }),
         }),
@@ -211,7 +215,6 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             firstName: next.vorname,
             lastName: next.nachname,
             email: next.email,
-            primaryContactId: next.primaryContactId,
             privatePhone: next.telefonPrivat,
             workPhone: next.telefonBeruflich,
             country: next.land,
@@ -244,9 +247,7 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             street: next.strasse,
             postalCode: next.plz,
             uid: next.uid,
-            iban: next.iban,
-            bic: next.bic,
-            bankName: next.bank,
+            ...(financeView ? { iban: next.iban, bic: next.bic, bankName: next.bank } : {}),
             email: next.email,
             active: next.status !== "inaktiv",
           }),

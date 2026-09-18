@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { Prisma, type PmTask } from "@prisma/client";
+import { Prisma, type PmTask, type User } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import {
   projectTaskPortfolio,
@@ -17,7 +17,7 @@ import {
 import { PrismaService } from "./prisma.service.js";
 import { AuditService } from "./audit.service.js";
 type Tx = Prisma.TransactionClient;
-export type PmActor = { id: string; role: string; active: boolean };
+export type PmActor = Pick<User, "id" | "role" | "status" | "organizerId" | "financeAccess">;
 type Scope = { scope: "EVENT"; eventId: string } | { scope: "GLOBAL"; eventId?: never };
 type Command = {
   graphVersion?: number;
@@ -49,24 +49,37 @@ export class ProjectManagementService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
-  private async actor(tx: Tx, actor: PmActor, admin = false) {
+  private async actor(
+    tx: Tx,
+    actor: PmActor,
+    options: { admin?: boolean; organizer?: boolean } = {},
+  ) {
     const user = await tx.user.findUnique({ where: { id: actor.id } });
     if (
-      !user?.active ||
-      !["ADMIN", "MITARBEITER"].includes(user.role) ||
-      (admin && user.role !== "ADMIN")
+      user?.status !== "ACTIVE" ||
+      (!options.organizer && user.role === "ORGANIZER") ||
+      (options.admin && user.role !== "ADMIN")
     )
       throw new ForbiddenException("Keine Berechtigung.");
+    if (user.role === "ORGANIZER") {
+      const organizer = user.organizerId
+        ? await tx.organizer.findFirst({ where: { id: user.organizerId, active: true } })
+        : null;
+      if (!organizer) throw new ForbiddenException("Veranstalterverknüpfung fehlt.");
+    }
     return user;
   }
   private catalogue(tx: Tx) {
     return Promise.all([
       tx.user.findMany({
-        select: { id: true, displayName: true, active: true },
+        select: { id: true, displayName: true, status: true, role: true, organizerId: true },
         orderBy: { displayName: "asc" },
       }),
       tx.pmGroup.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
-    ]).then(([owners, groups]) => ({ owners, groups }));
+    ]).then(([owners, groups]) => ({
+      owners: owners.map((owner) => ({ ...owner, active: owner.status === "ACTIVE" })),
+      groups,
+    }));
   }
   private async ensureScope(tx: Tx, scope: Scope, actor: PmActor) {
     await this.actor(tx, actor);
@@ -94,6 +107,8 @@ export class ProjectManagementService {
   }
   async read(eventId: string, actor: PmActor) {
     return this.prisma.$transaction(async (tx) => {
+      const user = await this.actor(tx, actor, { organizer: true });
+      if (user.role === "ORGANIZER") return this.organizerEventState(tx, eventId, user);
       await this.ensureScope(tx, { scope: "EVENT", eventId }, actor);
       const event = await tx.event.findUniqueOrThrow({
         where: { id: eventId },
@@ -107,7 +122,8 @@ export class ProjectManagementService {
   }
   async global(actor: PmActor) {
     return this.prisma.$transaction(async (tx) => {
-      await this.actor(tx, actor);
+      const user = await this.actor(tx, actor, { organizer: true });
+      if (user.role === "ORGANIZER") return this.organizerGlobalState(tx, user);
       const catalogue = await this.catalogue(tx),
         time = new Date().toISOString();
       const events = await tx.event.findMany({
@@ -218,6 +234,7 @@ export class ProjectManagementService {
             endDate: after.endDate,
             version: after.version,
           };
+          if (after.ownerId) await this.validateOwner(tx, scope, after.ownerId);
           if (before) await tx.pmTask.update({ where: { id: taskId }, data });
           else await tx.pmTask.create({ data: { id: taskId, ...data } });
           await tx.pmActivity.create({
@@ -305,8 +322,12 @@ export class ProjectManagementService {
   }
   async comments(taskId: string, actor: PmActor) {
     return this.prisma.$transaction(async (tx) => {
-      await this.actor(tx, actor);
-      return tx.pmComment.findMany({ where: { taskId }, orderBy: { createdAt: "asc" } });
+      await this.ensureTaskAccess(tx, taskId, actor);
+      return tx.pmComment.findMany({
+        where: { taskId },
+        orderBy: { createdAt: "asc" },
+        include: { author: { select: { id: true, displayName: true } } },
+      });
     });
   }
   async comment(
@@ -315,10 +336,10 @@ export class ProjectManagementService {
     actor: PmActor,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      await this.actor(tx, actor);
-      const task = await tx.pmTask.findUnique({ where: { id: taskId } });
-      if (!task) throw new NotFoundException("Aufgabe nicht gefunden.");
+      await this.ensureTaskAccess(tx, taskId, actor);
       const before = input.id ? await tx.pmComment.findUnique({ where: { id: input.id } }) : null;
+      if (before && before.taskId !== taskId)
+        throw new NotFoundException("Kommentar nicht gefunden.");
       if (before && before.authorId !== actor.id)
         throw new ForbiddenException("Nur eigene Kommentare dürfen geändert werden.");
       if (input.delete) {
@@ -357,7 +378,8 @@ export class ProjectManagementService {
   }
   activities(taskId: string, actor: PmActor) {
     return this.prisma.$transaction(async (tx) => {
-      await this.actor(tx, actor);
+      const user = await this.ensureTaskAccess(tx, taskId, actor);
+      if (user.role === "ORGANIZER") return [];
       return tx.pmActivity.findMany({
         where: { taskId },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -374,26 +396,287 @@ export class ProjectManagementService {
     input: { id?: string; name: string; active: boolean; sortOrder: number; version?: number },
     actor: PmActor,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      await this.actor(tx, actor, true);
-      if (!input.name?.trim() || !Number.isInteger(input.sortOrder))
-        throw new BadRequestException("Name und Reihenfolge erforderlich.");
-      const before = input.id ? await tx.pmGroup.findUnique({ where: { id: input.id } }) : null;
-      if (before && before.version !== input.version)
-        throw new ConflictException("Kategorie wurde geändert.");
-      return before
-        ? tx.pmGroup.update({
-            where: { id: before.id },
+    return this.prisma
+      .$transaction(async (tx) => {
+        await this.actor(tx, actor, { admin: true });
+        if (
+          typeof input.name !== "string" ||
+          !input.name.trim() ||
+          typeof input.active !== "boolean" ||
+          !Number.isInteger(input.sortOrder)
+        )
+          throw new BadRequestException("Name und Reihenfolge erforderlich.");
+        if (input.id) {
+          if (!Number.isInteger(input.version))
+            throw new BadRequestException("Kategorieversion erforderlich.");
+          const saved = await tx.pmGroup.updateMany({
+            where: { id: input.id, version: input.version },
             data: {
               name: input.name.trim(),
               active: input.active,
               sortOrder: input.sortOrder,
               version: { increment: 1 },
             },
-          })
-        : tx.pmGroup.create({
-            data: { name: input.name.trim(), active: input.active, sortOrder: input.sortOrder },
           });
+          if (!saved.count)
+            throw new ConflictException("Kategorie wurde geändert. Kategorien neu laden.");
+          return tx.pmGroup.findUniqueOrThrow({ where: { id: input.id } });
+        }
+        return tx.pmGroup.create({
+          data: { name: input.name.trim(), active: input.active, sortOrder: input.sortOrder },
+        });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
+          throw new ConflictException("Eine Kategorie mit diesem Namen ist bereits vorhanden.");
+        throw error;
+      });
+  }
+  reorderGroups(input: { groups: { id: string; version: number }[] }, actor: PmActor) {
+    return this.prisma
+      .$transaction(
+        async (tx) => {
+          await this.actor(tx, actor, { admin: true });
+          if (
+            !Array.isArray(input.groups) ||
+            input.groups.some(
+              (group) => !group || typeof group.id !== "string" || !Number.isInteger(group.version),
+            )
+          )
+            throw new BadRequestException("Kategorien und Versionen erforderlich.");
+          const current = await tx.pmGroup.findMany();
+          const ids = new Set(input.groups.map((group) => group.id));
+          if (
+            ids.size !== input.groups.length ||
+            current.length !== ids.size ||
+            current.some((group) => !ids.has(group.id))
+          )
+            throw new ConflictException("Kategorien wurden geändert. Kategorien neu laden.");
+          // Lock in a consistent order; roll back the complete order on a stale version.
+          const ordered = input.groups
+            .map((group, sortOrder) => ({ ...group, sortOrder }))
+            .sort((a, b) => a.id.localeCompare(b.id));
+          for (const group of ordered) {
+            const saved = await tx.pmGroup.updateMany({
+              where: { id: group.id, version: group.version },
+              data: { sortOrder: group.sortOrder, version: { increment: 1 } },
+            });
+            if (!saved.count)
+              throw new ConflictException("Kategorien wurden geändert. Kategorien neu laden.");
+          }
+          return {
+            groups: await tx.pmGroup.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+          };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      )
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
+          throw new ConflictException("Kategorien wurden geändert. Kategorien neu laden.");
+        throw error;
+      });
+  }
+
+  async attachments(taskId: string, actor: PmActor) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.ensureTaskAccess(tx, taskId, actor);
+      return tx.pmAttachment.findMany({
+        where: { taskId },
+        select: {
+          id: true,
+          taskId: true,
+          authorId: true,
+          fileName: true,
+          mimeType: true,
+          size: true,
+          createdAt: true,
+          author: { select: { id: true, displayName: true } },
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
     });
+  }
+
+  async uploadAttachment(
+    taskId: string,
+    input: { fileName?: string; mimeType?: string; contentBase64?: string },
+    actor: PmActor,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.ensureTaskAccess(tx, taskId, actor);
+      const fileName = input.fileName?.trim().replace(/[\\/]/g, "_") ?? "";
+      const mimeType = input.mimeType?.trim().toLowerCase() ?? "";
+      const allowed = new Set([
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "text/plain",
+        "text/csv",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ]);
+      if (!fileName || fileName.length > 180 || !allowed.has(mimeType) || !input.contentBase64)
+        throw new BadRequestException("Dateiname oder Dateityp ist ungültig.");
+      const content = Buffer.from(input.contentBase64, "base64");
+      if (!content.length || content.length > 5 * 1024 * 1024)
+        throw new BadRequestException("Datei muss zwischen 1 Byte und 5 MB groß sein.");
+      return tx.pmAttachment.create({
+        data: { taskId, authorId: actor.id, fileName, mimeType, size: content.length, content },
+        select: {
+          id: true,
+          taskId: true,
+          authorId: true,
+          fileName: true,
+          mimeType: true,
+          size: true,
+          createdAt: true,
+          author: { select: { id: true, displayName: true } },
+        },
+      });
+    });
+  }
+
+  async attachment(taskId: string, attachmentId: string, actor: PmActor) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.ensureTaskAccess(tx, taskId, actor);
+      const file = await tx.pmAttachment.findFirst({ where: { id: attachmentId, taskId } });
+      if (!file) throw new NotFoundException("Datei nicht gefunden.");
+      return file;
+    });
+  }
+
+  private async ensureTaskAccess(tx: Tx, taskId: string, actor: PmActor) {
+    const user = await this.actor(tx, actor, { organizer: true });
+    const task = await tx.pmTask.findUnique({
+      where: { id: taskId },
+      select: { ownerId: true, event: { select: { organizerId: true } } },
+    });
+    if (!task) throw new NotFoundException("Aufgabe nicht gefunden.");
+    if (
+      user.role === "ORGANIZER" &&
+      (task.ownerId !== user.id || !task.event || task.event.organizerId !== user.organizerId)
+    )
+      throw new NotFoundException("Aufgabe nicht gefunden.");
+    return user;
+  }
+
+  private async validateOwner(tx: Tx, scope: Scope, ownerId: string) {
+    const owner = await tx.user.findUnique({ where: { id: ownerId } });
+    if (!owner || owner.status !== "ACTIVE")
+      throw new BadRequestException("Aktiver Benutzer erforderlich.");
+    if (owner.role !== "ORGANIZER") return;
+    if (scope.scope !== "EVENT")
+      throw new BadRequestException("Veranstalter dürfen keine globalen Aufgaben erhalten.");
+    const organizer = owner.organizerId
+      ? await tx.organizer.findFirst({ where: { id: owner.organizerId, active: true } })
+      : null;
+    if (!organizer) throw new BadRequestException("Aktiver Veranstalter nicht gefunden.");
+    const event = await tx.event.findUnique({
+      where: { id: scope.eventId },
+      select: { organizerId: true },
+    });
+    if (!event?.organizerId || event.organizerId !== owner.organizerId)
+      throw new BadRequestException("Veranstalterkonto gehört nicht zu diesem Event.");
+  }
+
+  private async organizerGlobalState(tx: Tx, user: User) {
+    if (!user.organizerId) throw new ForbiddenException("Veranstalterverknüpfung fehlt.");
+    const rows = await tx.pmTask.findMany({
+      where: { ownerId: user.id, event: { organizerId: user.organizerId } },
+      include: {
+        event: {
+          select: {
+            id: true,
+            eventCode: true,
+            name: true,
+            startAt: true,
+            endAt: true,
+            archived: true,
+            pmGraphVersion: true,
+          },
+        },
+      },
+      orderBy: { id: "asc" },
+    });
+    const rawTasks = rows.map(asTask);
+    const taskIds = rawTasks.map((task) => task.id);
+    const edges = taskIds.length
+      ? await tx.pmDependency.findMany({
+          where: { predecessorId: { in: taskIds }, successorId: { in: taskIds } },
+        })
+      : [];
+    const externallyBlockedIds = taskIds.length
+      ? new Set(
+          (
+            await tx.pmDependency.findMany({
+              where: {
+                successorId: { in: taskIds },
+                predecessor: { status: { not: "DONE" } },
+                NOT: { predecessorId: { in: taskIds } },
+              },
+              select: { successorId: true },
+            })
+          ).map((edge) => edge.successorId),
+        )
+      : new Set<string>();
+    const events = [
+      ...new Map(
+        rows.filter((row) => row.event).map((row) => [row.event!.id, row.event!]),
+      ).values(),
+    ];
+    const groups = await tx.pmGroup.findMany({
+      where: {
+        id: { in: rows.map((row) => row.groupId).filter((id): id is string => Boolean(id)) },
+      },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    });
+    const owners = [
+      {
+        id: user.id,
+        displayName: user.displayName,
+        active: true,
+        role: user.role,
+        organizerId: user.organizerId,
+      },
+    ];
+    const projected = projectTaskPortfolio(
+      rawTasks,
+      edges,
+      { owners, groups },
+      new Date().toISOString(),
+    );
+    return {
+      referenceTime: new Date().toISOString(),
+      owners,
+      groups,
+      eventChoices: events,
+      tasks: projected.tasks.map((task) => ({
+        ...task,
+        event: rows.find((row) => row.id === task.id)?.event ?? null,
+        externalBlocked: externallyBlockedIds.has(task.id),
+      })),
+      edges,
+      events,
+      readOnly: true,
+    };
+  }
+
+  private async organizerEventState(tx: Tx, eventId: string, user: User) {
+    const global = await this.organizerGlobalState(tx, user);
+    const event = global.events.find((candidate) => candidate.id === eventId);
+    if (!event) throw new NotFoundException("Event nicht gefunden.");
+    const tasks = global.tasks.filter((task) => task.eventId === eventId);
+    const ids = new Set(tasks.map((task) => task.id));
+    return {
+      event,
+      tasks,
+      edges: global.edges.filter(
+        (edge) => ids.has(edge.predecessorId) && ids.has(edge.successorId),
+      ),
+      owners: global.owners,
+      groups: global.groups,
+      referenceTime: global.referenceTime,
+      readOnly: true,
+    };
   }
 }

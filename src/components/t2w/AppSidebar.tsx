@@ -13,10 +13,13 @@ import {
   Users,
   Package,
   ChevronDown,
+  LogOut,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useT2W } from "@/lib/t2w/store";
+import { AccountDialog } from "@/components/t2w/AccountDialog";
 
 export const HAUPT_NAV = [
   { to: "/", label: "Übersicht", icon: LayoutDashboard, exact: true, available: true },
@@ -92,11 +95,27 @@ const linkClass =
 
 function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
   const { locale, setLocale, t } = useI18n();
+  const { currentUser, logout } = useT2W();
   const { pathname } = useLocation();
+  const [accountOpen, setAccountOpen] = useState(false);
   const einstellungenAktiv = pathname.startsWith("/einstellungen");
+  const visibleMain = HAUPT_NAV.filter((item) => {
+    if (currentUser.role === "ORGANIZER") return item.to === "/aufgaben";
+    if (
+      ["/auszahlungen", "/angebote", "/rechnungen"].includes(item.to) &&
+      !currentUser.financeAccess
+    )
+      return false;
+    if (item.to === "/einstellungen" && currentUser.role !== "ADMIN") return false;
+    return true;
+  });
   return (
     <div className="flex h-full flex-col gap-6 bg-nav px-3 py-4 text-nav-foreground">
-      <Link to="/" onClick={onNavigate} className="flex items-center gap-2.5 px-2">
+      <Link
+        to={currentUser.role === "ORGANIZER" ? "/aufgaben" : "/"}
+        onClick={onNavigate}
+        className="flex items-center gap-2.5 px-2"
+      >
         <img src="/time2win_logo_button.svg" alt="TIME2WIN Logo" className="size-8 rounded-md" />
         <span className="min-w-0">
           <span className="block text-sm font-semibold tracking-tight">TIME2WIN</span>
@@ -108,7 +127,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
         <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
           {t("nav.modules")}
         </p>
-        {HAUPT_NAV.map((item) =>
+        {visibleMain.map((item) =>
           item.available ? (
             <Link
               key={item.to}
@@ -152,6 +171,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
           >
             {[
               ["allgemein", "Allgemein"],
+              ["benutzer", "Benutzer"],
               ["auswahllisten", "Auswahllisten"],
               ["outlook", "Outlook"],
               ["auditlog", "Auditlog"],
@@ -160,7 +180,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
                 key={value}
                 to="/einstellungen"
                 search={{
-                  tab: value as "allgemein" | "auswahllisten" | "outlook" | "auditlog",
+                  tab: value as "allgemein" | "benutzer" | "auswahllisten" | "outlook" | "auditlog",
                   liste: "services",
                 }}
                 onClick={onNavigate}
@@ -176,18 +196,41 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         )}
 
-        <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          {t("nav.more")}
-        </p>
-        {NEBEN_NAV.map((item) => (
-          <Link key={item.to} to={item.to} onClick={onNavigate} className={linkClass}>
-            <item.icon className="size-4 shrink-0" />
-            {t(NEBEN_NAV_KEYS[item.to])}
-          </Link>
-        ))}
+        {currentUser.role !== "ORGANIZER" && (
+          <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
+            {t("nav.more")}
+          </p>
+        )}
+        {currentUser.role !== "ORGANIZER" &&
+          NEBEN_NAV.map((item) => (
+            <Link key={item.to} to={item.to} onClick={onNavigate} className={linkClass}>
+              <item.icon className="size-4 shrink-0" />
+              {t(NEBEN_NAV_KEYS[item.to])}
+            </Link>
+          ))}
       </nav>
 
       <div className="space-y-3 px-3">
+        <div className="border-t border-nav-active pt-3">
+          <p className="truncate text-sm font-medium">{currentUser.displayName}</p>
+          <p className="truncate text-xs text-nav-muted">{currentUser.email}</p>
+          <div className="mt-2 flex gap-3">
+            <button
+              type="button"
+              className="text-xs text-nav-muted hover:text-nav-foreground"
+              onClick={() => setAccountOpen(true)}
+            >
+              Profil
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-2 text-xs text-nav-muted hover:text-nav-foreground"
+              onClick={() => void logout()}
+            >
+              <LogOut className="size-3.5" /> Abmelden
+            </button>
+          </div>
+        </div>
         <div className="flex items-center justify-between gap-2 text-xs text-nav-muted">
           <div
             className="flex rounded border border-nav-active p-0.5"
@@ -221,6 +264,7 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         </div>
       </div>
+      <AccountDialog user={currentUser} open={accountOpen} onOpenChange={setAccountOpen} />
     </div>
   );
 }

@@ -5,9 +5,9 @@ export function OrganizerLink({
   name,
   className,
 }: {
-  organizerId?: string;
+  organizerId?: string | undefined;
   name: string;
-  className?: string;
+  className?: string | undefined;
 }) {
   if (!organizerId) return <span className={className}>{name}</span>;
 

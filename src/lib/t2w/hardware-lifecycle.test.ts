@@ -9,8 +9,8 @@ describe("hardwareLifecycle", () => {
     vi.stubGlobal("fetch", fetchMock);
     await hardwareLifecycle.save({ eventId: "event-1" }, { id: "h1", status: "RETURNED" });
     await hardwareLifecycle.save({}, { recipientName: "Ada" });
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/events/event-1/hardware/h1");
-    expect(fetchMock.mock.calls[1][0]).toBe("/api/v1/events/hardware");
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/events/event-1/hardware/h1");
+    expect(fetchMock.mock.calls[1]![0]).toBe("/api/v1/events/hardware");
     vi.unstubAllGlobals();
   });
 });

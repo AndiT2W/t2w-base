@@ -2,6 +2,7 @@ import { Body, Controller, Get, Patch } from "@nestjs/common";
 import { IsArray, IsObject, IsOptional, IsString } from "class-validator";
 import { PrismaService } from "./prisma.service.js";
 import { OutlookFolderService } from "./outlook/outlook.folder.service.js";
+import { Roles } from "./authorization.js";
 
 export class UpdateSettingsDto {
   @IsOptional() @IsArray() @IsObject({ each: true }) outlookJahresordner?: {
@@ -21,6 +22,7 @@ export class SettingsController {
   @Get() get() {
     return this.prisma.appSettings.upsert({ where: { id: 1 }, create: {}, update: {} });
   }
+  @Roles("ADMIN")
   @Patch() update(@Body() dto: UpdateSettingsDto) {
     return this.prisma.appSettings.upsert({
       where: { id: 1 },
@@ -28,6 +30,7 @@ export class SettingsController {
       update: dto,
     });
   }
+  @Roles("ADMIN")
   @Get("outlook/status")
   async outlookStatus() {
     const settings = await this.prisma.appSettings.findUnique({ where: { id: 1 } });

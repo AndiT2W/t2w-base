@@ -16,8 +16,9 @@ async function request<T>(
   const response = await fetch(url, {
     method,
     credentials: "include",
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    ...(body === undefined
+      ? {}
+      : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
   });
   if (!response.ok) throw new Error("HARDWARE_REQUEST_FAILED");
   return response.status === 204 ? undefined : ((await response.json()) as T);

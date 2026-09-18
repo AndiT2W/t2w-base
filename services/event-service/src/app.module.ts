@@ -8,7 +8,7 @@ import { AuthController } from "./auth.controller.js";
 import { AuthService } from "./auth.service.js";
 import { MasterDataController } from "./master-data.controller.js";
 import { AuthGuard } from "./auth.guard.js";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { SettingsController } from "./settings.controller.js";
 import { OutlookModule } from "./outlook/outlook.module.js";
 import { EventMutations } from "./event-mutations.js";
@@ -23,6 +23,10 @@ import { PayoutController, AutomationController, AuditLogController } from "./pa
 import { PayoutImportService } from "./payout-import.service.js";
 import { AutomationService } from "./automation.service.js";
 import { TablePreferencesController } from "./table-preferences.controller.js";
+import { UserManagementController } from "./user-management.controller.js";
+import { UserManagementService } from "./user-management.service.js";
+import { SecurityMailService } from "./security-mail.service.js";
+import { FinanceDataInterceptor } from "./finance-data.interceptor.js";
 
 @Module({
   imports: [OutlookModule],
@@ -37,6 +41,7 @@ import { TablePreferencesController } from "./table-preferences.controller.js";
     AutomationController,
     AuditLogController,
     TablePreferencesController,
+    UserManagementController,
   ],
   providers: [
     ProjectManagementService,
@@ -50,6 +55,8 @@ import { TablePreferencesController } from "./table-preferences.controller.js";
     Time2winService,
     { provide: TIME2WIN_ADAPTER, useClass: HttpTime2winAdapter },
     AuthService,
+    SecurityMailService,
+    UserManagementService,
     {
       provide: EventMutations,
       inject: [PrismaService],
@@ -57,6 +64,7 @@ import { TablePreferencesController } from "./table-preferences.controller.js";
         new EventMutations(new PrismaEventMutationAdapter(prisma)),
     },
     { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_INTERCEPTOR, useClass: FinanceDataInterceptor },
   ],
 })
 export class AppModule {}

@@ -9,7 +9,14 @@ datasource db {
 
 enum UserRole {
   ADMIN
-  MITARBEITER
+  USER
+  ORGANIZER
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
 }
 
 enum OrganizerType {
@@ -37,16 +44,34 @@ model User {
   pmTasks      PmTask[]
   id           String   @id @default(uuid()) @db.Uuid
   displayName  String
+  firstName    String?
+  lastName     String?
   email        String   @unique
-  passwordHash String
-  role         UserRole @default(MITARBEITER)
-  active       Boolean  @default(true)
+  pendingEmail String?  @unique
+  passwordHash String?
+  role         UserRole @default(USER)
+  status       UserStatus @default(ACTIVE)
+  financeAccess Boolean @default(false)
+  organizerId  String? @db.Uuid
+  failedLoginAttempts Int @default(0)
+  lockedUntil  DateTime?
+  statusChangedAt DateTime @default(now())
+  passwordChangedAt DateTime?
   createdAt    DateTime @default(now())
   lastLoginAt  DateTime?
   auditEntries AuditLog[]
   events       Event[]  @relation("EventUpdatedBy")
   sessions     Session[]
   tablePreferences UserTablePreference[]
+  organizer    Organizer? @relation(fields: [organizerId], references: [id], onDelete: Restrict)
+  invitation   UserInvitation?
+  passwordResets PasswordReset[]
+  emailChanges EmailChangeToken[]
+  taskAttachments PmAttachment[]
+  pmComments PmComment[]
+
+  @@index([status, role])
+  @@index([organizerId])
 }
 
 model UserTablePreference {
@@ -86,6 +111,7 @@ model Organizer {
   payoutEvents Event[]     @relation("EventPayoutRecipient")
   payouts Payout[]
   invoiceRecipients EventInvoiceRecipient[]
+  users User[]
   @@index([name])
 }
 
@@ -252,8 +278,24 @@ model PmTask {
   successors PmDependency[] @relation("PmPredecessor")
   activities PmActivity[]
   comments PmComment[]
+  attachments PmAttachment[]
   @@index([eventId, id])
   @@index([scope, id])
+}
+
+model PmAttachment {
+  id String @id @default(uuid()) @db.Uuid
+  taskId String @db.Uuid
+  task PmTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId String @db.Uuid
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  fileName String
+  mimeType String
+  size Int
+  content Bytes
+  createdAt DateTime @default(now())
+
+  @@index([taskId, createdAt])
 }
 
 model PmDependency {
@@ -280,6 +322,7 @@ model PmComment {
   taskId String @db.Uuid
   task PmTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
   authorId String @db.Uuid
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
   text String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -533,6 +576,58 @@ model Session {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([expiresAt])
+}
+
+model UserInvitation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model EmailChangeToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model SecurityNotification {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String?  @db.Uuid
+  kind           String
+  recipient      String
+  subject        String
+  body           String
+  deliveryStatus String   @default("PENDING")
+  lastError      String?
+  createdAt      DateTime @default(now())
+  deliveredAt    DateTime?
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 model AppSettings {

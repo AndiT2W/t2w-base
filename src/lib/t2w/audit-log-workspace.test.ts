@@ -9,7 +9,7 @@ const entry = (overrides: Partial<ApiAuditLog> = {}): ApiAuditLog => ({
   action: "updated",
   details: { name: "City Run" },
   createdAt: "2026-09-10T08:30:00.000Z",
-  user: { displayName: "Ada Lovelace", email: "ada@example.com" },
+  user: { id: "user-1", displayName: "Ada Lovelace", email: "ada@example.com" },
   ...overrides,
 });
 

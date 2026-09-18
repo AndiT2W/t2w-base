@@ -190,7 +190,7 @@ export function EventDialog({ trigger }: { trigger: React.ReactNode }) {
           </div>
           <div>
             <Label>Sportart *</Label>
-            <Select value={sportartId} onValueChange={setSportartId}>
+            <Select value={sportartId ?? ""} onValueChange={setSportartId}>
               <SelectTrigger aria-label="Sportart" className="mt-1.5">
                 <SelectValue placeholder="Sportart auswählen" />
               </SelectTrigger>

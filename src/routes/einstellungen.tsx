@@ -31,18 +31,24 @@ import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 import { createSelectionListManagementWorkspace } from "@/lib/t2w/selection-list-management-workspace";
 import { formatDatumMitZeit } from "@/lib/t2w/format";
 import { DataTable } from "@/components/t2w/DataTable";
+import { PmCategorySettings } from "@/components/t2w/PmCategorySettings";
+import { UserManagement } from "@/components/t2w/UserManagement";
 
 export const Route = createFileRoute("/einstellungen")({
   validateSearch: (search) => ({
     tab:
-      search.tab === "outlook" || search.tab === "auswahllisten" || search.tab === "auditlog"
-        ? search.tab
+      search["tab"] === "outlook" ||
+      search["tab"] === "benutzer" ||
+      search["tab"] === "auswahllisten" ||
+      search["tab"] === "auditlog"
+        ? search["tab"]
         : ("allgemein" as const),
     liste:
-      search.liste === "sportarten" ||
-      search.liste === "eventrollen" ||
-      search.liste === "hardwareobjekte"
-        ? search.liste
+      search["liste"] === "sportarten" ||
+      search["liste"] === "eventrollen" ||
+      search["liste"] === "aufgabenkategorien" ||
+      search["liste"] === "hardwareobjekte"
+        ? search["liste"]
         : ("services" as const),
   }),
   head: () => ({
@@ -73,7 +79,7 @@ function Einstellungen() {
     reorderSelectionValues,
   } = useT2W();
   const { tab, liste } = Route.useSearch();
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: "/einstellungen" });
   const [workspace] = useState(() =>
     createSettingsWorkspace({ save: setSettings, checkOutlook: apiOutlookStatus }, settings),
   );
@@ -292,7 +298,10 @@ function Einstellungen() {
             void navigate({
               search: {
                 tab:
-                  nextTab === "outlook" || nextTab === "auswahllisten" || nextTab === "auditlog"
+                  nextTab === "outlook" ||
+                  nextTab === "benutzer" ||
+                  nextTab === "auswahllisten" ||
+                  nextTab === "auditlog"
                     ? nextTab
                     : "allgemein",
                 liste,
@@ -388,6 +397,10 @@ function Einstellungen() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="benutzer" className="space-y-5">
+            <UserManagement />
+          </TabsContent>
+
           <TabsContent value="auswahllisten" className="space-y-5">
             <div className="space-y-5">
               <Card>
@@ -397,12 +410,15 @@ function Einstellungen() {
                     role="tablist"
                     aria-label="Auswahllisten Kategorien"
                   >
-                    {[
-                      ["sportarten", "Sportarten"],
-                      ["services", "Services"],
-                      ["eventrollen", "Eventrollen"],
-                      ["hardwareobjekte", "Hardware-Objekte"],
-                    ].map(([value, label]) => (
+                    {(
+                      [
+                        ["sportarten", "Sportarten"],
+                        ["services", "Services"],
+                        ["eventrollen", "Eventrollen"],
+                        ["hardwareobjekte", "Hardware-Objekte"],
+                        ["aufgabenkategorien", "Projektmanagement / Aufgaben"],
+                      ] as const
+                    ).map(([value, label]) => (
                       <Button
                         key={value}
                         type="button"
@@ -421,6 +437,7 @@ function Einstellungen() {
                 </CardContent>
               </Card>
               <div className="space-y-5">
+                {liste === "aufgabenkategorien" && <PmCategorySettings />}
                 {liste === "sportarten" && (
                   <Card>
                     <CardHeader>

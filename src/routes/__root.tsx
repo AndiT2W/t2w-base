@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useLocation,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -17,13 +18,13 @@ import {
   SidebarMobileTrigger,
   SidebarShellProvider,
 } from "@/components/t2w/AppSidebar";
-import { T2WProvider } from "@/lib/t2w/store";
+import { T2WProvider, useT2W } from "@/lib/t2w/store";
 import { CrmProvider } from "@/lib/crm/store";
 import { createBrowserLocalCrmAdapter } from "@/lib/crm/local-adapter";
 import { I18nProvider } from "@/lib/i18n";
 
 const crmAdapter =
-  import.meta.env.VITE_CRM_ADAPTER === "local" ? createBrowserLocalCrmAdapter() : undefined;
+  import.meta.env["VITE_CRM_ADAPTER"] === "local" ? createBrowserLocalCrmAdapter() : undefined;
 
 function NotFoundComponent() {
   return (
@@ -127,6 +128,16 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function AppShell() {
+  const { currentUser } = useT2W();
+  const { pathname } = useLocation();
+  const financeRoute = ["/auszahlungen", "/angebote", "/rechnungen"].some((path) =>
+    pathname.startsWith(path),
+  );
+  const allowed =
+    currentUser.role === "ORGANIZER"
+      ? pathname.startsWith("/aufgaben")
+      : !(financeRoute && !currentUser.financeAccess) &&
+        !(pathname.startsWith("/einstellungen") && currentUser.role !== "ADMIN");
   return (
     <SidebarShellProvider>
       <div className="min-h-screen bg-background lg:pl-60">
@@ -136,7 +147,22 @@ function AppShell() {
           <span className="text-sm font-semibold tracking-tight text-foreground">TIME2WIN</span>
         </div>
         <main className="min-w-0 overflow-x-hidden px-4 pb-10 sm:px-6 lg:px-7">
-          <Outlet />
+          {allowed ? (
+            <Outlet />
+          ) : (
+            <div className="mx-auto mt-16 max-w-lg rounded-lg border bg-card p-6 text-center">
+              <h1 className="text-xl font-semibold">Kein Zugriff</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Für diesen Bereich fehlt die erforderliche Berechtigung.
+              </p>
+              <Link
+                to={currentUser.role === "ORGANIZER" ? "/aufgaben" : "/"}
+                className="mt-4 inline-block text-sm font-medium text-primary underline"
+              >
+                Zur erlaubten Startseite
+              </Link>
+            </div>
+          )}
         </main>
       </div>
     </SidebarShellProvider>
@@ -150,7 +176,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <T2WProvider>
-          <CrmProvider adapter={crmAdapter}>
+          <CrmProvider {...(crmAdapter ? { adapter: crmAdapter } : {})}>
             <AppShell />
             <Toaster />
           </CrmProvider>

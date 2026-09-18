@@ -7,9 +7,13 @@ const person = {
   vorname: "Ada",
   nachname: "Lovelace",
   email: "ada@example.com",
-  telefon: "",
+  telefonPrivat: "",
+  telefonBeruflich: "",
   funktion: "",
   ort: "",
+  land: "",
+  strasse: "",
+  plz: "",
   notiz: "",
   kundenprofilId: null,
   kundenIds: [],
@@ -54,7 +58,7 @@ describe("CRM workspace", () => {
     await workspace.load();
     await workspace.load();
 
-    expect(workspace.snapshot().kunden[0].events).toEqual([]);
+    expect(workspace.snapshot().kunden[0]!.events).toEqual([]);
     expect(adapter.load).toHaveBeenCalledTimes(2);
   });
 
@@ -75,10 +79,7 @@ describe("CRM workspace", () => {
     } as unknown as CrmModule;
     const workspace = createCrmWorkspace(adapter);
     await workspace.load();
-    await workspace.createPersonAndKunde(
-      { ...person, kundenIds: [] },
-      { ...kunde, kontaktIds: [], events: [] },
-    );
+    await workspace.createPersonAndKunde({ ...person, kundenIds: [] }, { ...kunde });
     expect(workspace.snapshot()).toMatchObject({
       personen: [expect.objectContaining({ kundenprofilId: "k1", kundenIds: ["k1"] })],
       kunden: [expect.objectContaining({ id: "k1", kontaktIds: ["p1"] })],

@@ -10,7 +10,16 @@ import {
 } from "react";
 import type { ColumnKey, Settings, T2WEvent } from "./types";
 import { ALL_COLUMNS } from "./types";
-import { createHttpEventTransport, apiEvents, apiSettings, apiUpdateSettings } from "./api";
+import {
+  configureApiAccess,
+  createHttpEventTransport,
+  apiCurrentUser,
+  apiEvents,
+  apiLogout,
+  apiSettings,
+  apiUpdateSettings,
+  type CurrentUser,
+} from "./api";
 import {
   createEventWorkspace,
   type CreateEventInput,
@@ -23,6 +32,7 @@ import {
   type SelectionListSnapshot,
 } from "./selection-list-workspace";
 import { createHttpSelectionListAdapter } from "./selection-list-adapter";
+import { configureCrmAccess } from "@/lib/crm/module";
 
 type State = {
   settings: Settings;
@@ -30,6 +40,8 @@ type State = {
 };
 
 type Ctx = State & {
+  currentUser: CurrentUser;
+  logout: () => Promise<void>;
   events: T2WEvent[];
   bereit: boolean;
   ladefehler: string | null;
@@ -77,7 +89,8 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initial);
   const [bereit, setBereit] = useState(false);
   const [ladefehler, setLadefehler] = useState<string | null>(null);
-  const [angemeldet, setAngemeldet] = useState(true);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const workspace = useMemo(() => createEventWorkspace(createHttpEventTransport()), []);
   const selectionWorkspace = useMemo(
     () => createSelectionListWorkspace(createHttpSelectionListAdapter()),
@@ -89,21 +102,33 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     selectionWorkspace.snapshot,
     selectionWorkspace.snapshot,
   );
+  const authFlow =
+    typeof window !== "undefined" &&
+    ["invite", "reset", "emailChange"].some((parameter) =>
+      new URLSearchParams(window.location.search).has(parameter),
+    );
 
   useEffect(() => {
     void (async () => {
       try {
-        const [events, settings] = await Promise.all([apiEvents(), apiSettings()]);
-        workspace.load(events);
-        setState((current) => ({ ...current, settings }));
-      } catch {
-        setLadefehler("Die zentrale Eventquelle konnte nicht geladen werden.");
-        setAngemeldet(false);
+        const user = await apiCurrentUser();
+        configureApiAccess(user);
+        configureCrmAccess(user);
+        setCurrentUser(user);
+        if (user.role !== "ORGANIZER") {
+          const [events, settings] = await Promise.all([apiEvents(), apiSettings()]);
+          workspace.load(events);
+          setState((current) => ({ ...current, settings }));
+          await selectionWorkspace.load().catch(() => undefined);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message !== "AUTH_REQUIRED")
+          setLadefehler("Die zentrale Datenquelle konnte nicht geladen werden.");
       } finally {
+        setAuthChecked(true);
         setBereit(true);
       }
     })();
-    void selectionWorkspace.load().catch(() => undefined);
   }, [workspace, selectionWorkspace]);
 
   const neuesEvent: Ctx["neuesEvent"] = useCallback(
@@ -129,6 +154,11 @@ export function T2WProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(
     () => ({
       ...state,
+      currentUser: currentUser!,
+      logout: async () => {
+        await apiLogout();
+        setCurrentUser(null);
+      },
       events,
       bereit,
       ladefehler,
@@ -152,6 +182,7 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      currentUser,
       events,
       bereit,
       ladefehler,
@@ -166,16 +197,8 @@ export function T2WProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  if (!angemeldet)
-    return (
-      <LoginView
-        onLogin={() => {
-          setAngemeldet(true);
-          setBereit(false);
-          window.location.reload();
-        }}
-      />
-    );
+  if (!authChecked) return null;
+  if (authFlow || !currentUser) return <LoginView onLogin={() => window.location.reload()} />;
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

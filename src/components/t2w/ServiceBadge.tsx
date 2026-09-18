@@ -229,8 +229,8 @@ export const SERVICE_COLOR_OPTIONS: { value: ColorKey; label: string }[] = [
 ];
 export function servicePresentation(service: {
   name: string;
-  icon?: string | null;
-  color?: string | null;
+  icon?: string | null | undefined;
+  color?: string | null | undefined;
 }) {
   const fallback = defaults[service.name] ?? {
     icon: "panels-top-left" as IconKey,
@@ -248,8 +248,8 @@ export function ServiceBadge({
   color,
 }: {
   name: string;
-  icon?: string | null;
-  color?: string | null;
+  icon?: string | null | undefined;
+  color?: string | null | undefined;
 }) {
   const presentation = servicePresentation({
     name,

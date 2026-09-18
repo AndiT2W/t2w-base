@@ -49,7 +49,7 @@ export function createTablePreferences<T extends string>(
       key,
       JSON.stringify({
         version: 1,
-        visible,
+        visible: [...visible],
         ...(sort ? { sort } : {}),
       } satisfies TableViewPreference),
     );
@@ -150,7 +150,9 @@ export function createTableBehavior<T, K extends string>(options: {
       const target = index + offset;
       if (index < 0 || target < 0 || target >= visibleColumns.length) return this.snapshot();
       const next = [...visibleColumns];
-      [next[index], next[target]] = [next[target], next[index]];
+      const current = next[index]!;
+      next[index] = next[target]!;
+      next[target] = current;
       visibleColumns = next;
       preferences.save(visibleColumns, sort);
       return this.snapshot();

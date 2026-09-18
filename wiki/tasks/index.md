@@ -4,6 +4,8 @@ Use this section only for task notes that create durable project context worth k
 
 ## Task Notes
 
+- [Benutzerkonten und Veranstalterzugang](system-users-spec.md) (umgesetzt, Issue #49)
+
 - [Projektmanagement v4: vereinfachte Aufgaben und Gesamtübersicht](project-management-spec-v4.md) (aktuell, Issue #55)
 - [Projektmanagement v3: Aufgabenabhängigkeiten und aufklappbare Ablaufübersicht](project-management-spec-v3.md) (ersetzt)
 

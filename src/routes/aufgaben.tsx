@@ -32,6 +32,7 @@ import {
 } from "@/lib/t2w/project-management";
 import { createTaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
 import { TaskQueue } from "@/components/t2w/TaskQueue";
+import { useT2W } from "@/lib/t2w/store";
 import {
   QUEUE_GROUP_LABEL,
   queueCounts,
@@ -245,13 +246,25 @@ function portfolioBlocks(data: PmGlobal, sourceTasks: PmGlobal["tasks"]) {
       categories: portfolio.categories.map((category) => {
         const tasks = portfolio.tasks
           .filter((task) => task.groupId === category.groupId)
-          .map((task) => ({ ...task, event }));
+          .map((task) => {
+            const source = sourceTasks.find((candidate) => candidate.id === task.id);
+            return {
+              ...task,
+              blockedBy:
+                source?.externalBlocked && task.blockedBy.length === 0
+                  ? ["external"]
+                  : task.blockedBy,
+              event,
+            };
+          });
         return { ...category, tasks, flows: category.flows };
       }),
     };
   });
 }
 function Aufgaben() {
+  const { currentUser } = useT2W();
+  const readOnly = currentUser.role === "ORGANIZER";
   const [data, setData] = useState<PmGlobal>();
   const [view, setView] = useState<"table" | "gantt">("table");
   const [search, setSearch] = useState("");
@@ -433,29 +446,31 @@ function Aufgaben() {
         >
           Gantt
         </Button>
-        <Button
-          className="min-h-11 md:min-h-8"
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            void interaction.open({
-              id: "",
-              scope: "GLOBAL",
-              eventId: null,
-              title: "",
-              description: "",
-              status: "OPEN",
-              priority: "NORMAL",
-              ownerId: null,
-              groupId: null,
-              startDate: null,
-              endDate: null,
-              version: 0,
-            });
-          }}
-        >
-          Globale Aufgabe anlegen
-        </Button>
+        {!readOnly && (
+          <Button
+            className="min-h-11 md:min-h-8"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              void interaction.open({
+                id: "",
+                scope: "GLOBAL",
+                eventId: null,
+                title: "",
+                description: "",
+                status: "OPEN",
+                priority: "NORMAL",
+                ownerId: null,
+                groupId: null,
+                startDate: null,
+                endDate: null,
+                version: 0,
+              });
+            }}
+          >
+            Globale Aufgabe anlegen
+          </Button>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <label className="relative">
@@ -475,7 +490,7 @@ function Aufgaben() {
 
         <FilterChip label="Event" value={eventFilter} onChange={setEventFilter} inaktiv="all">
           <option value="all">alle</option>
-          <option value="global">Global</option>
+          {!readOnly && <option value="global">Global</option>}
           {data?.eventChoices.map((event) => (
             <option key={event.id} value={event.id}>
               {event.name}
@@ -840,6 +855,8 @@ function Aufgaben() {
           edges: data?.edges ?? [],
         }}
         variant="global"
+        readOnly={readOnly}
+        currentUserId={currentUser.id}
       />
     </main>
   );

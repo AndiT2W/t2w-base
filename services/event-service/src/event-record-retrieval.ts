@@ -28,25 +28,41 @@ export function withTaskReadiness({ pmTasks, ...event }: EventRecord) {
   };
 }
 
+function forAccess(record: ReturnType<typeof withTaskReadiness>, financeAccess: boolean) {
+  if (financeAccess) return record;
+  return {
+    ...record,
+    financeNotes: null,
+    payoutRecipientId: null,
+    payoutRecipient: null,
+  };
+}
+
 @Injectable()
 export class EventRecordRetrieval {
   constructor(private readonly prisma: PrismaService) {}
 
-  async read(id: string) {
-    return withTaskReadiness(
-      await this.prisma.event.findUniqueOrThrow({ where: { id }, include: eventRecordInclude }),
+  async read(id: string, financeAccess = true) {
+    return forAccess(
+      withTaskReadiness(
+        await this.prisma.event.findUniqueOrThrow({ where: { id }, include: eventRecordInclude }),
+      ),
+      financeAccess,
     );
   }
-  async readByCode(eventCode: string) {
-    return withTaskReadiness(
-      await this.prisma.event.findUniqueOrThrow({
-        where: { eventCode },
-        include: eventRecordInclude,
-      }),
+  async readByCode(eventCode: string, financeAccess = true) {
+    return forAccess(
+      withTaskReadiness(
+        await this.prisma.event.findUniqueOrThrow({
+          where: { eventCode },
+          include: eventRecordInclude,
+        }),
+      ),
+      financeAccess,
     );
   }
 
-  async list(input: { q?: string; skip: number; take: number }) {
+  async list(input: { q?: string; skip: number; take: number }, financeAccess = true) {
     const events = await this.prisma.event.findMany({
       where: {
         ...(input.q
@@ -63,6 +79,6 @@ export class EventRecordRetrieval {
       take: input.take,
       include: eventRecordInclude,
     });
-    return events.map(withTaskReadiness);
+    return events.map((event) => forAccess(withTaskReadiness(event), financeAccess));
   }
 }

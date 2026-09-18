@@ -26,7 +26,12 @@ export function createSettingsWorkspace(persistence: Persistence, initial: Setti
     dirty = false,
     connection: OutlookConnection = "idle",
     error: string | null = null;
-  let snapshot = { draft, dirty, connection, error };
+  let snapshot: {
+    draft: SettingsDraft;
+    dirty: boolean;
+    connection: OutlookConnection;
+    error: string | null;
+  } = { draft, dirty, connection, error };
   const subscribers = new Set<() => void>();
   const publish = () => {
     snapshot = { draft, dirty, connection, error };

@@ -58,7 +58,7 @@ export function createAuditLogWorkspace(reader: AuditLogReader) {
     error = null;
     publish();
     try {
-      const loaded = await reader.load({ entity: entity || undefined });
+      const loaded = await reader.load(entity ? { entity } : {});
       if (generation !== requestGeneration) return { kind: "stale" as const };
       entries = loaded;
       loading = false;

@@ -90,7 +90,7 @@ export function createEventDetailWorkspace(
     const invoiceQuery = inputs.invoiceRecipientSearch.trim().toLocaleLowerCase("de");
     const invoiceRecipientIds =
       form.rechnungsempfaengerIds ?? (event.veranstalterId ? [event.veranstalterId] : []);
-    const payoutRecipientId = form.auszahlungsempfaengerId ?? event.veranstalterId;
+    const payoutRecipientId = form.auszahlungsempfaengerId ?? event.veranstalterId ?? null;
     const seriesCandidates = events
       .filter((item) => item.id !== event.id)
       .sort((left, right) => left.start.localeCompare(right.start));
@@ -100,6 +100,9 @@ export function createEventDetailWorkspace(
           .sort((left, right) => left.start.localeCompare(right.start))
       : [];
     const seriesIndex = seriesEvents.findIndex((item) => item.id === event.id);
+    const payoutRecipient = customers.find((customer) => customer.id === payoutRecipientId);
+    const previousSeriesEvent = seriesEvents[seriesIndex - 1];
+    const nextSeriesEvent = seriesEvents[seriesIndex + 1];
     return {
       ...inputs,
       form,
@@ -122,7 +125,7 @@ export function createEventDetailWorkspace(
               .includes(contactQuery)),
       ),
       payoutRecipientId,
-      payoutRecipient: customers.find((customer) => customer.id === payoutRecipientId),
+      ...(payoutRecipient ? { payoutRecipient } : {}),
       invoiceRecipientIds,
       invoiceRecipients: customers.filter((customer) => invoiceRecipientIds.includes(customer.id)),
       visibleInvoiceRecipients: customers.filter((customer) =>
@@ -130,8 +133,8 @@ export function createEventDetailWorkspace(
       ),
       seriesCandidates,
       seriesEvents,
-      previousSeriesEvent: seriesEvents[seriesIndex - 1],
-      nextSeriesEvent: seriesEvents[seriesIndex + 1],
+      ...(previousSeriesEvent ? { previousSeriesEvent } : {}),
+      ...(nextSeriesEvent ? { nextSeriesEvent } : {}),
     };
   };
   const publish = () => {
@@ -358,12 +361,15 @@ export function createEventDetailWorkspace(
       return session.save();
     },
     async copy(input: EventCopyInput) {
-      return mutations.copy(event.id, { ...input, version: snapshot.form.version });
+      return mutations.copy(event.id, {
+        ...input,
+        ...(snapshot.form.version === undefined ? {} : { version: snapshot.form.version }),
+      });
     },
     async updateSeries(targetEventIds?: string[]) {
       const changed = await mutations.updateSeries(event.id, {
         ...(targetEventIds ? { targetEventIds } : {}),
-        version: snapshot.form.version,
+        ...(snapshot.form.version === undefined ? {} : { version: snapshot.form.version }),
       });
       mutations.applyEvents(changed);
       events = events.map((item) => changed.find((updated) => updated.id === item.id) ?? item);

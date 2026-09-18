@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sheet";
 import { useCrm, passtKunde, passtPerson } from "@/lib/crm/store";
 import { KUNDENSTATUS_LABEL, personName, type Kunde, type Person } from "@/lib/crm/types";
+import { useT2W } from "@/lib/t2w/store";
 
 export const Route = createFileRoute("/kontakte")({ component: KundenKontakte });
 type Auswahl = { art: "person" | "kunde"; id: string } | null;
@@ -160,6 +161,7 @@ function Field({
 }
 function KundenKontakte() {
   const crm = useCrm();
+  const { currentUser } = useT2W();
   const [tab, setTab] = useState<"kontakte" | "kunden">("kontakte");
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<Auswahl>(null);
@@ -200,7 +202,13 @@ function KundenKontakte() {
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Kunden & Kontakte"
         beschreibung="Stammdaten: Kontakte pflegen und Kundenprofile für Organisationen und Abrechnung verwalten"
-        suche={{ value: q, onChange: setQ, placeholder: "Name, E-Mail, Telefon, UID, IBAN …" }}
+        suche={{
+          value: q,
+          onChange: setQ,
+          placeholder: currentUser.financeAccess
+            ? "Name, E-Mail, Telefon, UID, IBAN …"
+            : "Name, E-Mail, Telefon oder UID …",
+        }}
         aktion={
           <a
             ref={createTriggerRef}
@@ -249,6 +257,7 @@ function KundenKontakte() {
             people={crm.personen}
             select={(id) => setSel({ art: "kunde", id })}
             open={() => setCreate(true)}
+            financeAccess={currentUser.financeAccess}
           />
         )}
         <p className="rounded border border-dashed border-border p-3 text-xs text-muted-foreground">
@@ -270,7 +279,7 @@ function KundenKontakte() {
                 <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
                 <AssociationRemover
                   label="Kundenzuordnung entfernen"
-                  items={crm.kundenVonPerson(p).map((x) => [x.id, x.name])}
+                  items={crm.kundenVonPerson(p).map((x) => [x.id, x.name] as const)}
                   remove={(id) => crm.loeseVerknuepfung(p.id, id)}
                 />
               </>
@@ -280,10 +289,11 @@ function KundenKontakte() {
                   customer={k!}
                   crm={crm}
                   go={(id) => setSel({ art: "person", id })}
+                  financeAccess={currentUser.financeAccess}
                 />
                 <AssociationRemover
                   label="Kontaktzuordnung entfernen"
-                  items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)])}
+                  items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)] as const)}
                   remove={(id) => crm.loeseVerknuepfung(id, k!.id)}
                 />
               </>
@@ -301,7 +311,9 @@ function KundenKontakte() {
           </SheetContent>
         </Sheet>
       )}
-      {create && <CreateDialog crm={crm} close={closeCreate} />}
+      {create && (
+        <CreateDialog crm={crm} close={closeCreate} financeAccess={currentUser.financeAccess} />
+      )}
     </div>
   );
 }
@@ -376,11 +388,13 @@ function CustomerTable({
   people,
   select,
   open,
+  financeAccess,
 }: {
   customers: Kunde[];
   people: Person[];
   select: (id: string) => void;
   open: () => void;
+  financeAccess: boolean;
 }) {
   const table = useTableBehavior<Kunde, CustomerColumn>({
     storageKey: CUSTOMER_COLUMN_STORAGE_KEY,
@@ -407,13 +421,15 @@ function CustomerTable({
   return customers.length ? (
     <>
       <ColumnPicker
-        columns={CUSTOMER_COLUMNS}
+        columns={CUSTOMER_COLUMNS.filter((column) => financeAccess || column !== "IBAN")}
         visibleColumns={visibleColumns}
         toggleColumn={toggleColumn}
       />
       <Table
         exportName="Kunden"
-        h={CUSTOMER_COLUMNS.filter((column) => visibleColumns.includes(column))}
+        h={CUSTOMER_COLUMNS.filter(
+          (column) => (financeAccess || column !== "IBAN") && visibleColumns.includes(column),
+        )}
         sort={table.sort}
         onSort={table.sortBy}
       >
@@ -433,7 +449,7 @@ function CustomerTable({
             )}
             {visibleColumns.includes("E-Mail") && <td>{k.email || "–"}</td>}
             {visibleColumns.includes("UID") && <td>{k.uid || "–"}</td>}
-            {visibleColumns.includes("IBAN") && <td>{k.iban || "–"}</td>}
+            {financeAccess && visibleColumns.includes("IBAN") && <td>{k.iban || "–"}</td>}
             {visibleColumns.includes("Kontakte") && <td>{k.kontaktIds.length}</td>}
             {visibleColumns.includes("Events") && <td>{k.events.length}</td>}
             {visibleColumns.includes("Status") && (
@@ -449,7 +465,7 @@ function CustomerTable({
     <Empty text="Keine Kunden gefunden." open={open} label="Kunde anlegen" />
   );
 }
-function Table({
+function Table<K extends string>({
   exportName,
   h,
   children,
@@ -457,10 +473,10 @@ function Table({
   onSort,
 }: {
   exportName: string;
-  h: string[];
+  h: readonly K[];
   children: ReactNode;
-  sort: { key: string; direction: "asc" | "desc" };
-  onSort: (key: string) => void;
+  sort: { key: K; direction: "asc" | "desc" };
+  onSort: (key: K) => void;
 }) {
   return (
     <DataTable
@@ -499,7 +515,6 @@ function PersonDetail({
   person,
   crm,
   go,
-  close,
 }: {
   person: Person;
   crm: ReturnType<typeof useCrm>;
@@ -593,7 +608,7 @@ function PersonDetail({
           label="Kunde zuordnen"
           options={crm.kunden
             .filter((k) => !person.kundenIds.includes(k.id))
-            .map((k) => [k.id, k.name])}
+            .map((k) => [k.id, k.name] as const)}
           save={(id) => crm.verknuepfe(person.id, id)}
         />
       </section>
@@ -622,11 +637,12 @@ function CustomerDetail({
   customer,
   crm,
   go,
-  close,
+  financeAccess,
 }: {
   customer: Kunde;
   crm: ReturnType<typeof useCrm>;
   go: (id: string) => void;
+  financeAccess: boolean;
 }) {
   const contacts = crm.kontakteVonKunde(customer.id);
   const events = groupCustomerEvents(customer.events);
@@ -687,21 +703,27 @@ function CustomerDetail({
             save={(v) => crm.updateKunde(customer.id, { land: v })}
           />
         </div>
-        <Field
-          label="IBAN"
-          value={customer.iban}
-          save={(v) => crm.updateKunde(customer.id, { iban: v })}
-        />
-        <Field
-          label="BIC"
-          value={customer.bic}
-          save={(v) => crm.updateKunde(customer.id, { bic: v })}
-        />
-        <Field
-          label="Bank"
-          value={customer.bank}
-          save={(v) => crm.updateKunde(customer.id, { bank: v })}
-        />
+        {financeAccess && (
+          <Field
+            label="IBAN"
+            value={customer.iban}
+            save={(v) => crm.updateKunde(customer.id, { iban: v })}
+          />
+        )}
+        {financeAccess && (
+          <Field
+            label="BIC"
+            value={customer.bic}
+            save={(v) => crm.updateKunde(customer.id, { bic: v })}
+          />
+        )}
+        {financeAccess && (
+          <Field
+            label="Bank"
+            value={customer.bank}
+            save={(v) => crm.updateKunde(customer.id, { bank: v })}
+          />
+        )}
       </div>
       <section>
         <h3 className="mb-2 font-semibold">Hauptansprechperson</h3>
@@ -736,7 +758,7 @@ function CustomerDetail({
           label="Kontakt zuordnen"
           options={crm.personen
             .filter((p) => !p.kundenIds.includes(customer.id))
-            .map((p) => [p.id, personName(p)])}
+            .map((p) => [p.id, personName(p)] as const)}
           save={(id) => crm.verknuepfe(id, customer.id)}
         />
       </section>
@@ -804,7 +826,7 @@ function AssociationRemover({
   remove,
 }: {
   label: string;
-  items: string[][];
+  items: readonly (readonly [string, string])[];
   remove: (id: string) => void;
 }) {
   if (!items.length) return null;
@@ -835,7 +857,7 @@ function Assign({
   save,
 }: {
   label: string;
-  options: string[][];
+  options: readonly (readonly [string, string])[];
   save: (id: string) => Promise<void>;
 }) {
   const [query, setQuery] = useState("");
@@ -946,7 +968,15 @@ function Assign({
     </div>
   );
 }
-function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: () => void }) {
+function CreateDialog({
+  crm,
+  close,
+  financeAccess,
+}: {
+  crm: ReturnType<typeof useCrm>;
+  close: () => void;
+  financeAccess: boolean;
+}) {
   const [mode, setMode] = useState<Modus>("person");
   const [p, setP] = useState({
     vorname: "",
@@ -974,17 +1004,26 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
     email: "",
   });
   const create = async () => {
-    if (mode !== "kunde" && !p.vorname && !p.nachname)
-      return toast.error("Vor- oder Nachname ist erforderlich.");
-    if (mode === "kunde" && !k.name) return toast.error("Kundenname ist erforderlich.");
+    if (mode !== "kunde" && !p.vorname && !p.nachname) {
+      toast.error("Vor- oder Nachname ist erforderlich.");
+      return;
+    }
+    if (mode === "kunde" && !k.name) {
+      toast.error("Kundenname ist erforderlich.");
+      return;
+    }
     const email = mode === "kunde" ? k.email : p.email;
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      return toast.error("Bitte eine gültige Mail-Adresse angeben.");
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Bitte eine gültige Mail-Adresse angeben.");
+      return;
+    }
     if (
       mode !== "kunde" &&
       [p.telefonPrivat, p.telefonBeruflich].some((phone) => phone && !/^[+0-9() ./-]+$/.test(phone))
-    )
-      return toast.error("Bitte gültige Telefonnummern angeben.");
+    ) {
+      toast.error("Bitte gültige Telefonnummern angeben.");
+      return;
+    }
     if (mode === "person") await crm.neuePerson({ ...p, kundenIds: [] });
     else if (mode === "kunde") await crm.neuerKunde({ typ: "firma", status: "aktiv", ...k });
     else {
@@ -995,10 +1034,10 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
     toast.success("Datensatz angelegt");
     close();
   };
-  const f = (
-    obj: Record<string, string>,
-    set: (v: Record<string, string>) => void,
-    key: string,
+  const f = <T extends Record<string, string>>(
+    obj: T,
+    set: (v: T) => void,
+    key: keyof T,
     label: string,
   ) => (
     <label className="space-y-1 text-sm">
@@ -1050,9 +1089,9 @@ function CreateDialog({ crm, close }: { crm: ReturnType<typeof useCrm>; close: (
             <>
               {f(k, setK, "name", "Kundenname")}
               {f(k, setK, "uid", "UID")}
-              {f(k, setK, "iban", "IBAN")}
-              {f(k, setK, "bic", "BIC")}
-              {f(k, setK, "bank", "Bank")}
+              {financeAccess && f(k, setK, "iban", "IBAN")}
+              {financeAccess && f(k, setK, "bic", "BIC")}
+              {financeAccess && f(k, setK, "bank", "Bank")}
               {f(k, setK, "strasse", "Straße")}
               {f(k, setK, "plz", "PLZ")}
               {f(k, setK, "ort", "Ort")}

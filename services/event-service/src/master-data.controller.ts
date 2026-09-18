@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  ForbiddenException,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -12,6 +13,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { PrismaService } from "./prisma.service.js";
@@ -24,6 +26,7 @@ import {
 } from "./crm-command.adapter.js";
 import { SelectionLists } from "@t2w/domain/selection-lists";
 import { PrismaSelectionListAdapter } from "./selection-list.adapter.js";
+import { Roles } from "./authorization.js";
 
 @ApiTags("master-data")
 @Controller("api/v1")
@@ -55,14 +58,18 @@ export class MasterDataController {
   @Post("organizers") organizer(
     @Body()
     body: OrganizerInput,
+    @Req() req: { user: { role: string; financeAccess: boolean } },
   ) {
+    this.assertFinanceFields(req.user, body);
     return this.crm.createOrganizer(body).then((result) => this.unwrap(result));
   }
   @Patch("organizers/:id") organizerUpdate(
     @Param("id", ParseUUIDPipe) id: string,
     @Body()
     body: Partial<OrganizerInput>,
+    @Req() req: { user: { role: string; financeAccess: boolean } },
   ) {
+    this.assertFinanceFields(req.user, body);
     return this.crm.updateOrganizer(id, body).then((result) => this.unwrap(result));
   }
   @Patch("organizers/:id/deactivate") deactivateOrganizer(@Param("id", ParseUUIDPipe) id: string) {
@@ -93,18 +100,22 @@ export class MasterDataController {
   @Get("sports") sports(@Query("includeInactive") includeInactive?: string) {
     return this.selectionLists.list("sports", includeInactive === "true");
   }
+  @Roles("ADMIN")
   @Post("sports") sport(@Body() body: { name: string }) {
     return this.selectionLists.create("sports", body.name);
   }
+  @Roles("ADMIN")
   @Patch("sports/:id") updateSport(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
     return this.selectionLists.update("sports", id, body);
   }
+  @Roles("ADMIN")
   @Patch("sports/:id/deactivate") deactivateSport(@Param("id", ParseUUIDPipe) id: string) {
     return this.selectionLists.update("sports", id, { active: false });
   }
+  @Roles("ADMIN")
   @Post(":kind/reorder") reorderSelectionList(
     @Param("kind") kind: "sports" | "services" | "hardware-objects" | "event-roles",
     @Body() body: { ids: string[] },
@@ -121,9 +132,11 @@ export class MasterDataController {
   @Get("services") services(@Query("includeInactive") includeInactive?: string) {
     return this.selectionLists.list("services", includeInactive === "true");
   }
+  @Roles("ADMIN")
   @Post("services") service(@Body() body: { name: string }) {
     return this.selectionLists.create("services", body.name);
   }
+  @Roles("ADMIN")
   @Patch("services/:id") updateService(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
@@ -134,9 +147,11 @@ export class MasterDataController {
   @Get("hardware-objects") hardwareObjects(@Query("includeInactive") includeInactive?: string) {
     return this.selectionLists.list("hardwareObjects", includeInactive === "true");
   }
+  @Roles("ADMIN")
   @Post("hardware-objects") hardwareObject(@Body() body: { name: string }) {
     return this.selectionLists.create("hardwareObjects", body.name);
   }
+  @Roles("ADMIN")
   @Patch("hardware-objects/:id") updateHardwareObject(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean },
@@ -147,9 +162,11 @@ export class MasterDataController {
   @Get("event-roles") eventRoles(@Query("includeInactive") includeInactive?: string) {
     return this.selectionLists.list("eventRoles", includeInactive === "true");
   }
+  @Roles("ADMIN")
   @Post("event-roles") eventRole(@Body() body: { name: string }) {
     return this.selectionLists.create("eventRoles", body.name);
   }
+  @Roles("ADMIN")
   @Patch("event-roles/:id") updateEventRole(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
@@ -182,7 +199,21 @@ export class MasterDataController {
     @Param("id", ParseUUIDPipe) id: string,
     @Body()
     body: CustomerProfileInput,
+    @Req() req: { user: { role: string; financeAccess: boolean } },
   ) {
+    this.assertFinanceFields(req.user, body);
     return this.crm.upsertCustomerProfile(id, body).then((result) => this.unwrap(result));
+  }
+
+  private assertFinanceFields(
+    user: { role: string; financeAccess: boolean },
+    body: { iban?: string; bic?: string; bankName?: string },
+  ) {
+    if (
+      user.role !== "ADMIN" &&
+      !user.financeAccess &&
+      (body.iban !== undefined || body.bic !== undefined || body.bankName !== undefined)
+    )
+      throw new ForbiddenException("Kein Zugriff auf Finanzen.");
   }
 }

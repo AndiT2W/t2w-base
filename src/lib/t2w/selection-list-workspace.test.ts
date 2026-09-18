@@ -2,14 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   createSelectionListWorkspace,
   type SelectionListAdapter,
+  type SelectionListKind,
+  type SelectionListValue,
 } from "./selection-list-workspace";
 
 describe("selection list workspace", () => {
   it("owns management snapshots and active values", async () => {
-    const values = {
+    const values: Record<SelectionListKind, SelectionListValue[]> = {
       sports: [{ id: "s1", name: "Triathlon", active: true }],
       eventRoles: [{ id: "r1", name: "Finanz", active: false }],
       services: [{ id: "service-1", name: "UHF", active: true }],
+      hardwareObjects: [{ id: "hardware-1", name: "Active Transponder", active: true }],
     };
     const adapter: SelectionListAdapter = {
       load: async (kind) => values[kind],
@@ -18,6 +21,7 @@ describe("selection list workspace", () => {
         ...values[kind].find((value) => value.id === id)!,
         ...patch,
       }),
+      reorder: async (kind, ids) => ids.map((id) => values[kind].find((value) => value.id === id)!),
     };
     const workspace = createSelectionListWorkspace(adapter);
     await workspace.load();

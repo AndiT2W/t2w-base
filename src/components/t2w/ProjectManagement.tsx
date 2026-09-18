@@ -16,6 +16,7 @@ import {
   type PmState,
 } from "@/lib/t2w/project-management";
 import { createTaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
+import { useT2W } from "@/lib/t2w/store";
 
 export function ProjectManagement({
   eventId,
@@ -24,6 +25,7 @@ export function ProjectManagement({
   eventId: string;
   eventStart?: string;
 }) {
+  const { currentUser } = useT2W();
   const [state, setState] = useState<PmState>();
   const [open, setOpen] = useState<string | null>(null);
   const [view, setView] = useState<"kategorien" | "zeitachse">("kategorien");
@@ -152,6 +154,10 @@ export function ProjectManagement({
                 const members = categoryTasks(state.tasks, category.groupId);
                 const expanded = open === key;
                 const name = categoryName(category.groupId);
+                const canCreate =
+                  !state.event.archived &&
+                  (category.groupId === null ||
+                    state.groups.some((group) => group.id === category.groupId && group.active));
                 return (
                   <div key={key} className="border-b last:border-0">
                     <CategoryRow
@@ -172,7 +178,7 @@ export function ProjectManagement({
                           groupName={categoryName}
                           onOpen={(task) => void interaction.open(task)}
                           busy={busy}
-                          {...(state.event.archived
+                          {...(!canCreate
                             ? {}
                             : {
                                 onAppend: async (predecessorId: string, title: string) => {
@@ -191,7 +197,7 @@ export function ProjectManagement({
                           onOpen={(task) => void interaction.open(task)}
                           busy={busy}
                           categoryName={name}
-                          {...(state.event.archived
+                          {...(!canCreate
                             ? {}
                             : {
                                 onCreate: (title: string) =>
@@ -219,6 +225,7 @@ export function ProjectManagement({
           edges: state?.edges ?? [],
         }}
         variant="event"
+        currentUserId={currentUser.id}
       />
     </section>
   );

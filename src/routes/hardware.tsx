@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, PackageOpen, RotateCcw, TriangleAlert } from "lucide-react";
+import { Bell, PackageOpen, RotateCcw, TriangleAlert, type LucideIcon } from "lucide-react";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { formatDatum } from "@/lib/t2w/format";
@@ -43,18 +43,19 @@ type Hardware = {
   note?: string;
   event: { id?: string; eventCode: string; name: string } | null;
 };
-type InlineDraft = Pick<
-  Hardware,
-  | "recipientName"
-  | "email"
-  | "phone"
-  | "issueType"
-  | "objectName"
-  | "quantity"
-  | "status"
-  | "dueDate"
-  | "note"
-> & { eventId: string; objectNumber: string };
+type InlineDraft = {
+  recipientName: string;
+  email: string | undefined;
+  phone: string | undefined;
+  issueType: string;
+  objectName: string;
+  quantity: number;
+  status: string;
+  dueDate: string | undefined;
+  note: string | undefined;
+  eventId: string;
+  objectNumber: string;
+};
 const validEmail = (value: string) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const labels: Record<string, string> = {
   OPEN: "Offen",
@@ -115,7 +116,7 @@ function objectNumberChanges(value: string) {
       objectNumberPrefix: range[1],
       objectNumberFrom: Number(range[2]),
       objectNumberTo: Number(range[3]),
-      objectNumberPadding: range[2].length,
+      objectNumberPadding: range[2]!.length,
     };
   }
   return {
@@ -303,9 +304,10 @@ function HardwarePage() {
     setSavingInline(true);
     const persist = async () => {
       const updated = await hardwareLifecycle.save<Hardware>(
-        { eventId: item.event?.id },
+        item.event?.id ? { eventId: item.event.id } : {},
         { ...changes, id: item.id },
       );
+      if (!updated) throw new Error("HARDWARE_SAVE_EMPTY_RESPONSE");
       setItems((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
     };
     const request = saveQueue.current.then(persist, persist);
@@ -318,6 +320,32 @@ function HardwarePage() {
       if (pendingSaves.current === 0) setSavingInline(false);
     });
   };
+  const metrics: { title: string; value: number; Icon: LucideIcon; iconClass: string }[] = [
+    {
+      title: "Offen",
+      value: active.filter((item) => item.status === "OPEN").length,
+      Icon: PackageOpen,
+      iconClass: "text-primary",
+    },
+    {
+      title: "Benachrichtigt",
+      value: active.filter((item) => item.status === "NOTIFIED").length,
+      Icon: Bell,
+      iconClass: "text-muted-foreground",
+    },
+    {
+      title: "Überfällig",
+      value: overdueCount,
+      Icon: TriangleAlert,
+      iconClass: overdueCount ? "text-destructive" : "text-muted-foreground",
+    },
+    {
+      title: "Gesamt aktiv",
+      value: active.length,
+      Icon: PackageOpen,
+      iconClass: "text-foreground",
+    },
+  ];
   return (
     <div>
       <PageHeader
@@ -362,7 +390,7 @@ function HardwarePage() {
                 </Select>
               </label>
               <HardwareWorkspace
-                eventId={selectedEventId === "none" ? undefined : selectedEventId}
+                {...(selectedEventId === "none" ? {} : { eventId: selectedEventId })}
                 createOnMount
                 onSaved={() => {
                   void loadItems();
@@ -378,28 +406,8 @@ function HardwarePage() {
           aria-label="Übersicht"
           className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pb-3"
         >
-          {[
-            [
-              "Offen",
-              active.filter((i) => i.status === "OPEN").length,
-              PackageOpen,
-              "text-primary",
-            ],
-            [
-              "Benachrichtigt",
-              active.filter((i) => i.status === "NOTIFIED").length,
-              Bell,
-              "text-muted-foreground",
-            ],
-            [
-              "Überfällig",
-              overdueCount,
-              TriangleAlert,
-              overdueCount ? "text-destructive" : "text-muted-foreground",
-            ],
-            ["Gesamt aktiv", active.length, PackageOpen, "text-foreground"],
-          ].map(([title, value, Icon, iconClass]) => (
-            <div key={String(title)} className="flex items-center gap-2">
+          {metrics.map(({ title, value, Icon, iconClass }) => (
+            <div key={title} className="flex items-center gap-2">
               <Icon className={`size-4 ${iconClass}`} aria-hidden="true" />
               <span className="text-xs text-muted-foreground">{title}</span>
               <span className="text-lg font-semibold tabular-nums">{value}</span>

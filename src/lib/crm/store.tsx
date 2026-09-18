@@ -19,7 +19,7 @@ type Ctx = CrmState & {
   neuePerson: (p: Omit<Person, "id" | "kundenprofilId" | "eventRollen">) => Promise<Person>;
   neuerKunde: (
     k: Omit<Kunde, "id" | "kontaktIds" | "events" | "personId"> & { personId?: string | null },
-  ) => Promise<void>;
+  ) => Promise<Kunde>;
   personAlsKunde: (
     id: string,
     k: Omit<Kunde, "id" | "name" | "personId" | "kontaktIds" | "events" | "typ">,
@@ -27,7 +27,7 @@ type Ctx = CrmState & {
   neuePersonAlsKunde: (
     p: Omit<Person, "id" | "kundenprofilId" | "eventRollen">,
     k: Omit<Kunde, "id" | "name" | "personId" | "kontaktIds" | "events" | "typ">,
-  ) => Promise<void>;
+  ) => Promise<Person>;
   updatePerson: (id: string, p: Partial<Person>) => Promise<void>;
   updateKunde: (id: string, p: Partial<Kunde>) => Promise<void>;
   deletePerson: (id: string) => Promise<void>;
@@ -44,7 +44,7 @@ export function CrmProvider({ children, adapter }: { children: ReactNode; adapte
   const persistence = useMemo(
     () =>
       adapter ??
-      (import.meta.env.VITE_CRM_ADAPTER === "local"
+      (import.meta.env["VITE_CRM_ADAPTER"] === "local"
         ? createBrowserLocalCrmAdapter()
         : createHttpCrmAdapter()),
     [adapter],

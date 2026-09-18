@@ -19,7 +19,7 @@ export type TimelineGroup = {
   messages: Communication[];
 };
 
-const emails = (value: string) =>
+const emails = (value: string): string[] =>
   value.toLocaleLowerCase("de").match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/g) ?? [];
 
 const relatedEmails = (message: Communication) =>
@@ -96,6 +96,7 @@ export function projectCommunicationTimeline(input: {
     });
     threads.forEach((messages, key) => {
       const first = [...messages].sort((a, b) => a.datum.localeCompare(b.datum))[0];
+      if (!first) return;
       groups.push({
         key,
         label: first.betreff,

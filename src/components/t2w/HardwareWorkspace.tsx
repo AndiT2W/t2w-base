@@ -123,7 +123,7 @@ export function HardwareWorkspace({
     try {
       const saved = await hardwareLifecycle.save<Item>(eventId ? { eventId } : {}, {
         ...payload,
-        id: editing.id,
+        ...(editing.id ? { id: editing.id } : {}),
       });
       setEditing(null);
       await load();
