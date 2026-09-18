@@ -2,7 +2,8 @@
 
 ## Status
 
-- Accepted, 2026-09-15
+- Superseded, 2026-09-18 — zuvor Accepted, 2026-09-15.
+- Die [PM-Designgrundlage](../concepts/project-management-design.md) ersetzt diese Entscheidung: Die globale Übersicht verwendet nun eine flache Dringlichkeitsliste mit Event und Kategorie als Spalten. Quelle: [Nutzerauftrag und Claude-Überarbeitung](../sources/2026-09-18-claude-pm-design.md). Die folgenden Abschnitte bleiben als Historie erhalten.
 
 ## Context
 

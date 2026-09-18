@@ -2,6 +2,8 @@
 
 Stand: 2026-09-14. Quelle: Nutzerentscheidung in dieser Unterhaltung und die drei bereitgestellten UI-Referenzen.
 
+> **UI fortgeschrieben am 2026-09-18:** Die fachlichen Regeln bleiben gültig. Für alle künftigen UI-Änderungen gilt die [PM-Designgrundlage der Claude-Überarbeitung](../concepts/project-management-design.md). Sie ersetzt die unten dokumentierten alten Ansichtsvorgaben: Event-Kategorien mit Ablaufketten und Zeitachse, globale Dringlichkeitsliste mit sichtbaren Filterchips sowie gemeinsames Aufgabenpanel.
+
 ## Aufgabe
 
 - Eine Aufgabe ist entweder global oder unveränderlich einem Event zugeordnet.
@@ -10,7 +12,7 @@ Stand: 2026-09-14. Quelle: Nutzerentscheidung in dieser Unterhaltung und die dre
 - Kommentare können vom Autor bearbeitet oder gelöscht werden. Änderungen sind im Aufgabenverlauf nachvollziehbar; eine Löschung entfernt Kommentar und dessen sichtbaren Verlauf.
 - Der alte `EventTask`-Speicher wird beim Rollout bewusst ohne Migration entfernt. `PmTask` ist die einzige Aufgabenhaltung; Event-Schnappschüsse enthalten ausschließlich eine kompakte Readiness-Projektion.
 
-## Ansichten
+## Ansichten vom 14.09.2026 (historischer Entwurf)
 
 - Die Standardansicht gruppiert **Event → Kategorie**. Alle Kategorien starten geschlossen und zeigen Statuspunkt, Statuszahlen, nächsten ausführbaren Schritt, nächste Frist und Ablaufstufen. Nur Aufgaben derselben zusammenhängenden Abhängigkeitsgruppe erscheinen als Ablauf; unabhängige Aufgaben stehen getrennt unter „Weitere Aufgaben“ und werden nicht als implizite Vorgänger dargestellt.
 - Das Aufklappen zeigt Tabelle oder auf Mobilgeräten Karten mit Name, Person, Ende, Priorität und Status.
@@ -22,5 +24,7 @@ Stand: 2026-09-14. Quelle: Nutzerentscheidung in dieser Unterhaltung und die dre
 
 - Kategoriepunkt: kritisch bei Blockade oder Überfälligkeit, gelb bis sieben Tage vor offenem Ende, blau bei laufender Arbeit, grün bei ausschließlich erledigten Aufgaben.
 - Reale Browser-Regressionen prüfen geschlossene Kategorien, Ablauf/Blockade, kombinierte Übersicht, Gantt und mobile Ausblendung. Domain- und PostgreSQL-Tests sichern Regeln, Speicherung, Kommentare und Löschen.
+
+Diese Angaben beschreiben den damaligen Stand. Die aktuelle Gestaltung verwendet die Anzeigezustände und Fortschrittsbalken der [Designgrundlage](../concepts/project-management-design.md); die vorhandenen Browser-Erwartungen sind teilweise veraltet. Siehe [Prüfung vom 18.09.2026](../sources/2026-09-18-claude-pm-design.md).
 
 Verwandt: [Implementierungsnotiz](project-management-implementation.md), [v3-Historie](project-management-spec-v3.md).

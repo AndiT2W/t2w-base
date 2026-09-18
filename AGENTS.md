@@ -116,3 +116,7 @@ This is a single-context repository; domain context and ADRs are read from the r
 ### Feature testing rule
 
 Every additional feature must include a regression test in the same change. Prefer a real browser E2E test that drives the complete user workflow and verifies the observable result, including persistence after reload where applicable. Run the relevant browser tests before committing and keep the test as a durable guard for future changes.
+
+### Project-management UI
+
+Before changing Event tasks, the global task overview, task creation, task details, or time views, read [the PM design foundation](wiki/concepts/project-management-design.md). Carry its patterns through all affected views and update that page and the wiki log when design rules change.

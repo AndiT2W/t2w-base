@@ -4,6 +4,8 @@ Track ingested evidence and source summaries here.
 
 ## Active Sources
 
+- [Claude-PM-Design: Nutzerauftrag und geprüfter Stand (2026-09-18)](2026-09-18-claude-pm-design.md)
+
 - [Rechnungen-Kundenstamm-Abgleich 2026 (2026-09-15)](2026-09-15-rechnungen-kundenstamm-abgleich.md)
 
 - [ClickUp Live-Veranstaltungen (2026-09-15)](2026-09-15-clickup-live-veranstaltungen.md)

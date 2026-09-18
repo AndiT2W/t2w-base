@@ -2,7 +2,7 @@
 title: Aufgabenplanung und Tabellen-Vertiefung
 type: concept
 status: active
-updated: 2026-09-15
+updated: 2026-09-18
 sources:
   - ../../CONTEXT.md
   - ../../packages/domain/src/project-management.ts
@@ -22,9 +22,11 @@ sources:
 - Der Task-Interaction-Workspace besitzt die fachnahen Bearbeitungsintentionen für Erstellen, Ändern, Voraussetzungen, Kommentare und Löschen sowie Auswahl, Draft, Ladezustand und Historie. HTTP- und In-Memory-Adapter kapseln Transport, Versionen und Persistenzpfade. Eine verspätete Historie darf weder eine neuere Auswahl noch ein bereits geschlossenes Detail überschreiben.
 - `TaskDetailSheet` besitzt die gemeinsame Bearbeitungsinteraktion für Event- und Gesamtansicht: Felder, Voraussetzungen, Kommentare, Verlauf und Löschen. Die aufrufende Ansicht liefert nur Task-Interaction-Workspace, Planungskontext und Ansichtstyp; die Detailansicht grenzt Vorgänger selbst auf denselben Planungsbereich ein. Event-Aufgaben behalten die graph-versionierte Speicherung.
 - Die Gesamtansicht sendet jede Task-Intention über den globalen Task-Adapter. Der Server bestimmt für Event-Aufgaben den Event-Pfad und die aktuelle Graph-Version; die Browseransicht kennt diese Persistenzverzweigung nicht.
-- `DataTable` bündelt den kompakten Tabellenvertrag und das Tabellenverhalten (Spaltenauswahl, Sortierung und persistierte Präferenzen). Übersicht, Veranstaltungen, Hardware, Auszahlungen sowie beide Aufgabenlisten verwenden denselben Vertrag.
+- `DataTable` bündelt den kompakten Tabellenvertrag und das Tabellenverhalten (Spaltenauswahl, Sortierung und persistierte Präferenzen) für operative Listen wie Übersicht, Veranstaltungen, Hardware und Auszahlungen. Seit der [Claude-Überarbeitung](../sources/2026-09-18-claude-pm-design.md) verwenden die beiden PM-Einstiege eigene Darstellungen für Kategorien/Abläufe und Dringlichkeit; ihre Weiterentwicklung folgt der [PM-Designgrundlage](project-management-design.md).
 
 ## Verifikation
+
+Die folgenden Ergebnisse beziehen sich auf den 15.09.2026. Den Prüfstand und die veralteten Browser-Erwartungen nach der Designüberarbeitung beschreibt der [Quellnachweis vom 18.09.2026](../sources/2026-09-18-claude-pm-design.md).
 
 - Domain-Test trennt unabhängige Aufgaben von verbundenen Abläufen.
 - Der PM-Browsertest bearbeitet dieselbe Event-Aufgabe in Event- und Gesamtansicht, kommentiert sie und prüft die Persistenz nach Reload.

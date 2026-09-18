@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-09-18
+
+- Die von Claude am 17.09.2026 überarbeitete PM-Oberfläche auf Nutzerwunsch als [verbindliche Designgrundlage](concepts/project-management-design.md) übernommen. Code und laufende Desktopansicht für Kategorien, Ablaufketten, Aufgabenpanel, Event-Zeitachse und globale Dringlichkeitsliste abgeglichen. `AGENTS.md` verweist vor PM-UI-Änderungen auf die Grundlage und verlangt deren Weiterpflege. Wiki-Einstiege, PM v4, Tabellenstandard und frühere Übersichtsentscheidung konsistent fortgeschrieben; Historie als überholt gekennzeichnet. Vier gezielte Testsuiten mit 50 Tests bestanden. Alte Browser-Erwartungen und aktuelle Umsetzungslücken sind im [Quellnachweis](sources/2026-09-18-claude-pm-design.md) dokumentiert; keine UI- oder Fachdatenänderung.
+
 ## 2026-09-15
 
 - Nutzerwunsch umgesetzt: Sportart und jeder Service erscheinen in den Eventtabellen mit demselben konfigurierten Badge wie in den Event-Stammdaten. Der Browser-Regressionstest prüft die Badges samt Icons.
