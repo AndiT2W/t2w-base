@@ -627,6 +627,10 @@ Der Eventdetail-Dialog verbindet nun mehrere ausgewählte Termine in einem atoma
 
 Die bestehende Importarbeitsmappe mit 114 Kunden und 146 zugeordneten Rechnungsbelegen wurde gegen alle 164 PDFs unter `raw/03_rechnungen/` abgeglichen. Der neue Stand enthält 123 Kunden; 18 Belege wurden ergänzt, vier Dublettenzeilen über UID beziehungsweise identische Anschrift und Kontakt zusammengeführt und die frühere Fehlzuordnung der TIME2WIN-UID bereinigt. Alle 164 Belege sind genau einmal zugeordnet. Fehlende oder abgeleitete Angaben aus den Rechnungen 260087 und 260161 bleiben ausdrücklich markiert. Ergebnis und Evidenz: [Rechnungen-Kundenstamm-Abgleich 2026](sources/2026-09-15-rechnungen-kundenstamm-abgleich.md).
 
+## 2026-09-15 — Abgeglichener Kundenstamm produktiv importiert
+
+Der Rechnungs-Kundenstand wurde transaktional in die Hostinger-Produktionsdatenbank des `t2w-base`-Event-Service importiert. 109 bestehende Organisationen wurden mit den geprüften Rechnungsdaten ergänzt oder korrigiert, 14 neue Kunden angelegt und 20 Kontakte neu verknüpft. Der Import korrigiert 14 frühere Zeichenfehler in Kundennamen, ohne Dubletten anzulegen; 123 Rechnungs-Kunden sind eindeutig aufgelöst und 106 Primärkontakte gesetzt. Vorher wurde ein vollständiger PostgreSQL-Dump erstellt; Pfad und angewandtes SQL sind in [Rechnungen-Kundenstamm-Abgleich 2026](sources/2026-09-15-rechnungen-kundenstamm-abgleich.md) dokumentiert.
+
 ## 2026-09-15 — Datumsbereich in Event-Stammdaten verdichtet
 
 Start- und Enddatum stehen im Stammdatenbereich eines Events nun als zwei gleich breite Datumsfelder in einer gemeinsamen Zeile mit sichtbarem Trennstrich. Die Feldgruppe ist insgesamt genauso breit wie die angrenzenden Einzelfelder, bleibt auch in der schmalen Ansicht einzeilig und besitzt weiterhin getrennte zugängliche Feldbezeichnungen. Der Browser-Regressionstest prüft Ausrichtung und Breite auf Desktop und bei 390 px. Quellen: Nutzerkonversation vom 2026-09-15, `src/routes/events.$eventcode.tsx`, `src/lib/i18n.tsx`, `tests/e2e/event-management.spec.ts`.
@@ -634,3 +638,19 @@ Start- und Enddatum stehen im Stammdatenbereich eines Events nun als zwei gleich
 ## 2026-09-15 — Excel-Export für alle Datentabellen
 
 Der gemeinsame `DataTable`-Vertrag verlangt nun einen fachlichen Exportnamen und stellt an jeder Tabelle einen beschrifteten Excel-Export bereit. Die `.xlsx`-Arbeitsmappe entspricht dem sichtbaren, gefilterten und sortierten Tabellenstand; Auswahl- und Aktionsspalten werden ausgelassen. Bestehende fachliche Tabellen in Übersichten, Stammdaten, Hardware, Auszahlungen, Angeboten/Rechnungen, Auditlog und Eventdetails wurden auf den gemeinsamen Vertrag geführt. Der Auditlog behält den CSV-Export zusätzlich. Die Browser-Regression lädt eine Arbeitsmappe herunter und validiert ihre Kopfzeile sowie Eventdaten. Quellen: Nutzerkonversation vom 2026-09-15, `src/components/t2w/DataTable.tsx`, `tests/e2e/table-preferences.spec.ts` und [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
+
+## 2026-09-16 — TIME2WIN-Spalte der Eventtabellen neu positioniert
+
+In Übersicht und Veranstaltungsansicht steht die TIME2WIN-Spalte nun direkt zwischen Status und Event. Kopf und Zellen sind auf 3,5 rem begrenzt; Logo, Sortierung und Backend-Link bleiben erhalten. Der Excel-Export folgt derselben Reihenfolge. Browser-Regressionen prüfen Position, Breite, Linkziel und Exportkopf. Quellen: Nutzerkonversation vom 2026-09-16, `src/routes/index.tsx`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts`, `tests/e2e/table-preferences.spec.ts` und [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
+
+## 2026-09-17 — Veranstaltungsfilter um nächstes Kalenderjahr ergänzt
+
+Die Veranstaltungsseite bietet im Zeitraumfilter nun `Nächstes Jahr`. Der Filter grenzt auf das vollständige folgende Kalenderjahr ein und berücksichtigt dabei Events, die dieses Jahr überschneiden. Ein Browser-Regressionstest prüft Auswahl, Sichtbarkeit und Ausschluss eines Events aus dem aktuellen Jahr. Quellen: Nutzerkonversation vom 2026-09-17, `src/lib/t2w/event-catalogue.ts`, `src/routes/veranstaltungen.tsx`, `tests/e2e/event-management.spec.ts` und [ClickUp-Import Veranstaltungen](concepts/clickup-veranstaltungen-import.md).
+
+## 2026-09-17 — Sticky Seiten- und Tabellenkopf für Datentabellen
+
+Beim vertikalen Scrollen bleiben der sticky Seitenkopf mit Suchleiste sowie die Tabellenköpfe sichtbar. `PageHeader` misst seine responsive Höhe und stellt sie als CSS-Offset bereit; `DataTable` und das allgemeine Tabellen-Primitive positionieren ihre Tabellenköpfe darunter. Auf schmaleren Viewports bleibt der horizontale Tabellen-Scroller aktiv; auf Desktopbreite wird sein Overflow freigegeben, damit der Sticky-Kopf am Seiten-Viewport haftet und Tabellenzeilen nicht überlagert. Eine Browser-Regression prüft Position, Sichtbarkeit und Scrollverhalten. Quellen: Nutzerkonversation vom 2026-09-17, `src/components/t2w/PageHeader.tsx`, `src/components/t2w/DataTable.tsx`, `src/components/ui/table.tsx`, `src/styles.css`, `tests/e2e/table-preferences.spec.ts` und [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md).
+
+## 2026-09-17 — Lokale Design-Testinstanz mit Produktionsdaten befüllt
+
+Die PostgreSQL-Datenbank der Docker-Compose-Testinstanz `design-ueberarbeiten-724ef7` wurde durch einen vollständigen, hashgeprüften Dump der Hostinger-Produktionsdatenbank `t2w-base-event-db-1` ersetzt. Beide Seiten verwenden Schema/Migrationen bis `0030_clickup_event_import`; der Restore lief ohne Fehler und der neu gestartete lokale Event-Service meldet `/ready` als bereit. Stichprobenartig exakt verglichen wurden unter anderem 764 Events, 126 Organisationen, 117 Kontakte, 756 ClickUp-Quellen, 12 PM-Aufgaben, 19 Hardwareausgaben und 107 Auditlog-Einträge. Der lokale Ausgangsstand bleibt im Docker-Backup-Volume als `/backups/pre-hostinger-copy-20260917.dump` erhalten; temporäre Transport-Dumps wurden gelöscht. Quelle: Nutzerkonversation und Betriebsprüfung vom 2026-09-17.

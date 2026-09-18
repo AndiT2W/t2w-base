@@ -12,11 +12,11 @@ Veranstaltungen aus der ClickUp-Liste `TIME2WIN > Office > VERANSTALTUNGEN` werd
 
 Die ClickUp-Quelle enthält keinen eigenen Eventcode/Slug (`custom_id` ist in allen erfassten Aufgaben leer). Der Eventcode wird deshalb wie bei nativ angelegten Events aus Startdatum und Eventname gebildet: `YYMMDD_slug`; Kollisionen erhalten `_02`, `_03` usw. Die ClickUp-ID steht ausschließlich in `Event.clickUpId` und wird nicht auf der Stammdaten-Seite dargestellt. Ein Wiederholungslauf ersetzt nur die früheren Platzhalter-Codes `clickup-<id>`; nachträglich gepflegte Eventcodes bleiben unverändert.
 
-## Katalogabruf und Standardansicht (2026-09-15)
+## Katalogabruf und Standardansicht (2026-09-17)
 
 Die Event-UI ruft `/api/v1/events` seitenweise mit `limit=500` ab, bis keine weitere volle Seite mehr geliefert wird. Der Event-Service verwendet ebenfalls 500 als Standardlimit (maximal 1.000), damit direkte Verbraucher nicht weiter beim früheren Standardlimit von 200 stehen bleiben. So werden sämtliche importierten Jahre geladen; bei 756 importierten ClickUp-Events sind dies derzeit zwei API-Seiten.
 
-Die Veranstaltungs- und Gantt-Ansicht startet bewusst mit dem aktuellen Kalenderjahr. Der Zeitraum ist sichtbar als `Aktuelles Jahr` ausgewählt; vergangene und künftige Jahre bleiben über die bestehenden Zeitraumauswahlen erreichbar.
+Die Veranstaltungs- und Gantt-Ansicht startet bewusst mit dem aktuellen Kalenderjahr. Der Zeitraum ist sichtbar als `Aktuelles Jahr` ausgewählt; die Veranstaltungsseite bietet zusätzlich `Nächstes Jahr` als Kalenderjahresfilter. Vergangene und weitere künftige Zeiträume bleiben über die bestehenden Zeitraumauswahlen erreichbar.
 
 ## Importumfang
 

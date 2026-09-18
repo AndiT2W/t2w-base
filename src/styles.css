@@ -202,6 +202,13 @@ html[lang="en"] .lang-en-only {
     border-bottom: 2px solid var(--color-table-header-border);
   }
 
+  .t2w-sticky-table-header,
+  .t2w-data-table > thead {
+    position: sticky;
+    top: var(--t2w-page-header-bottom, 0px);
+    z-index: 20;
+  }
+
   .t2w-table-header th {
     font-weight: 600;
   }

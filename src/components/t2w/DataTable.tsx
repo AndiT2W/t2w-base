@@ -200,7 +200,7 @@ export const DataTable = React.forwardRef<HTMLTableElement, DataTableProps>(
           />
         </div>
         <div
-          className="relative w-full overflow-x-auto rounded-md border border-border bg-card"
+          className="relative w-full overflow-x-auto rounded-md border border-border bg-card xl:overflow-visible"
           data-density="compact"
         >
           <table
@@ -209,7 +209,7 @@ export const DataTable = React.forwardRef<HTMLTableElement, DataTableProps>(
               assignRef(ref, value);
             }}
             className={cn(
-              "w-full caption-bottom text-[13px] leading-4 [&_thead]:bg-table-header [&_thead]:text-[12px] [&_thead]:normal-case [&_thead]:tracking-[0.025em] [&_thead]:text-table-header-foreground [&_thead_tr]:h-[30px] [&_thead_tr]:border-b-2 [&_thead_tr]:border-table-header-border [&_th]:h-[30px] [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-middle [&_th]:font-semibold [&_tbody_tr]:h-[34px] [&_tbody_tr]:border-b [&_tbody_tr]:border-border/80 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-muted/55 [&_tbody_tr:last-child]:border-b-0 [&_td]:h-[34px] [&_td]:max-w-0 [&_td]:truncate [&_td]:px-2 [&_td]:py-1 [&_td]:align-middle [&_a:focus-visible]:outline-none [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-ring [&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-2 [&_input:focus-visible]:ring-ring",
+              "t2w-data-table w-full caption-bottom text-[13px] leading-4 [&_thead]:bg-table-header [&_thead]:text-[12px] [&_thead]:normal-case [&_thead]:tracking-[0.025em] [&_thead]:text-table-header-foreground [&_thead_tr]:h-[30px] [&_thead_tr]:border-b-2 [&_thead_tr]:border-table-header-border [&_th]:h-[30px] [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-middle [&_th]:font-semibold [&_tbody_tr]:h-[34px] [&_tbody_tr]:border-b [&_tbody_tr]:border-border/80 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-muted/55 [&_tbody_tr:last-child]:border-b-0 [&_td]:h-[34px] [&_td]:max-w-0 [&_td]:truncate [&_td]:px-2 [&_td]:py-1 [&_td]:align-middle [&_a:focus-visible]:outline-none [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-ring [&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-2 [&_input:focus-visible]:ring-ring",
               className,
             )}
             {...props}

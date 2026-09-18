@@ -1,5 +1,6 @@
 import type { EventStatus, T2WEvent } from "./types";
-export type EventPeriod = "alle" | "jahr" | "kommend" | "laufend" | "vergangen" | "monat";
+export type EventPeriod =
+  "alle" | "jahr" | "naechstes-jahr" | "kommend" | "laufend" | "vergangen" | "monat";
 export type ArchiveSelection = "aktiv" | "archiv" | "alle";
 export type EventCatalogueFilters = {
   query: string;
@@ -20,7 +21,10 @@ export function selectEventCatalogue(events: T2WEvent[], options: EventCatalogue
     month = options.today.slice(0, 7),
     year = options.today.slice(0, 4),
     yearStart = `${year}-01-01`,
-    yearEnd = `${year}-12-31`;
+    yearEnd = `${year}-12-31`,
+    nextYear = String(Number(year) + 1),
+    nextYearStart = `${nextYear}-01-01`,
+    nextYearEnd = `${nextYear}-12-31`;
   return events
     .filter(
       (e) =>
@@ -32,11 +36,13 @@ export function selectEventCatalogue(events: T2WEvent[], options: EventCatalogue
         ? options.period === "alle" || e.start > options.today
         : options.period === "jahr"
           ? e.start <= yearEnd && e.ende >= yearStart
-          : options.period === "vergangen"
-            ? e.ende < options.today
-            : options.period === "laufend"
-              ? e.start <= options.today && e.ende >= options.today
-              : e.start.slice(0, 7) === month || e.ende.slice(0, 7) === month,
+          : options.period === "naechstes-jahr"
+            ? e.start <= nextYearEnd && e.ende >= nextYearStart
+            : options.period === "vergangen"
+              ? e.ende < options.today
+              : options.period === "laufend"
+                ? e.start <= options.today && e.ende >= options.today
+                : e.start.slice(0, 7) === month || e.ende.slice(0, 7) === month,
     )
     .filter(
       (e) =>
