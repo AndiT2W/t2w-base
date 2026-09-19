@@ -83,10 +83,10 @@ export function segmenteFuerWoche(events: T2WEvent[], wochenStart: Date): Segmen
 }
 
 export const STATUS_BAR = {
+  akquise: "bg-status-akquise",
   anfrage: "bg-status-angefragt",
-  "angebot-gesendet": "bg-status-angefragt",
-  abgesagt: "bg-status-storniert",
-  akquise: "bg-status-angefragt",
-  "datum-pruefen": "bg-status-angefragt",
+  "angebot-gesendet": "bg-status-angebot",
+  "datum-pruefen": "bg-status-datum-pruefen",
   zugesagt: "bg-status-zugesagt",
+  abgesagt: "bg-status-storniert",
 } as const;

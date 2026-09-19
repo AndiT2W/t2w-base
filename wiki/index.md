@@ -2,7 +2,11 @@
 
 ## Core Pages
 
+- [Architecture candidates, 2026-09-19](sources/2026-09-19-architecture-scan.md) (review complete; selection pending)
+
 - [Projektmanagement: verbindliche Designgrundlage](concepts/project-management-design.md) (Claude-Überarbeitung, bestätigt am 2026-09-18; vor PM-UI-Änderungen lesen)
+
+- [Eventlisten und Tabellenwerkzeuge: Anzeigegrundlage](concepts/event-list-display-design.md) (Symbolleiste, Spaltenreihenfolge und gemeinsame Eventtabelle, 2026-09-19; vor Änderungen an einer Tabelle lesen)
 
 - [Kommunikation: Anzeigegrundlage](concepts/communication-display-design.md) (Anzeige umgesetzt am 2026-09-19, Datenmodell teilweise offen; vor Änderungen an der Kommunikationsanzeige lesen)
 

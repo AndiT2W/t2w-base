@@ -78,6 +78,9 @@ html[lang="en"] .lang-en-only {
   --color-table-header-foreground: var(--table-header-foreground);
   --color-table-header-border: var(--table-header-border);
   --color-status-angefragt: var(--status-angefragt);
+  --color-status-angebot: var(--status-angebot);
+  --color-status-akquise: var(--status-akquise);
+  --color-status-datum-pruefen: var(--status-datum-pruefen);
   --color-status-zugesagt: var(--status-zugesagt);
   --color-status-storniert: var(--status-storniert);
   --color-risk-beobachten: var(--risk-beobachten);
@@ -116,7 +119,19 @@ html[lang="en"] .lang-en-only {
   --table-header: oklch(0.9479 0.0025 228.79);
   --table-header-foreground: oklch(0.3464 0.0177 258.37);
   --table-header-border: oklch(0.8088 0.0101 252.83);
+  /*
+   * Eventstatus: seit 19.09.2026 hat jeder Status eine eigene Farbe. Vorher
+   * teilten sich Anfrage, Angebot gesendet, Akquise und Datum prüfen dasselbe
+   * Amber — der Punkt konnte den Status nicht benennen und eine Legende
+   * hätte vier gleich aussehende Einträge gezeigt. Die Farbtöne stehen rund
+   * 45–90° auseinander; Datum prüfen bleibt bewusst neutral („noch offen“).
+   * Die Farbe trägt die Bedeutung nie allein: Tooltip, Screenreader-Text und
+   * die Legende unter der Tabelle nennen den Status ausgeschrieben.
+   */
+  --status-akquise: oklch(0.56 0.18 315);
   --status-angefragt: oklch(0.72 0.15 70);
+  --status-angebot: oklch(0.6 0.15 255);
+  --status-datum-pruefen: oklch(0.62 0.03 255);
   --status-zugesagt: oklch(0.6 0.13 160);
   --status-storniert: oklch(0.62 0.19 25);
   --risk-beobachten: oklch(0.75 0.16 82);
@@ -251,7 +266,8 @@ html[lang="en"] .lang-en-only {
    * statt eines 2px-Balkens — der Kopf soll die Daten einordnen, nicht
    * mit ihnen um Aufmerksamkeit streiten.
    */
-  .t2w-table-header {
+  .t2w-table-header,
+  .t2w-data-table > thead {
     /* Deckend, nicht durchscheinend: der Kopf klebt beim Scrollen
        (.t2w-data-table > thead), durchsichtig würden die Zeilen darunter
        durchscheinen. */
@@ -262,7 +278,8 @@ html[lang="en"] .lang-en-only {
     text-transform: uppercase;
   }
 
-  .t2w-table-header > tr {
+  .t2w-table-header > tr,
+  .t2w-data-table > thead > tr {
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -273,7 +290,8 @@ html[lang="en"] .lang-en-only {
     z-index: 20;
   }
 
-  .t2w-table-header th {
+  .t2w-table-header th,
+  .t2w-data-table > thead th {
     font-weight: 700;
   }
 }

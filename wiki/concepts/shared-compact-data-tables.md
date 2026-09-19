@@ -2,7 +2,7 @@
 title: Gemeinsame kompakte Datentabellen
 type: concept
 status: active
-updated: 2026-09-18
+updated: 2026-09-19
 sources:
   - ../sources/2026-09-18-claude-pm-design.md
   - ../../src/styles.css
@@ -15,6 +15,7 @@ sources:
   - ../../src/routes/aufgaben.tsx
   - ../../src/routes/index.tsx
   - ../../src/routes/veranstaltungen.tsx
+  - ../../src/components/t2w/FilterChip.tsx
   - ../../src/routes/kontakte.tsx
   - ../../src/routes/hardware.tsx
   - ../../src/routes/auszahlungen.tsx
@@ -47,17 +48,23 @@ sources:
 
 Seit der Claude-Überarbeitung vom 17.09.2026 gilt eine leichtere Kopfgestaltung: 10-px-Beschriftung, Gewicht 700, Versalien, `0.08em` Laufweite und 1-px-Unterkante. `.t2w-table-header` verwendet eine dezente, deckende Mischung aus `muted` und `card`; dadurch bleiben beim Sticky-Scrollen darunterliegende Zeilen verdeckt. `DataTable` verwendet einen Kartenradius von 12 px. Kopf- und Zeilenhöhen des kompakten Desktopstandards bleiben erhalten. Quellen: [CSS](../../src/styles.css), [DataTable](../../src/components/t2w/DataTable.tsx), [bestätigte Designgrundlage](project-management-design.md).
 
-**Historie:** Die am 15.09.2026 bestätigte Variante „Ausgewogen“ verwendete einen grauen Kopf, dunkle 12-px-Beschriftung ohne Versalsatz und 2-px-Unterkante. Diese optischen Vorgaben sind ersetzt. Der [Browser-Test](../../tests/e2e/table-preferences.spec.ts) enthält noch Erwartungen an diesen alten Stand; er belegt die neue Gestaltung noch nicht.
+Seit dem 19.09.2026 gilt diese Kopfgestaltung für beide Kopfarten: `.t2w-table-header` und `.t2w-data-table > thead` teilen sich dieselbe Regel. Vorher setzte `DataTable` seinen Kopf über eigene Utilities und wich in Fläche und Laufweite ab. Der [Browser-Test](../../tests/e2e/table-preferences.spec.ts) prüft jetzt die dokumentierten Werte; sein fehlender Anmelde-Hook ist ergänzt, ohne den die Datei seit der verpflichtenden Anmeldung nichts belegte.
+
+**Historie:** Die am 15.09.2026 bestätigte Variante „Ausgewogen“ verwendete einen grauen Kopf, dunkle 12-px-Beschriftung ohne Versalsatz und 2-px-Unterkante. Diese optischen Vorgaben sind ersetzt; seit dem 19.09.2026 prüft der Browser-Test nicht mehr sie, sondern die aktuellen Werte.
 
 ## Zustands- und Persistenzmodell
 
 `DataTable` und `table-model.ts` kapseln stabile Sortierung, sichere Wiederherstellung sichtbarer Spalten und die Präferenzform `{ version, visible, sort }`. Die Reihenfolge in `visible` ist zugleich die Anzeigereihenfolge. Unbekannte Spalten werden verworfen.
+
+Damit das wirkt, gibt eine Tabelle Kopf **und** Zellen über `visibleColumns.map(…)` aus. Bis zum 19.09.2026 taten das nur die Hardwaretabelle und die Auswahllisten; Übersicht, Veranstaltungen und Kontakte hatten ihre Zellen fest verdrahtet, sodass eine geänderte Reihenfolge unsichtbar geblieben wäre. Das Spaltenmenü bietet je sichtbarer Spalte „nach links" und „nach rechts"; oben in der Liste ist links in der Tabelle.
 
 Die Servertabelle `UserTablePreference` ist je `(userId, tableId)` eindeutig. Der geschützte Endpunkt gibt ausschließlich die Präferenz des angemeldeten Benutzers zurück. Ein bestehender Browserwert wird nur dann hochgeladen, wenn der Benutzer noch keine serverseitige Präferenz besitzt.
 
 ## Excel-Export
 
 Jede gemeinsame `DataTable` verwendet einen fachlichen Exportnamen und bietet die beschriftete Aktion `Excel exportieren`. Die erzeugte `.xlsx`-Arbeitsmappe übernimmt den aktuellen sichtbaren Tabellenstand einschließlich Filter, Sortierung, Spaltenauswahl und bearbeiteter Eingabewerte. Reine Auswahl- und Aktionsspalten werden ausgelassen. Der Auditlog behält seinen bestehenden CSV-Export zusätzlich. Die PM-Überarbeitung verwendet eigene Darstellungen ohne diesen Export; diese Abweichung vom allgemeinen Tabellen-/Exportziel ist im [Quellnachweis](../sources/2026-09-18-claude-pm-design.md) festgehalten.
+
+Seit dem 19.09.2026 ist der Export ein **Symbol** in der Leiste an der rechten Oberkante der Tabelle, die `DataTable` selbst stellt; der ausgeschriebene Name steckt im barrierefreien Namen und im Tooltip. Dieselbe Leiste trägt die Spaltenauswahl, sofern die Seite eine über `columnPicker` hineinreicht. Damit wählt keine Route mehr ihre eigene Platzierung, und die Filterzeile trägt nur noch Filter. Regeln und Abdeckung: [Eventlisten und Tabellenwerkzeuge](event-list-display-design.md).
 
 `exportName` ist ein verpflichtender Teil des `DataTable`-Vertrags. Dadurch kann eine neue Tabelle nicht über das gemeinsame Primitive angelegt werden, ohne zugleich einen Excel-Export zu benennen. Die Browser-Regression lädt die Arbeitsmappe herunter und liest Kopfzeile sowie einen bekannten Eventwert wieder ein.
 

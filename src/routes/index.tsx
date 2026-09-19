@@ -1,30 +1,30 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  AlertTriangle,
-  CalendarClock,
-  CheckSquare,
-  Mail,
-  Pencil,
-  Plus,
-  Share2,
-} from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { StatusDot } from "@/components/t2w/StatusBadge";
-import { SelectionBadge, ServiceBadge } from "@/components/t2w/ServiceBadge";
+import { StatusDot, StatusLegend } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
-import { formatZeitraum, heuteIso, tageZwischen } from "@/lib/t2w/format";
+import { heuteIso, tageZwischen } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { cn } from "@/lib/utils";
-import { FolderLink } from "@/components/t2w/FolderLink";
 import { useI18n } from "@/lib/i18n";
 import { activeEvents } from "@/lib/t2w/event-projections";
-import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
-import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
+import {
+  ColumnPicker,
+  DataTable,
+  TableToolbar,
+  useTableBehavior,
+} from "@/components/t2w/DataTable";
+import {
+  EVENT_COLUMNS,
+  EVENT_SORT_COLUMNS,
+  EventHeaderCells,
+  EventRowCells,
+  type EventColumn,
+} from "@/components/t2w/EventTableColumns";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
-import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,39 +45,6 @@ export const Route = createFileRoute("/")({
 });
 
 type Schnellfilter = "alle" | "diese-woche" | "offen" | "ueberfaellig" | "ohne-ordner";
-const OVERVIEW_COLUMNS = [
-  "Status",
-  "TIME2WIN",
-  "Event",
-  "Veranstalter",
-  "Sportart",
-  "Services",
-  "Zeitraum",
-  "Tage",
-  "Aufgaben",
-  "Ordner",
-] as const;
-type OverviewColumn = (typeof OVERVIEW_COLUMNS)[number];
-const OVERVIEW_TABLE_COLUMNS = [
-  { key: "Status", sortValue: (event: T2WEvent) => STATUS_LABEL[event.status] },
-  { key: "TIME2WIN", sortValue: (event: T2WEvent) => event.t2wEventId ?? 0 },
-  { key: "Event", sortValue: (event: T2WEvent) => event.name },
-  { key: "Veranstalter", sortValue: (event: T2WEvent) => event.veranstalter },
-  { key: "Sportart", sortValue: (event: T2WEvent) => event.sportart ?? "" },
-  { key: "Services", sortValue: (event: T2WEvent) => event.services?.join(", ") ?? "" },
-  { key: "Zeitraum", sortValue: (event: T2WEvent) => event.start },
-  { key: "Tage", sortValue: (event: T2WEvent) => tageZwischen(event.start, event.ende) },
-  {
-    key: "Aufgaben",
-    sortValue: (event: T2WEvent) => event.taskReadiness.openCount,
-  },
-  {
-    key: "Ordner",
-    sortValue: (event: T2WEvent) =>
-      Number(Boolean(event.outlookOrdner)) + Number(Boolean(event.sharepointOrdner)),
-  },
-] as const;
-
 const SCHNELLFILTER: { key: Schnellfilter; label: string }[] = [
   { key: "alle", label: "Alle aktiven" },
   { key: "diese-woche", label: "Nächste 14 Tage" },
@@ -99,12 +66,13 @@ function Uebersicht() {
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [suche, setSuche] = useState("");
-  const table = useTableBehavior<T2WEvent, OverviewColumn>({
+  const tableRef = useRef<HTMLTableElement>(null);
+  const table = useTableBehavior<T2WEvent, EventColumn>({
     storageKey: "t2w-overview-table-columns",
-    columns: OVERVIEW_TABLE_COLUMNS,
+    columns: EVENT_SORT_COLUMNS,
     initialSort: { key: "Zeitraum", direction: "asc" },
   });
-  const { visibleColumns, toggleColumn, sort } = table;
+  const { visibleColumns, toggleColumn, moveColumn, sort } = table;
 
   const aktive = useMemo(() => activeEvents(events), [events]);
 
@@ -211,275 +179,55 @@ function Uebersicht() {
               ))}
             </select>
           </label>
+
+          {/* Auf Filterhöhe statt in einer eigenen Zeile; mobil stehen Karten. */}
+          <div className="hidden md:block">
+            <TableToolbar
+              tableRef={tableRef}
+              exportName="Übersicht"
+              columnPicker={
+                <ColumnPicker
+                  columns={EVENT_COLUMNS}
+                  visibleColumns={visibleColumns}
+                  toggleColumn={toggleColumn}
+                  moveColumn={moveColumn}
+                />
+              }
+            />
+          </div>
         </div>
 
         <EventMobileList
           events={zeilen}
           settings={settings}
+          selectionLists={selectionLists}
           emptyText="Keine Events für diese Schnellfilter."
         />
         <div className="hidden md:block">
-          <div className="mb-2 flex justify-end">
-            <ColumnPicker
-              columns={OVERVIEW_COLUMNS}
-              visibleColumns={visibleColumns}
-              toggleColumn={toggleColumn}
-            />
-          </div>
-          <DataTable exportName="Übersicht" className="min-w-[54rem]">
+          <DataTable ref={tableRef} exportName="Übersicht" tools="extern" className="min-w-[54rem]">
             <thead className="text-left">
-              <tr className="h-[30px]">
-                {visibleColumns.includes("Status") && (
-                  <th className="w-12 max-w-[3rem] !px-1 py-1.5">
-                    <SortHeader
-                      label="Status"
-                      active={sort.key === "Status"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Status")}
-                    >
-                      St.
-                    </SortHeader>
-                  </th>
-                )}
-                {visibleColumns.includes("TIME2WIN") && (
-                  <th className="w-14 max-w-14 whitespace-nowrap !px-1 py-1.5">
-                    <SortHeader
-                      label="TIME2WIN"
-                      active={sort.key === "TIME2WIN"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("TIME2WIN")}
-                    >
-                      <img
-                        src="/time2win_logo_button.svg"
-                        alt=""
-                        aria-hidden="true"
-                        className="size-4"
-                      />
-                    </SortHeader>
-                  </th>
-                )}
-                {visibleColumns.includes("Event") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Event"
-                      active={sort.key === "Event"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Event")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Veranstalter") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Veranstalter"
-                      active={sort.key === "Veranstalter"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Veranstalter")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Sportart") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Sportart"
-                      active={sort.key === "Sportart"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Sportart")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Services") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Services"
-                      active={sort.key === "Services"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Services")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Zeitraum") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Zeitraum"
-                      active={sort.key === "Zeitraum"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Zeitraum")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Tage") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Tage"
-                      active={sort.key === "Tage"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Tage")}
-                    >
-                      Tage
-                    </SortHeader>
-                  </th>
-                )}
-                {visibleColumns.includes("Aufgaben") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Aufgaben"
-                      active={sort.key === "Aufgaben"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Aufgaben")}
-                    >
-                      Aufg.
-                    </SortHeader>
-                  </th>
-                )}
-                {visibleColumns.includes("Ordner") && (
-                  <th className="px-2 py-1.5 font-semibold">
-                    <span className="sr-only">Ordner: </span>
-                    <span className="inline-flex items-center gap-2" title="Outlook und SharePoint">
-                      <Mail className="size-3.5" aria-label="Outlook" />
-                      <Share2 className="size-3.5" aria-label="SharePoint" />
-                    </span>
-                  </th>
-                )}
-                <th className="px-2 py-1.5 text-right font-semibold">Aktion</th>
+              <tr>
+                <EventHeaderCells visibleColumns={visibleColumns} sort={sort} onSort={sortiere} />
               </tr>
             </thead>
             <tbody>
-              {zeilen.map((e) => {
-                const offen = e.taskReadiness.openCount;
-                const folders = resolveEventFolderNavigation(e, settings);
-                return (
-                  <tr key={e.id} className="h-[34px] border-t border-border hover:bg-accent/50">
-                    {visibleColumns.includes("Status") && (
-                      <td
-                        className="w-12 max-w-[3rem] !px-1 py-1"
-                        title={t(`status.${e.status}` as Parameters<typeof t>[0])}
-                      >
-                        <StatusDot status={e.status} />
-                        <span className="sr-only">{STATUS_LABEL[e.status]}</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes("TIME2WIN") && (
-                      <td className="w-14 max-w-14 whitespace-nowrap !px-1 py-1 tabular-nums">
-                        {e.t2wEventId != null ? (
-                          <a
-                            href={`https://time2win.at/backend/event/${e.t2wEventId}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label={`TIME2WIN Event-ID ${e.t2wEventId} im Backend öffnen`}
-                            title="TIME2WIN Backend öffnen"
-                          >
-                            {e.t2wEventId}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Event") && (
-                      <td className="max-w-[16rem] truncate px-2 py-1 font-medium text-foreground">
-                        <Link
-                          to="/events/$eventcode"
-                          params={{ eventcode: e.eventcode }}
-                          className="hover:text-primary hover:underline"
-                        >
-                          {e.name}
-                        </Link>
-                      </td>
-                    )}
-                    {visibleColumns.includes("Veranstalter") && (
-                      <td className="max-w-[10rem] truncate px-2 py-1">
-                        <OrganizerLink organizerId={e.veranstalterId} name={e.veranstalter} />
-                      </td>
-                    )}
-                    {visibleColumns.includes("Sportart") && (
-                      <td className="max-w-[9rem] truncate px-2 py-1" title={e.sportart || "—"}>
-                        {e.sportart ? (
-                          <SelectionBadge
-                            {...(selectionLists.sports.find(
-                              (sport) => sport.id === e.sportartId || sport.name === e.sportart,
-                            ) ?? { name: e.sportart })}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Services") && (
-                      <td
-                        className="max-w-[12rem] truncate px-2 py-1"
-                        title={e.services?.join(", ") || "—"}
-                      >
-                        {e.services?.length ? (
-                          <div className="flex min-w-0 flex-nowrap gap-1 overflow-hidden">
-                            {e.services.map((name, index) => {
-                              const service = selectionLists.services.find(
-                                (item) => item.id === e.serviceIds?.[index] || item.name === name,
-                              );
-                              return (
-                                <div key={service?.id ?? name} className="shrink-0">
-                                  <ServiceBadge
-                                    name={name}
-                                    icon={service?.icon}
-                                    color={service?.color}
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Zeitraum") && (
-                      <td className="whitespace-nowrap px-2 py-1">
-                        {formatZeitraum(e.start, e.ende)}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Tage") && (
-                      <td className="px-2 py-1 tabular-nums">{tageZwischen(e.start, e.ende)}</td>
-                    )}
-                    {visibleColumns.includes("Aufgaben") && (
-                      <td className="px-2 py-1 tabular-nums">
-                        {offen > 0 ? (
-                          <span className="rounded bg-secondary px-1.5 py-0.5 font-medium text-foreground">
-                            {offen}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Ordner") && (
-                      <td className="px-2 py-1">
-                        <span className="flex gap-1">
-                          {folders.map((destination) => (
-                            <FolderLink key={destination.id} destination={destination} />
-                          ))}
-                        </span>
-                      </td>
-                    )}
-                    <td className="whitespace-nowrap px-2 py-1 text-right">
-                      <Link
-                        to="/events/$eventcode"
-                        params={{ eventcode: e.eventcode }}
-                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded p-1 text-primary hover:bg-accent sm:min-h-0 sm:min-w-0"
-                        title={`Event bearbeiten: ${e.name}`}
-                        aria-label={`Event bearbeiten: ${e.name}`}
-                      >
-                        <Pencil className="size-4" aria-hidden="true" />
-                        <span className="sr-only">Event bearbeiten: </span>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
+              {zeilen.map((e) => (
+                <tr key={e.id}>
+                  <EventRowCells
+                    event={e}
+                    visibleColumns={visibleColumns}
+                    context={{
+                      settings,
+                      selectionLists,
+                      statusTitle: (status) => t(`status.${status}` as Parameters<typeof t>[0]),
+                    }}
+                  />
+                </tr>
+              ))}
               {zeilen.length === 0 && (
                 <tr>
                   <td
-                    colSpan={visibleColumns.length + 1}
+                    colSpan={visibleColumns.length}
                     className="px-2 py-8 text-center text-muted-foreground"
                   >
                     Keine Events für diese Schnellfilter.
@@ -489,17 +237,7 @@ function Uebersicht() {
             </tbody>
           </DataTable>
         </div>
-        <div
-          aria-label="Statuslegende"
-          className="flex flex-wrap gap-3 text-xs text-muted-foreground"
-        >
-          {STATUS_ORDER.map((s) => (
-            <span key={s} className="inline-flex items-center gap-1.5">
-              <StatusDot status={s} />
-              {t(`status.${s}` as Parameters<typeof t>[0])}
-            </span>
-          ))}
-        </div>
+        <StatusLegend />
 
         <p className="text-xs text-muted-foreground">
           {zeilen.length} Zeilen · Aufg. = offene Aufgaben, OL/SP = Outlook- bzw. SharePoint-Ordner

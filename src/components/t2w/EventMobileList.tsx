@@ -6,21 +6,31 @@ import {
 } from "@/components/t2w/EventDateCollision";
 import { FolderLink } from "@/components/t2w/FolderLink";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
+import { SelectionBadge, ServiceBadge } from "@/components/t2w/ServiceBadge";
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { cn } from "@/lib/utils";
 import type { EventDateCollision } from "@/lib/t2w/event-date-collisions";
 import { formatZeitraum } from "@/lib/t2w/format";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
+import type { SelectionListSnapshot } from "@/lib/t2w/selection-list-workspace";
 import type { Settings, T2WEvent } from "@/lib/t2w/types";
 
+/**
+ * Die Eventliste für schmale Ansichten.  Der Tabellenstandard sieht hier
+ * Karten statt umbrechender Zeilen vor; Statuskennzeichen, Sportart- und
+ * Service-Badges sind dieselben wie in der Desktoptabelle, damit dasselbe
+ * Event auf beiden Breiten gleich gelesen wird.
+ */
 export function EventMobileList({
   events,
   settings,
+  selectionLists,
   emptyText,
   dateCollisions,
 }: {
   events: T2WEvent[];
   settings: Settings;
+  selectionLists?: SelectionListSnapshot | undefined;
   emptyText: string;
   dateCollisions?: ReadonlyMap<string, EventDateCollision>;
 }) {
@@ -38,6 +48,11 @@ export function EventMobileList({
         const folders = resolveEventFolderNavigation(event, settings);
         const openTasks = event.taskReadiness.openCount;
         const dateCollision = dateCollisions?.get(event.id);
+        const sport = event.sportart
+          ? (selectionLists?.sports.find(
+              (item) => item.id === event.sportartId || item.name === event.sportart,
+            ) ?? { name: event.sportart })
+          : null;
         return (
           <article
             key={event.id}
@@ -66,6 +81,24 @@ export function EventMobileList({
                 <StatusBadge status={event.status} />
               </div>
             </div>
+            {(sport || event.services?.length) && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {sport && <SelectionBadge {...sport} />}
+                {event.services?.map((name, index) => {
+                  const service = selectionLists?.services.find(
+                    (item) => item.id === event.serviceIds?.[index] || item.name === name,
+                  );
+                  return (
+                    <ServiceBadge
+                      key={service?.id ?? name}
+                      name={name}
+                      icon={service?.icon}
+                      color={service?.color}
+                    />
+                  );
+                })}
+              </div>
+            )}
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <CalendarDays className="size-4" aria-hidden="true" />

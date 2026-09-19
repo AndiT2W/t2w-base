@@ -13,6 +13,7 @@ import {
   Search,
   type LucideIcon,
 } from "lucide-react";
+import { DateChip, FilterChip, FilterResetChip } from "@/components/t2w/FilterChip";
 import { SelectionBadge } from "@/components/t2w/ServiceBadge";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -39,75 +40,6 @@ import {
 } from "@/lib/t2w/task-queue";
 
 export const Route = createFileRoute("/aufgaben")({ component: Aufgaben });
-/**
- * Ein Filter als Chip. Die Auswahl bleibt ein natives select: es bringt
- * Tastaturbedienung, Bildschirmleser und die Mobilauswahl des Systems mit,
- * ein nachgebautes Menü müsste das alles erst wieder herstellen.
- */
-function FilterChip({
-  label,
-  value,
-  inaktiv,
-  onChange,
-  children,
-}: {
-  label: string;
-  value: string;
-  inaktiv: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
-  const aktiv = value !== inaktiv;
-  return (
-    <label
-      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm md:min-h-8 ${
-        aktiv ? "border-primary/50 bg-primary/10" : "border-input bg-card"
-      }`}
-    >
-      <span className="text-muted-foreground">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
-        className={`max-w-40 cursor-pointer truncate bg-transparent pr-1 outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-          aktiv ? "font-semibold" : ""
-        }`}
-      >
-        {children}
-      </select>
-    </label>
-  );
-}
-
-function DateChip({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label
-      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm md:min-h-8 ${
-        value ? "border-primary/50 bg-primary/10" : "border-input bg-card"
-      }`}
-    >
-      <span className="text-muted-foreground">{label}</span>
-      <input
-        type="date"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
-        className={`cursor-pointer bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-          value ? "font-semibold" : "text-muted-foreground"
-        }`}
-      />
-    </label>
-  );
-}
-
 const FOKUS = [
   {
     key: "overdue" as const,
@@ -487,24 +419,19 @@ function Aufgaben() {
         <DateChip label="Ende ab" value={fromDate} onChange={setFromDate} />
         <DateChip label="Ende bis" value={toDate} onChange={setToDate} />
 
-        {aktiveFilter > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              setSearch("");
-              setEventFilter("all");
-              setStatusFilter("all");
-              setOwnerFilter("all");
-              setCategoryFilter("all");
-              setPriorityFilter("all");
-              setFromDate("");
-              setToDate("");
-            }}
-            className="min-h-11 rounded-full px-3 text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline md:min-h-8"
-          >
-            {aktiveFilter} Filter zurücksetzen
-          </button>
-        )}
+        <FilterResetChip
+          count={aktiveFilter}
+          onReset={() => {
+            setSearch("");
+            setEventFilter("all");
+            setStatusFilter("all");
+            setOwnerFilter("all");
+            setCategoryFilter("all");
+            setPriorityFilter("all");
+            setFromDate("");
+            setToDate("");
+          }}
+        />
       </div>
       {view === "table" ? (
         <>

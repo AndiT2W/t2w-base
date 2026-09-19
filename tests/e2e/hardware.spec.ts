@@ -202,7 +202,8 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.getByPlaceholder("Event filtern …").fill("Zweites");
   await expect(page.getByText("Timer XY")).toBeVisible();
   await expect(page.getByText("Max Mustermann")).not.toBeVisible();
-  await page.getByRole("button", { name: "Filter zurücksetzen" }).click();
+  // Die Aktion ist jetzt Symbol plus Anzahl; der Satz steckt im barrierefreien Namen.
+  await page.getByRole("button", { name: "1 Filter zurücksetzen" }).click();
   await expect(page.getByText("Max Mustermann")).toBeVisible();
   await expect(page.getByRole("link", { name: "Zweites Event" })).toHaveAttribute(
     "href",

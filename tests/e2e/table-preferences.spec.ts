@@ -2,6 +2,24 @@ import { expect, test } from "@playwright/test";
 import readXlsxFile from "read-excel-file/node";
 import { mockEventManagementApi } from "./support/event-management-api";
 
+// Seit der verpflichtenden Anmeldung landet jeder Ablauf ohne Sitzung auf der
+// Loginseite, und die Tabellen dieser Datei existieren dann gar nicht. Wie in
+// event-management.spec.ts stellt der Hook eine Admin-Sitzung bereit.
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user-1",
+        email: "admin@time2win.cloud",
+        displayName: "Event Admin",
+        role: "ADMIN",
+        financeAccess: true,
+        organizerId: null,
+      },
+    }),
+  );
+});
+
 test("exportiert die sichtbare Tabelle als Excel-Arbeitsmappe", async ({ page }) => {
   await mockEventManagementApi(page);
   await page.route("**/api/v1/table-preferences/**", (route) =>
@@ -62,7 +80,42 @@ test("lädt Tabellenspalten aus dem Konto und speichert Änderungen zurück", as
   await expect.poll(() => putBody).toMatchObject({ visible: expect.arrayContaining(["Tage"]) });
 });
 
-test("hebt kompakte Tabellenköpfe mit der ausgewogenen Kontrastvariante ab", async ({ page }) => {
+test("ordnet Tabellenspalten um und behält die Reihenfolge nach dem Neuladen", async ({ page }) => {
+  await mockEventManagementApi(page);
+  let preference: { version: 1; visible: string[]; sort: { key: string; direction: string } } = {
+    version: 1,
+    visible: ["Status", "Event", "Veranstalter", "Zeitraum"],
+    sort: { key: "Zeitraum", direction: "asc" },
+  };
+  await page.route("**/api/v1/table-preferences/**", async (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: { value: preference } });
+    if (route.request().method() === "PUT") {
+      preference = route.request().postDataJSON() as typeof preference;
+      return route.fulfill({ json: { value: preference } });
+    }
+    return route.fallback();
+  });
+
+  await page.goto("/");
+  const kopfNamen = async () =>
+    page.locator('[data-density="compact"] table thead th').first().textContent();
+  await expect.poll(kopfNamen).toContain("St.");
+
+  // Die Liste steht in Anzeigereihenfolge: oben ist links.
+  await page.getByRole("button", { name: "Spalten auswählen" }).click();
+  await page.getByRole("button", { name: "Event nach links verschieben" }).click();
+  await page.keyboard.press("Escape");
+
+  await expect
+    .poll(() => preference.visible)
+    .toEqual(["Event", "Status", "Veranstalter", "Zeitraum"]);
+  await expect.poll(kopfNamen).toContain("Event");
+
+  await page.reload();
+  await expect.poll(kopfNamen).toContain("Event");
+});
+
+test("hebt kompakte Tabellenköpfe mit der leichten Versalienvariante ab", async ({ page }) => {
   await mockEventManagementApi(page);
   await page.route("**/api/v1/table-preferences/**", (route) =>
     route.fulfill({ json: { value: null } }),
@@ -72,9 +125,14 @@ test("hebt kompakte Tabellenköpfe mit der ausgewogenen Kontrastvariante ab", as
   const table = page.locator('[data-density="compact"] table').first();
   const header = table.locator("thead");
 
-  await expect(header).toHaveCSS("font-size", "12px");
-  await expect(header).toHaveCSS("text-transform", "none");
-  await expect(header.locator("tr")).toHaveCSS("border-bottom-width", "2px");
+  // Tabellenstandard seit 17.09.2026: 10 px, Versalien, Haarlinie statt
+  // grauem Balken. Die abgelöste Variante "Ausgewogen" stand auf 12 px,
+  // ohne Versalsatz und mit 2-px-Unterkante.
+  await expect(header).toHaveCSS("font-size", "10px");
+  await expect(header).toHaveCSS("text-transform", "uppercase");
+  await expect(header).toHaveCSS("letter-spacing", "0.8px");
+  await expect(header.locator("th").first()).toHaveCSS("font-weight", "700");
+  await expect(header.locator("tr")).toHaveCSS("border-bottom-width", "1px");
 
   const surfaces = await table.evaluate((element) => {
     const tableElement = element as HTMLTableElement;

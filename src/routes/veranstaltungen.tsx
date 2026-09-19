@@ -1,35 +1,36 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, GanttChartSquare, List, Mail, Pencil, Plus, Share2 } from "lucide-react";
+import { CalendarDays, GanttChartSquare, List, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { GanttSeite } from "@/routes/gantt";
 import { KalenderSeite } from "@/routes/kalender";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
-import { StatusDot } from "@/components/t2w/StatusBadge";
-import { SelectionBadge, ServiceBadge } from "@/components/t2w/ServiceBadge";
-import { FolderLink } from "@/components/t2w/FolderLink";
+import {
+  ColumnPicker,
+  DataTable,
+  TableToolbar,
+  useTableBehavior,
+} from "@/components/t2w/DataTable";
+import {
+  EVENT_COLUMNS,
+  EVENT_SORT_COLUMNS,
+  EventHeaderCells,
+  EventRowCells,
+  type EventColumn,
+} from "@/components/t2w/EventTableColumns";
+import { FilterChip, FilterResetChip } from "@/components/t2w/FilterChip";
+import { StatusLegend } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
-import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
+import { heuteIso } from "@/lib/t2w/format";
 import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import {
   selectEventCatalogue,
   type ArchiveSelection,
   type EventPeriod,
 } from "@/lib/t2w/event-catalogue";
-import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
-import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 import {
-  EventDateCollisionIndicator,
   EventDateCollisionLegend,
   eventDateCollisionSurfaceClass,
 } from "@/components/t2w/EventDateCollision";
@@ -64,60 +65,22 @@ export const Route = createFileRoute("/veranstaltungen")({
 
 type Zeitraum = EventPeriod;
 type ArchivFilter = ArchiveSelection;
-const EVENT_COLUMNS = [
-  "Status",
-  "TIME2WIN",
-  "Event",
-  "Veranstalter",
-  "Sportart",
-  "Services",
-  "Zeitraum",
-  "Tage",
-  "Aufgaben",
-  "Ordner",
-] as const;
-type EventColumn = (typeof EVENT_COLUMNS)[number];
-const EVENT_TABLE_COLUMNS = [
-  { key: "Status", sortValue: (event: T2WEvent) => STATUS_LABEL[event.status] },
-  { key: "TIME2WIN", sortValue: (event: T2WEvent) => event.t2wEventId ?? 0 },
-  { key: "Event", sortValue: (event: T2WEvent) => event.name },
-  { key: "Veranstalter", sortValue: (event: T2WEvent) => event.veranstalter },
-  { key: "Sportart", sortValue: (event: T2WEvent) => event.sportart ?? "" },
-  { key: "Services", sortValue: (event: T2WEvent) => event.services?.join(", ") ?? "" },
-  { key: "Zeitraum", sortValue: (event: T2WEvent) => event.start },
-  {
-    key: "Tage",
-    sortValue: (event: T2WEvent) =>
-      Math.max(
-        1,
-        Math.round((new Date(event.ende).getTime() - new Date(event.start).getTime()) / 86400000) +
-          1,
-      ),
-  },
-  {
-    key: "Aufgaben",
-    sortValue: (event: T2WEvent) => event.taskReadiness.openCount,
-  },
-  {
-    key: "Ordner",
-    sortValue: (event: T2WEvent) =>
-      Number(Boolean(event.outlookOrdner)) + Number(Boolean(event.sharepointOrdner)),
-  },
-] as const;
-
+/** Ungefilterter Zustand — Bezugspunkt für „n Filter zurücksetzen“. */
+const FILTER_GRUNDSTELLUNG = { status: "alle", zeitraum: "jahr", archiv: "aktiv" } as const;
 function Veranstaltungen() {
   const { q, ansicht } = Route.useSearch();
   const { events, settings, selectionLists } = useT2W();
   const [suche, setSuche] = useState(q);
-  const [status, setStatus] = useState<EventStatus | "alle">("alle");
-  const [zeitraum, setZeitraum] = useState<Zeitraum>("jahr");
-  const [archiv, setArchiv] = useState<ArchivFilter>("aktiv");
+  const [status, setStatus] = useState<EventStatus | "alle">(FILTER_GRUNDSTELLUNG.status);
+  const [zeitraum, setZeitraum] = useState<Zeitraum>(FILTER_GRUNDSTELLUNG.zeitraum);
+  const [archiv, setArchiv] = useState<ArchivFilter>(FILTER_GRUNDSTELLUNG.archiv);
+  const tableRef = useRef<HTMLTableElement>(null);
   const table = useTableBehavior<T2WEvent, EventColumn>({
     storageKey: "t2w-event-table-columns",
-    columns: EVENT_TABLE_COLUMNS,
+    columns: EVENT_SORT_COLUMNS,
     initialSort: { key: "Zeitraum", direction: "asc" },
   });
-  const { visibleColumns, toggleColumn, sort } = table;
+  const { visibleColumns, toggleColumn, moveColumn, sort } = table;
   const heute = heuteIso();
 
   const gefiltert = useMemo(() => {
@@ -138,6 +101,17 @@ function Veranstaltungen() {
       ),
     [gefiltert],
   );
+  const aktiveFilter =
+    (suche.trim() ? 1 : 0) +
+    (status === FILTER_GRUNDSTELLUNG.status ? 0 : 1) +
+    (zeitraum === FILTER_GRUNDSTELLUNG.zeitraum ? 0 : 1) +
+    (archiv === FILTER_GRUNDSTELLUNG.archiv ? 0 : 1);
+  const filterZuruecksetzen = () => {
+    setSuche("");
+    setStatus(FILTER_GRUNDSTELLUNG.status);
+    setZeitraum(FILTER_GRUNDSTELLUNG.zeitraum);
+    setArchiv(FILTER_GRUNDSTELLUNG.archiv);
+  };
   if (ansicht === "kalender") return <KalenderSeite veranstaltungsmenue />;
   if (ansicht === "gantt") return <GanttSeite veranstaltungsmenue />;
 
@@ -146,7 +120,12 @@ function Veranstaltungen() {
       <PageHeader
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Veranstaltungen"
-        beschreibung={`${gefiltert.length} von ${events.length} Events`}
+        beschreibung={
+          <>
+            <span className="font-semibold tabular-nums text-foreground">{gefiltert.length}</span>
+            {` von ${events.length} Events`}
+          </>
+        }
         suche={{
           value: suche,
           onChange: setSuche,
@@ -165,7 +144,10 @@ function Veranstaltungen() {
       />
 
       <div className="space-y-3">
-        <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
+        <nav
+          aria-label="Veranstaltungsansichten"
+          className="flex w-fit gap-1 rounded-lg border border-border bg-card p-1"
+        >
           <AnsichtsReiter to="/veranstaltungen" aktiv label="Liste" icon={List} />
           <AnsichtsReiter
             to="/veranstaltungen"
@@ -183,53 +165,63 @@ function Veranstaltungen() {
         <div
           role="group"
           aria-label="Eventfilter und Tabellenspalten"
-          className="flex flex-wrap gap-3 border-b border-border pb-3"
+          className="flex flex-wrap items-center gap-2 border-b border-border pb-3"
         >
-          <Select value={status} onValueChange={(v) => setStatus(v as EventStatus | "alle")}>
-            <SelectTrigger className="h-8 w-44">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="alle">Alle Status</SelectItem>
-              {STATUS_ORDER.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterChip
+            label="Status"
+            value={status}
+            inaktiv={FILTER_GRUNDSTELLUNG.status}
+            onChange={(wert) => setStatus(wert as EventStatus | "alle")}
+          >
+            <option value="alle">Alle Status</option>
+            {STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </FilterChip>
 
-          <Select value={zeitraum} onValueChange={(v) => setZeitraum(v as Zeitraum)}>
-            <SelectTrigger className="h-8 w-44">
-              <SelectValue placeholder="Zeitraum" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="jahr">Aktuelles Jahr</SelectItem>
-              <SelectItem value="naechstes-jahr">Nächstes Jahr</SelectItem>
-              <SelectItem value="alle">Alle Zeiträume</SelectItem>
-              <SelectItem value="kommend">Kommend</SelectItem>
-              <SelectItem value="laufend">Laufend</SelectItem>
-              <SelectItem value="vergangen">Vergangen</SelectItem>
-              <SelectItem value="monat">Aktueller Monat</SelectItem>
-            </SelectContent>
-          </Select>
+          <FilterChip
+            label="Zeitraum"
+            value={zeitraum}
+            inaktiv={FILTER_GRUNDSTELLUNG.zeitraum}
+            onChange={(wert) => setZeitraum(wert as Zeitraum)}
+          >
+            <option value="jahr">Aktuelles Jahr</option>
+            <option value="naechstes-jahr">Nächstes Jahr</option>
+            <option value="alle">Alle Zeiträume</option>
+            <option value="kommend">Kommend</option>
+            <option value="laufend">Laufend</option>
+            <option value="vergangen">Vergangen</option>
+            <option value="monat">Aktueller Monat</option>
+          </FilterChip>
 
-          <Select value={archiv} onValueChange={(v) => setArchiv(v as ArchivFilter)}>
-            <SelectTrigger className="h-8 w-40">
-              <SelectValue placeholder="Archiv" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="aktiv">Nur aktive</SelectItem>
-              <SelectItem value="archiv">Nur archivierte</SelectItem>
-              <SelectItem value="alle">Aktive & Archiv</SelectItem>
-            </SelectContent>
-          </Select>
+          <FilterChip
+            label="Archiv"
+            value={archiv}
+            inaktiv={FILTER_GRUNDSTELLUNG.archiv}
+            onChange={(wert) => setArchiv(wert as ArchivFilter)}
+          >
+            <option value="aktiv">Nur aktive</option>
+            <option value="archiv">Nur archivierte</option>
+            <option value="alle">Aktive &amp; Archiv</option>
+          </FilterChip>
 
-          <div className="ml-auto">
-            <ColumnPicker
-              columns={EVENT_COLUMNS}
-              visibleColumns={visibleColumns}
-              toggleColumn={toggleColumn}
+          <FilterResetChip count={aktiveFilter} onReset={filterZuruecksetzen} />
+
+          {/* Auf Filterhöhe statt in einer eigenen Zeile; mobil stehen Karten. */}
+          <div className="ml-auto hidden md:block">
+            <TableToolbar
+              tableRef={tableRef}
+              exportName="Veranstaltungen"
+              columnPicker={
+                <ColumnPicker
+                  columns={EVENT_COLUMNS}
+                  visibleColumns={visibleColumns}
+                  toggleColumn={toggleColumn}
+                  moveColumn={moveColumn}
+                />
+              }
             />
           </div>
         </div>
@@ -238,289 +230,76 @@ function Veranstaltungen() {
         <EventMobileList
           events={zeilen}
           settings={settings}
+          selectionLists={selectionLists}
           emptyText="Keine Events für die aktuelle Filterauswahl."
           dateCollisions={dateCollisions}
         />
         <div className="hidden md:block">
-          <DataTable exportName="Veranstaltungen" className="min-w-[54rem]">
+          <DataTable
+            ref={tableRef}
+            exportName="Veranstaltungen"
+            tools="extern"
+            className="min-w-[54rem]"
+          >
             <thead className="text-left">
-              <tr className="h-[30px]">
-                {visibleColumns.includes("Status") && (
-                  <th className="w-12 max-w-[3rem] !px-1 py-1.5">
-                    <SortHeader
-                      label="Status"
-                      active={sort.key === "Status"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Status")}
-                    >
-                      St.
-                    </SortHeader>
-                  </th>
-                )}
-                {visibleColumns.includes("TIME2WIN") && (
-                  <th className="w-14 max-w-14 whitespace-nowrap !px-1 py-1.5">
-                    <SortHeader
-                      label="TIME2WIN"
-                      active={sort.key === "TIME2WIN"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("TIME2WIN")}
-                    >
-                      <img
-                        src="/time2win_logo_button.svg"
-                        alt=""
-                        aria-hidden="true"
-                        className="size-4"
-                      />
-                    </SortHeader>
-                  </th>
-                )}
-                {visibleColumns.includes("Event") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Event"
-                      active={sort.key === "Event"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Event")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Veranstalter") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Veranstalter"
-                      active={sort.key === "Veranstalter"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Veranstalter")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Sportart") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Sportart"
-                      active={sort.key === "Sportart"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Sportart")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Services") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Services"
-                      active={sort.key === "Services"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Services")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Zeitraum") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Zeitraum"
-                      active={sort.key === "Zeitraum"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Zeitraum")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Tage") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Tage"
-                      active={sort.key === "Tage"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Tage")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Aufgaben") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Aufgaben"
-                      active={sort.key === "Aufgaben"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Aufgaben")}
-                    />
-                  </th>
-                )}
-                {visibleColumns.includes("Ordner") && (
-                  <th className="px-2 py-1.5">
-                    <SortHeader
-                      label="Ordner"
-                      active={sort.key === "Ordner"}
-                      direction={sort.direction}
-                      onSort={() => sortiere("Ordner")}
-                    >
-                      <span className="inline-flex gap-2" title="Outlook und SharePoint">
-                        <Mail className="size-3.5" aria-label="Outlook" />
-                        <Share2 className="size-3.5" aria-label="SharePoint" />
-                      </span>
-                    </SortHeader>
-                  </th>
-                )}
-                <th className="px-2 py-1.5 text-right">Aktion</th>
+              <tr>
+                <EventHeaderCells visibleColumns={visibleColumns} sort={sort} onSort={sortiere} />
               </tr>
             </thead>
             <tbody>
               {zeilen.map((e) => {
-                const folders = resolveEventFolderNavigation(e, settings);
                 const dateCollision = dateCollisions.get(e.id);
                 return (
                   <tr
                     key={e.id}
-                    className={cn(
-                      "h-[34px] border-t border-border hover:bg-accent/50",
-                      eventDateCollisionSurfaceClass(dateCollision, "table"),
-                    )}
+                    className={cn(eventDateCollisionSurfaceClass(dateCollision, "table"))}
                     data-date-collision-group={
                       dateCollision ? String(dateCollision.groupIndex + 1) : undefined
                     }
                   >
-                    {visibleColumns.includes("Status") && (
-                      <td className="w-12 max-w-[3rem] !px-1 py-1" title={STATUS_LABEL[e.status]}>
-                        <StatusDot status={e.status} />
-                        <span className="sr-only">{STATUS_LABEL[e.status]}</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes("TIME2WIN") && (
-                      <td className="w-14 max-w-14 whitespace-nowrap !px-1 py-1 tabular-nums">
-                        {e.t2wEventId != null ? (
-                          <a
-                            href={`https://time2win.at/backend/event/${e.t2wEventId}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label={`TIME2WIN Event-ID ${e.t2wEventId} im Backend öffnen`}
-                            title="TIME2WIN Backend öffnen"
-                          >
-                            {e.t2wEventId}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">–</span>
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Event") && (
-                      <td className="max-w-[16rem] truncate px-2 py-1 font-medium">
-                        <Link
-                          to="/events/$eventcode"
-                          params={{ eventcode: e.eventcode }}
-                          className="hover:text-primary hover:underline"
-                        >
-                          {e.name}
-                        </Link>
-                      </td>
-                    )}
-                    {visibleColumns.includes("Veranstalter") && (
-                      <td className="max-w-[10rem] truncate px-2 py-1">
-                        <OrganizerLink organizerId={e.veranstalterId} name={e.veranstalter} />
-                      </td>
-                    )}
-                    {visibleColumns.includes("Sportart") && (
-                      <td className="max-w-[9rem] truncate px-2 py-1" title={e.sportart || "—"}>
-                        {e.sportart ? (
-                          <SelectionBadge
-                            {...(selectionLists.sports.find(
-                              (sport) => sport.id === e.sportartId || sport.name === e.sportart,
-                            ) ?? { name: e.sportart })}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Services") && (
-                      <td
-                        className="max-w-[12rem] truncate px-2 py-1"
-                        title={e.services?.join(", ") || "—"}
-                      >
-                        {e.services?.length ? (
-                          <div className="flex min-w-0 flex-nowrap gap-1 overflow-hidden">
-                            {e.services.map((name, index) => {
-                              const service = selectionLists.services.find(
-                                (item) => item.id === e.serviceIds?.[index] || item.name === name,
-                              );
-                              return (
-                                <div key={service?.id ?? name} className="shrink-0">
-                                  <ServiceBadge
-                                    name={name}
-                                    icon={service?.icon}
-                                    color={service?.color}
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Zeitraum") && (
-                      <td className="whitespace-nowrap px-2 py-1">
-                        <span className="inline-flex items-center gap-1.5">
-                          {formatZeitraum(e.start, e.ende)}
-                          {dateCollision && (
-                            <EventDateCollisionIndicator collision={dateCollision} />
-                          )}
-                        </span>
-                      </td>
-                    )}
-                    {visibleColumns.includes("Tage") && (
-                      <td className="px-2 py-1 tabular-nums">
-                        {Math.max(
-                          1,
-                          Math.round(
-                            (new Date(e.ende).getTime() - new Date(e.start).getTime()) / 86400000,
-                          ) + 1,
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.includes("Aufgaben") && (
-                      <td className="px-2 py-1 tabular-nums">{e.taskReadiness.openCount || "–"}</td>
-                    )}
-                    {visibleColumns.includes("Ordner") && (
-                      <td className="px-2 py-1">
-                        <span className="flex gap-1">
-                          {folders.map((destination) => (
-                            <FolderLink key={destination.id} destination={destination} />
-                          ))}
-                        </span>
-                      </td>
-                    )}
-                    <td className="px-2 py-1 text-right">
-                      <Link
-                        to="/events/$eventcode"
-                        params={{ eventcode: e.eventcode }}
-                        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded p-1 text-primary hover:bg-accent sm:min-h-0 sm:min-w-0"
-                        title="Event bearbeiten"
-                        aria-label={`Event bearbeiten: ${e.name}`}
-                      >
-                        <Pencil className="size-4" />
-                      </Link>
-                    </td>
+                    <EventRowCells
+                      event={e}
+                      visibleColumns={visibleColumns}
+                      context={{ settings, selectionLists, dateCollision }}
+                    />
                   </tr>
                 );
               })}
               {gefiltert.length === 0 && (
                 <tr>
                   <td
-                    colSpan={visibleColumns.length + 1}
-                    className="px-2 py-8 text-center text-muted-foreground"
+                    colSpan={visibleColumns.length}
+                    className="!h-auto !max-w-none !overflow-visible !whitespace-normal py-8"
                   >
-                    Keine Events für die aktuelle Filterauswahl.
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <p className="text-sm font-medium text-foreground">
+                        Keine Events für die aktuelle Filterauswahl.
+                      </p>
+                      {aktiveFilter > 0 && (
+                        <Button size="sm" variant="outline" onClick={filterZuruecksetzen}>
+                          {aktiveFilter} Filter zurücksetzen
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )}
             </tbody>
           </DataTable>
+          <div className="mt-2">
+            <StatusLegend />
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+/**
+ * Ein Segment der Ansichtsleiste.  Die Ansichten bleiben Links, damit Zurück,
+ * Lesezeichen und „in neuem Tab öffnen“ weiter funktionieren; die Segmentoptik
+ * entspricht den Leisten in Projektmanagement und Kommunikation.
+ */
 function AnsichtsReiter({
   to,
   search,
@@ -539,11 +318,12 @@ function AnsichtsReiter({
       to={to}
       {...(search ? { search } : {})}
       {...(aktiv ? { "aria-current": "page" as const } : {})}
-      className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
+      className={cn(
+        "inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors md:min-h-8",
         aktiv
-          ? "border-primary text-foreground"
-          : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-      }`}
+          ? "bg-secondary text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+      )}
     >
       <Icon className="size-4" />
       {label}
