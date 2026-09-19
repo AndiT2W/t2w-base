@@ -53,6 +53,11 @@ describe("Task interaction workspace", () => {
           resolvers.set(taskId, resolve);
         }),
       writeComment: async () => undefined,
+      attachments: async () => [],
+      uploadAttachment: async () => {
+        throw new Error("Nicht erwartet");
+      },
+      downloadAttachment: async () => new Blob(),
     };
     const workspace = createTaskInteractionWorkspace(adapter);
 
@@ -94,5 +99,21 @@ describe("Task interaction workspace", () => {
     await reopening;
 
     expect(workspace.snapshot()).toMatchObject({ task: null, comments: [], activities: [] });
+  });
+
+  it("keeps attachment intent and state behind the task interaction interface", async () => {
+    const workspace = createTaskInteractionWorkspace(
+      createInMemoryTaskInteractionAdapter({ tasks: [task] }),
+    );
+    await workspace.open(task);
+    await workspace.uploadAttachment({
+      fileName: "briefing.txt",
+      mimeType: "text/plain",
+      contentBase64: "aGVsbG8=",
+    });
+
+    const attachment = workspace.snapshot().attachments[0]!;
+    expect(attachment.fileName).toBe("briefing.txt");
+    await expect(workspace.downloadAttachment(attachment)).resolves.toBeInstanceOf(Blob);
   });
 });

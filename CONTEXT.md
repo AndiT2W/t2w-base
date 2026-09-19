@@ -12,6 +12,10 @@
 
 **Aufgabenablauf**: Die aus verbundenen Aufgaben eines Planungsbereichs abgeleitete Folge einschließlich paralleler Zweige; Übersicht und Tabelle beschreiben dieselbe Arbeit. Unabhängige Aufgaben bilden jeweils einen eigenen Ablauf. Quelle: Nutzerentscheidung vom 15.09.2026.
 
+**Planungsschnappschuss**: Der nach einer Planungsintention gültige Zustand der Aufgaben, Abhängigkeiten und zugehörigen Planungsdaten. Er enthält bei Aufgabenintentionen die Identität der betroffenen Aufgabe, damit eine Ansicht sie nicht aus veränderlichen Eigenschaften wie dem Titel herleiten muss. Quelle: Nutzerentscheidung vom 19.09.2026.
+
+**Globale Aufgabenprojektion**: Die für einen Benutzer sichtbare, zusammengeführte Planung aus globalen und Eventaufgaben, ihrem Eventkontext und ihren abgeleiteten Blockadegründen. Filter und Darstellung verändern diese Projektion nicht. Quelle: Nutzerentscheidung vom 19.09.2026.
+
 ## CRM workspace
 
 The CRM workspace manages people, customer profiles, and their independent relationships. A person may have customer associations and event roles simultaneously. Removing a customer association preserves the person and any event roles.

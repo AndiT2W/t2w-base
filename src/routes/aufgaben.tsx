@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { projectTaskPortfolios, type Task } from "@t2w/domain/project-management";
+import type { Task } from "@t2w/domain/project-management";
 import {
   AlertTriangle,
   CalendarDays,
@@ -29,6 +29,7 @@ import {
   priorityLabel,
   statusLabel,
   type PmGlobal,
+  type PmGlobalTask,
 } from "@/lib/t2w/project-management";
 import { createTaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
 import { TaskQueue } from "@/components/t2w/TaskQueue";
@@ -151,11 +152,7 @@ const taskStatusTone = (task: VisibleTask) => {
     return "border-sky-700/25 bg-sky-700/10 text-sky-800 dark:text-sky-300";
   return "border-border bg-muted text-muted-foreground";
 };
-type VisibleTask = ReturnType<
-  typeof projectTaskPortfolios
->[number]["portfolio"]["tasks"][number] & {
-  event: PmGlobal["eventChoices"][number] | null;
-};
+type VisibleTask = PmGlobalTask;
 
 type CategoryPresentation = {
   Icon: LucideIcon;
@@ -232,36 +229,6 @@ function categoryHealthPresentation(
   };
 }
 
-function portfolioBlocks(data: PmGlobal, sourceTasks: PmGlobal["tasks"]) {
-  return projectTaskPortfolios(
-    sourceTasks,
-    data.edges,
-    { owners: data.owners, groups: data.groups },
-    data.referenceTime,
-  ).map(({ eventId, portfolio }) => {
-    const event = sourceTasks.find((task) => task.eventId === eventId)?.event ?? null;
-    return {
-      key: eventId ?? "global",
-      event,
-      categories: portfolio.categories.map((category) => {
-        const tasks = portfolio.tasks
-          .filter((task) => task.groupId === category.groupId)
-          .map((task) => {
-            const source = sourceTasks.find((candidate) => candidate.id === task.id);
-            return {
-              ...task,
-              blockedBy:
-                source?.externalBlocked && task.blockedBy.length === 0
-                  ? ["external"]
-                  : task.blockedBy,
-              event,
-            };
-          });
-        return { ...category, tasks, flows: category.flows };
-      }),
-    };
-  });
-}
 function Aufgaben() {
   const { currentUser } = useT2W();
   const readOnly = currentUser.role === "ORGANIZER";
@@ -341,7 +308,18 @@ function Aufgaben() {
   );
   const blocks = useMemo(() => {
     if (!data) return [];
-    return portfolioBlocks(data, rawTasks);
+    const visibleTaskIds = new Set(rawTasks.map((task) => task.id));
+    return data.blocks
+      .map((block) => ({
+        ...block,
+        categories: block.categories
+          .map((category) => ({
+            ...category,
+            tasks: category.tasks.filter((task) => visibleTaskIds.has(task.id)),
+          }))
+          .filter((category) => category.tasks.length),
+      }))
+      .filter((block) => block.categories.length);
   }, [data, rawTasks]);
   const tasks = useMemo(
     () => blocks.flatMap((block) => block.categories.flatMap((category) => category.tasks)),

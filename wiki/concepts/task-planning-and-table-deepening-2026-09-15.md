@@ -2,13 +2,16 @@
 title: Aufgabenplanung und Tabellen-Vertiefung
 type: concept
 status: active
-updated: 2026-09-18
+updated: 2026-09-19
 sources:
   - ../../CONTEXT.md
   - ../../packages/domain/src/project-management.ts
   - ../../src/lib/t2w/task-interaction-workspace.ts
   - ../../src/lib/t2w/project-management.ts
   - ../../src/components/t2w/TaskDetailSheet.tsx
+  - ../../services/event-service/src/project-management.service.ts
+  - ../../services/event-service/src/project-management-task-conversation.ts
+  - ../../services/event-service/src/project-management-catalogue.ts
   - ../../src/components/t2w/DataTable.tsx
   - ../../tests/pm-e2e/project-management.spec.ts
   - User conversation, 2026-09-15
@@ -22,6 +25,9 @@ sources:
 - Der Task-Interaction-Workspace besitzt die fachnahen Bearbeitungsintentionen für Erstellen, Ändern, Voraussetzungen, Kommentare und Löschen sowie Auswahl, Draft, Ladezustand und Historie. HTTP- und In-Memory-Adapter kapseln Transport, Versionen und Persistenzpfade. Eine verspätete Historie darf weder eine neuere Auswahl noch ein bereits geschlossenes Detail überschreiben.
 - `TaskDetailSheet` besitzt die gemeinsame Bearbeitungsinteraktion für Event- und Gesamtansicht: Felder, Voraussetzungen, Kommentare, Verlauf und Löschen. Die aufrufende Ansicht liefert nur Task-Interaction-Workspace, Planungskontext und Ansichtstyp; die Detailansicht grenzt Vorgänger selbst auf denselben Planungsbereich ein. Event-Aufgaben behalten die graph-versionierte Speicherung.
 - Die Gesamtansicht sendet jede Task-Intention über den globalen Task-Adapter. Der Server bestimmt für Event-Aufgaben den Event-Pfad und die aktuelle Graph-Version; die Browseransicht kennt diese Persistenzverzweigung nicht.
+- Jede Aufgabenintention liefert einen aktuellen Planungsschnappschuss mit `affectedTaskId`. Ansichten wählen damit die betroffene Aufgabe über ihre stabile Identität und nicht über veränderliche Eigenschaften wie den Titel aus.
+- Die globale Aufgabenprojektion entsteht im Event-Service. Sie liefert die sichtbaren Aufgaben mitsamt Eventkontext, abgeleiteten Blockadegründen und Kategorieblöcken; die globale Route filtert und stellt diese Projektion dar.
+- Anhänge sind Teil der Task-Interaction-Workspace-Intentionen. Das Aufgabenpanel steuert nur die native Dateiauswahl und das Speichern eines bereitgestellten Downloads. Der Planungsservice bleibt Fassade; Kategorienkatalog sowie Aufgabenverlauf und Anhänge liegen in eigenen Implementierungen hinter seinen Seams.
 - `DataTable` bündelt den kompakten Tabellenvertrag und das Tabellenverhalten (Spaltenauswahl, Sortierung und persistierte Präferenzen) für operative Listen wie Übersicht, Veranstaltungen, Hardware und Auszahlungen. Seit der [Claude-Überarbeitung](../sources/2026-09-18-claude-pm-design.md) verwenden die beiden PM-Einstiege eigene Darstellungen für Kategorien/Abläufe und Dringlichkeit; ihre Weiterentwicklung folgt der [PM-Designgrundlage](project-management-design.md).
 
 ## Verifikation

@@ -69,7 +69,12 @@ describe.skipIf(!enabled)("simplified PM persistence", () => {
   });
   it("keeps global and event tasks separate, supports dependencies and removes a predecessor relation on delete", async () => {
     const e = await event();
-    await pm.command(e.id, { type: "create", graphVersion: 0, task: { title: "Design" } }, actor);
+    const createdDesign = await pm.command(
+      e.id,
+      { type: "create", graphVersion: 0, task: { title: "Design" } },
+      actor,
+    );
+    expect(createdDesign.affectedTaskId).toBe(createdDesign.tasks[0]?.id);
     let state = await pm.read(e.id, actor);
     const design = state.tasks.find((task) => task.title === "Design")!;
     await pm.command(
@@ -130,10 +135,16 @@ describe.skipIf(!enabled)("simplified PM persistence", () => {
     expect(
       (await pm.read(e.id, actor)).tasks.some((task) => task.title === "Druck aktualisiert"),
     ).toBe(true);
-    await pm.globalCommand(
+    const createdGlobal = await pm.globalCommand(
       { type: "create", task: { title: "Globale Aufgabe", endDate: "2026-09-20" } },
       actor,
     );
+    expect(createdGlobal.affectedTaskId).toBeTruthy();
+    expect(
+      createdGlobal.blocks
+        .flatMap((block) => block.categories)
+        .flatMap((category) => category.tasks),
+    ).toContainEqual(expect.objectContaining({ id: createdGlobal.affectedTaskId }));
     const global = await pm.global(actor);
     expect(
       global.tasks.some((task) => task.title === "Globale Aufgabe" && task.event === null),

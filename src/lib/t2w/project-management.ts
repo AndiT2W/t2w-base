@@ -1,5 +1,6 @@
 import type { projectTaskPortfolio, Task } from "@t2w/domain/project-management";
 import type {
+  TaskAttachment,
   TaskActivity,
   TaskComment,
   TaskInteractionAdapter,
@@ -25,23 +26,34 @@ export type PmState = ReturnType<typeof projectTaskPortfolio> & {
   groups: { id: string; name: string; active: boolean; sortOrder: number; version: number }[];
   readOnly?: boolean;
 };
+export type PmGlobalTask = PmState["tasks"][number] & {
+  event: PmState["event"] | null;
+  externalBlocked?: boolean;
+};
+export type PmGlobalBlock = {
+  key: string;
+  event: PmState["event"] | null;
+  categories: (PmState["categories"][number] & { tasks: PmGlobalTask[] })[];
+};
 export type PmGlobal = {
   referenceTime: string;
   owners: PmState["owners"];
   groups: PmState["groups"];
   eventChoices: PmState["event"][];
   events: PmState["event"][];
-  tasks: (Task & { event: PmState["event"] | null; externalBlocked?: boolean })[];
+  tasks: PmGlobalTask[];
+  blocks: PmGlobalBlock[];
   edges: PmState["edges"];
   readOnly?: boolean;
 };
-type PmCommand = {
+export type PmCommand = {
   type: "create" | "update" | "delete" | "add-dependency" | "remove-dependency";
   taskId?: string;
   taskVersion?: number;
   task?: Partial<Task>;
   predecessorId?: string;
 };
+export type PmMutation<TState> = TState & { affectedTaskId: string | null };
 
 export async function pmRequest<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`/api/v1/pm${path}`, {
@@ -66,39 +78,18 @@ export async function pmRequest<T>(path: string, body?: unknown): Promise<T> {
 
 export const pmRead = (id: string) => pmRequest<PmState>(`/events/${id}`);
 const pmCommand = (state: PmState, command: PmCommand) =>
-  pmRequest<PmState>(`/events/${state.event.id}/commands`, {
+  pmRequest<PmMutation<PmState>>(`/events/${state.event.id}/commands`, {
     ...command,
     graphVersion: state.event.pmGraphVersion,
   });
 export const pmGlobalRead = () => pmRequest<PmGlobal>("");
-export type PmAttachment = {
-  id: string;
-  taskId: string;
-  authorId: string;
-  fileName: string;
-  mimeType: string;
-  size: number;
-  createdAt: string;
-  author?: { id: string; displayName: string };
-};
+export type PmAttachment = TaskAttachment;
 export const pmAttachments = (taskId: string) =>
   pmRequest<PmAttachment[]>(`/tasks/${taskId}/attachments`);
 export const pmUploadAttachment = (
   taskId: string,
   input: { fileName: string; mimeType: string; contentBase64: string },
 ) => pmRequest<PmAttachment>(`/tasks/${taskId}/attachments`, input);
-export async function pmDownloadAttachment(taskId: string, attachment: PmAttachment) {
-  const response = await fetch(`/api/v1/pm/tasks/${taskId}/attachments/${attachment.id}`, {
-    credentials: "include",
-  });
-  if (!response.ok) throw new Error("Datei konnte nicht geladen werden.");
-  const url = URL.createObjectURL(await response.blob());
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = attachment.fileName;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 export type PmGroup = PmState["groups"][number];
 export const pmGroupsRead = () => pmRequest<Pick<PmState, "groups">>("/groups");
 export const pmGroupSave = (
@@ -108,7 +99,8 @@ export const pmGroupsReorder = (groups: PmGroup[]) =>
   pmRequest<Pick<PmState, "groups">>("/groups/reorder", {
     groups: groups.map(({ id, version }) => ({ id, version })),
   });
-const pmGlobalCommand = (command: PmCommand) => pmRequest<unknown>("/commands", command);
+const pmGlobalCommand = (command: PmCommand) =>
+  pmRequest<PmMutation<PmGlobal>>("/commands", command);
 
 const history = async (taskId: string) => {
   const [comments, activities] = await Promise.all([
@@ -123,19 +115,17 @@ const writeComment = async (
 ) => {
   await pmRequest(`/tasks/${taskId}/comments`, input);
 };
-const changedTask = (tasks: readonly Task[], command: PmCommand) => {
-  if (command.type === "delete") return null;
-  if (command.taskId) return tasks.find((task) => task.id === command.taskId) ?? null;
-  return tasks.find((task) => task.title === command.task?.title) ?? null;
-};
-
-function createPmTaskInteractionAdapter<TState>(options: {
-  execute(command: PmCommand): Promise<TState>;
-  changedTask(state: TState, command: PmCommand): Task | null;
+function createPmTaskInteractionAdapter<TState extends { tasks: readonly Task[] }>(options: {
+  execute(command: PmCommand): Promise<PmMutation<TState>>;
 }): TaskInteractionAdapter<TState> {
   const execute = async (command: PmCommand) => {
     const state = await options.execute(command);
-    return { state, task: options.changedTask(state, command) };
+    return {
+      state,
+      task: state.affectedTaskId
+        ? (state.tasks.find((task) => task.id === state.affectedTaskId) ?? null)
+        : null,
+    };
   };
   return {
     create: (draft) => execute({ type: "create", task: draft }),
@@ -158,6 +148,15 @@ function createPmTaskInteractionAdapter<TState>(options: {
       }),
     history,
     writeComment,
+    attachments: pmAttachments,
+    uploadAttachment: pmUploadAttachment,
+    downloadAttachment: async (taskId, attachment) => {
+      const response = await fetch(`/api/v1/pm/tasks/${taskId}/attachments/${attachment.id}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Datei konnte nicht geladen werden.");
+      return response.blob();
+    },
   };
 }
 
@@ -174,7 +173,6 @@ export function createEventTaskInteractionAdapter(options: {
       options.update(next);
       return next;
     },
-    changedTask: (state, command) => changedTask(state.tasks, command),
   });
 }
 
@@ -187,12 +185,10 @@ export function createGlobalTaskInteractionAdapter(options: {
 }): TaskInteractionAdapter<PmGlobal> {
   return createPmTaskInteractionAdapter({
     async execute(command) {
-      await pmGlobalCommand(command);
-      const next = await pmGlobalRead();
+      const next = await pmGlobalCommand(command);
       options.update(next);
       return next;
     },
-    changedTask: (state, command) => changedTask(state.tasks, command),
   });
 }
 

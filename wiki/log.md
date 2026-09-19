@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-09-19
+
+- Planungsarchitektur vertieft: Jede Aufgabenintention liefert nun einen aktuellen Planungsschnappschuss mit stabiler `affectedTaskId`; gleichnamige Aufgaben können damit nach einer Anlage nicht mehr falsch ausgewählt werden. Der Event-Service erzeugt die globale Aufgabenprojektion mit Eventkontext, Blockadegründen und Kategorieblöcken; die Route filtert nur noch diese Projektion. Anhänge durchlaufen den Task-Interaction-Workspace, während das Aufgabenpanel bei nativer Dateiauswahl und dem Speichern des Downloads bleibt. `ProjectManagementService` ist jetzt Fassade für Planung, Kategorienkatalog sowie Aufgabenverlauf/Anhänge. Eine Browser-Regression deckt die Anlage zweier gleichnamiger globaler Aufgaben mit Reload ab; Workspace- und Service-Regressionen sichern Anhänge, Ergebnisidentität und die Projektion. Quellen: Nutzerentscheidung vom 2026-09-19, [Planungskonzept](concepts/task-planning-and-table-deepening-2026-09-15.md), [PM-Service](../services/event-service/src/project-management.service.ts), [Workspace](../src/lib/t2w/task-interaction-workspace.ts), [Browser-Regression](../tests/pm-e2e/project-management.spec.ts).
+
 ## 2026-09-18
 
 - Die von Claude am 17.09.2026 überarbeitete PM-Oberfläche auf Nutzerwunsch als [verbindliche Designgrundlage](concepts/project-management-design.md) übernommen. Code und laufende Desktopansicht für Kategorien, Ablaufketten, Aufgabenpanel, Event-Zeitachse und globale Dringlichkeitsliste abgeglichen. `AGENTS.md` verweist vor PM-UI-Änderungen auf die Grundlage und verlangt deren Weiterpflege. Wiki-Einstiege, PM v4, Tabellenstandard und frühere Übersichtsentscheidung konsistent fortgeschrieben; Historie als überholt gekennzeichnet. Vier gezielte Testsuiten mit 50 Tests bestanden. Alte Browser-Erwartungen und aktuelle Umsetzungslücken sind im [Quellnachweis](sources/2026-09-18-claude-pm-design.md) dokumentiert; keine UI- oder Fachdatenänderung.

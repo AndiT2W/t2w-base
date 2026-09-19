@@ -10,6 +10,16 @@ export type TaskComment = {
 };
 export type TaskActivity = { id: string; action: string; createdAt: string };
 export type TaskHistory = { comments: TaskComment[]; activities: TaskActivity[] };
+export type TaskAttachment = {
+  id: string;
+  taskId: string;
+  authorId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+  author?: { id: string; displayName: string };
+};
 
 type TaskIntentResult<TState> = { state: TState; task: Task | null };
 type TaskCommentInput = { id?: string; text?: string; delete?: boolean };
@@ -26,13 +36,21 @@ export type TaskInteractionAdapter<TState> = {
   removeDependency(task: Task, predecessorId: string): Promise<TaskIntentResult<TState>>;
   history(taskId: string): Promise<TaskHistory>;
   writeComment(taskId: string, input: TaskCommentInput): Promise<void>;
+  attachments(taskId: string): Promise<TaskAttachment[]>;
+  uploadAttachment(
+    taskId: string,
+    input: { fileName: string; mimeType: string; contentBase64: string },
+  ): Promise<TaskAttachment>;
+  downloadAttachment(taskId: string, attachment: TaskAttachment): Promise<Blob>;
 };
 
 export type TaskInteractionSnapshot = TaskHistory & {
   task: Task | null;
   draft: Partial<Task>;
   busy: boolean;
+  attachmentBusy: boolean;
   error: string | null;
+  attachments: TaskAttachment[];
 };
 
 export type TaskInteractionWorkspace<TState> = {
@@ -47,9 +65,16 @@ export type TaskInteractionWorkspace<TState> = {
   removeDependency(predecessorId: string): Promise<TState | undefined>;
   delete(): Promise<TState | undefined>;
   writeComment(input: TaskCommentInput): Promise<void>;
+  uploadAttachment(input: {
+    fileName: string;
+    mimeType: string;
+    contentBase64: string;
+  }): Promise<void>;
+  downloadAttachment(attachment: TaskAttachment): Promise<Blob | undefined>;
 };
 
 const emptyHistory: TaskHistory = { comments: [], activities: [] };
+const emptyAttachments = { attachments: [] as TaskAttachment[], attachmentBusy: false };
 
 /**
  * Owns a Task editing interaction. Planning modules use Task intentions while
@@ -64,6 +89,7 @@ export function createTaskInteractionWorkspace<TState>(
     busy: false,
     error: null,
     ...emptyHistory,
+    ...emptyAttachments,
   };
   let selectionVersion = 0;
   const subscribers = new Set<() => void>();
@@ -85,13 +111,27 @@ export function createTaskInteractionWorkspace<TState>(
     if (selectionVersion === requestVersion && snapshot.task?.id === taskId) set(history);
     return history;
   };
+  const refreshAttachments = async (taskId = snapshot.task?.id) => {
+    if (!taskId) return [];
+    const requestVersion = selectionVersion;
+    const attachments = await adapter.attachments(taskId);
+    if (selectionVersion === requestVersion && snapshot.task?.id === taskId) set({ attachments });
+    return attachments;
+  };
   const apply = async (intent: () => Promise<TaskIntentResult<TState>>) => {
     set({ busy: true, error: null });
     try {
       const result = await intent();
       selectionVersion += 1;
-      set({ task: result.task, draft: result.task ?? {}, busy: false, ...emptyHistory });
-      if (result.task?.id) await refreshHistory(result.task.id);
+      set({
+        task: result.task,
+        draft: result.task ?? {},
+        busy: false,
+        ...emptyHistory,
+        ...emptyAttachments,
+      });
+      if (result.task?.id)
+        await Promise.all([refreshHistory(result.task.id), refreshAttachments(result.task.id)]);
       return result.state;
     } catch (value) {
       fail(value);
@@ -118,17 +158,24 @@ export function createTaskInteractionWorkspace<TState>(
     },
     async open(task) {
       selectionVersion += 1;
-      set({ task, draft: task, busy: false, error: null, ...emptyHistory });
+      set({ task, draft: task, busy: false, error: null, ...emptyHistory, ...emptyAttachments });
       if (!task.id) return;
       try {
-        await refreshHistory(task.id);
+        await Promise.all([refreshHistory(task.id), refreshAttachments(task.id)]);
       } catch (value) {
         if (snapshot.task?.id === task.id) fail(value);
       }
     },
     close() {
       selectionVersion += 1;
-      set({ task: null, draft: {}, busy: false, error: null, ...emptyHistory });
+      set({
+        task: null,
+        draft: {},
+        busy: false,
+        error: null,
+        ...emptyHistory,
+        ...emptyAttachments,
+      });
     },
     updateDraft(patch) {
       set({ draft: { ...snapshot.draft, ...patch } });
@@ -172,6 +219,33 @@ export function createTaskInteractionWorkspace<TState>(
         fail(value);
       }
     },
+    async uploadAttachment(input) {
+      const taskId = snapshot.task?.id;
+      if (!taskId) return;
+      set({ attachmentBusy: true, error: null });
+      try {
+        const attachment = await adapter.uploadAttachment(taskId, input);
+        if (snapshot.task?.id === taskId)
+          set({ attachments: [...snapshot.attachments, attachment], attachmentBusy: false });
+      } catch (value) {
+        set({ attachmentBusy: false });
+        fail(value);
+      }
+    },
+    async downloadAttachment(attachment) {
+      const taskId = snapshot.task?.id;
+      if (!taskId) return undefined;
+      set({ attachmentBusy: true, error: null });
+      try {
+        const file = await adapter.downloadAttachment(taskId, attachment);
+        set({ attachmentBusy: false });
+        return file;
+      } catch (value) {
+        set({ attachmentBusy: false });
+        fail(value);
+        return undefined;
+      }
+    },
   };
 }
 
@@ -179,10 +253,12 @@ export function createInMemoryTaskInteractionAdapter(initial: {
   tasks: Task[];
   comments?: Record<string, TaskComment[]>;
   activities?: Record<string, TaskActivity[]>;
+  attachments?: Record<string, TaskAttachment[]>;
 }): TaskInteractionAdapter<Task[]> {
   let tasks = initial.tasks;
   const comments = new Map(Object.entries(initial.comments ?? {}));
   const activities = new Map(Object.entries(initial.activities ?? {}));
+  const attachments = new Map(Object.entries(initial.attachments ?? {}));
   const save = (task: Task) => {
     tasks = tasks.map((candidate) => (candidate.id === task.id ? task : candidate));
     return { state: tasks, task };
@@ -267,6 +343,29 @@ export function createInMemoryTaskInteractionAdapter(initial: {
           createdAt: now,
         },
       ]);
+    },
+    async attachments(taskId) {
+      return attachments.get(taskId) ?? [];
+    },
+    async uploadAttachment(taskId, input) {
+      taskOrFail(taskId);
+      const saved: TaskAttachment = {
+        id: `attachment-${(attachments.get(taskId) ?? []).length + 1}`,
+        taskId,
+        authorId: "memory",
+        fileName: input.fileName,
+        mimeType: input.mimeType,
+        size: input.contentBase64.length,
+        createdAt: new Date().toISOString(),
+      };
+      attachments.set(taskId, [...(attachments.get(taskId) ?? []), saved]);
+      return saved;
+    },
+    async downloadAttachment(taskId, attachment) {
+      taskOrFail(taskId);
+      if (!(attachments.get(taskId) ?? []).some((item) => item.id === attachment.id))
+        throw new Error("Datei nicht gefunden.");
+      return new Blob();
     },
   };
 }

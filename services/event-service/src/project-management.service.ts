@@ -9,13 +9,17 @@ import { Prisma, type PmTask, type User } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import {
   projectTaskPortfolio,
+  projectTaskPortfolios,
   validateDependency,
   validateTaskChange,
+  type Catalogue,
   type Dependency,
   type Task,
 } from "@t2w/domain/project-management";
 import { PrismaService } from "./prisma.service.js";
 import { AuditService } from "./audit.service.js";
+import { ProjectManagementCatalogue } from "./project-management-catalogue.js";
+import { ProjectManagementTaskConversation } from "./project-management-task-conversation.js";
 type Tx = Prisma.TransactionClient;
 export type PmActor = Pick<User, "id" | "role" | "status" | "organizerId" | "financeAccess">;
 type Scope = { scope: "EVENT"; eventId: string } | { scope: "GLOBAL"; eventId?: never };
@@ -45,10 +49,24 @@ const asTask = (task: PmTask): Task => ({
 
 @Injectable()
 export class ProjectManagementService {
+  private readonly categoryCatalogue: ProjectManagementCatalogue;
+  private readonly taskConversation: ProjectManagementTaskConversation;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-  ) {}
+  ) {
+    this.categoryCatalogue = new ProjectManagementCatalogue(
+      prisma,
+      (tx, actor) => this.actor(tx, actor as PmActor),
+      (tx, actor) => this.actor(tx, actor as PmActor, { admin: true }),
+    );
+    this.taskConversation = new ProjectManagementTaskConversation(
+      prisma,
+      audit,
+      (tx, taskId, actor) => this.ensureTaskAccess(tx, taskId, actor),
+    );
+  }
   private async actor(
     tx: Tx,
     actor: PmActor,
@@ -137,15 +155,13 @@ export class ProjectManagementService {
             where: { successorId: { in: all.map((task) => task.id) } },
           })
         : [];
+      const projection = this.globalProjection(all, edges, catalogue, events, time);
       return {
         referenceTime: time,
         owners: catalogue.owners,
         groups: catalogue.groups,
         eventChoices: events,
-        tasks: all.map((task) => ({
-          ...task,
-          event: task.eventId ? (events.find((event) => event.id === task.eventId) ?? null) : null,
-        })),
+        ...projection,
         edges,
         events,
       };
@@ -284,7 +300,11 @@ export class ProjectManagementService {
           error instanceof Error ? error.message : "Ungültige Änderung.",
         );
       }
-      return scope.scope === "EVENT" ? this.readInside(tx, scope.eventId) : this.state(tx, scope);
+      const state =
+        scope.scope === "EVENT"
+          ? await this.readInside(tx, scope.eventId)
+          : await this.state(tx, scope);
+      return { ...state, affectedTaskId: input.type === "delete" ? null : taskId };
     });
   }
   private async readInside(tx: Tx, eventId: string) {
@@ -311,190 +331,45 @@ export class ProjectManagementService {
           where: { id: task.eventId },
           select: { pmGraphVersion: true },
         });
-        return this.mutate(
+        const result = await this.mutate(
           { scope: "EVENT", eventId: task.eventId },
           { ...input, graphVersion: input.graphVersion ?? event.pmGraphVersion },
           actor,
         );
+        return { ...(await this.global(actor)), affectedTaskId: result.affectedTaskId };
       }
     }
-    return this.mutate({ scope: "GLOBAL" }, input, actor);
+    const result = await this.mutate({ scope: "GLOBAL" }, input, actor);
+    return { ...(await this.global(actor)), affectedTaskId: result.affectedTaskId };
   }
   async comments(taskId: string, actor: PmActor) {
-    return this.prisma.$transaction(async (tx) => {
-      await this.ensureTaskAccess(tx, taskId, actor);
-      return tx.pmComment.findMany({
-        where: { taskId },
-        orderBy: { createdAt: "asc" },
-        include: { author: { select: { id: true, displayName: true } } },
-      });
-    });
+    return this.taskConversation.comments(taskId, actor);
   }
   async comment(
     taskId: string,
     input: { id?: string; text?: string; delete?: boolean },
     actor: PmActor,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      await this.ensureTaskAccess(tx, taskId, actor);
-      const before = input.id ? await tx.pmComment.findUnique({ where: { id: input.id } }) : null;
-      if (before && before.taskId !== taskId)
-        throw new NotFoundException("Kommentar nicht gefunden.");
-      if (before && before.authorId !== actor.id)
-        throw new ForbiddenException("Nur eigene Kommentare dürfen geändert werden.");
-      if (input.delete) {
-        if (!before) throw new NotFoundException("Kommentar nicht gefunden.");
-        await tx.pmActivity.deleteMany({
-          where: { taskId, details: { path: ["commentId"], equals: before.id } },
-        });
-        await tx.pmComment.delete({ where: { id: before.id } });
-        await this.audit.append(
-          {
-            entity: "PmComment",
-            entityId: before.id,
-            action: "delete",
-            userId: actor.id,
-            details: { taskId },
-          },
-          tx,
-        );
-        return null;
-      }
-      if (!input.text?.trim() || input.text.length > 10000)
-        throw new BadRequestException("Kommentartext erforderlich.");
-      const saved = before
-        ? await tx.pmComment.update({ where: { id: before.id }, data: { text: input.text } })
-        : await tx.pmComment.create({ data: { taskId, authorId: actor.id, text: input.text } });
-      await tx.pmActivity.create({
-        data: {
-          taskId,
-          actorId: actor.id,
-          action: before ? "comment-update" : "comment-create",
-          details: json({ commentId: saved.id, before: before?.text ?? null, after: saved.text }),
-        },
-      });
-      return saved;
-    });
+    return this.taskConversation.comment(taskId, input, actor);
   }
   activities(taskId: string, actor: PmActor) {
-    return this.prisma.$transaction(async (tx) => {
-      const user = await this.ensureTaskAccess(tx, taskId, actor);
-      if (user.role === "ORGANIZER") return [];
-      return tx.pmActivity.findMany({
-        where: { taskId },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      });
-    });
+    return this.taskConversation.activities(taskId, actor);
   }
   groups(actor: PmActor) {
-    return this.prisma.$transaction(async (tx) => {
-      await this.actor(tx, actor);
-      return this.catalogue(tx);
-    });
+    return this.categoryCatalogue.groups(actor);
   }
   saveGroup(
     input: { id?: string; name: string; active: boolean; sortOrder: number; version?: number },
     actor: PmActor,
   ) {
-    return this.prisma
-      .$transaction(async (tx) => {
-        await this.actor(tx, actor, { admin: true });
-        if (
-          typeof input.name !== "string" ||
-          !input.name.trim() ||
-          typeof input.active !== "boolean" ||
-          !Number.isInteger(input.sortOrder)
-        )
-          throw new BadRequestException("Name und Reihenfolge erforderlich.");
-        if (input.id) {
-          if (!Number.isInteger(input.version))
-            throw new BadRequestException("Kategorieversion erforderlich.");
-          const saved = await tx.pmGroup.updateMany({
-            where: { id: input.id, version: input.version },
-            data: {
-              name: input.name.trim(),
-              active: input.active,
-              sortOrder: input.sortOrder,
-              version: { increment: 1 },
-            },
-          });
-          if (!saved.count)
-            throw new ConflictException("Kategorie wurde geändert. Kategorien neu laden.");
-          return tx.pmGroup.findUniqueOrThrow({ where: { id: input.id } });
-        }
-        return tx.pmGroup.create({
-          data: { name: input.name.trim(), active: input.active, sortOrder: input.sortOrder },
-        });
-      })
-      .catch((error: unknown) => {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
-          throw new ConflictException("Eine Kategorie mit diesem Namen ist bereits vorhanden.");
-        throw error;
-      });
+    return this.categoryCatalogue.save(input, actor);
   }
   reorderGroups(input: { groups: { id: string; version: number }[] }, actor: PmActor) {
-    return this.prisma
-      .$transaction(
-        async (tx) => {
-          await this.actor(tx, actor, { admin: true });
-          if (
-            !Array.isArray(input.groups) ||
-            input.groups.some(
-              (group) => !group || typeof group.id !== "string" || !Number.isInteger(group.version),
-            )
-          )
-            throw new BadRequestException("Kategorien und Versionen erforderlich.");
-          const current = await tx.pmGroup.findMany();
-          const ids = new Set(input.groups.map((group) => group.id));
-          if (
-            ids.size !== input.groups.length ||
-            current.length !== ids.size ||
-            current.some((group) => !ids.has(group.id))
-          )
-            throw new ConflictException("Kategorien wurden geändert. Kategorien neu laden.");
-          // Lock in a consistent order; roll back the complete order on a stale version.
-          const ordered = input.groups
-            .map((group, sortOrder) => ({ ...group, sortOrder }))
-            .sort((a, b) => a.id.localeCompare(b.id));
-          for (const group of ordered) {
-            const saved = await tx.pmGroup.updateMany({
-              where: { id: group.id, version: group.version },
-              data: { sortOrder: group.sortOrder, version: { increment: 1 } },
-            });
-            if (!saved.count)
-              throw new ConflictException("Kategorien wurden geändert. Kategorien neu laden.");
-          }
-          return {
-            groups: await tx.pmGroup.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
-          };
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      )
-      .catch((error: unknown) => {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
-          throw new ConflictException("Kategorien wurden geändert. Kategorien neu laden.");
-        throw error;
-      });
+    return this.categoryCatalogue.reorder(input, actor);
   }
 
   async attachments(taskId: string, actor: PmActor) {
-    return this.prisma.$transaction(async (tx) => {
-      await this.ensureTaskAccess(tx, taskId, actor);
-      return tx.pmAttachment.findMany({
-        where: { taskId },
-        select: {
-          id: true,
-          taskId: true,
-          authorId: true,
-          fileName: true,
-          mimeType: true,
-          size: true,
-          createdAt: true,
-          author: { select: { id: true, displayName: true } },
-        },
-        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      });
-    });
+    return this.taskConversation.attachments(taskId, actor);
   }
 
   async uploadAttachment(
@@ -502,47 +377,11 @@ export class ProjectManagementService {
     input: { fileName?: string; mimeType?: string; contentBase64?: string },
     actor: PmActor,
   ) {
-    return this.prisma.$transaction(async (tx) => {
-      await this.ensureTaskAccess(tx, taskId, actor);
-      const fileName = input.fileName?.trim().replace(/[\\/]/g, "_") ?? "";
-      const mimeType = input.mimeType?.trim().toLowerCase() ?? "";
-      const allowed = new Set([
-        "application/pdf",
-        "image/jpeg",
-        "image/png",
-        "text/plain",
-        "text/csv",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ]);
-      if (!fileName || fileName.length > 180 || !allowed.has(mimeType) || !input.contentBase64)
-        throw new BadRequestException("Dateiname oder Dateityp ist ungültig.");
-      const content = Buffer.from(input.contentBase64, "base64");
-      if (!content.length || content.length > 5 * 1024 * 1024)
-        throw new BadRequestException("Datei muss zwischen 1 Byte und 5 MB groß sein.");
-      return tx.pmAttachment.create({
-        data: { taskId, authorId: actor.id, fileName, mimeType, size: content.length, content },
-        select: {
-          id: true,
-          taskId: true,
-          authorId: true,
-          fileName: true,
-          mimeType: true,
-          size: true,
-          createdAt: true,
-          author: { select: { id: true, displayName: true } },
-        },
-      });
-    });
+    return this.taskConversation.uploadAttachment(taskId, input, actor);
   }
 
   async attachment(taskId: string, attachmentId: string, actor: PmActor) {
-    return this.prisma.$transaction(async (tx) => {
-      await this.ensureTaskAccess(tx, taskId, actor);
-      const file = await tx.pmAttachment.findFirst({ where: { id: attachmentId, taskId } });
-      if (!file) throw new NotFoundException("Datei nicht gefunden.");
-      return file;
-    });
+    return this.taskConversation.attachment(taskId, attachmentId, actor);
   }
 
   private async ensureTaskAccess(tx: Tx, taskId: string, actor: PmActor) {
@@ -639,22 +478,21 @@ export class ProjectManagementService {
         organizerId: user.organizerId,
       },
     ];
-    const projected = projectTaskPortfolio(
+    const referenceTime = new Date().toISOString();
+    const projection = this.globalProjection(
       rawTasks,
       edges,
       { owners, groups },
-      new Date().toISOString(),
+      events,
+      referenceTime,
+      externallyBlockedIds,
     );
     return {
-      referenceTime: new Date().toISOString(),
+      referenceTime,
       owners,
       groups,
       eventChoices: events,
-      tasks: projected.tasks.map((task) => ({
-        ...task,
-        event: rows.find((row) => row.id === task.id)?.event ?? null,
-        externalBlocked: externallyBlockedIds.has(task.id),
-      })),
+      ...projection,
       edges,
       events,
       readOnly: true,
@@ -677,6 +515,48 @@ export class ProjectManagementService {
       groups: global.groups,
       referenceTime: global.referenceTime,
       readOnly: true,
+    };
+  }
+
+  private globalProjection(
+    tasks: Task[],
+    edges: Dependency[],
+    catalogue: Catalogue,
+    events: {
+      id: string;
+      eventCode: string;
+      name: string;
+      archived: boolean;
+      pmGraphVersion: number;
+    }[],
+    referenceTime: string,
+    externallyBlockedIds = new Set<string>(),
+  ) {
+    const eventById = new Map(events.map((event) => [event.id, event]));
+    const blocks = projectTaskPortfolios(tasks, edges, catalogue, referenceTime).map(
+      ({ eventId, portfolio }) => {
+        const projectedTasks = portfolio.tasks.map((task) => ({
+          ...task,
+          event: task.eventId ? (eventById.get(task.eventId) ?? null) : null,
+          externalBlocked: externallyBlockedIds.has(task.id),
+          blockedBy:
+            externallyBlockedIds.has(task.id) && task.blockedBy.length === 0
+              ? ["external"]
+              : task.blockedBy,
+        }));
+        return {
+          key: eventId ?? "global",
+          event: eventId ? (eventById.get(eventId) ?? null) : null,
+          categories: portfolio.categories.map((category) => ({
+            ...category,
+            tasks: projectedTasks.filter((task) => task.groupId === category.groupId),
+          })),
+        };
+      },
+    );
+    return {
+      tasks: blocks.flatMap((block) => block.categories.flatMap((category) => category.tasks)),
+      blocks,
     };
   }
 }

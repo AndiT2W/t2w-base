@@ -39,8 +39,31 @@ async function create(page: Page, eventId: string, title: string) {
   });
   expect(response.ok()).toBeTruthy();
   const next = await response.json();
-  return next.tasks.find((task: { title: string }) => task.title === title);
+  expect(next.affectedTaskId).toEqual(expect.any(String));
+  return next.tasks.find((task: { id: string }) => task.id === next.affectedTaskId);
 }
+
+test("keeps a duplicate-title Aufgabe selected after creation and reload", async ({ page }) => {
+  await fixture(page);
+  const title = `Doppelte Aufgabe ${randomUUID().slice(0, 6)}`;
+
+  await page.goto("/aufgaben");
+  await page.getByRole("button", { name: "Globale Aufgabe anlegen" }).click();
+  await page.getByLabel("Titel").fill(title);
+  await page.getByRole("button", { name: "Aufgabe anlegen" }).click();
+  await page.getByLabel("Beschreibung").fill("Erste gleichnamige Aufgabe");
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Globale Aufgabe anlegen" }).click();
+  await page.getByLabel("Titel").fill(title);
+  await page.getByRole("button", { name: "Aufgabe anlegen" }).click();
+  await expect(page.getByLabel("Beschreibung")).toHaveValue("");
+  await page.getByLabel("Beschreibung").fill("Zweite gleichnamige Aufgabe");
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await page.reload();
+  await expect(page.getByTestId("task-overview").getByText(title, { exact: true })).toHaveCount(2);
+});
 test("keeps categories closed, expands the sequential table and blocks premature completion", async ({
   page,
 }) => {

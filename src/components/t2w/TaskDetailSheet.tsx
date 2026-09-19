@@ -18,12 +18,7 @@ import { successorIds } from "@/lib/t2w/task-flow-view";
 import { taskState } from "@/lib/t2w/task-state";
 import { TaskStateChip } from "@/components/t2w/TaskState";
 import { cn } from "@/lib/utils";
-import {
-  pmAttachments,
-  pmDownloadAttachment,
-  pmUploadAttachment,
-  type PmAttachment,
-} from "@/lib/t2w/project-management";
+import type { TaskAttachment } from "@/lib/t2w/task-interaction-workspace";
 
 const control = "min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
 
@@ -92,14 +87,12 @@ export function TaskDetailSheet({
     workspace.snapshot,
     workspace.snapshot,
   );
-  const { activities, busy, comments, draft, error, task } = snapshot;
+  const { activities, attachmentBusy, attachments, busy, comments, draft, error, task } = snapshot;
   const [comment, setComment] = useState("");
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [attachments, setAttachments] = useState<PmAttachment[]>([]);
-  const [attachmentBusy, setAttachmentBusy] = useState(false);
 
   const editable = Boolean(task?.id);
   const canEdit = editable && !readOnly;
@@ -140,12 +133,18 @@ export function TaskDetailSheet({
     setEditingComment(null);
     setConfirmDelete(null);
     setHistoryOpen(false);
-    setAttachments([]);
-    if (task?.id)
-      void pmAttachments(task.id)
-        .then(setAttachments)
-        .catch(() => undefined);
   }, [task?.id]);
+
+  const downloadAttachment = async (attachment: TaskAttachment) => {
+    const file = await workspace.downloadAttachment(attachment);
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = attachment.fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Sheet open={!!task} onOpenChange={(shown) => !shown && !busy && workspace.close()}>
@@ -577,7 +576,7 @@ export function TaskDetailSheet({
                         size="icon"
                         variant="ghost"
                         aria-label={`${attachment.fileName} herunterladen`}
-                        onClick={() => void pmDownloadAttachment(task.id, attachment)}
+                        onClick={() => void downloadAttachment(attachment)}
                       >
                         <Download className="size-4" />
                       </Button>
@@ -599,19 +598,16 @@ export function TaskDetailSheet({
                     const file = event.target.files?.[0];
                     event.currentTarget.value = "";
                     if (!file || !task.id) return;
-                    setAttachmentBusy(true);
                     const reader = new FileReader();
                     reader.onload = () => {
                       const contentBase64 = String(reader.result).split(",")[1] ?? "";
-                      void pmUploadAttachment(task.id, {
+                      void workspace.uploadAttachment({
                         fileName: file.name,
                         mimeType: file.type || "text/plain",
                         contentBase64,
-                      })
-                        .then((saved) => setAttachments((current) => [...current, saved]))
-                        .finally(() => setAttachmentBusy(false));
+                      });
                     };
-                    reader.onerror = () => setAttachmentBusy(false);
+                    reader.onerror = () => undefined;
                     reader.readAsDataURL(file);
                   }}
                 />
