@@ -126,9 +126,22 @@ verschwindet also erst, wenn nichts mehr an ihr hängt. Konversationen hängen j
 [Auswahllisten-Domain](../../packages/domain/src/selection-lists.ts),
 [Einstellungen](../../src/routes/einstellungen.tsx), [Symbolpalette](../../src/components/t2w/ServiceBadge.tsx).
 
+Nachgezogen am 19.09.2026 (Schritt 2, erster Teil): Der Bezug nimmt neben der Person ein Thema auf.
+Migration `0034_communication_topics` legt `CommunicationTopicOption` an (vorbelegt mit Teilnehmer,
+Sponsoren, Behörde, Rechnung, Presse) und ergänzt `topicId` an `EventActivity` und
+`EventCommunicationMessage`. Der Fremdschlüssel löscht mit `ON DELETE SET NULL`: ein entferntes Thema
+nimmt keinen Eintrag mit, der Eintrag verliert nur seinen Bezug. Zugeordnet wird im Nachrichtenpanel;
+das Kommando `assign-communication-topic` läuft über dieselbe Versionsprüfung wie die übrigen
+Eventmutationen. Der Server entscheidet selbst, ob der Eintrag eine Outlook-Nachricht oder eine
+manuelle Notiz ist, statt die Herkunft durch die Anwendung zu reichen. „Ohne Bezug“ bedeutet jetzt
+**weder Person noch Thema**; ein Themenfilter steht neben dem Bezugsfilter. Referenzen:
+[Eventmutationen](../../services/event-service/src/event-mutations.ts),
+[Prisma-Adapter](../../services/event-service/src/prisma-event-mutation.adapter.ts).
+
 Noch nicht umgesetzt, weil vom Datenmodell abhängig:
-- Der Bezug kennt nur Personen. Themen, Vorschläge und der Filter „Vorschläge prüfen“ kommen mit
-  Schritt 2. Die Spalte heißt bereits „Bezug“, damit sie später nicht umbenannt werden muss.
+- Vorschläge und der Filter „Vorschläge prüfen“ fehlen noch; sie kommen mit der
+  [Mailkategorisierung](../decisions/2026-09-19-mailkategorisierung-mit-ollama-cloud.md).
+  Ebenso fehlen die Regeln für Adresse und Domain — Themen werden derzeit von Hand zugeordnet.
 - Der Zeitraumfilter der Chipleiste fehlt; gefiltert wird derzeit über Art, Bezug, Richtung und
   Anlagen.
 - „Notiz erfassen“ legt weiterhin eine Aktivität im bestehenden Sinn an.
@@ -139,7 +152,8 @@ Noch nicht umgesetzt, weil vom Datenmodell abhängig:
 ## Offene Umsetzungsschritte
 
 1. ~~Nachrichtenarten als Auswahlliste mit Symbol~~ — erledigt am 19.09.2026.
-2. Feld für den Bezug (Person und/oder Thema) samt getrenntem Vorschlagsfeld; Regeln für Adresse und Domain.
+2. ~~Feld für den Bezug (Person und/oder Thema)~~ — erledigt am 19.09.2026. Offen bleiben das
+   getrennte Vorschlagsfeld und die Regeln für Adresse und Domain.
 
 **Festlegungen vom 19.09.2026** (Nutzerkonversation): Nachrichtenarten und Themen entstehen als zwei neue Kinds des vorhandenen Auswahllisten-Mechanismus — `communicationChannels` und `communicationTopics` — mit je einem Options-Modell samt `icon`, `color`, `active` und `sortOrder`, wie `ServiceOption` und `EventRoleOption`. Damit gelten Adapter, Workspace und Einstellungsoberfläche unverändert; die Sonderverwaltung von `PmGroup` wird nicht kopiert. Die drei Bestandswerte `E-Mail`, `Telefon` und `Notiz` werden als Optionen vorbelegt. Eine Nachricht trägt **genau ein Thema**; die Person bleibt ein davon getrenntes Feld, beide können nebeneinander gesetzt sein. Referenzen: [Auswahllisten-Domain](../../packages/domain/src/selection-lists.ts), [Schema](../../services/event-service/prisma/schema.prisma).
 3. ~~Anzeige umbauen~~ — erledigt am 19.09.2026.

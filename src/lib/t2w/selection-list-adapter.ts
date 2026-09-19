@@ -14,6 +14,9 @@ import {
   apiManageCommunicationChannels,
   apiCreateCommunicationChannel,
   apiUpdateCommunicationChannel,
+  apiManageCommunicationTopics,
+  apiCreateCommunicationTopic,
+  apiUpdateCommunicationTopic,
 } from "./api";
 import type {
   SelectionListAdapter,
@@ -34,7 +37,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
             ? apiManageHardwareObjects()
             : kind === "communicationChannels"
               ? apiManageCommunicationChannels()
-              : apiManageEventRoles();
+              : kind === "communicationTopics"
+                ? apiManageCommunicationTopics()
+                : apiManageEventRoles();
     },
     create(kind: SelectionListKind, name: string): Promise<SelectionListValue> {
       return kind === "sports"
@@ -45,7 +50,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
             ? apiCreateHardwareObject(name)
             : kind === "communicationChannels"
               ? apiCreateCommunicationChannel(name)
-              : apiCreateEventRole(name);
+              : kind === "communicationTopics"
+                ? apiCreateCommunicationTopic(name)
+                : apiCreateEventRole(name);
     },
     update(
       kind: SelectionListKind,
@@ -60,7 +67,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
             ? apiUpdateHardwareObject(id, patch)
             : kind === "communicationChannels"
               ? apiUpdateCommunicationChannel(id, patch)
-              : apiUpdateEventRole(id, patch);
+              : kind === "communicationTopics"
+                ? apiUpdateCommunicationTopic(id, patch)
+                : apiUpdateEventRole(id, patch);
     },
     reorder(kind, ids) {
       const path =
@@ -72,7 +81,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
               ? "hardware-objects"
               : kind === "communicationChannels"
                 ? "communication-channels"
-                : "event-roles";
+                : kind === "communicationTopics"
+                  ? "communication-topics"
+                  : "event-roles";
       return fetch(`/api/v1/${path}/reorder`, {
         method: "POST",
         credentials: "include",

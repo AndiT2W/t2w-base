@@ -122,7 +122,13 @@ export class MasterDataController {
   @Post(":kind/reorder")
   reorderSelectionList(
     @Param("kind")
-    kind: "sports" | "services" | "hardware-objects" | "event-roles" | "communication-channels",
+    kind:
+      | "sports"
+      | "services"
+      | "hardware-objects"
+      | "event-roles"
+      | "communication-channels"
+      | "communication-topics",
     @Body() body: { ids: string[] },
   ) {
     const normalized =
@@ -132,7 +138,9 @@ export class MasterDataController {
           ? "eventRoles"
           : kind === "communication-channels"
             ? "communicationChannels"
-            : kind;
+            : kind === "communication-topics"
+              ? "communicationTopics"
+              : kind;
     return this.selectionLists.reorder(normalized, body.ids);
   }
 
@@ -204,6 +212,25 @@ export class MasterDataController {
     @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
     return this.selectionLists.update("communicationChannels", id, body);
+  }
+
+  @Get("communication-topics") communicationTopics(
+    @Query("includeInactive") includeInactive?: string,
+  ) {
+    return this.selectionLists.list("communicationTopics", includeInactive === "true");
+  }
+  @Roles("ADMIN")
+  @Post("communication-topics")
+  communicationTopic(@Body() body: { name: string }) {
+    return this.selectionLists.create("communicationTopics", body.name);
+  }
+  @Roles("ADMIN")
+  @Patch("communication-topics/:id")
+  updateCommunicationTopic(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  ) {
+    return this.selectionLists.update("communicationTopics", id, body);
   }
 
   @Get("contacts") contacts() {

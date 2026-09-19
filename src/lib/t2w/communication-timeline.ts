@@ -17,6 +17,8 @@ export type CommunicationTimelineCriteria = {
   channel: "all" | CommunicationChannel;
   /** "all", "unassigned" oder eine Kontakt-Id. */
   contactId: string;
+  /** "all" oder die Id eines Themas aus der Auswahlliste. */
+  topicId: string;
   direction: CommunicationDirection;
   search: string;
   attachmentsOnly: boolean;
@@ -170,10 +172,14 @@ export function projectCommunicationTimeline(input: {
   const matchesContact = (message: Communication) => {
     if (input.criteria.contactId === "all") return true;
     const eventContact = eventContactsByMessageId.get(message.id);
+    // "Ohne Bezug" heisst: weder Person noch Thema. Ein Eintrag mit Thema
+    // hat einen Bezug, auch wenn keine Person dahintersteht.
     return input.criteria.contactId === "unassigned"
-      ? !eventContact
+      ? !eventContact && !message.themaId
       : eventContact?.id === input.criteria.contactId;
   };
+  const matchesTopic = (message: Communication) =>
+    input.criteria.topicId === "all" || message.themaId === input.criteria.topicId;
   const matchesDirection = (message: Communication) =>
     input.criteria.direction === "all" || message.richtung === input.criteria.direction;
   const matchesAttachments = (message: Communication) =>
@@ -187,6 +193,7 @@ export function projectCommunicationTimeline(input: {
     (message) =>
       matchesSearch(message) &&
       matchesContact(message) &&
+      matchesTopic(message) &&
       matchesDirection(message) &&
       matchesAttachments(message),
   );
@@ -263,8 +270,9 @@ export function projectCommunicationTimeline(input: {
     channelNames,
     channelCounts,
     attachmentCount: withoutChannel.filter((message) => message.hatAnlagen).length,
-    unassignedCount: withoutChannel.filter((message) => !eventContactsByMessageId.has(message.id))
-      .length,
+    unassignedCount: withoutChannel.filter(
+      (message) => !eventContactsByMessageId.has(message.id) && !message.themaId,
+    ).length,
     replyMessageIds,
     threadOrigins,
     eventContactsByMessageId,

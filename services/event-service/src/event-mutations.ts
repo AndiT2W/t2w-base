@@ -62,6 +62,10 @@ export interface EventMutationAdapter {
     nextRole: string,
   ): Promise<void>;
   createFile(eventId: string, input: { name: string; url?: string; size?: string }): Promise<void>;
+  assignCommunicationTopic?(
+    eventId: string,
+    input: { entryId: string; topicId: string | null },
+  ): Promise<void>;
   createActivity(
     eventId: string,
     input: {
@@ -248,6 +252,19 @@ export class EventMutations {
     version: number,
   ) {
     return this.mutate(eventId, version, (adapter) => adapter.createActivity(eventId, input));
+  }
+  assignCommunicationTopic(
+    eventId: string,
+    input: { entryId: string; topicId: string | null },
+    version: number,
+  ) {
+    return this.mutate(
+      eventId,
+      version,
+      (adapter) =>
+        adapter.assignCommunicationTopic?.(eventId, input) ??
+        Promise.reject(new Error("ASSIGN_COMMUNICATION_TOPIC_UNAVAILABLE")),
+    );
   }
 
   private mutate(

@@ -209,6 +209,7 @@ function CommunicationRow({
   query,
   threadSize,
   bezug,
+  thema,
   sent,
   onOpen,
   dense = false,
@@ -218,6 +219,7 @@ function CommunicationRow({
   query: string;
   threadSize: number;
   bezug: CommunicationBezug;
+  thema: { name: string; icon?: string | null; color?: string | null } | null;
   sent: boolean;
   onOpen: () => void;
   dense?: boolean;
@@ -276,20 +278,20 @@ function CommunicationRow({
           <Highlighted text={message.text} query={query} />
         </p>
       </div>
-      <div className="hidden w-52 shrink-0 md:block">
-        {bezug ? (
+      <div className="hidden w-52 shrink-0 items-center gap-1 md:flex">
+        {bezug && (
           <a
             href={`/kontakte?person=${encodeURIComponent(bezug.id)}`}
             className={cn(
               badgeVariants({ variant: bezug.event ? "secondary" : "outline" }),
-              "max-w-full truncate",
+              "min-w-0 max-w-full truncate",
             )}
           >
             {bezug.label}
           </a>
-        ) : (
-          <span className="text-xs text-muted-foreground">Kein Bezug</span>
         )}
+        {thema && <SelectionBadge name={thema.name} icon={thema.icon} color={thema.color} />}
+        {!bezug && !thema && <span className="text-xs text-muted-foreground">Kein Bezug</span>}
       </div>
       <time
         dateTime={message.datum}
@@ -462,6 +464,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   // "all" oder der Name einer konfigurierten Nachrichtenart.
   const [communicationChannel, setCommunicationChannel] = useState<string>("all");
   const [communicationContactFilter, setCommunicationContactFilter] = useState("all");
+  const [communicationTopicFilter, setCommunicationTopicFilter] = useState("all");
   const [communicationDirection, setCommunicationDirection] = useState<
     "all" | "INCOMING" | "OUTGOING"
   >("all");
@@ -474,6 +477,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [selectedCommunicationId, setSelectedCommunicationId] = useState<string | null>(null);
   const communicationChannelOptions = selectionLists.communicationChannels;
+  const communicationTopicOptions = selectionLists.communicationTopics;
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
   const services = selectionListChoices(selectionLists.services).filter(
     (service) => service.active || form.serviceIds?.includes(service.id),
@@ -497,6 +501,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         criteria: {
           channel: communicationChannel,
           contactId: communicationContactFilter,
+          topicId: communicationTopicFilter,
           direction: communicationDirection,
           search: communicationSearch,
           attachmentsOnly: communicationAttachmentsOnly,
@@ -508,6 +513,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       communicationAttachmentsOnly,
       communicationChannel,
       communicationContactFilter,
+      communicationTopicFilter,
       communicationDirection,
       communicationSearch,
       communicationView,
@@ -529,12 +535,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const selectedThread = communicationTimeline.selectedThread(selectedCommunicationId);
   const communicationFilterCount =
     (communicationContactFilter === "all" ? 0 : 1) +
+    (communicationTopicFilter === "all" ? 0 : 1) +
     (communicationDirection === "all" ? 0 : 1) +
     (communicationAttachmentsOnly ? 1 : 0) +
     (communicationChannel === "all" ? 0 : 1);
   const resetCommunicationFilters = () => {
     setCommunicationChannel("all");
     setCommunicationContactFilter("all");
+    setCommunicationTopicFilter("all");
     setCommunicationDirection("all");
     setCommunicationAttachmentsOnly(false);
   };
@@ -585,6 +593,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       toast.success(outcome.message);
     } else {
       toast.error(outcome.message);
+    }
+  }
+  async function assignCommunicationTopic(entryId: string, topicId: string | null) {
+    try {
+      await detailWorkspace.assignCommunicationTopic(entryId, topicId);
+      toast.success(topicId ? "Thema zugeordnet." : "Thema entfernt.");
+    } catch {
+      toast.error("Thema konnte nicht gespeichert werden.");
     }
   }
   async function kommunikationSynchronisieren() {
@@ -1918,6 +1934,19 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={communicationTopicFilter} onValueChange={setCommunicationTopicFilter}>
+              <SelectTrigger aria-label="Nach Thema filtern" className="h-8 w-auto rounded-full">
+                <SelectValue placeholder="Thema: Alle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Thema: Alle</SelectItem>
+                {selectionListChoices(communicationTopicOptions).map((topic) => (
+                  <SelectItem key={topic.id} value={topic.id}>
+                    {topic.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select
               value={communicationDirection}
               onValueChange={(value) =>
@@ -2039,6 +2068,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                               message.kanal,
                               communicationChannelOptions,
                             )}
+                            thema={
+                              communicationTopicOptions.find(
+                                (topic) => topic.id === message.themaId,
+                              ) ?? null
+                            }
                             query={communicationSearch}
                             threadSize={communicationTimeline.threadSize(message)}
                             bezug={bezug}
@@ -2156,6 +2190,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                         message.kanal,
                                         communicationChannelOptions,
                                       )}
+                                      thema={
+                                        communicationTopicOptions.find(
+                                          (topic) => topic.id === message.themaId,
+                                        ) ?? null
+                                      }
                                       query={communicationSearch}
                                       threadSize={1}
                                       bezug={bezug}
@@ -2281,6 +2320,43 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                         </dd>
                       </div>
                     </dl>
+
+                    <div className="rounded-lg border bg-muted/20 p-3">
+                      <label
+                        htmlFor="communication-topic"
+                        className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+                      >
+                        Thema
+                      </label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Für Einträge ohne einzelne Person – etwa eine Sammelmail zum Thema
+                        „Teilnehmer“. Die Person bleibt davon unberührt.
+                      </p>
+                      <Select
+                        value={selectedCommunication.themaId ?? "none"}
+                        onValueChange={(value) => {
+                          void assignCommunicationTopic(
+                            selectedCommunication.id,
+                            value === "none" ? null : value,
+                          );
+                        }}
+                      >
+                        <SelectTrigger id="communication-topic" className="mt-2">
+                          <SelectValue placeholder="Kein Thema" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Kein Thema</SelectItem>
+                          {selectionListChoices(
+                            communicationTopicOptions,
+                            selectedCommunication.themaId,
+                          ).map((topic) => (
+                            <SelectItem key={topic.id} value={topic.id}>
+                              {topic.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">

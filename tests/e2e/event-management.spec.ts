@@ -1551,6 +1551,48 @@ test("pflegt Nachrichtenarten als Auswahlliste und zieht sie in die Kommunikatio
   ).toHaveCount(0);
 });
 
+test("ordnet einer Sammelmail ein Thema zu und behält es nach dem Reload", async ({ page }) => {
+  await mockApi(page, {
+    outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
+    outlookFolderId: "event-folder-id",
+    outlookFolderSyncStatus: "SUCCESS",
+  });
+
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "Kommunikation" }).click();
+  await page.getByRole("button", { name: "Synchronisieren" }).click();
+
+  // Vor der Zuordnung trägt die Zeile nur die erkannte Person, kein Thema.
+  const ersteZeile = page
+    .locator("[data-communication-row]")
+    .filter({ hasText: "Startzeit bestätigt" });
+  await expect(ersteZeile).toContainText("Eva Beispiel");
+  await expect(ersteZeile).not.toContainText("Teilnehmer");
+
+  await page.getByRole("button", { name: "Startzeit bestätigt" }).click();
+  const nachrichtenpanel = page.getByRole("dialog");
+  await nachrichtenpanel.getByLabel("Thema").click();
+  await page.getByRole("option", { name: "Teilnehmer" }).click();
+  await expect(page.getByText("Thema zugeordnet.")).toBeVisible();
+  await nachrichtenpanel.getByRole("button", { name: "Schließen", exact: true }).click();
+
+  // Das Thema steht als eigener Bezug in der Zeile, neben der Person.
+  await expect(ersteZeile).toContainText("Teilnehmer");
+  await expect(ersteZeile).toContainText("Eva Beispiel");
+
+  // Der Themenfilter grenzt auf genau diesen Eintrag ein.
+  await page.getByLabel("Nach Thema filtern").click();
+  await page.getByRole("option", { name: "Teilnehmer" }).click();
+  await expect(page.locator("[data-communication-row]")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Startzeit bestätigt" })).toBeVisible();
+
+  // Nach dem Reload ist die Zuordnung noch da.
+  await page.reload();
+  await page.getByRole("tab", { name: "Kommunikation" }).click();
+  await page.getByRole("button", { name: "Startzeit bestätigt" }).click();
+  await expect(page.getByRole("dialog").getByLabel("Thema")).toContainText("Teilnehmer");
+});
+
 test("findet Kommunikation über Suche, Artenfilter und Konversationen", async ({ page }) => {
   await mockApi(page, {
     outlookFolder: "06_auftraege_26/Q3/260820_demo_event",

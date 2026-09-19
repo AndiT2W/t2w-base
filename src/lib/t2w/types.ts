@@ -85,6 +85,8 @@ export type Message = {
   hatAnlagen?: boolean;
   outlookWebUrl?: string;
   conversationId?: string;
+  /** Bezug auf ein Thema aus der Auswahlliste; die Person bleibt davon getrennt. */
+  themaId?: string;
 };
 
 export type T2WEvent = {

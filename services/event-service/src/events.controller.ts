@@ -335,6 +335,20 @@ export class EventsController {
     return this.mutate(() => this.eventMutations.createActivity(eventId, input, version));
   }
 
+  @Patch(":id/communication/:entryId/topic") assignCommunicationTopic(
+    @Param("id", ParseUUIDPipe) eventId: string,
+    @Param("entryId", ParseUUIDPipe) entryId: string,
+    @Body() body: { topicId: string | null; version: number },
+  ) {
+    return this.mutate(() =>
+      this.eventMutations.assignCommunicationTopic(
+        eventId,
+        { entryId, topicId: body.topicId },
+        body.version,
+      ),
+    );
+  }
+
   private mutate(work: () => Promise<unknown>) {
     return work().catch((error: unknown) => {
       if (error instanceof EventMutationConflict)

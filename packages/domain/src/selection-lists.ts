@@ -1,5 +1,10 @@
 export type SelectionListKind =
-  "sports" | "eventRoles" | "services" | "hardwareObjects" | "communicationChannels";
+  | "sports"
+  | "eventRoles"
+  | "services"
+  | "hardwareObjects"
+  | "communicationChannels"
+  | "communicationTopics";
 export type SelectionListValue = {
   id: string;
   name: string;
@@ -25,6 +30,7 @@ export const SELECTION_LIST_KINDS: readonly SelectionListKind[] = [
   "services",
   "hardwareObjects",
   "communicationChannels",
+  "communicationTopics",
 ];
 
 export interface SelectionListAdapter {
@@ -103,6 +109,7 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
     services: [],
     hardwareObjects: [],
     communicationChannels: [],
+    communicationTopics: [],
     loaded: false,
   };
   const subscribers = new Set<() => void>();
@@ -122,20 +129,28 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
       return selectionListChoices(snapshot[kind]);
     },
     async load() {
-      const [sports, eventRoles, services, hardwareObjects, communicationChannels] =
-        await Promise.all([
-          lists.list("sports", true),
-          lists.list("eventRoles", true),
-          lists.list("services", true),
-          lists.list("hardwareObjects", true),
-          lists.list("communicationChannels", true),
-        ]);
+      const [
+        sports,
+        eventRoles,
+        services,
+        hardwareObjects,
+        communicationChannels,
+        communicationTopics,
+      ] = await Promise.all([
+        lists.list("sports", true),
+        lists.list("eventRoles", true),
+        lists.list("services", true),
+        lists.list("hardwareObjects", true),
+        lists.list("communicationChannels", true),
+        lists.list("communicationTopics", true),
+      ]);
       snapshot = {
         sports,
         eventRoles,
         services,
         hardwareObjects,
         communicationChannels,
+        communicationTopics,
         loaded: true,
       };
       publish();

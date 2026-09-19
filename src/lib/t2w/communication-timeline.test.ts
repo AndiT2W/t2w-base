@@ -69,6 +69,7 @@ const criteria = (
 ): CommunicationTimelineCriteria => ({
   channel: "all",
   contactId: "all",
+  topicId: "all",
   direction: "all",
   search: "",
   attachmentsOnly: false,
@@ -241,6 +242,40 @@ describe("projectCommunicationTimeline", () => {
     expect(timeline.conversations).toHaveLength(1);
     expect(timeline.conversations[0]?.channel).toBe("WhatsApp");
     expect(timeline.singles).toHaveLength(0);
+  });
+
+  it("behandelt das Thema als eigenen Bezug neben der Person", () => {
+    const withTopic = [
+      ...messages,
+      {
+        id: "sammelmail",
+        kanal: "E-Mail",
+        betreff: "Nachmeldungen Firmenstaffel",
+        datum: "2026-09-02T10:00:00.000Z",
+        autor: "anmeldung@example.at",
+        text: "40 Nachmeldungen.",
+        richtung: "INCOMING" as const,
+        themaId: "topic-teilnehmer",
+      },
+    ];
+    const project2 = (overrides: Partial<CommunicationTimelineCriteria>) =>
+      projectCommunicationTimeline({
+        messages: withTopic,
+        eventContacts,
+        contacts: [],
+        today: "2026-09-03",
+        criteria: criteria(overrides),
+      });
+
+    // Nach Thema filtern liefert nur den Eintrag mit diesem Thema.
+    expect(project2({ topicId: "topic-teilnehmer" }).visibleMessages.map((m) => m.id)).toEqual([
+      "sammelmail",
+    ]);
+
+    // "Ohne Bezug" heisst weder Person noch Thema: die Sammelmail hat einen Bezug.
+    const unassigned = project2({ contactId: "unassigned" });
+    expect(unassigned.visibleMessages.map((m) => m.id)).toEqual(["note"]);
+    expect(unassigned.visibleMessages.map((m) => m.id)).not.toContain("sammelmail");
   });
 
   it("liefert den Thread einer ausgewählten Nachricht", () => {
