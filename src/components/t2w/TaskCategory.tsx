@@ -8,6 +8,7 @@ import { formatDatum } from "@/lib/t2w/format";
 import { taskProgressCounts, taskState, TASK_STATE_LABEL } from "@/lib/t2w/task-state";
 import { chainView, foreignPredecessorIds, splitFlows } from "@/lib/t2w/task-flow-view";
 import { TaskProgress, TaskStateChip } from "@/components/t2w/TaskState";
+import { SelectionBadge } from "@/components/t2w/ServiceBadge";
 
 export type CategoryTask = Task & {
   blockedBy: readonly string[];
@@ -18,6 +19,8 @@ export type CategoryTask = Task & {
 export type CategoryView = {
   groupId: string | null;
   name: string;
+  icon?: string | null;
+  color?: string | null;
   count: number;
   nextTaskId: string | null;
   nextEndDate: string | null;
@@ -113,7 +116,12 @@ export function CategoryRow({
       )}
 
       <span className="w-40 shrink-0">
-        <span className="block truncate font-semibold">{category.name}</span>
+        <SelectionBadge
+          name={category.name}
+          icon={category.icon}
+          color={category.color}
+          className="font-semibold"
+        />
         {hint && (
           <span
             className={cn(

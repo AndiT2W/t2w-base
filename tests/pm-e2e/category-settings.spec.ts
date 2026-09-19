@@ -52,6 +52,16 @@ test("configures categories and preserves their use in event and global tasks af
   await expect(
     page.getByRole("textbox", { name: `Kategorie ${renamed}`, exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: `Darstellung für ${renamed} bearbeiten`, exact: true })
+    .click();
+  const presentationDialog = page.getByRole("dialog", { name: `Darstellung: ${renamed}` });
+  await presentationDialog.getByRole("button", { name: "Paket", exact: true }).click();
+  await presentationDialog.getByRole("button", { name: "Türkis", exact: true }).click();
+  await presentationDialog
+    .getByRole("button", { name: "Darstellung speichern", exact: true })
+    .click();
+  await expect(presentationDialog).toBeHidden();
   await page.reload();
   await expect(page.getByRole("tab", { name: "Projektmanagement / Aufgaben" })).toHaveAttribute(
     "aria-selected",
@@ -61,6 +71,14 @@ test("configures categories and preserves their use in event and global tasks af
   await expect(
     page.getByRole("textbox", { name: `Kategorie ${renamed}`, exact: true }),
   ).toHaveValue(renamed);
+  const renamedRow = list.getByRole("listitem", { name: renamed, exact: true });
+  await expect(
+    renamedRow.locator('[data-selection-icon="package"][data-selection-color="teal"]'),
+  ).toBeVisible();
+  const catalogueAfterPresentation = await (await page.request.get("/api/v1/pm/groups")).json();
+  expect(
+    catalogueAfterPresentation.groups.find((item: { name: string }) => item.name === renamed),
+  ).toMatchObject({ icon: "package", color: "teal" });
 
   const eventResponse = await page.request.post("/api/v1/events", {
     data: {
@@ -84,11 +102,19 @@ test("configures categories and preserves their use in event and global tasks af
   await page.reload();
   const category = page.getByRole("button", { name: new RegExp(renamed) }).first();
   await expect(category).toBeVisible();
+  await expect(
+    category.locator('[data-selection-icon="package"][data-selection-color="teal"]'),
+  ).toBeVisible();
   await category.click();
   await expect(page.getByRole("button", { name: eventTitle, exact: true })).toBeVisible();
 
   await page.goto("/aufgaben");
   await expect(page.getByRole("button", { name: eventTitle, exact: true })).toBeVisible();
+  await expect(
+    page.locator('[data-selection-icon="package"][data-selection-color="teal"]', {
+      hasText: renamed,
+    }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Globale Aufgabe anlegen" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Titel", { exact: true }).fill(globalTitle);
@@ -174,8 +200,26 @@ test("keeps category drafts on conflicts and supports narrow settings layouts", 
   await page.getByLabel("Neue Kategorie", { exact: true }).fill(`${name} Entwurf`);
   await page.getByRole("button", { name: "Hinzufügen", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("bereits vorhanden");
+  await page
+    .getByRole("button", {
+      name: `Darstellung für ${name} Entwurf bearbeiten`,
+      exact: true,
+    })
+    .click();
+  const presentationDialog = page.getByRole("dialog", {
+    name: `Darstellung: ${name} Entwurf`,
+  });
+  await expect(
+    presentationDialog.getByRole("button", { name: "Paket", exact: true }),
+  ).toBeVisible();
+  await expect(
+    presentationDialog.getByRole("button", { name: "Türkis", exact: true }),
+  ).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.screenshot({ path: "test-results/pm-category-settings-mobile.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results/pm-category-presentation-mobile.png",
+    fullPage: true,
+  });
 });

@@ -250,6 +250,8 @@ model EventClickUpSource {
 model PmGroup {
   id String @id @default(uuid()) @db.Uuid
   name String @unique
+  icon String?
+  color String?
   active Boolean @default(true)
   sortOrder Int @default(0)
   version Int @default(1)

@@ -10,6 +10,7 @@ import {
 } from "@/lib/t2w/task-timeline";
 import { formatDatum } from "@/lib/t2w/format";
 import { cn } from "@/lib/utils";
+import { SelectionBadge } from "@/components/t2w/ServiceBadge";
 
 const PILL_TONE: Record<ReturnType<typeof taskState>, string> = {
   done: "border-task-done/40 bg-task-done-soft text-task-done-strong",
@@ -90,7 +91,12 @@ function Track({
   return (
     <div className="flex items-stretch border-b last:border-0">
       <div className="w-44 shrink-0 border-r px-3 py-2">
-        <p className="truncate text-sm font-semibold">{category.name}</p>
+        <SelectionBadge
+          name={category.name}
+          icon={category.icon}
+          color={category.color}
+          className="font-semibold"
+        />
         <TaskProgress counts={counts} className="mt-1" label={`${counts.done}/${counts.total}`} />
       </div>
 
@@ -132,7 +138,7 @@ export function TaskTimeline({
   tasks,
   eventStart,
   onOpen,
-  categoryName,
+  categoryDetails,
 }: {
   categories: readonly {
     groupId: string | null;
@@ -144,7 +150,11 @@ export function TaskTimeline({
   tasks: readonly CategoryTask[];
   eventStart?: string;
   onOpen: (task: CategoryTask) => void;
-  categoryName: (groupId: string | null) => string;
+  categoryDetails: (groupId: string | null) => {
+    name: string;
+    icon: string | null;
+    color: string | null;
+  };
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const scale = timelineScale(
@@ -209,7 +219,7 @@ export function TaskTimeline({
         {categories.map((category) => (
           <Track
             key={category.groupId ?? "none"}
-            category={{ ...category, name: categoryName(category.groupId), flows: category.flows }}
+            category={{ ...category, ...categoryDetails(category.groupId), flows: category.flows }}
             tasks={tasks.filter((task) => (task.groupId ?? null) === category.groupId)}
             scale={scale}
             onOpen={onOpen}

@@ -24,7 +24,15 @@ export class ProjectManagementCatalogue {
   }
 
   save(
-    input: { id?: string; name: string; active: boolean; sortOrder: number; version?: number },
+    input: {
+      id?: string;
+      name: string;
+      icon?: string | null;
+      color?: string | null;
+      active: boolean;
+      sortOrder: number;
+      version?: number;
+    },
     actor: Actor,
   ) {
     return this.prisma
@@ -33,6 +41,8 @@ export class ProjectManagementCatalogue {
         if (
           typeof input.name !== "string" ||
           !input.name.trim() ||
+          (input.icon !== undefined && input.icon !== null && typeof input.icon !== "string") ||
+          (input.color !== undefined && input.color !== null && typeof input.color !== "string") ||
           typeof input.active !== "boolean" ||
           !Number.isInteger(input.sortOrder)
         )
@@ -44,6 +54,8 @@ export class ProjectManagementCatalogue {
             where: { id: input.id, version: input.version },
             data: {
               name: input.name.trim(),
+              ...(input.icon === undefined ? {} : { icon: input.icon?.trim() || null }),
+              ...(input.color === undefined ? {} : { color: input.color?.trim() || null }),
               active: input.active,
               sortOrder: input.sortOrder,
               version: { increment: 1 },
@@ -54,7 +66,13 @@ export class ProjectManagementCatalogue {
           return tx.pmGroup.findUniqueOrThrow({ where: { id: input.id } });
         }
         return tx.pmGroup.create({
-          data: { name: input.name.trim(), active: input.active, sortOrder: input.sortOrder },
+          data: {
+            name: input.name.trim(),
+            icon: input.icon?.trim() || null,
+            color: input.color?.trim() || null,
+            active: input.active,
+            sortOrder: input.sortOrder,
+          },
         });
       })
       .catch((error: unknown) => {

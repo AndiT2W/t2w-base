@@ -38,8 +38,15 @@ describe.skipIf(!enabled)("simplified PM persistence", () => {
     });
   }
   it("manages categories with admin permissions, unique names and atomic versioned ordering", async () => {
-    const input = { name: `Category ${randomUUID()}`, active: true, sortOrder: 10 };
+    const input = {
+      name: `Category ${randomUUID()}`,
+      icon: "package",
+      color: "teal",
+      active: true,
+      sortOrder: 10,
+    };
     const group = await pm.saveGroup(input, actor);
+    expect(group).toMatchObject({ icon: "package", color: "teal" });
     await expect(pm.saveGroup(input, actor)).rejects.toThrow("bereits vorhanden");
     const member = await prisma.user.create({
       data: {
@@ -50,9 +57,13 @@ describe.skipIf(!enabled)("simplified PM persistence", () => {
       },
     });
     await expect(pm.saveGroup({ ...group, active: false }, member)).rejects.toThrow("Berechtigung");
-    const updated = await pm.saveGroup({ ...group, active: false }, actor);
+    const updated = await pm.saveGroup(
+      { ...group, icon: "calendar", color: "violet", active: false },
+      actor,
+    );
     await expect(pm.saveGroup({ ...group, name: "Stale edit" }, actor)).rejects.toThrow("geändert");
     expect(updated.version).toBe(group.version + 1);
+    expect(updated).toMatchObject({ icon: "calendar", color: "violet" });
     const before = (await pm.groups(actor)).groups;
     await expect(pm.reorderGroups({ groups: before }, member)).rejects.toThrow("Berechtigung");
     const order = [...before].reverse();

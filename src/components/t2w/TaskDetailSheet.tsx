@@ -17,6 +17,7 @@ import { formatDatum, formatDatumMitZeit } from "@/lib/t2w/format";
 import { successorIds } from "@/lib/t2w/task-flow-view";
 import { taskState } from "@/lib/t2w/task-state";
 import { TaskStateChip } from "@/components/t2w/TaskState";
+import { SelectionBadge } from "@/components/t2w/ServiceBadge";
 import { cn } from "@/lib/utils";
 import type { TaskAttachment } from "@/lib/t2w/task-interaction-workspace";
 
@@ -30,7 +31,13 @@ export type TaskDetailPlanningContext = {
     role?: string;
     organizerId?: string | null;
   }[];
-  groups: { id: string; name: string; active: boolean }[];
+  groups: {
+    id: string;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    active: boolean;
+  }[];
   tasks: readonly Task[];
   edges: readonly { predecessorId: string; successorId: string }[];
 };
@@ -115,7 +122,7 @@ export function TaskDetailSheet({
         .map((id) => taskById.get(id)?.title)
         .filter((title): title is string => Boolean(title))
     : [];
-  const groupName = planning.groups.find((group) => group.id === draft.groupId)?.name ?? null;
+  const group = planning.groups.find((item) => item.id === draft.groupId) ?? null;
   const selectedOwner = planning.owners.find((owner) => owner.id === draft.ownerId);
   const exposesTaskToOrganizer =
     canEdit &&
@@ -167,7 +174,7 @@ export function TaskDetailSheet({
                     Neu
                   </span>
                 )}
-                {groupName && <span className="text-xs text-muted-foreground">{groupName}</span>}
+                {group && <SelectionBadge {...group} />}
                 {variant === "global" && (
                   <span className="text-xs text-muted-foreground">Globale Planung</span>
                 )}

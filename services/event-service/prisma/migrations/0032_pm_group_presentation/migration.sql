@@ -1,0 +1,3 @@
+ALTER TABLE "PmGroup"
+  ADD COLUMN "icon" TEXT,
+  ADD COLUMN "color" TEXT;

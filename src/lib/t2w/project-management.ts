@@ -23,7 +23,15 @@ export type PmState = ReturnType<typeof projectTaskPortfolio> & {
     role?: string;
     organizerId?: string | null;
   }[];
-  groups: { id: string; name: string; active: boolean; sortOrder: number; version: number }[];
+  groups: {
+    id: string;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    active: boolean;
+    sortOrder: number;
+    version: number;
+  }[];
   readOnly?: boolean;
 };
 export type PmGlobalTask = PmState["tasks"][number] & {
@@ -93,7 +101,8 @@ export const pmUploadAttachment = (
 export type PmGroup = PmState["groups"][number];
 export const pmGroupsRead = () => pmRequest<Pick<PmState, "groups">>("/groups");
 export const pmGroupSave = (
-  group: Omit<PmGroup, "id" | "version"> & { id?: string; version?: number },
+  group: Omit<PmGroup, "id" | "version" | "icon" | "color"> &
+    Partial<Pick<PmGroup, "icon" | "color">> & { id?: string; version?: number },
 ) => pmRequest<PmGroup>("/groups", group);
 export const pmGroupsReorder = (groups: PmGroup[]) =>
   pmRequest<Pick<PmState, "groups">>("/groups/reorder", {

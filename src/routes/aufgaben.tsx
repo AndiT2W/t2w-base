@@ -8,15 +8,12 @@ import {
   ChevronDown,
   ChevronUp,
   CircleDot,
-  CircleDollarSign,
   CirclePlay,
   Clock3,
-  FolderKanban,
-  Package,
   Search,
-  Ticket,
   type LucideIcon,
 } from "lucide-react";
+import { SelectionBadge } from "@/components/t2w/ServiceBadge";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,47 +150,6 @@ const taskStatusTone = (task: VisibleTask) => {
   return "border-border bg-muted text-muted-foreground";
 };
 type VisibleTask = PmGlobalTask;
-
-type CategoryPresentation = {
-  Icon: LucideIcon;
-  accent: string;
-  icon: string;
-  tone: string;
-};
-
-function categoryPresentation(name: string): CategoryPresentation {
-  const normalized = name.toLocaleLowerCase("de-AT");
-  if (normalized.includes("hardware")) {
-    return {
-      Icon: Package,
-      accent: "border-l-teal-600",
-      icon: "bg-teal-700/10 text-teal-800 dark:text-teal-300",
-      tone: "hardware",
-    };
-  }
-  if (normalized.includes("startnummer") || normalized.includes("anmeldung")) {
-    return {
-      Icon: Ticket,
-      accent: "border-l-sky-600",
-      icon: "bg-sky-700/10 text-sky-800 dark:text-sky-300",
-      tone: "anmeldung",
-    };
-  }
-  if (normalized.includes("finanz") || normalized.includes("zahlung")) {
-    return {
-      Icon: CircleDollarSign,
-      accent: "border-l-violet-600",
-      icon: "bg-violet-700/10 text-violet-800 dark:text-violet-300",
-      tone: "finanzen",
-    };
-  }
-  return {
-    Icon: FolderKanban,
-    accent: "border-l-primary",
-    icon: "bg-primary/10 text-primary",
-    tone: "standard",
-  };
-}
 
 function categoryHealthPresentation(
   health: "critical" | "warning" | "active" | "done" | "neutral",
@@ -355,8 +311,12 @@ function Aufgaben() {
     () => new Map((data?.tasks ?? []).map((item) => [item.id, item])),
     [data],
   );
-  const categoryName = (id: string | null) =>
-    data?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
+  const categoryDetails = (id: string | null) => {
+    const group = data?.groups.find((item) => item.id === id);
+    return group
+      ? { name: group.name, icon: group.icon, color: group.color }
+      : { name: "Ohne Kategorie", icon: null, color: null };
+  };
   const start = new Date(`${range}T00:00:00Z`),
     end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, 1)),
     duration = end.getTime() - start.getTime();
@@ -386,7 +346,7 @@ function Aufgaben() {
       categories: block.categories
         .map((category) => ({
           key: `${block.key}:${category.groupId ?? "none"}`,
-          name: categoryName(category.groupId),
+          ...categoryDetails(category.groupId),
           items: category.tasks.filter((item) => {
             const itemStart = dateValue(item.startDate ?? item.endDate!);
             const itemEnd = dateValue(item.endDate ?? item.startDate!);
@@ -581,7 +541,7 @@ function Aufgaben() {
           <section data-testid="task-overview" aria-label="Aufgaben nach Dringlichkeit">
             <TaskQueue
               tasks={sichtbareAufgaben}
-              categoryName={categoryName}
+              categoryDetails={categoryDetails}
               ownerName={ownerName}
               taskTitle={(taskId) => allTaskById.get(taskId)?.title ?? taskId}
               onOpen={(task) => void interaction.open(task)}
@@ -674,8 +634,13 @@ function Aufgaben() {
                   {event.categories.map((category) => (
                     <div key={category.key} data-testid="gantt-category">
                       <div className="grid grid-cols-[22rem_minmax(0,1fr)] border-b bg-muted/30">
-                        <span className="sticky left-0 z-20 border-r bg-muted/30 px-3 py-2 pl-7 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {category.name}
+                        <span className="sticky left-0 z-20 border-r bg-muted/30 px-3 py-2 pl-7">
+                          <SelectionBadge
+                            name={category.name}
+                            icon={category.icon}
+                            color={category.color}
+                            className="text-xs font-semibold"
+                          />
                         </span>
                         <span />
                       </div>

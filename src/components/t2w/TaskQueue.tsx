@@ -4,6 +4,7 @@ import { formatDatum } from "@/lib/t2w/format";
 import { groupTasksByUrgency, type QueueGroupKey } from "@/lib/t2w/task-queue";
 import { taskState } from "@/lib/t2w/task-state";
 import { cn } from "@/lib/utils";
+import { SelectionBadge } from "@/components/t2w/ServiceBadge";
 
 export type QueueEntry = Task & {
   blockedBy: readonly string[];
@@ -35,13 +36,17 @@ const GROUP_TONE: Record<QueueGroupKey, { dot: string; head: string; text: strin
  */
 export function TaskQueue({
   tasks,
-  categoryName,
+  categoryDetails,
   ownerName,
   taskTitle,
   onOpen,
 }: {
   tasks: readonly QueueEntry[];
-  categoryName: (groupId: string | null) => string;
+  categoryDetails: (groupId: string | null) => {
+    name: string;
+    icon: string | null;
+    color: string | null;
+  };
   ownerName: (ownerId: string | null) => string;
   taskTitle: (taskId: string) => string;
   onOpen: (task: QueueEntry) => void;
@@ -115,9 +120,10 @@ export function TaskQueue({
                     {task.event?.name ?? "Globale Aufgabe"}
                   </span>
                   <span className="order-4 w-32 md:order-3">
-                    <span className="inline-block rounded-[5px] bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                      {categoryName(task.groupId)}
-                    </span>
+                    <SelectionBadge
+                      {...categoryDetails(task.groupId)}
+                      className="text-[11px] font-semibold"
+                    />
                   </span>
                   <span className="order-5 w-24 md:order-4">
                     <TaskStateChip state={state} />

@@ -32,7 +32,8 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { badgeVariants } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type IconKey =
   | "radio"
@@ -246,10 +247,12 @@ export function ServiceBadge({
   name,
   icon,
   color,
+  className,
 }: {
   name: string;
   icon?: string | null | undefined;
   color?: string | null | undefined;
+  className?: string;
 }) {
   const presentation = servicePresentation({
     name,
@@ -258,10 +261,19 @@ export function ServiceBadge({
   });
   const Icon = presentation.Icon;
   return (
-    <Badge className={`gap-1.5 border ${presentation.className}`} variant="outline">
+    <span
+      className={cn(
+        badgeVariants({ variant: "outline" }),
+        "max-w-full gap-1.5 border",
+        presentation.className,
+        className,
+      )}
+      data-selection-icon={presentation.icon}
+      data-selection-color={presentation.color}
+    >
       <Icon className="size-3.5" aria-hidden="true" />
-      {name}
-    </Badge>
+      <span className="truncate">{name}</span>
+    </span>
   );
 }
 

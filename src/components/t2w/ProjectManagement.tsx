@@ -70,6 +70,12 @@ export function ProjectManagement({
   const taskById = useMemo(() => new Map(state?.tasks.map((task) => [task.id, task])), [state]);
   const categoryName = (id: string | null) =>
     state?.groups.find((group) => group.id === id)?.name ?? "Ohne Kategorie";
+  const categoryDetails = (id: string | null) => {
+    const group = state?.groups.find((item) => item.id === id);
+    return group
+      ? { name: group.name, icon: group.icon, color: group.color }
+      : { name: "Ohne Kategorie", icon: null, color: null };
+  };
   const ownerName = (id: string | null) =>
     state?.owners.find((owner) => owner.id === id)?.displayName ?? "nicht zugeordnet";
   return (
@@ -145,7 +151,7 @@ export function ProjectManagement({
               tasks={state.tasks}
               {...(eventStart ? { eventStart } : {})}
               onOpen={(task) => void interaction.open(task)}
-              categoryName={categoryName}
+              categoryDetails={categoryDetails}
             />
           ) : (
             <div className="overflow-hidden rounded-lg border bg-card">
@@ -154,6 +160,7 @@ export function ProjectManagement({
                 const members = categoryTasks(state.tasks, category.groupId);
                 const expanded = open === key;
                 const name = categoryName(category.groupId);
+                const presentation = categoryDetails(category.groupId);
                 const canCreate =
                   !state.event.archived &&
                   (category.groupId === null ||
@@ -161,7 +168,7 @@ export function ProjectManagement({
                 return (
                   <div key={key} className="border-b last:border-0">
                     <CategoryRow
-                      category={{ ...category, name }}
+                      category={{ ...category, ...presentation }}
                       tasks={members}
                       expanded={expanded}
                       onToggle={() => setOpen(expanded ? null : key)}

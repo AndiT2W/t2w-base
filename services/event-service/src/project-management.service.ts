@@ -359,7 +359,15 @@ export class ProjectManagementService {
     return this.categoryCatalogue.groups(actor);
   }
   saveGroup(
-    input: { id?: string; name: string; active: boolean; sortOrder: number; version?: number },
+    input: {
+      id?: string;
+      name: string;
+      icon?: string | null;
+      color?: string | null;
+      active: boolean;
+      sortOrder: number;
+      version?: number;
+    },
     actor: PmActor,
   ) {
     return this.categoryCatalogue.save(input, actor);
