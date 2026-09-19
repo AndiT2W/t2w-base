@@ -356,6 +356,13 @@ export function createEventDetailWorkspace(
       publish();
       return result;
     },
+    /** Thema eines Kommunikationseintrags setzen; null entfernt den Bezug. */
+    async assignCommunicationTopic(entryId: string, topicId: string | null) {
+      return requireSaved(
+        session.execute({ kind: "assign-communication-topic", input: { entryId, topicId } }),
+        "EVENT_COMMUNICATION_TOPIC_SAVE_FAILED",
+      );
+    },
     async confirmOutlookMove(path: string) {
       session.update({ outlookOrdner: path });
       return session.save();

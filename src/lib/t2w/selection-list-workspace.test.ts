@@ -13,6 +13,8 @@ describe("selection list workspace", () => {
       eventRoles: [{ id: "r1", name: "Finanz", active: false }],
       services: [{ id: "service-1", name: "UHF", active: true }],
       hardwareObjects: [{ id: "hardware-1", name: "Active Transponder", active: true }],
+      communicationChannels: [{ id: "channel-1", name: "E-Mail", active: true }],
+      communicationTopics: [{ id: "topic-1", name: "Teilnehmer", active: true }],
     };
     const adapter: SelectionListAdapter = {
       load: async (kind) => values[kind],

@@ -13,19 +13,23 @@ import {
   Laptop,
   Mail,
   MapPin,
+  MessageCircle,
   Mountain,
   Monitor,
   Music,
   Package,
   PanelsTopLeft,
+  Phone,
   Radio,
   Printer,
   Settings,
   Smartphone,
   Star,
+  StickyNote,
   Tag,
   Trophy,
   UserRound,
+  Users,
   Video,
   Wifi,
   Waves,
@@ -45,6 +49,7 @@ type IconKey =
   | "clipboard-list"
   | "smartphone"
   | "user-round"
+  | "users"
   | "bell"
   | "calendar"
   | "circle-check"
@@ -52,12 +57,15 @@ type IconKey =
   | "headphones"
   | "laptop"
   | "mail"
+  | "message-circle"
   | "monitor"
   | "music"
   | "package"
+  | "phone"
   | "printer"
   | "settings"
   | "star"
+  | "sticky-note"
   | "tag"
   | "wifi"
   | "zap"
@@ -100,6 +108,7 @@ const icons: Record<IconKey, LucideIcon> = {
   "clipboard-list": ClipboardList,
   smartphone: Smartphone,
   "user-round": UserRound,
+  users: Users,
   bell: Bell,
   calendar: Calendar,
   "circle-check": CircleCheck,
@@ -107,12 +116,15 @@ const icons: Record<IconKey, LucideIcon> = {
   headphones: Headphones,
   laptop: Laptop,
   mail: Mail,
+  "message-circle": MessageCircle,
   monitor: Monitor,
   music: Music,
   package: Package,
+  phone: Phone,
   printer: Printer,
   settings: Settings,
   star: Star,
+  "sticky-note": StickyNote,
   tag: Tag,
   wifi: Wifi,
   zap: Zap,
@@ -167,6 +179,13 @@ const defaults: Record<string, Presentation> = {
   "Anmeldung (only)": { icon: "clipboard-list", color: "teal" },
   App: { icon: "smartphone", color: "cyan" },
   Jörg: { icon: "user-round", color: "fuchsia" },
+  // Nachrichtenarten: ohne eigene Auswahl trägt jede Art ihr naheliegendes Symbol.
+  "E-Mail": { icon: "mail", color: "neutral" },
+  Telefon: { icon: "phone", color: "neutral" },
+  Notiz: { icon: "sticky-note", color: "neutral" },
+  WhatsApp: { icon: "message-circle", color: "neutral" },
+  Gespräch: { icon: "users", color: "neutral" },
+  Videocall: { icon: "video", color: "neutral" },
 };
 export const SERVICE_ICON_OPTIONS: { value: IconKey; label: string }[] = [
   { value: "radio", label: "Funk" },
@@ -205,6 +224,17 @@ export const SPORT_ICON_OPTIONS: { value: IconKey; label: string }[] = [
   { value: "activity", label: "Sport" },
   { value: "calendar", label: "Veranstaltung" },
   { value: "euro", label: "Euro" },
+];
+/** Symbole der Nachrichtenarten; die Sprechblase ist der Rückfall für unbekannte Arten. */
+export const COMMUNICATION_ICON_OPTIONS: { value: IconKey; label: string }[] = [
+  { value: "mail", label: "E-Mail" },
+  { value: "phone", label: "Telefon" },
+  { value: "message-circle", label: "Nachricht" },
+  { value: "users", label: "Gespräch" },
+  { value: "video", label: "Videocall" },
+  { value: "sticky-note", label: "Notiz" },
+  { value: "calendar", label: "Termin" },
+  { value: "package", label: "Post" },
 ];
 export const SERVICE_COLOR_OPTIONS: { value: ColorKey; label: string }[] = [
   { value: "sky", label: "Blau" },

@@ -43,6 +43,7 @@ export const event = {
     hasAttachments: boolean;
     webUrl: string | null;
     conversationId?: string | null;
+    topicId?: string | null;
   }[],
   sharepointFolder: null,
   contacts: [] as {
@@ -159,6 +160,15 @@ export async function mockEventManagementApi(
     { id: "r1", name: "Anmeldung", active: true },
     { id: "r2", name: "Finanz", active: true },
   ];
+  let communicationChannels = [
+    { id: "channel-1", name: "E-Mail", icon: "mail", color: "slate", active: true },
+    { id: "channel-2", name: "Telefon", icon: "phone", color: "slate", active: true },
+    { id: "channel-3", name: "Notiz", icon: "sticky-note", color: "slate", active: true },
+  ];
+  let communicationTopics = [
+    { id: "topic-1", name: "Teilnehmer", icon: "users", color: "sky", active: true },
+    { id: "topic-2", name: "Rechnung", icon: "euro", color: "emerald", active: true },
+  ];
   let services = [
     { id: "service-1", name: "UHF", active: true },
     { id: "service-2", name: "Active", active: true },
@@ -227,6 +237,18 @@ export async function mockEventManagementApi(
     if (request.method() === "DELETE") {
       eventDeleted = true;
       return route.fulfill({ status: 204 });
+    }
+    const topicAssignment = /\/communication\/([^/]+)\/topic$/.exec(request.url());
+    if (topicAssignment && request.method() === "PATCH") {
+      const entryId = topicAssignment[1];
+      const assigned = JSON.parse(request.postData() ?? "{}").topicId ?? null;
+      mockedEvent = {
+        ...mockedEvent,
+        communicationMessages: (mockedEvent.communicationMessages ?? []).map((message) =>
+          message.id === entryId ? { ...message, topicId: assigned } : message,
+        ),
+      };
+      return route.fulfill({ json: mockedEvent });
     }
     if (request.method() === "POST") {
       const body = JSON.parse(request.postData() ?? "{}");
@@ -585,6 +607,64 @@ export async function mockEventManagementApi(
     if (request.method() === "PATCH" && id) {
       eventRoles = eventRoles.map((role) => (role.id === id ? { ...role, ...body } : role));
       return route.fulfill({ json: eventRoles.find((role) => role.id === id) });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/v1/communication-topics**", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: request.url().includes("includeInactive=true")
+          ? communicationTopics
+          : communicationTopics.filter((topic) => topic.active),
+      });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const topic = {
+        id: `topic-${communicationTopics.length + 1}`,
+        name: body.name,
+        icon: null as string | null,
+        color: null as string | null,
+        active: true,
+      };
+      communicationTopics = [...communicationTopics, topic];
+      return route.fulfill({ status: 201, json: topic });
+    }
+    const id = request.url().match(/\/communication-topics\/([^/?]+)/)?.[1];
+    if (request.method() === "PATCH" && id) {
+      communicationTopics = communicationTopics.map((topic) =>
+        topic.id === id ? { ...topic, ...body } : topic,
+      );
+      return route.fulfill({ json: communicationTopics.find((topic) => topic.id === id) });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/v1/communication-channels**", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: request.url().includes("includeInactive=true")
+          ? communicationChannels
+          : communicationChannels.filter((channel) => channel.active),
+      });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const channel = {
+        id: `channel-${communicationChannels.length + 1}`,
+        name: body.name,
+        icon: null as string | null,
+        color: null as string | null,
+        active: true,
+      };
+      communicationChannels = [...communicationChannels, channel];
+      return route.fulfill({ status: 201, json: channel });
+    }
+    const id = request.url().match(/\/communication-channels\/([^/?]+)/)?.[1];
+    if (request.method() === "PATCH" && id) {
+      communicationChannels = communicationChannels.map((channel) =>
+        channel.id === id ? { ...channel, ...body } : channel,
+      );
+      return route.fulfill({ json: communicationChannels.find((channel) => channel.id === id) });
     }
     return route.continue();
   });

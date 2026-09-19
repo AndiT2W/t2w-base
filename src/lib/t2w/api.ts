@@ -59,6 +59,7 @@ type ApiEvent = {
     author: string | null;
     body: string | null;
     occurredAt: string;
+    topicId?: string | null;
   }[];
   communicationMessages?: {
     id: string;
@@ -71,6 +72,7 @@ type ApiEvent = {
     hasAttachments: boolean;
     webUrl: string | null;
     conversationId?: string | null;
+    topicId?: string | null;
   }[];
   payoutRecipient?: { id: string; name: string } | null;
   invoiceRecipients?: { organizer: { id: string; name: string } }[];
@@ -169,11 +171,12 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     kommunikation: [
       ...(event.activities ?? []).map((activity) => ({
         id: activity.id,
-        kanal: activity.channel as "E-Mail" | "Telefon" | "Notiz",
+        kanal: activity.channel,
         betreff: activity.subject,
         datum: activity.occurredAt,
         autor: activity.author ?? "",
         text: activity.body ?? "",
+        ...(activity.topicId ? { themaId: activity.topicId } : {}),
       })),
       ...(event.communicationMessages ?? []).map((message) => ({
         id: message.id,
@@ -187,6 +190,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
         hatAnlagen: message.hasAttachments,
         ...(message.webUrl ? { outlookWebUrl: message.webUrl } : {}),
         ...(message.conversationId ? { conversationId: message.conversationId } : {}),
+        ...(message.topicId ? { themaId: message.topicId } : {}),
       })),
     ].sort((left, right) => right.datum.localeCompare(left.datum)),
     sportart: event.sport?.name ?? "",
@@ -262,6 +266,15 @@ export const apiCreateEventActivity = (
   eventAction<ApiEvent>(`/api/v1/events/${eventId}/activities`, "POST", { ...body, version }).then(
     mapApiEvent,
   );
+export const apiAssignCommunicationTopic = (
+  eventId: string,
+  input: { entryId: string; topicId: string | null },
+  version: number,
+) =>
+  eventAction<ApiEvent>(`/api/v1/events/${eventId}/communication/${input.entryId}/topic`, "PATCH", {
+    topicId: input.topicId,
+    version,
+  }).then(mapApiEvent);
 
 export type CurrentUser = {
   id: string;
@@ -570,6 +583,78 @@ export async function apiUpdateHardwareObject(
   if (!response.ok) throw new Error("Hardware-Objekt konnte nicht gespeichert werden");
   return response.json() as Promise<ApiService>;
 }
+export async function apiManageCommunicationChannels(): Promise<ApiService[]> {
+  const response = await fetch("/api/v1/communication-channels?includeInactive=true", {
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Nachrichtenarten konnten nicht geladen werden");
+  return response.json() as Promise<ApiService[]>;
+}
+export async function apiCreateCommunicationChannel(name: string) {
+  const response = await fetch("/api/v1/communication-channels", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error("Nachrichtenart konnte nicht angelegt werden");
+  return response.json() as Promise<ApiService>;
+}
+export async function apiUpdateCommunicationChannel(
+  id: string,
+  patch: {
+    name?: string;
+    active?: boolean;
+    icon?: string | null;
+    color?: string | null;
+    sortOrder?: number;
+  },
+) {
+  const response = await fetch(`/api/v1/communication-channels/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) throw new Error("Nachrichtenart konnte nicht gespeichert werden");
+  return response.json() as Promise<ApiService>;
+}
+export async function apiManageCommunicationTopics(): Promise<ApiService[]> {
+  const response = await fetch("/api/v1/communication-topics?includeInactive=true", {
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Themen konnten nicht geladen werden");
+  return response.json() as Promise<ApiService[]>;
+}
+export async function apiCreateCommunicationTopic(name: string) {
+  const response = await fetch("/api/v1/communication-topics", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error("Thema konnte nicht angelegt werden");
+  return response.json() as Promise<ApiService>;
+}
+export async function apiUpdateCommunicationTopic(
+  id: string,
+  patch: {
+    name?: string;
+    active?: boolean;
+    icon?: string | null;
+    color?: string | null;
+    sortOrder?: number;
+  },
+) {
+  const response = await fetch(`/api/v1/communication-topics/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) throw new Error("Thema konnte nicht gespeichert werden");
+  return response.json() as Promise<ApiService>;
+}
 export type ApiEventRole = {
   id: string;
   name: string;
@@ -804,6 +889,7 @@ export function createHttpEventTransport(): EventTransport<T2WEvent> {
     updateContactRole: apiUpdateEventContactRole,
     createFile: apiCreateEventFile,
     createActivity: apiCreateEventActivity,
+    assignCommunicationTopic: apiAssignCommunicationTopic,
   };
 }
 

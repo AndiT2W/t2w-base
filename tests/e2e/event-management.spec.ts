@@ -1,6 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { event, mockEventManagementApi as mockApi } from "./support/event-management-api";
 
+// Seit der verpflichtenden Anmeldung landet jeder Ablauf ohne Sitzung auf der
+// Loginseite. Wie in hardware.spec.ts stellt der Hook eine Admin-Sitzung bereit.
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user-1",
+        email: "admin@time2win.cloud",
+        displayName: "Event Admin",
+        role: "ADMIN",
+        financeAccess: true,
+        organizerId: null,
+      },
+    }),
+  );
+});
+
 test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }) => {
   await mockApi(page);
   await page.goto("/einstellungen?tab=auswahllisten&liste=sportarten");
@@ -1469,36 +1486,114 @@ test("synchronisiert Outlook-Nachrichten als persistente Event-Timeline ohne Dup
   await page.getByRole("tab", { name: "Kommunikation" }).click();
   await page.getByRole("button", { name: "Synchronisieren" }).click();
 
-  await expect(
-    page.getByRole("heading", { name: "Startzeit bestätigt", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByText("Eingehend", { exact: true })).toBeVisible();
-  await expect(page.getByText("Von: Eva Beispiel <eva@example.at>")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Startzeit bestätigt" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "E-Mail, eingehend" })).toBeVisible();
+  await expect(page.getByText("Eva Beispiel <eva@example.at>", { exact: true })).toBeVisible();
   await expect(page.getByText("Der Start bleibt um 09:00 Uhr.").first()).toBeVisible();
-  await expect(page.getByText("Ausgehend", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("An: Eva Beispiel <eva@example.at>")).toBeVisible();
-  await expect(page.getByText("Zeitplan an das Team gesendet").first()).toBeVisible();
-  await expect(
-    page.locator('a[href="https://outlook.office.com/mail/deeplink/read/mail-1"]'),
-  ).toHaveAccessibleName("In Outlook öffnen");
+  await expect(page.getByRole("img", { name: "E-Mail, ausgehend von TIME2WIN" })).toBeVisible();
+  await expect(page.getByText("An Eva Beispiel <eva@example.at>", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Zeitplan an das Team gesendet" })).toBeVisible();
+
+  // Der Outlook-Deeplink liegt im Nachrichtenpanel, nicht in der Zeile.
+  await page.getByRole("button", { name: "Startzeit bestätigt" }).click();
+  const nachrichtenpanel = page.getByRole("dialog");
+  await expect(nachrichtenpanel.getByRole("link", { name: "In Outlook öffnen" })).toHaveAttribute(
+    "href",
+    "https://outlook.office.com/mail/deeplink/read/mail-1",
+  );
+  await nachrichtenpanel.getByRole("button", { name: "Schließen", exact: true }).click();
+  await expect(nachrichtenpanel).toBeHidden();
 
   await page.getByRole("button", { name: "Synchronisieren" }).click();
-  await expect(page.getByRole("heading", { name: "Startzeit bestätigt", exact: true })).toHaveCount(
-    1,
-  );
+  await expect(page.getByRole("button", { name: "Startzeit bestätigt" })).toHaveCount(1);
   await page.reload();
   await page.getByRole("tab", { name: "Kommunikation" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Startzeit bestätigt", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Startzeit bestätigt" })).toBeVisible();
   expect(requests.filter((request) => request.url.endsWith("/outlook-messages/sync"))).toHaveLength(
     2,
   );
 });
 
-test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer Vorschau", async ({
+test("pflegt Nachrichtenarten als Auswahlliste und zieht sie in die Kommunikation nach", async ({
   page,
 }) => {
+  await mockApi(page, {
+    outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
+    outlookFolderId: "event-folder-id",
+    outlookFolderSyncStatus: "SUCCESS",
+  });
+
+  await page.goto("/einstellungen?tab=auswahllisten&liste=nachrichtenarten");
+  await expect(page.getByLabel("Nachrichtenart E-Mail", { exact: true })).toHaveValue("E-Mail");
+
+  await page.getByLabel("Neue Nachrichtenart").fill("WhatsApp");
+  await page.getByRole("button", { name: "Hinzufügen" }).click();
+  await expect(page.getByLabel("Nachrichtenart WhatsApp", { exact: true })).toHaveValue("WhatsApp");
+
+  // Eine Art ohne Einträge verschwindet nach dem Deaktivieren aus der Filterleiste.
+  await page
+    .locator("div")
+    .filter({ has: page.getByLabel("Nachrichtenart Notiz", { exact: true }) })
+    .last()
+    .getByRole("button", { name: "Deaktivieren" })
+    .click();
+
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "Kommunikation" }).click();
+  await page.getByRole("button", { name: "Synchronisieren" }).click();
+
+  await expect(page.getByRole("button", { name: "E-Mail 2" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "WhatsApp 0" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Telefon 0" })).toBeVisible();
+  // Nur die Filterleiste prüfen: "Notiz erfassen" im Kopf bleibt davon unberührt.
+  await expect(
+    page.getByLabel("Kommunikation filtern").getByRole("button", { name: /^Notiz/ }),
+  ).toHaveCount(0);
+});
+
+test("ordnet einer Sammelmail ein Thema zu und behält es nach dem Reload", async ({ page }) => {
+  await mockApi(page, {
+    outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
+    outlookFolderId: "event-folder-id",
+    outlookFolderSyncStatus: "SUCCESS",
+  });
+
+  await page.goto("/events/260820_demo_event");
+  await page.getByRole("tab", { name: "Kommunikation" }).click();
+  await page.getByRole("button", { name: "Synchronisieren" }).click();
+
+  // Vor der Zuordnung trägt die Zeile nur die erkannte Person, kein Thema.
+  const ersteZeile = page
+    .locator("[data-communication-row]")
+    .filter({ hasText: "Startzeit bestätigt" });
+  await expect(ersteZeile).toContainText("Eva Beispiel");
+  await expect(ersteZeile).not.toContainText("Teilnehmer");
+
+  await page.getByRole("button", { name: "Startzeit bestätigt" }).click();
+  const nachrichtenpanel = page.getByRole("dialog");
+  await nachrichtenpanel.getByLabel("Thema").click();
+  await page.getByRole("option", { name: "Teilnehmer" }).click();
+  await expect(page.getByText("Thema zugeordnet.")).toBeVisible();
+  await nachrichtenpanel.getByRole("button", { name: "Schließen", exact: true }).click();
+
+  // Das Thema steht als eigener Bezug in der Zeile, neben der Person.
+  await expect(ersteZeile).toContainText("Teilnehmer");
+  await expect(ersteZeile).toContainText("Eva Beispiel");
+
+  // Der Themenfilter grenzt auf genau diesen Eintrag ein.
+  await page.getByLabel("Nach Thema filtern").click();
+  await page.getByRole("option", { name: "Teilnehmer" }).click();
+  await expect(page.locator("[data-communication-row]")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Startzeit bestätigt" })).toBeVisible();
+
+  // Nach dem Reload ist die Zuordnung noch da.
+  await page.reload();
+  await page.getByRole("tab", { name: "Kommunikation" }).click();
+  await page.getByRole("button", { name: "Startzeit bestätigt" }).click();
+  await expect(page.getByRole("dialog").getByLabel("Thema")).toContainText("Teilnehmer");
+});
+
+test("findet Kommunikation über Suche, Artenfilter und Konversationen", async ({ page }) => {
   await mockApi(page, {
     outlookFolder: "06_auftraege_26/Q3/260820_demo_event",
     outlookFolderId: "event-folder-id",
@@ -1515,67 +1610,72 @@ test("verdichtet die Kommunikationstimeline mit Suche, Filtern und aufklappbarer
   await page.getByRole("tab", { name: "Kommunikation" }).click();
   await page.getByRole("button", { name: "Synchronisieren" }).click();
 
-  await expect(page.getByRole("button", { name: "Kompakt" })).toHaveAttribute(
+  // Verlauf ist der Einstieg: eine Zeitgruppe, zwei Zeilen, kein Bearbeitungszustand.
+  const filterleiste = page.getByLabel("Kommunikation filtern");
+  await expect(page.getByRole("button", { name: "Verlauf" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await expect(page.locator('article[data-timeline-view="compact"]')).toHaveCount(2);
+  await expect(page.locator("[data-communication-row]")).toHaveCount(2);
   await expect(page.locator('section[aria-label^="Kommunikation "]')).toHaveCount(1);
-  await expect(page.getByText("Eventkontakt · Eva Beispiel (Anmeldung)")).toHaveCount(2);
-  const time2winLogo = page.getByLabel("Von TIME2WIN gesendet");
-  await expect(time2winLogo).toBeVisible();
-  await expect(time2winLogo.locator('img[src="/time2win_logo_button.svg"]')).toBeVisible();
-  await expect(page.getByText("Antwort", { exact: true })).toBeVisible();
-  const replyReference = page.getByRole("button", {
-    name: /Antwort auf „Startzeit bestätigt“ vom/,
-  });
-  await expect(replyReference).toBeVisible();
-  await expect(page.locator('article[data-reply="true"]')).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Vollständige Vorschau" })).toBeVisible();
-  await expect(
-    page
-      .locator('article[data-timeline-view="compact"]')
-      .getByText("Regressionstest für die aufklappbare Vorschau."),
-  ).not.toBeVisible();
-  await expect(page.locator("[data-communication-preview]").first()).toHaveClass(/line-clamp-1/);
+  await expect(page.getByText("Wartet seit")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Vollständige Vorschau" }).click();
-  await expect(
-    page.getByText("Regressionstest für die aufklappbare Vorschau.").first(),
-  ).toBeVisible();
+  // Art und Richtung stehen als Symbol mit barrierefreiem Namen, nicht als Textspalte.
+  await expect(page.getByRole("img", { name: "E-Mail, eingehend" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "E-Mail, ausgehend von TIME2WIN" })).toBeVisible();
+
+  // Die Artenfilter tragen ihre Anzahl und schalten die Liste um.
+  await expect(page.getByRole("button", { name: "E-Mail 2" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Notiz 0" })).toBeVisible();
+  await page.getByRole("button", { name: "Notiz 0" }).click();
+  await expect(page.getByText("Keine Einträge für diese Auswahl.")).toBeVisible();
+  await filterleiste.getByRole("button", { name: "1 Filter zurücksetzen" }).click();
+  await expect(page.locator("[data-communication-row]")).toHaveCount(2);
 
   const contactLink = page.locator('a[href="/kontakte?person=p4"]').first();
-  await expect(contactLink).toHaveText("Eventkontakt · Eva Beispiel (Anmeldung)");
+  await expect(contactLink).toHaveText("Eva Beispiel · Anmeldung");
 
-  await replyReference.click();
-  await expect(page.locator("#communication-message-1")).toBeFocused();
-
-  await page.getByRole("button", { name: "Dialog" }).click();
-  await expect(page.locator('section[aria-label="Kommunikation Startzeit bestätigt"]')).toHaveCount(
-    1,
-  );
-  await expect(page.locator('article[data-timeline-view="conversation"]')).toHaveCount(2);
-  await expect(
-    page.getByRole("button", { name: /Antwort auf „Startzeit bestätigt“ vom/ }),
-  ).toHaveCount(0);
-  await page.getByRole("button", { name: "Hybrid" }).click();
-  await expect(page.locator('article[data-timeline-view="cards"]')).toHaveCount(2);
-  await expect(page.getByRole("complementary", { name: "Thread-Kontext" })).toBeVisible();
-  await expect(page.getByText("2 Nachrichten", { exact: true })).toBeVisible();
-  await page.locator('article[data-timeline-view="cards"]').last().click();
-  await expect(page.getByRole("complementary", { name: "Thread-Kontext" })).toContainText(
-    "Im Anhang findet ihr den aktuellen Zeitplan.",
-  );
-
+  // Die Suche zählt ihre Treffer und hebt sie hervor.
   await page.getByLabel("Kommunikation durchsuchen").fill("Zeitplan");
-  await expect(page.getByText("Zeitplan an das Team gesendet")).toBeVisible();
-  await expect(page.getByText("Startzeit bestätigt")).not.toBeVisible();
-
-  await page.getByRole("button", { name: "Aktivitäten" }).click();
-  await expect(page.getByText("Keine Einträge für diese Auswahl.")).toBeVisible();
-
-  await page.getByRole("button", { name: "Alle" }).click();
+  await expect(page.getByText("1 Treffer für „Zeitplan“")).toBeVisible();
+  await expect(page.locator("[data-communication-row]")).toHaveCount(1);
+  await expect(page.locator("mark").first()).toHaveText("Zeitplan");
   await page.getByLabel("Kommunikation durchsuchen").fill("");
+  await expect(page.locator("[data-communication-row]")).toHaveCount(2);
+
+  // Der Richtungsfilter bleibt ein eigener Chip.
+  await page.getByLabel("Nach Richtung filtern").click();
+  await page.getByRole("option", { name: "Ausgehend" }).click();
+  await expect(page.locator("[data-communication-row]")).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Zeitplan an das Team gesendet" })).toBeVisible();
+  await filterleiste.getByRole("button", { name: "1 Filter zurücksetzen" }).click();
+
+  // Das Nachrichtenpanel zeigt Text, Bezug und die ganze Konversation.
+  await page.getByRole("button", { name: "Startzeit bestätigt" }).click();
+  const nachrichtenpanel = page.getByRole("dialog");
+  await expect(nachrichtenpanel).toContainText("Der Start bleibt um 09:00 Uhr.");
+  await expect(nachrichtenpanel).toContainText("Nachricht 1 von 2 in dieser Konversation");
+  await expect(
+    nachrichtenpanel.getByRole("link", { name: "Eva Beispiel · Anmeldung" }),
+  ).toBeVisible();
+  await nachrichtenpanel
+    .getByRole("button", { name: /Im Anhang findet ihr den aktuellen Zeitplan/ })
+    .click();
+  await expect(nachrichtenpanel).toContainText("Im Anhang findet ihr den aktuellen Zeitplan.");
+  await nachrichtenpanel.getByRole("button", { name: "Schließen", exact: true }).click();
+  await expect(nachrichtenpanel).toBeHidden();
+
+  // Konversationen bündeln denselben Bestand zu einem Thema.
+  await page.getByRole("button", { name: "Konversationen" }).click();
+  const konversation = page.getByRole("button", { name: /Startzeit bestätigt/ }).first();
+  await expect(konversation).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("[data-communication-row]")).toHaveCount(0);
+  await konversation.click();
+  await expect(konversation).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("[data-communication-row]")).toHaveCount(2);
+
+  // Der Bezug bleibt ein Link auf die Person.
+  await page.getByRole("button", { name: "Verlauf" }).click();
   await contactLink.click();
   await expect(page.getByRole("heading", { name: "Eva Beispiel" })).toBeVisible();
 });

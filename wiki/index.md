@@ -4,6 +4,8 @@
 
 - [Projektmanagement: verbindliche Designgrundlage](concepts/project-management-design.md) (Claude-Überarbeitung, bestätigt am 2026-09-18; vor PM-UI-Änderungen lesen)
 
+- [Kommunikation: Anzeigegrundlage](concepts/communication-display-design.md) (Anzeige umgesetzt am 2026-09-19, Datenmodell teilweise offen; vor Änderungen an der Kommunikationsanzeige lesen)
+
 - [Projektmanagement: Neuimplementierung und Testbetrieb](tasks/project-management-implementation.md)
 
 - [Projektmanagement v4: vereinfachte Aufgaben und Gesamtübersicht](tasks/project-management-spec-v4.md) (aktuell, Issue #55)

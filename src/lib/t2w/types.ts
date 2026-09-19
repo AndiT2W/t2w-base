@@ -74,7 +74,8 @@ export type EventFile = {
 
 export type Message = {
   id: string;
-  kanal: "E-Mail" | "Telefon" | "Notiz";
+  /** Frei konfigurierbar über Einstellungen → Auswahllisten → Nachrichtenarten. */
+  kanal: string;
   betreff: string;
   datum: string;
   autor: string;
@@ -84,6 +85,8 @@ export type Message = {
   hatAnlagen?: boolean;
   outlookWebUrl?: string;
   conversationId?: string;
+  /** Bezug auf ein Thema aus der Auswahlliste; die Person bleibt davon getrennt. */
+  themaId?: string;
 };
 
 export type T2WEvent = {

@@ -20,6 +20,7 @@ import {
   ServiceBadge,
   SelectionBadge,
   SERVICE_COLOR_OPTIONS,
+  COMMUNICATION_ICON_OPTIONS,
   SERVICE_ICON_OPTIONS,
   SPORT_ICON_OPTIONS,
   servicePresentation,
@@ -47,6 +48,8 @@ export const Route = createFileRoute("/einstellungen")({
       search["liste"] === "sportarten" ||
       search["liste"] === "eventrollen" ||
       search["liste"] === "aufgabenkategorien" ||
+      search["liste"] === "nachrichtenarten" ||
+      search["liste"] === "themen" ||
       search["liste"] === "hardwareobjekte"
         ? search["liste"]
         : ("services" as const),
@@ -101,12 +104,28 @@ function Einstellungen() {
   const [newService, setNewService] = useState("");
   const hardwareObjects = selectionLists.hardwareObjects;
   const [newHardwareObject, setNewHardwareObject] = useState("");
+  const communicationChannels = selectionLists.communicationChannels;
+  const [newCommunicationChannel, setNewCommunicationChannel] = useState("");
+  const communicationTopics = selectionLists.communicationTopics;
+  const [newCommunicationTopic, setNewCommunicationTopic] = useState("");
   const [dragged, setDragged] = useState<{
-    kind: "sports" | "eventRoles" | "services" | "hardwareObjects";
+    kind:
+      | "sports"
+      | "eventRoles"
+      | "services"
+      | "hardwareObjects"
+      | "communicationChannels"
+      | "communicationTopics";
     id: string;
   } | null>(null);
   const [presentation, setPresentation] = useState<{
-    kind: "sports" | "eventRoles" | "services" | "hardwareObjects";
+    kind:
+      | "sports"
+      | "eventRoles"
+      | "services"
+      | "hardwareObjects"
+      | "communicationChannels"
+      | "communicationTopics";
     id: string;
   } | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
@@ -204,7 +223,11 @@ function Einstellungen() {
           ? saveEventRole
           : presentation.kind === "services"
             ? saveService
-            : saveHardwareObject;
+            : presentation.kind === "communicationChannels"
+              ? saveCommunicationChannel
+              : presentation.kind === "communicationTopics"
+                ? saveCommunicationTopic
+                : saveHardwareObject;
     await save(presentation.id, patch);
   }
   async function addService() {
@@ -257,8 +280,58 @@ function Einstellungen() {
       toast.error("Hardware-Objekt konnte nicht gespeichert werden.");
     }
   }
+  async function addCommunicationChannel() {
+    const name = newCommunicationChannel.trim();
+    if (!name) return;
+    try {
+      await createSelectionValue("communicationChannels", name);
+      setNewCommunicationChannel("");
+      toast.success("Nachrichtenart angelegt.");
+    } catch {
+      toast.error("Nachrichtenart konnte nicht angelegt werden.");
+    }
+  }
+  async function saveCommunicationChannel(
+    id: string,
+    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  ) {
+    try {
+      await updateSelectionValue("communicationChannels", id, patch);
+      toast.success("Nachrichtenart gespeichert.");
+    } catch {
+      toast.error("Nachrichtenart konnte nicht gespeichert werden.");
+    }
+  }
+  async function addCommunicationTopic() {
+    const name = newCommunicationTopic.trim();
+    if (!name) return;
+    try {
+      await createSelectionValue("communicationTopics", name);
+      setNewCommunicationTopic("");
+      toast.success("Thema angelegt.");
+    } catch {
+      toast.error("Thema konnte nicht angelegt werden.");
+    }
+  }
+  async function saveCommunicationTopic(
+    id: string,
+    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  ) {
+    try {
+      await updateSelectionValue("communicationTopics", id, patch);
+      toast.success("Thema gespeichert.");
+    } catch {
+      toast.error("Thema konnte nicht gespeichert werden.");
+    }
+  }
   async function reorder(
-    kind: "sports" | "eventRoles" | "services" | "hardwareObjects",
+    kind:
+      | "sports"
+      | "eventRoles"
+      | "services"
+      | "hardwareObjects"
+      | "communicationChannels"
+      | "communicationTopics",
     id: string,
   ) {
     if (!dragged || dragged.kind !== kind || dragged.id === id) return;
@@ -416,6 +489,8 @@ function Einstellungen() {
                         ["services", "Services"],
                         ["eventrollen", "Eventrollen"],
                         ["hardwareobjekte", "Hardware-Objekte"],
+                        ["nachrichtenarten", "Kommunikation / Nachrichtenarten"],
+                        ["themen", "Kommunikation / Themen"],
                         ["aufgabenkategorien", "Projektmanagement / Aufgaben"],
                       ] as const
                     ).map(([value, label]) => (
@@ -515,6 +590,176 @@ function Einstellungen() {
                           Hinzufügen
                         </Button>
                       </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {liste === "themen" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Themen</CardTitle>
+                      <CardDescription>
+                        Bezug eines Kommunikationseintrags, wenn keine einzelne Person dahintersteht
+                        — etwa eine Sammelmail aus dem Anmeldeportal zum Thema „Teilnehmer“.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex gap-2 pt-2">
+                        <Input
+                          aria-label="Neues Thema"
+                          value={newCommunicationTopic}
+                          onChange={(event) => setNewCommunicationTopic(event.target.value)}
+                          placeholder="Thema hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addCommunicationTopic()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
+                      </div>
+                      {communicationTopics.map((topic) => (
+                        <div
+                          key={topic.id}
+                          draggable
+                          onDragStart={() =>
+                            setDragged({ kind: "communicationTopics", id: topic.id })
+                          }
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => void reorder("communicationTopics", topic.id)}
+                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
+                        >
+                          <span
+                            aria-label={`Vorschau Thema: ${topic.name}`}
+                            className="flex min-w-0 items-center"
+                          >
+                            <SelectionBadge
+                              name={topic.name}
+                              icon={topic.icon}
+                              color={topic.color}
+                            />
+                          </span>
+                          <Input
+                            aria-label={`Thema ${topic.name}`}
+                            defaultValue={topic.name}
+                            onBlur={(event) => {
+                              const name = event.target.value.trim();
+                              if (name && name !== topic.name)
+                                void saveCommunicationTopic(topic.id, { name });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="justify-start"
+                            aria-label={`Darstellung für Thema ${topic.name}`}
+                            onClick={() =>
+                              setPresentation({ kind: "communicationTopics", id: topic.id })
+                            }
+                          >
+                            <span
+                              className={`size-3 rounded-full border ${selectionPresentation(topic).className}`}
+                              aria-hidden="true"
+                            />
+                            Darstellung
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={topic.active ? "outline" : "secondary"}
+                            onClick={() =>
+                              void saveCommunicationTopic(topic.id, { active: !topic.active })
+                            }
+                          >
+                            {topic.active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
+                        </div>
+                      ))}
+                      <p className="pt-1 text-sm text-muted-foreground">
+                        Ein Eintrag trägt genau ein Thema. Wird ein Thema gelöscht, verlieren die
+                        Einträge nur ihren Bezug — sie bleiben erhalten.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+                {liste === "nachrichtenarten" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Nachrichtenarten</CardTitle>
+                      <CardDescription>
+                        Arten der Kommunikationseinträge samt Symbol. Sie tragen die Symbolspalte
+                        und die Filterleiste im Kommunikationsreiter eines Events.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex gap-2 pt-2">
+                        <Input
+                          aria-label="Neue Nachrichtenart"
+                          value={newCommunicationChannel}
+                          onChange={(event) => setNewCommunicationChannel(event.target.value)}
+                          placeholder="Nachrichtenart hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addCommunicationChannel()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
+                      </div>
+                      {communicationChannels.map((channel) => (
+                        <div
+                          key={channel.id}
+                          draggable
+                          onDragStart={() =>
+                            setDragged({ kind: "communicationChannels", id: channel.id })
+                          }
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => void reorder("communicationChannels", channel.id)}
+                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
+                        >
+                          <span
+                            aria-label={`Vorschau Nachrichtenart: ${channel.name}`}
+                            className="flex min-w-0 items-center"
+                          >
+                            <SelectionBadge
+                              name={channel.name}
+                              icon={channel.icon}
+                              color={channel.color}
+                            />
+                          </span>
+                          <Input
+                            aria-label={`Nachrichtenart ${channel.name}`}
+                            defaultValue={channel.name}
+                            onBlur={(event) => {
+                              const name = event.target.value.trim();
+                              if (name && name !== channel.name)
+                                void saveCommunicationChannel(channel.id, { name });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="justify-start"
+                            aria-label={`Darstellung für Nachrichtenart ${channel.name}`}
+                            onClick={() =>
+                              setPresentation({ kind: "communicationChannels", id: channel.id })
+                            }
+                          >
+                            <span
+                              className={`size-3 rounded-full border ${selectionPresentation(channel).className}`}
+                              aria-hidden="true"
+                            />
+                            Darstellung
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={channel.active ? "outline" : "secondary"}
+                            onClick={() =>
+                              void saveCommunicationChannel(channel.id, { active: !channel.active })
+                            }
+                          >
+                            {channel.active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
+                        </div>
+                      ))}
+                      <p className="pt-1 text-sm text-muted-foreground">
+                        Eine deaktivierte Art verschwindet aus der Filterleiste, sobald kein Eintrag
+                        mehr an ihr hängt. Bestehende Einträge behalten ihre Art.
+                      </p>
                     </CardContent>
                   </Card>
                 )}
@@ -724,7 +969,10 @@ function Einstellungen() {
                             <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
                               {(presentation.kind === "sports"
                                 ? SPORT_ICON_OPTIONS
-                                : SERVICE_ICON_OPTIONS
+                                : presentation.kind === "communicationChannels" ||
+                                    presentation.kind === "communicationTopics"
+                                  ? COMMUNICATION_ICON_OPTIONS
+                                  : SERVICE_ICON_OPTIONS
                               ).map((option) => {
                                 const Icon = selectionPresentation({
                                   name: presentationValue.name,

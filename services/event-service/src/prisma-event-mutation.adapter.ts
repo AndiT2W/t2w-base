@@ -117,6 +117,26 @@ export class PrismaEventMutationAdapter implements EventMutationAdapter {
   async createFile(eventId: string, input: { name: string; url?: string; size?: string }) {
     await this.prisma.eventFile.create({ data: { eventId, ...input } });
   }
+  /**
+   * Der Eintrag liegt je nach Herkunft in einer von zwei Tabellen. updateMany
+   * trifft die richtige und laesst die andere unberuehrt, statt die Herkunft
+   * durch die halbe Anwendung zu reichen. Der eventId-Filter verhindert, dass
+   * ein fremder Eintrag ueber ein anderes Event geaendert wird.
+   */
+  async assignCommunicationTopic(
+    eventId: string,
+    input: { entryId: string; topicId: string | null },
+  ) {
+    await this.prisma.eventCommunicationMessage.updateMany({
+      where: { id: input.entryId, eventId },
+      data: { topicId: input.topicId },
+    });
+    await this.prisma.eventActivity.updateMany({
+      where: { id: input.entryId, eventId },
+      data: { topicId: input.topicId },
+    });
+  }
+
   async createActivity(
     eventId: string,
     input: {

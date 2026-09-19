@@ -72,6 +72,11 @@ export type EventDetailCommand =
         body?: string;
         occurredAt?: string;
       };
+    }
+  | {
+      /** Thema eines Kommunikationseintrags setzen oder (topicId null) entfernen. */
+      kind: "assign-communication-topic";
+      input: { entryId: string; topicId: string | null };
     };
 
 export type EventTransport<TEvent extends EventRecord> = {
@@ -116,6 +121,11 @@ export type EventTransport<TEvent extends EventRecord> = {
       body?: string;
       occurredAt?: string;
     },
+    version: number,
+  ): Promise<TEvent>;
+  assignCommunicationTopic?(
+    id: string,
+    input: { entryId: string; topicId: string | null },
     version: number,
   ): Promise<TEvent>;
 };
@@ -364,6 +374,11 @@ export function createEventWorkspace<TEvent extends EventRecord>(
                 return (
                   transport.createActivity?.(id, command.input, event.version ?? 0) ?? unavailable()
                 );
+              case "assign-communication-topic":
+                return (
+                  transport.assignCommunicationTopic?.(id, command.input, event.version ?? 0) ??
+                  unavailable()
+                );
             }
           }),
         );
@@ -401,6 +416,8 @@ export function createEventWorkspace<TEvent extends EventRecord>(
           body?: string;
           occurredAt?: string;
         }) => execute({ kind: "create-activity", input }),
+        assignCommunicationTopic: (input: { entryId: string; topicId: string | null }) =>
+          execute({ kind: "assign-communication-topic", input }),
         outlookPlan: () => transport.outlookPlan(id),
       };
     },

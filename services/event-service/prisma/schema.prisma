@@ -482,6 +482,36 @@ model EventService {
   @@id([eventId, serviceId])
 }
 
+/** Nachrichtenarten der Kommunikationsanzeige: E-Mail, Telefon, WhatsApp, Gespraech, ... */
+model CommunicationChannelOption {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  active    Boolean  @default(true)
+  icon      String?
+  color     String?
+  sortOrder Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name])
+}
+
+/** Thema eines Kommunikationseintrags, etwa "Teilnehmer" fuer Sammelmails. */
+model CommunicationTopicOption {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  active    Boolean  @default(true)
+  icon      String?
+  color     String?
+  sortOrder Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  activities EventActivity[]
+  messages   EventCommunicationMessage[]
+
+  @@unique([name])
+}
+
 model EventRoleOption {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
@@ -509,6 +539,8 @@ model EventActivity {
   id        String   @id @default(uuid()) @db.Uuid
   eventId   String   @db.Uuid
   channel   String
+  topicId   String?  @db.Uuid
+  topic     CommunicationTopicOption? @relation(fields: [topicId], references: [id], onDelete: SetNull)
   subject   String
   author    String?
   body      String?
@@ -516,11 +548,15 @@ model EventActivity {
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([topicId])
 }
 
 model EventCommunicationMessage {
   id             String   @id @default(uuid()) @db.Uuid
   eventId        String   @db.Uuid
+  topicId        String?  @db.Uuid
+  topic          CommunicationTopicOption? @relation(fields: [topicId], references: [id], onDelete: SetNull)
   mailbox        String
   externalId     String
   conversationId String?
@@ -538,6 +574,7 @@ model EventCommunicationMessage {
 
   @@unique([mailbox, externalId])
   @@index([eventId, occurredAt])
+  @@index([topicId])
 }
 
 model EventInvoiceRecipient {
