@@ -2,10 +2,11 @@ import * as React from "react";
 import { useCallback, useEffect, useRef, useState, type ForwardedRef, type ReactNode } from "react";
 import {
   ArrowDown,
-  ArrowDownToLine,
   ArrowUp,
   ArrowUpDown,
-  ArrowUpToLine,
+  ChevronLeft,
+  ChevronRight,
+  Columns3,
   FileSpreadsheet,
   LoaderCircle,
 } from "lucide-react";
@@ -28,6 +29,18 @@ import { cn } from "@/lib/utils";
 type DataTableProps = React.HTMLAttributes<HTMLTableElement> & {
   exportName: string;
   exportFileName?: string;
+  /**
+   * Die `ColumnPicker` der Seite.  Sie steht in derselben Symbolleiste wie der
+   * Export; beide sind Werkzeuge der Tabelle, nicht der Seite.
+   */
+  columnPicker?: ReactNode;
+  /**
+   * "ueber-tabelle" stellt die Symbolleiste in einer eigenen schmalen Zeile.
+   * "extern" lässt sie weg: Seiten mit Filterzeile setzen `TableToolbar` an
+   * deren rechtes Ende und sparen damit die Zeile.  Das Aussehen der Werkzeuge
+   * bleibt in beiden Fällen dasselbe.
+   */
+  tools?: "ueber-tabelle" | "extern";
 };
 
 function assignRef<T>(ref: ForwardedRef<T>, value: T | null) {
@@ -119,7 +132,12 @@ function excelFileName(name: string) {
   return `${slug || "tabelle"}.xlsx`;
 }
 
-function ExcelExportButton({
+/**
+ * Der Excel-Export einer gemeinsamen Tabelle: ein Symbol in der Leiste über der
+ * Tabelle.  Der ausgeschriebene Name steckt im barrierefreien Namen und im
+ * Tooltip, damit die Leiste nicht mit der Tabelle um Aufmerksamkeit streitet.
+ */
+export function TableExportButton({
   tableRef,
   exportName,
   exportFileName,
@@ -171,10 +189,12 @@ function ExcelExportButton({
   return (
     <Button
       type="button"
-      size="sm"
-      variant="outline"
+      size="icon"
+      variant="ghost"
+      className="size-7 text-muted-foreground hover:text-foreground"
       disabled={exporting}
       aria-label={`${exportName} als Excel exportieren`}
+      title={exporting ? "Excel wird erstellt …" : "Als Excel exportieren"}
       onClick={() => void exportTable()}
     >
       {exporting ? (
@@ -182,23 +202,57 @@ function ExcelExportButton({
       ) : (
         <FileSpreadsheet className="size-4" aria-hidden="true" />
       )}
-      {exporting ? "Excel wird erstellt …" : "Excel exportieren"}
     </Button>
   );
 }
 
+/**
+ * Spalten und Export als Symbolpaar.  `DataTable` stellt sie selbst über die
+ * Tabelle; Seiten mit eigener Filterzeile setzen sie mit `tools="extern"` an
+ * deren rechtes Ende und sparen so eine Zeile Höhe.  So oder so sehen die
+ * Werkzeuge in jeder Tabelle gleich aus.
+ */
+export function TableToolbar({
+  tableRef,
+  exportName,
+  exportFileName,
+  columnPicker,
+}: {
+  tableRef: React.RefObject<HTMLTableElement | null>;
+  exportName: string;
+  exportFileName?: string | undefined;
+  columnPicker?: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {columnPicker}
+      <TableExportButton
+        tableRef={tableRef}
+        exportName={exportName}
+        exportFileName={exportFileName}
+      />
+    </div>
+  );
+}
+
 export const DataTable = React.forwardRef<HTMLTableElement, DataTableProps>(
-  ({ className, exportName, exportFileName, ...props }, ref) => {
+  (
+    { className, exportName, exportFileName, columnPicker, tools = "ueber-tabelle", ...props },
+    ref,
+  ) => {
     const tableRef = useRef<HTMLTableElement>(null);
     return (
-      <div className="space-y-2">
-        <div className="flex justify-end">
-          <ExcelExportButton
-            tableRef={tableRef}
-            exportName={exportName}
-            exportFileName={exportFileName}
-          />
-        </div>
+      <div className="space-y-1">
+        {tools === "ueber-tabelle" && (
+          <div className="flex justify-end">
+            <TableToolbar
+              tableRef={tableRef}
+              exportName={exportName}
+              exportFileName={exportFileName}
+              columnPicker={columnPicker}
+            />
+          </div>
+        )}
         <div
           className="relative w-full overflow-x-auto rounded-xl border border-border bg-card xl:overflow-visible"
           data-density="compact"
@@ -209,7 +263,7 @@ export const DataTable = React.forwardRef<HTMLTableElement, DataTableProps>(
               assignRef(ref, value);
             }}
             className={cn(
-              "t2w-data-table w-full caption-bottom text-[13px] leading-4 [&_thead]:bg-muted [&_thead]:text-[10px] [&_thead]:uppercase [&_thead]:tracking-wider [&_thead]:text-muted-foreground [&_thead_tr]:h-[30px] [&_thead_tr]:border-b [&_thead_tr]:border-border [&_th]:h-[30px] [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-middle [&_th]:font-bold [&_tbody_tr]:h-[34px] [&_tbody_tr]:border-b [&_tbody_tr]:border-border/70 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-muted/40 [&_tbody_tr:last-child]:border-b-0 [&_td]:h-[34px] [&_td]:max-w-0 [&_td]:truncate [&_td]:px-2 [&_td]:py-1 [&_td]:align-middle [&_a:focus-visible]:outline-none [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-ring [&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-2 [&_input:focus-visible]:ring-ring",
+              "t2w-data-table w-full caption-bottom text-[13px] leading-4 [&_thead_tr]:h-[30px] [&_th]:h-[30px] [&_th]:whitespace-nowrap [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-middle [&_tbody_tr]:h-[34px] [&_tbody_tr]:border-b [&_tbody_tr]:border-border/70 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-muted/40 [&_tbody_tr:last-child]:border-b-0 [&_td]:h-[34px] [&_td]:max-w-0 [&_td]:truncate [&_td]:px-2 [&_td]:py-1 [&_td]:align-middle [&_a:focus-visible]:outline-none [&_a:focus-visible]:ring-2 [&_a:focus-visible]:ring-ring [&_button:focus-visible]:outline-none [&_button:focus-visible]:ring-2 [&_button:focus-visible]:ring-ring [&_input:focus-visible]:outline-none [&_input:focus-visible]:ring-2 [&_input:focus-visible]:ring-ring",
               className,
             )}
             {...props}
@@ -315,6 +369,11 @@ export function useTableBehavior<T, K extends string>(options: {
   };
 }
 
+/**
+ * Spaltenauswahl und -reihenfolge.  Sie gehört in die Symbolleiste der Tabelle
+ * (`DataTable` nimmt sie als `columnPicker` entgegen); die Liste steht in der
+ * Anzeigereihenfolge der Spalten, oben ist links.
+ */
 export function ColumnPicker<T extends string>({
   columns,
   visibleColumns,
@@ -333,12 +392,21 @@ export function ColumnPicker<T extends string>({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button type="button" size="sm" variant="outline">
-          Spalten auswählen
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="size-7 text-muted-foreground hover:text-foreground"
+          aria-label="Spalten auswählen"
+          title="Spalten auswählen und ordnen"
+        >
+          <Columns3 className="size-4" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-60 p-2">
-        <p className="px-1 pb-1 text-xs text-muted-foreground">Sichtbarkeit und Reihenfolge</p>
+      <PopoverContent align="end" className="w-64 p-2">
+        <p className="px-1 pb-1 text-xs text-muted-foreground">
+          Sichtbarkeit und Reihenfolge — oben ist links
+        </p>
         {orderedColumns.map((column) => {
           const isVisible = visibleColumns.includes(column);
           const visibleIndex = visibleColumns.indexOf(column);
@@ -355,22 +423,22 @@ export function ColumnPicker<T extends string>({
                     size="icon"
                     variant="ghost"
                     className="size-6"
-                    aria-label={`${column} nach oben verschieben`}
+                    aria-label={`${column} nach links verschieben`}
                     disabled={visibleIndex === 0}
                     onClick={() => moveColumn(column, -1)}
                   >
-                    <ArrowUpToLine className="size-3" />
+                    <ChevronLeft className="size-3.5" aria-hidden="true" />
                   </Button>
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
                     className="size-6"
-                    aria-label={`${column} nach unten verschieben`}
+                    aria-label={`${column} nach rechts verschieben`}
                     disabled={visibleIndex === visibleColumns.length - 1}
                     onClick={() => moveColumn(column, 1)}
                   >
-                    <ArrowDownToLine className="size-3" />
+                    <ChevronRight className="size-3.5" aria-hidden="true" />
                   </Button>
                 </span>
               )}

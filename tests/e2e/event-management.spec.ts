@@ -256,7 +256,8 @@ test("lädt Events in 500er-Seiten und zeigt standardmäßig das aktuelle Jahr",
   const requests = await mockApi(page);
   await page.goto("/veranstaltungen");
 
-  await expect(page.getByText("Aktuelles Jahr", { exact: true })).toBeVisible();
+  // Der Zeitraum steht als Auswahlchip mit nativem select; geprüft wird sein Wert.
+  await expect(page.getByLabel("Zeitraum", { exact: true })).toHaveValue("jahr");
   await expect(page.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
   await expect(page.getByText("Folgetermin", { exact: true })).toHaveCount(0);
   await expect
@@ -287,10 +288,11 @@ test("filtert Veranstaltungen nach dem nächsten Kalenderjahr", async ({ page })
     0,
   );
 
-  await page.getByRole("combobox").filter({ hasText: "Aktuelles Jahr" }).click();
-  await page.getByRole("option", { name: "Nächstes Jahr", exact: true }).click();
+  const zeitraum = page.getByLabel("Zeitraum", { exact: true });
+  await expect(zeitraum).toHaveValue("jahr");
+  await zeitraum.selectOption("naechstes-jahr");
 
-  await expect(page.getByRole("combobox").filter({ hasText: "Nächstes Jahr" })).toBeVisible();
+  await expect(zeitraum).toHaveValue("naechstes-jahr");
   await expect(table.getByRole("link", { name: "Nächstes Jahr Event", exact: true })).toBeVisible();
   await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toHaveCount(0);
 });
@@ -424,7 +426,7 @@ test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ pa
   await expect(page.locator("text=1").first()).toBeVisible();
 });
 
-test("reduziert die Navigation und verwendet das Bearbeiten-Symbol", async ({ page }) => {
+test("reduziert die Navigation und öffnet das Event über seinen Namen", async ({ page }) => {
   await mockApi(page);
   await page.goto("/veranstaltungen");
   await expect(page.getByRole("link", { name: "Kalender", exact: true })).toHaveCount(1);
@@ -432,9 +434,12 @@ test("reduziert die Navigation und verwendet das Bearbeiten-Symbol", async ({ pa
   await expect(page.getByText("Zentrale Datenquelle: Event-Service", { exact: true })).toHaveCount(
     0,
   );
+  // Die Aktionsspalte entfällt (Nutzerwunsch 19.09.2026): der Eventname führt
+  // ins Detail, ein zweites Bearbeiten-Symbol daneben trug nichts bei.
+  await expect(page.getByRole("link", { name: /Event bearbeiten:/ })).toHaveCount(0);
   await expect(
-    page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ }),
-  ).toBeVisible();
+    page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
+  ).toHaveAttribute("href", "/events/260820_demo_event");
   await expect(page.getByRole("link", { name: "Aufgaben", exact: true })).toBeVisible();
   for (const modul of ["Angebote", "Rechnungen"]) {
     await expect(page.getByRole("link", { name: modul, exact: true })).toHaveCount(0);
@@ -565,7 +570,7 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await page.goto("/veranstaltungen");
   const table = page.locator("table");
   await expect(table).toBeVisible();
-  await expect(table.locator("thead th")).toHaveCount(11);
+  await expect(table.locator("thead th")).toHaveCount(10);
   await expect(table.locator("thead")).toContainText("St");
   await expect(table.locator("thead")).toContainText("Aufgaben");
   await expect(table.getByRole("columnheader", { name: "Sportart sortieren" })).toBeVisible();
@@ -711,6 +716,67 @@ test("platziert die schmale TIME2WIN-Spalte nach dem Status und verlinkt die Eve
   }
 });
 
+test("stellt Spalten und Export in Kontakten und Kunden auf Höhe der Tab-Leiste", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/kontakte");
+
+  // Nutzerwunsch 19.09.2026: keine eigene Werkzeugzeile, die Symbole stehen in
+  // der Zeile über der Tabelle — hier ist das die Tab-Leiste.
+  const spalten = page.getByRole("button", { name: "Spalten auswählen" });
+  await expect(spalten).toBeVisible();
+  await expect(page.getByRole("button", { name: "Kontakte als Excel exportieren" })).toBeVisible();
+
+  const [leisteBox, werkzeugBox] = await Promise.all([
+    page.getByRole("tablist").boundingBox(),
+    spalten.boundingBox(),
+  ]);
+  expect(Math.abs(werkzeugBox!.y - leisteBox!.y)).toBeLessThan(24);
+
+  // Der Wechsel des Reiters wechselt auch den Exportnamen der Leiste.
+  await page.getByRole("tab", { name: /Kunden/ }).click();
+  await expect(page.getByRole("button", { name: "Kunden als Excel exportieren" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Kontakte als Excel exportieren" })).toHaveCount(0);
+});
+
+test("erklärt die Statusfarben unter beiden Eventtabellen und hält sie unterscheidbar", async ({
+  page,
+}) => {
+  await mockApi(page);
+
+  for (const path of ["/", "/veranstaltungen"]) {
+    await page.goto(path);
+    const legende = page.getByLabel("Statuslegende");
+    await expect(legende).toBeVisible();
+    await expect(legende).toContainText("Anfrage");
+    await expect(legende).toContainText("Zugesagt");
+    await expect(legende).toContainText("Datum prüfen");
+
+    // Nutzerentscheidung 19.09.2026: jeder Status hat eine eigene Farbe. Vorher
+    // trugen Anfrage, Angebot gesendet, Akquise und Datum prüfen dasselbe Amber.
+    const farben = await legende
+      .locator("[data-status-dot]")
+      .evaluateAll((nodes) => nodes.map((node) => getComputedStyle(node).backgroundColor));
+    expect(farben).toHaveLength(6);
+    expect(new Set(farben).size).toBe(6);
+
+    // Die Farbe trägt die Bedeutung nie allein: die Zelle nennt den Status als Text.
+    const statusZelle = page
+      .locator("table tbody tr")
+      .filter({ hasText: "Bestehendes Event" })
+      .getByRole("cell")
+      .first();
+    await expect(statusZelle).toContainText("Anfrage");
+  }
+
+  // Schmal zeigen die Karten Punkt und Text nebeneinander; die Legende entfällt.
+  await page.setViewportSize({ width: 375, height: 700 });
+  await page.goto("/veranstaltungen");
+  await expect(page.getByLabel("Veranstaltungen mobile Liste")).toBeVisible();
+  await expect(page.getByLabel("Statuslegende")).toBeHidden();
+});
+
 test("zeigt ohne TIME2WIN-Event-ID keinen Backend-Link in den Eventtabellen", async ({ page }) => {
   await mockApi(page);
 
@@ -727,10 +793,75 @@ test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async (
   await page.goto("/veranstaltungen");
 
   const filterZeile = page.getByRole("group", { name: "Eventfilter und Tabellenspalten" });
-  await expect(filterZeile.getByRole("button", { name: "Spalten auswählen" })).toBeVisible();
   await expect(filterZeile).toContainText("Alle Status");
   await expect(filterZeile).toContainText("Alle Zeiträume");
   await expect(filterZeile).toContainText("Nur aktive");
+  // Spalten und Export sind Symbole und stehen auf Filterhöhe, damit die
+  // Tabelle keine eigene Werkzeugzeile braucht (Nutzerwunsch 19.09.2026).
+  await expect(filterZeile.getByRole("button", { name: "Spalten auswählen" })).toBeVisible();
+});
+
+test("führt Eventfilter, Spalten und Excel-Export in einer Kompaktzeile und setzt sie zurück", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/veranstaltungen");
+
+  const filterZeile = page.getByRole("group", { name: "Eventfilter und Tabellenspalten" });
+  const status = filterZeile.getByLabel("Status", { exact: true });
+  const table = page.locator("table");
+
+  // Filter, Spalten und Export teilen sich eine Zeile — keine zweite Reihe.
+  await expect(
+    filterZeile.getByRole("button", { name: "Veranstaltungen als Excel exportieren" }),
+  ).toBeVisible();
+  const [filterBox, tabellenBox] = await Promise.all([
+    filterZeile.boundingBox(),
+    page.locator("table").boundingBox(),
+  ]);
+  expect(tabellenBox!.y).toBeLessThan(filterBox!.y + filterBox!.height + 32);
+
+  // Ohne gesetzten Filter gibt es nichts zurückzusetzen.
+  await expect(filterZeile.getByRole("button", { name: /Filter zurücksetzen/ })).toHaveCount(0);
+  await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+
+  // Gesetzte Auswahlchips tragen den Markenakzent und zählen im Zurücksetzen mit.
+  const neutral = await status.evaluate(
+    (node) => getComputedStyle(node.parentElement!).backgroundColor,
+  );
+  await status.selectOption("zugesagt");
+  const aktiv = await status.evaluate(
+    (node) => getComputedStyle(node.parentElement!).backgroundColor,
+  );
+  expect(aktiv).not.toBe(neutral);
+
+  const zuruecksetzen = filterZeile.getByRole("button", { name: "1 Filter zurücksetzen" });
+  await expect(zuruecksetzen).toBeVisible();
+  await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toHaveCount(0);
+
+  await zuruecksetzen.click();
+  await expect(status).toHaveValue("alle");
+  await expect(filterZeile.getByRole("button", { name: /Filter zurücksetzen/ })).toHaveCount(0);
+  await expect(table.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+});
+
+test("zeigt Sportart und Services auch in den mobilen Eventkarten", async ({ page }) => {
+  await mockApi(page, {
+    sport: { id: "s1", name: "Triathlon" },
+    services: [{ service: { id: "service-1", name: "UHF" } }],
+  });
+  await page.setViewportSize({ width: 375, height: 700 });
+  await page.goto("/veranstaltungen");
+
+  const karte = page
+    .getByLabel("Veranstaltungen mobile Liste")
+    .locator("article")
+    .filter({ hasText: "Bestehendes Event" });
+  await expect(karte).toContainText("Triathlon");
+  await expect(karte).toContainText("UHF");
+  expect(await page.locator("body").evaluate((body) => body.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
 });
 
 test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page }) => {
@@ -1126,16 +1257,17 @@ test("zeigt Events mobil priorisiert und hält wichtige Touch-Ziele sowie Sticky
   );
 });
 
-test("trennt Tabellen-Detailnavigation von Outlook-, SharePoint- und Bearbeiten-Aktionen", async ({
-  page,
-}) => {
+test("trennt Tabellen-Detailnavigation von Outlook- und SharePoint-Aktionen", async ({ page }) => {
   await mockApi(page);
   await page.goto("/");
+  // Die Zeile selbst ist kein Link; jede Navigation hat ihr eigenes Ziel.
   await expect(page.locator('tbody tr[role="link"]')).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Bestehendes Event", exact: true })).toBeVisible();
+  await expect(page.locator("table").getByLabel("Outlook: nicht verknüpft").first()).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /Event bearbeiten: Bestehendes Event/ }),
+    page.locator("table").getByLabel("SharePoint: nicht verknüpft").first(),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: /Event bearbeiten:/ })).toHaveCount(0);
 });
 
 test("schließt Kontakt-Dialog und Detail-Sheet per Escape mit Fokus-Rückgabe", async ({ page }) => {

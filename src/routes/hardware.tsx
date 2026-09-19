@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, PackageOpen, RotateCcw, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Bell, PackageOpen, TriangleAlert, type LucideIcon } from "lucide-react";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { formatDatum } from "@/lib/t2w/format";
@@ -11,7 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
+import {
+  ColumnPicker,
+  DataTable,
+  SortHeader,
+  TableToolbar,
+  useTableBehavior,
+} from "@/components/t2w/DataTable";
+import { FilterResetChip } from "@/components/t2w/FilterChip";
 import {
   Sheet,
   SheetContent,
@@ -209,6 +216,7 @@ function HardwarePage() {
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [inlineEmailError, setInlineEmailError] = useState<string | null>(null);
   const [newHardware, setNewHardware] = useState(false);
+  const tableRef = useRef<HTMLTableElement>(null);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const pendingSaves = useRef(0);
   const table = useTableBehavior<Hardware, HardwareColumn>({
@@ -270,7 +278,13 @@ function HardwarePage() {
   );
   const rows = useMemo(() => table.rows(active), [active, table]);
   const overdueCount = active.filter((item) => isOverdue(item, today)).length;
-  const hasFilters = Boolean(q || event || overdue || status !== "active" || issueType !== "all");
+  // Gezählt wird jede Abweichung von der Grundstellung — wie in den übrigen Listen.
+  const activeFilterCount =
+    (q ? 1 : 0) +
+    (event ? 1 : 0) +
+    (overdue ? 1 : 0) +
+    (status === "active" ? 0 : 1) +
+    (issueType === "all" ? 0 : 1);
   const resetFilters = () => {
     setQ("");
     setEvent("");
@@ -423,11 +437,22 @@ function HardwarePage() {
                   {active.length} {active.length === 1 ? "aktiver Vorgang" : "aktive Vorgänge"}
                 </p>
               </div>
-              {hasFilters && (
-                <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-2">
-                  <RotateCcw className="size-4" aria-hidden="true" /> Filter zurücksetzen
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                <FilterResetChip count={activeFilterCount} onReset={resetFilters} />
+                {/* Auf Filterhöhe statt in einer eigenen Zeile über der Tabelle. */}
+                <TableToolbar
+                  tableRef={tableRef}
+                  exportName="Hardware"
+                  columnPicker={
+                    <ColumnPicker
+                      columns={HARDWARE_COLUMNS}
+                      visibleColumns={table.visibleColumns}
+                      toggleColumn={table.toggleColumn}
+                      moveColumn={table.moveColumn}
+                    />
+                  }
+                />
+              </div>
             </div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(14rem,1.2fr)_minmax(10rem,.8fr)_minmax(10rem,.8fr)_auto_auto] xl:items-end">
               <label className="grid gap-1 text-[13px] font-medium">
@@ -477,14 +502,6 @@ function HardwarePage() {
                 />{" "}
                 Überfällig
               </label>
-              <div className="flex h-8 items-end">
-                <ColumnPicker
-                  columns={HARDWARE_COLUMNS}
-                  visibleColumns={table.visibleColumns}
-                  toggleColumn={table.toggleColumn}
-                  moveColumn={table.moveColumn}
-                />
-              </div>
             </div>
           </CardHeader>
           <CardContent className="p-3">
@@ -497,7 +514,12 @@ function HardwarePage() {
               </p>
             )}
             <div>
-              <DataTable exportName="Hardware" className="min-w-[1100px]">
+              <DataTable
+                ref={tableRef}
+                exportName="Hardware"
+                tools="extern"
+                className="min-w-[1100px]"
+              >
                 <caption className="sr-only">Aktive Hardware-Rückgabevorgänge</caption>
                 <thead>
                   <tr className="h-[30px] border-b text-left">

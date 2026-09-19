@@ -3,7 +3,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { ColumnPicker, DataTable, SortHeader, useTableBehavior } from "@/components/t2w/DataTable";
+import {
+  ColumnPicker,
+  DataTable,
+  SortHeader,
+  TableToolbar,
+  useTableBehavior,
+} from "@/components/t2w/DataTable";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,6 +55,53 @@ const PEOPLE_COLUMNS = [
   "Kundenprofil",
 ] as const;
 type PeopleColumn = (typeof PEOPLE_COLUMNS)[number];
+/**
+ * Zellinhalt je Spalte.  Die Zeilen geben ihre Zellen in der Reihenfolge von
+ * `visibleColumns` aus, damit die im Spaltenmenü gewählte Reihenfolge auch die
+ * Anzeigereihenfolge ist.
+ */
+function peopleCell(person: Person, column: PeopleColumn): ReactNode {
+  switch (column) {
+    case "Name":
+      return personName(person);
+    case "Funktion":
+      return person.funktion || "–";
+    case "E-Mail":
+      return person.email || "–";
+    case "Telefon":
+      return person.telefonBeruflich || person.telefonPrivat || "–";
+    case "Kunden":
+      return person.kundenIds.length;
+    case "Eventrollen":
+      return person.eventRollen.length;
+    case "Kundenprofil":
+      return person.kundenprofilId ? <Chip good>ja</Chip> : <Chip>nein</Chip>;
+  }
+}
+
+function customerCell(customer: Kunde, column: CustomerColumn, people: Person[]): ReactNode {
+  switch (column) {
+    case "Kunde":
+      return customer.name;
+    case "Hauptansprechperson":
+      return customer.primaryContactId
+        ? personName(people.find((p) => p.id === customer.primaryContactId) ?? ({} as Person))
+        : "–";
+    case "E-Mail":
+      return customer.email || "–";
+    case "UID":
+      return customer.uid || "–";
+    case "IBAN":
+      return customer.iban || "–";
+    case "Kontakte":
+      return customer.kontaktIds.length;
+    case "Events":
+      return customer.events.length;
+    case "Status":
+      return <Chip good={customer.status === "aktiv"}>{KUNDENSTATUS_LABEL[customer.status]}</Chip>;
+  }
+}
+
 const input = "w-full rounded border border-input bg-background px-2 py-1.5 text-sm";
 const validEmail = (value: string) => !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const validPhone = (value: string) => !value || /^[+0-9() ./-]+$/.test(value);
@@ -163,6 +216,12 @@ function KundenKontakte() {
   const crm = useCrm();
   const { currentUser } = useT2W();
   const [tab, setTab] = useState<"kontakte" | "kunden">("kontakte");
+  // Spaltenzustand beider Tabellen liegt hier, damit die Werkzeuge auf
+  // Höhe der Tab-Leiste stehen können. Es ist immer nur eine Tabelle
+  // gemountet, deshalb genügt eine Referenz für den Export.
+  const peopleTable = usePeopleTable();
+  const customerTable = useCustomerTable(crm.personen);
+  const tableRef = useRef<HTMLTableElement>(null);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<Auswahl>(null);
   const [create, setCreate] = useState(false);
@@ -244,12 +303,53 @@ function KundenKontakte() {
               Kunden ({customers.length})
             </button>
           </div>
+
+          {/* Auf Höhe der Tab-Leiste statt in einer eigenen Zeile über der Tabelle. */}
+          <div className="ml-auto hidden md:block">
+            {tab === "kontakte"
+              ? people.length > 0 && (
+                  <TableToolbar
+                    tableRef={tableRef}
+                    exportName="Kontakte"
+                    columnPicker={
+                      <ColumnPicker
+                        columns={PEOPLE_COLUMNS}
+                        visibleColumns={peopleTable.visibleColumns}
+                        toggleColumn={peopleTable.toggleColumn}
+                        moveColumn={peopleTable.moveColumn}
+                      />
+                    }
+                  />
+                )
+              : customers.length > 0 && (
+                  <TableToolbar
+                    tableRef={tableRef}
+                    exportName="Kunden"
+                    columnPicker={
+                      <ColumnPicker
+                        columns={sichtbareKundenSpaltenVon(
+                          [...CUSTOMER_COLUMNS],
+                          currentUser.financeAccess,
+                        )}
+                        visibleColumns={sichtbareKundenSpaltenVon(
+                          customerTable.visibleColumns,
+                          currentUser.financeAccess,
+                        )}
+                        toggleColumn={customerTable.toggleColumn}
+                        moveColumn={customerTable.moveColumn}
+                      />
+                    }
+                  />
+                )}
+          </div>
         </div>
         {tab === "kontakte" ? (
           <PeopleTable
             people={people}
             select={(id) => setSel({ art: "person", id })}
             open={() => setCreate(true)}
+            table={peopleTable}
+            tableRef={tableRef}
           />
         ) : (
           <CustomerTable
@@ -258,6 +358,8 @@ function KundenKontakte() {
             select={(id) => setSel({ art: "kunde", id })}
             open={() => setCreate(true)}
             financeAccess={currentUser.financeAccess}
+            table={customerTable}
+            tableRef={tableRef}
           />
         )}
         <p className="rounded border border-dashed border-border p-3 text-xs text-muted-foreground">
@@ -317,16 +419,13 @@ function KundenKontakte() {
     </div>
   );
 }
-function PeopleTable({
-  people,
-  select,
-  open,
-}: {
-  people: Person[];
-  select: (id: string) => void;
-  open: () => void;
-}) {
-  const table = useTableBehavior<Person, PeopleColumn>({
+/**
+ * Der Spaltenzustand liegt bei der Seite, nicht bei der Tabelle: nur so können
+ * Spaltenauswahl und Export auf Höhe der Tab-Leiste stehen statt in einer
+ * eigenen Zeile über der Tabelle.
+ */
+function usePeopleTable() {
+  return useTableBehavior<Person, PeopleColumn>({
     storageKey: "t2w-contact-table-columns",
     initialSort: { key: "Name", direction: "asc" },
     columns: PEOPLE_COLUMNS.map((key) => ({
@@ -343,20 +442,31 @@ function PeopleTable({
         })[key] ?? "",
     })),
   });
-  const { visibleColumns, toggleColumn } = table;
+}
+
+function PeopleTable({
+  people,
+  select,
+  open,
+  table,
+  tableRef,
+}: {
+  people: Person[];
+  select: (id: string) => void;
+  open: () => void;
+  table: ReturnType<typeof usePeopleTable>;
+  tableRef: React.RefObject<HTMLTableElement | null>;
+}) {
+  const { visibleColumns } = table;
   const sortedPeople = table.rows(people);
   return people.length ? (
     <>
-      <ColumnPicker
-        columns={PEOPLE_COLUMNS}
-        visibleColumns={visibleColumns}
-        toggleColumn={toggleColumn}
-      />
       <Table
         exportName="Kontakte"
-        h={PEOPLE_COLUMNS.filter((column) => visibleColumns.includes(column))}
+        h={visibleColumns}
         sort={table.sort}
         onSort={table.sortBy}
+        tableRef={tableRef}
       >
         {sortedPeople.map((p) => (
           <tr
@@ -364,17 +474,9 @@ function PeopleTable({
             onClick={() => select(p.id)}
             className="cursor-pointer border-t border-border hover:bg-accent/50"
           >
-            {visibleColumns.includes("Name") && <td>{personName(p)}</td>}
-            {visibleColumns.includes("Funktion") && <td>{p.funktion || "–"}</td>}
-            {visibleColumns.includes("E-Mail") && <td>{p.email || "–"}</td>}
-            {visibleColumns.includes("Telefon") && (
-              <td>{p.telefonBeruflich || p.telefonPrivat || "–"}</td>
-            )}
-            {visibleColumns.includes("Kunden") && <td>{p.kundenIds.length}</td>}
-            {visibleColumns.includes("Eventrollen") && <td>{p.eventRollen.length}</td>}
-            {visibleColumns.includes("Kundenprofil") && (
-              <td>{p.kundenprofilId ? <Chip good>ja</Chip> : <Chip>nein</Chip>}</td>
-            )}
+            {visibleColumns.map((column) => (
+              <td key={column}>{peopleCell(p, column)}</td>
+            ))}
           </tr>
         ))}
       </Table>
@@ -383,20 +485,8 @@ function PeopleTable({
     <Empty text="Keine Kontakte gefunden." open={open} label="Person anlegen" />
   );
 }
-function CustomerTable({
-  customers,
-  people,
-  select,
-  open,
-  financeAccess,
-}: {
-  customers: Kunde[];
-  people: Person[];
-  select: (id: string) => void;
-  open: () => void;
-  financeAccess: boolean;
-}) {
-  const table = useTableBehavior<Kunde, CustomerColumn>({
+function useCustomerTable(people: Person[]) {
+  return useTableBehavior<Kunde, CustomerColumn>({
     storageKey: CUSTOMER_COLUMN_STORAGE_KEY,
     initialSort: { key: "Kunde", direction: "asc" },
     columns: CUSTOMER_COLUMNS.map((key) => ({
@@ -416,22 +506,40 @@ function CustomerTable({
         })[key] ?? "",
     })),
   });
-  const { visibleColumns, toggleColumn } = table;
+}
+
+/** Ohne Finanzzugriff verschwindet die IBAN-Spalte aus Kopf und Zellen. */
+function sichtbareKundenSpaltenVon(visibleColumns: CustomerColumn[], financeAccess: boolean) {
+  return visibleColumns.filter((column) => financeAccess || column !== "IBAN");
+}
+
+function CustomerTable({
+  customers,
+  people,
+  select,
+  open,
+  financeAccess,
+  table,
+  tableRef,
+}: {
+  customers: Kunde[];
+  people: Person[];
+  select: (id: string) => void;
+  open: () => void;
+  financeAccess: boolean;
+  table: ReturnType<typeof useCustomerTable>;
+  tableRef: React.RefObject<HTMLTableElement | null>;
+}) {
+  const sichtbareKundenSpalten = sichtbareKundenSpaltenVon(table.visibleColumns, financeAccess);
   const sortedCustomers = table.rows(customers);
   return customers.length ? (
     <>
-      <ColumnPicker
-        columns={CUSTOMER_COLUMNS.filter((column) => financeAccess || column !== "IBAN")}
-        visibleColumns={visibleColumns}
-        toggleColumn={toggleColumn}
-      />
       <Table
         exportName="Kunden"
-        h={CUSTOMER_COLUMNS.filter(
-          (column) => (financeAccess || column !== "IBAN") && visibleColumns.includes(column),
-        )}
+        h={sichtbareKundenSpalten}
         sort={table.sort}
         onSort={table.sortBy}
+        tableRef={tableRef}
       >
         {sortedCustomers.map((k) => (
           <tr
@@ -439,24 +547,9 @@ function CustomerTable({
             onClick={() => select(k.id)}
             className="cursor-pointer border-t border-border hover:bg-accent/50"
           >
-            {visibleColumns.includes("Kunde") && <td>{k.name}</td>}
-            {visibleColumns.includes("Hauptansprechperson") && (
-              <td>
-                {k.primaryContactId
-                  ? personName(people.find((p) => p.id === k.primaryContactId) ?? ({} as Person))
-                  : "–"}
-              </td>
-            )}
-            {visibleColumns.includes("E-Mail") && <td>{k.email || "–"}</td>}
-            {visibleColumns.includes("UID") && <td>{k.uid || "–"}</td>}
-            {financeAccess && visibleColumns.includes("IBAN") && <td>{k.iban || "–"}</td>}
-            {visibleColumns.includes("Kontakte") && <td>{k.kontaktIds.length}</td>}
-            {visibleColumns.includes("Events") && <td>{k.events.length}</td>}
-            {visibleColumns.includes("Status") && (
-              <td>
-                <Chip good={k.status === "aktiv"}>{KUNDENSTATUS_LABEL[k.status]}</Chip>
-              </td>
-            )}
+            {sichtbareKundenSpalten.map((column) => (
+              <td key={column}>{customerCell(k, column, people)}</td>
+            ))}
           </tr>
         ))}
       </Table>
@@ -471,16 +564,20 @@ function Table<K extends string>({
   children,
   sort,
   onSort,
+  tableRef,
 }: {
   exportName: string;
   h: readonly K[];
   children: ReactNode;
   sort: { key: K; direction: "asc" | "desc" };
   onSort: (key: K) => void;
+  tableRef: React.RefObject<HTMLTableElement | null>;
 }) {
   return (
     <DataTable
+      ref={tableRef}
       exportName={exportName}
+      tools="extern"
       className="min-w-[54rem] text-[13px] leading-4 [&_thead_tr]:h-[30px] [&_tbody_tr]:h-[34px]"
     >
       <thead className="t2w-table-header text-left">

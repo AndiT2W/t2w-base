@@ -4,6 +4,8 @@ Track ingested evidence and source summaries here.
 
 ## Active Sources
 
+- [Architecture scan: successor creation, category drafts and Event tables (2026-09-19)](2026-09-19-architecture-scan.md)
+
 - [Claude-Kommunikationsdesign: Nutzerauftrag und geprüfter Stand (2026-09-19)](2026-09-19-claude-kommunikation-design.md)
 
 - [Claude-PM-Design: Nutzerauftrag und geprüfter Stand (2026-09-18)](2026-09-18-claude-pm-design.md)

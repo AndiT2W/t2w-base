@@ -91,6 +91,7 @@ import { STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
+import { FilterResetChip } from "@/components/t2w/FilterChip";
 import { ServiceBadge, SelectionBadge, selectionPresentation } from "@/components/t2w/ServiceBadge";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
@@ -1975,17 +1976,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 {communicationTimeline.attachmentCount}
               </span>
             </Button>
-            {communicationFilterCount > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="rounded-full"
-                onClick={resetCommunicationFilters}
-              >
-                <X className="size-4" aria-hidden="true" />
-                {communicationFilterCount} Filter zurücksetzen
-              </Button>
-            )}
+            <FilterResetChip count={communicationFilterCount} onReset={resetCommunicationFilters} />
           </div>
 
           {communicationSearch.trim() && (
