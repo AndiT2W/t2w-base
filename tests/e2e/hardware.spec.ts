@@ -33,7 +33,13 @@ test("shows central hardware cases, filters them, and links to the event", async
       ],
     }),
   );
-  for (const endpoint of ["sports", "event-roles", "services"]) {
+  for (const endpoint of [
+    "sports",
+    "event-roles",
+    "services",
+    "communication-channels",
+    "communication-topics",
+  ]) {
     await page.route(`**/api/v1/${endpoint}**`, (route) => route.fulfill({ json: [] }));
   }
   await page.route("**/api/v1/events**", (route) => route.fulfill({ json: [] }));

@@ -129,30 +129,21 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
       return selectionListChoices(snapshot[kind]);
     },
     async load() {
-      const [
-        sports,
-        eventRoles,
-        services,
-        hardwareObjects,
-        communicationChannels,
-        communicationTopics,
-      ] = await Promise.all([
-        lists.list("sports", true),
-        lists.list("eventRoles", true),
-        lists.list("services", true),
-        lists.list("hardwareObjects", true),
-        lists.list("communicationChannels", true),
-        lists.list("communicationTopics", true),
-      ]);
-      snapshot = {
-        sports,
-        eventRoles,
-        services,
-        hardwareObjects,
-        communicationChannels,
-        communicationTopics,
-        loaded: true,
-      };
+      /**
+       * Jede Liste steht fuer sich: faellt ein Endpunkt aus, behaelt diese Liste
+       * ihren letzten Stand, statt alle uebrigen mitzureissen. Mit Promise.all
+       * blendete ein einzelner Fehler saemtliche Auswahllisten aus.
+       */
+      const results = await Promise.allSettled(
+        SELECTION_LIST_KINDS.map((kind) => lists.list(kind, true)),
+      );
+      const loadedLists = Object.fromEntries(
+        SELECTION_LIST_KINDS.map((kind, index) => {
+          const result = results[index];
+          return [kind, result?.status === "fulfilled" ? result.value : (snapshot[kind] ?? [])];
+        }),
+      ) as Record<SelectionListKind, SelectionListValue[]>;
+      snapshot = { ...loadedLists, loaded: true };
       publish();
       return snapshot;
     },

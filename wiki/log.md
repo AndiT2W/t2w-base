@@ -732,3 +732,11 @@ Geprüft: neuer Browserablauf (Thema im Panel zuordnen, Chip in der Zeile, Theme
 Themen werden von Hand im Nachrichtenpanel gesetzt; die Regeln „Adresse oder Domain → Thema“ werden auf Nutzerwunsch vorerst nicht gebaut. Das ist eine Entscheidung, kein offener Punkt: die manuelle Zuordnung ist der vorgesehene Weg, solange nichts anderes beschlossen wird.
 
 Folge für die [Mailkategorisierung mit Ollama Cloud](decisions/2026-09-19-mailkategorisierung-mit-ollama-cloud.md): deren Stufe 1 war als deterministischer Unterbau vor der Modellanbindung gedacht. Dieser Unterbau fehlt nun. Wer die Modellstufe angeht, muss Stufe 1 nachholen oder begründen, warum das Modell ohne sie tragfähig ist. Die Auflagen zu Vorschlag statt Zuordnung, serverseitigem Aufruf und Abschaltbarkeit je Event bleiben gültig. Quelle: Nutzerkonversation vom 2026-09-19.
+
+## 2026-09-19 — Auswahllisten laden unabhängig voneinander
+
+Das Deployment nach dem Merge von PR #56 blieb im `verify`-Job hängen: der Hardware-Browserablauf fand die Objektauswahl leer vor. Ursache war die Erweiterung der Auswahllisten um `communicationChannels` und `communicationTopics`. `createSelectionListWorkspace().load()` holte alle Listen mit `Promise.all`; der Hardware-Test mockt seine Endpunkte einzeln und kannte die beiden neuen nicht, also scheiterte ein Aufruf und riss sämtliche Listen mit — auch die Hardware-Objekte.
+
+`load()` verwendet jetzt `Promise.allSettled`: jede Liste steht für sich, eine ausgefallene behält ihren letzten Stand statt die übrigen auszublenden. Das betrifft nicht nur Tests — fiel in Produktion ein Listen-Endpunkt aus, waren bisher alle Auswahllisten leer. Ein Unit-Test sichert das Verhalten ab; der Hardware-Ablauf mockt zusätzlich die beiden neuen Endpunkte, damit er abbildet, was die Anwendung tatsächlich abruft.
+
+Geprüft: Hardware-Suite (3 bestanden, 1 wie zuvor übersprungen), vier Kommunikationsabläufe, 124 Frontend-Unit-Tests, `tsc --noEmit`, ESLint, Frontend-Build. Quelle: fehlgeschlagener Workflow-Lauf 35458821437 vom 2026-09-19.

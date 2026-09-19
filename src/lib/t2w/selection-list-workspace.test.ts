@@ -7,6 +7,26 @@ import {
 } from "./selection-list-workspace";
 
 describe("selection list workspace", () => {
+  it("lässt eine ausgefallene Liste die übrigen nicht mitreißen", async () => {
+    const adapter: SelectionListAdapter = {
+      load: async (kind) => {
+        if (kind === "communicationTopics") throw new Error("ENDPOINT_DOWN");
+        return [{ id: `${kind}-1`, name: kind, active: true }];
+      },
+      create: async (_kind, name) => ({ id: "new", name, active: true }),
+      update: async (_kind, id, patch) => ({ id, name: "x", active: true, ...patch }),
+      reorder: async () => [],
+    };
+    const workspace = createSelectionListWorkspace(adapter);
+    await workspace.load();
+
+    expect(workspace.snapshot().loaded).toBe(true);
+    expect(workspace.snapshot().hardwareObjects).toHaveLength(1);
+    expect(workspace.snapshot().sports).toHaveLength(1);
+    // Nur die ausgefallene Liste bleibt leer.
+    expect(workspace.snapshot().communicationTopics).toEqual([]);
+  });
+
   it("owns management snapshots and active values", async () => {
     const values: Record<SelectionListKind, SelectionListValue[]> = {
       sports: [{ id: "s1", name: "Triathlon", active: true }],
