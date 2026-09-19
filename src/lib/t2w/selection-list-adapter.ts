@@ -11,6 +11,9 @@ import {
   apiManageHardwareObjects,
   apiCreateHardwareObject,
   apiUpdateHardwareObject,
+  apiManageCommunicationChannels,
+  apiCreateCommunicationChannel,
+  apiUpdateCommunicationChannel,
 } from "./api";
 import type {
   SelectionListAdapter,
@@ -29,7 +32,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
           ? apiManageServices()
           : kind === "hardwareObjects"
             ? apiManageHardwareObjects()
-            : apiManageEventRoles();
+            : kind === "communicationChannels"
+              ? apiManageCommunicationChannels()
+              : apiManageEventRoles();
     },
     create(kind: SelectionListKind, name: string): Promise<SelectionListValue> {
       return kind === "sports"
@@ -38,7 +43,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
           ? apiCreateService(name)
           : kind === "hardwareObjects"
             ? apiCreateHardwareObject(name)
-            : apiCreateEventRole(name);
+            : kind === "communicationChannels"
+              ? apiCreateCommunicationChannel(name)
+              : apiCreateEventRole(name);
     },
     update(
       kind: SelectionListKind,
@@ -51,7 +58,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
           ? apiUpdateService(id, patch)
           : kind === "hardwareObjects"
             ? apiUpdateHardwareObject(id, patch)
-            : apiUpdateEventRole(id, patch);
+            : kind === "communicationChannels"
+              ? apiUpdateCommunicationChannel(id, patch)
+              : apiUpdateEventRole(id, patch);
     },
     reorder(kind, ids) {
       const path =
@@ -61,7 +70,9 @@ export function createHttpSelectionListAdapter(): SelectionListAdapter {
             ? "services"
             : kind === "hardwareObjects"
               ? "hardware-objects"
-              : "event-roles";
+              : kind === "communicationChannels"
+                ? "communication-channels"
+                : "event-roles";
       return fetch(`/api/v1/${path}/reorder`, {
         method: "POST",
         credentials: "include",

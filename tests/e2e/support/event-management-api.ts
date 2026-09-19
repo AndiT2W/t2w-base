@@ -159,6 +159,11 @@ export async function mockEventManagementApi(
     { id: "r1", name: "Anmeldung", active: true },
     { id: "r2", name: "Finanz", active: true },
   ];
+  let communicationChannels = [
+    { id: "channel-1", name: "E-Mail", icon: "mail", color: "slate", active: true },
+    { id: "channel-2", name: "Telefon", icon: "phone", color: "slate", active: true },
+    { id: "channel-3", name: "Notiz", icon: "sticky-note", color: "slate", active: true },
+  ];
   let services = [
     { id: "service-1", name: "UHF", active: true },
     { id: "service-2", name: "Active", active: true },
@@ -585,6 +590,35 @@ export async function mockEventManagementApi(
     if (request.method() === "PATCH" && id) {
       eventRoles = eventRoles.map((role) => (role.id === id ? { ...role, ...body } : role));
       return route.fulfill({ json: eventRoles.find((role) => role.id === id) });
+    }
+    return route.continue();
+  });
+  await page.route("**/api/v1/communication-channels**", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET")
+      return route.fulfill({
+        json: request.url().includes("includeInactive=true")
+          ? communicationChannels
+          : communicationChannels.filter((channel) => channel.active),
+      });
+    const body = JSON.parse(request.postData() ?? "{}");
+    if (request.method() === "POST") {
+      const channel = {
+        id: `channel-${communicationChannels.length + 1}`,
+        name: body.name,
+        icon: null as string | null,
+        color: null as string | null,
+        active: true,
+      };
+      communicationChannels = [...communicationChannels, channel];
+      return route.fulfill({ status: 201, json: channel });
+    }
+    const id = request.url().match(/\/communication-channels\/([^/?]+)/)?.[1];
+    if (request.method() === "PATCH" && id) {
+      communicationChannels = communicationChannels.map((channel) =>
+        channel.id === id ? { ...channel, ...body } : channel,
+      );
+      return route.fulfill({ json: communicationChannels.find((channel) => channel.id === id) });
     }
     return route.continue();
   });

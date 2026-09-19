@@ -74,7 +74,8 @@ export type EventFile = {
 
 export type Message = {
   id: string;
-  kanal: "E-Mail" | "Telefon" | "Notiz";
+  /** Frei konfigurierbar über Einstellungen → Auswahllisten → Nachrichtenarten. */
+  kanal: string;
   betreff: string;
   datum: string;
   autor: string;

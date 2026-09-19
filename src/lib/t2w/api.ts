@@ -169,7 +169,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     kommunikation: [
       ...(event.activities ?? []).map((activity) => ({
         id: activity.id,
-        kanal: activity.channel as "E-Mail" | "Telefon" | "Notiz",
+        kanal: activity.channel,
         betreff: activity.subject,
         datum: activity.occurredAt,
         autor: activity.author ?? "",
@@ -568,6 +568,42 @@ export async function apiUpdateHardwareObject(
     body: JSON.stringify(patch),
   });
   if (!response.ok) throw new Error("Hardware-Objekt konnte nicht gespeichert werden");
+  return response.json() as Promise<ApiService>;
+}
+export async function apiManageCommunicationChannels(): Promise<ApiService[]> {
+  const response = await fetch("/api/v1/communication-channels?includeInactive=true", {
+    credentials: "include",
+  });
+  if (!response.ok) throw new Error("Nachrichtenarten konnten nicht geladen werden");
+  return response.json() as Promise<ApiService[]>;
+}
+export async function apiCreateCommunicationChannel(name: string) {
+  const response = await fetch("/api/v1/communication-channels", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error("Nachrichtenart konnte nicht angelegt werden");
+  return response.json() as Promise<ApiService>;
+}
+export async function apiUpdateCommunicationChannel(
+  id: string,
+  patch: {
+    name?: string;
+    active?: boolean;
+    icon?: string | null;
+    color?: string | null;
+    sortOrder?: number;
+  },
+) {
+  const response = await fetch(`/api/v1/communication-channels/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) throw new Error("Nachrichtenart konnte nicht gespeichert werden");
   return response.json() as Promise<ApiService>;
 }
 export type ApiEventRole = {

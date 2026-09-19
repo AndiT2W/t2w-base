@@ -101,23 +101,28 @@ export class MasterDataController {
     return this.selectionLists.list("sports", includeInactive === "true");
   }
   @Roles("ADMIN")
-  @Post("sports") sport(@Body() body: { name: string }) {
+  @Post("sports")
+  sport(@Body() body: { name: string }) {
     return this.selectionLists.create("sports", body.name);
   }
   @Roles("ADMIN")
-  @Patch("sports/:id") updateSport(
+  @Patch("sports/:id")
+  updateSport(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
     return this.selectionLists.update("sports", id, body);
   }
   @Roles("ADMIN")
-  @Patch("sports/:id/deactivate") deactivateSport(@Param("id", ParseUUIDPipe) id: string) {
+  @Patch("sports/:id/deactivate")
+  deactivateSport(@Param("id", ParseUUIDPipe) id: string) {
     return this.selectionLists.update("sports", id, { active: false });
   }
   @Roles("ADMIN")
-  @Post(":kind/reorder") reorderSelectionList(
-    @Param("kind") kind: "sports" | "services" | "hardware-objects" | "event-roles",
+  @Post(":kind/reorder")
+  reorderSelectionList(
+    @Param("kind")
+    kind: "sports" | "services" | "hardware-objects" | "event-roles" | "communication-channels",
     @Body() body: { ids: string[] },
   ) {
     const normalized =
@@ -125,7 +130,9 @@ export class MasterDataController {
         ? "hardwareObjects"
         : kind === "event-roles"
           ? "eventRoles"
-          : kind;
+          : kind === "communication-channels"
+            ? "communicationChannels"
+            : kind;
     return this.selectionLists.reorder(normalized, body.ids);
   }
 
@@ -133,11 +140,13 @@ export class MasterDataController {
     return this.selectionLists.list("services", includeInactive === "true");
   }
   @Roles("ADMIN")
-  @Post("services") service(@Body() body: { name: string }) {
+  @Post("services")
+  service(@Body() body: { name: string }) {
     return this.selectionLists.create("services", body.name);
   }
   @Roles("ADMIN")
-  @Patch("services/:id") updateService(
+  @Patch("services/:id")
+  updateService(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
@@ -148,11 +157,13 @@ export class MasterDataController {
     return this.selectionLists.list("hardwareObjects", includeInactive === "true");
   }
   @Roles("ADMIN")
-  @Post("hardware-objects") hardwareObject(@Body() body: { name: string }) {
+  @Post("hardware-objects")
+  hardwareObject(@Body() body: { name: string }) {
     return this.selectionLists.create("hardwareObjects", body.name);
   }
   @Roles("ADMIN")
-  @Patch("hardware-objects/:id") updateHardwareObject(
+  @Patch("hardware-objects/:id")
+  updateHardwareObject(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean },
   ) {
@@ -163,15 +174,36 @@ export class MasterDataController {
     return this.selectionLists.list("eventRoles", includeInactive === "true");
   }
   @Roles("ADMIN")
-  @Post("event-roles") eventRole(@Body() body: { name: string }) {
+  @Post("event-roles")
+  eventRole(@Body() body: { name: string }) {
     return this.selectionLists.create("eventRoles", body.name);
   }
   @Roles("ADMIN")
-  @Patch("event-roles/:id") updateEventRole(
+  @Patch("event-roles/:id")
+  updateEventRole(
     @Param("id", ParseUUIDPipe) id: string,
     @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
     return this.selectionLists.update("eventRoles", id, body);
+  }
+
+  @Get("communication-channels") communicationChannels(
+    @Query("includeInactive") includeInactive?: string,
+  ) {
+    return this.selectionLists.list("communicationChannels", includeInactive === "true");
+  }
+  @Roles("ADMIN")
+  @Post("communication-channels")
+  communicationChannel(@Body() body: { name: string }) {
+    return this.selectionLists.create("communicationChannels", body.name);
+  }
+  @Roles("ADMIN")
+  @Patch("communication-channels/:id")
+  updateCommunicationChannel(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() body: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  ) {
+    return this.selectionLists.update("communicationChannels", id, body);
   }
 
   @Get("contacts") contacts() {

@@ -120,3 +120,7 @@ Every additional feature must include a regression test in the same change. Pref
 ### Project-management UI
 
 Before changing Event tasks, the global task overview, task creation, task details, or time views, read [the PM design foundation](wiki/concepts/project-management-design.md). Carry its patterns through all affected views and update that page and the wiki log when design rules change.
+
+### Communication UI
+
+Before changing the event communication tab, read [the communication display foundation](wiki/concepts/communication-display-design.md). It records the agreed target state, which the shipped code does not match yet: implement towards it instead of extending the current timeline, and update that page and the wiki log when design rules change.

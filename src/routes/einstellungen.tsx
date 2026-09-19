@@ -20,6 +20,7 @@ import {
   ServiceBadge,
   SelectionBadge,
   SERVICE_COLOR_OPTIONS,
+  COMMUNICATION_ICON_OPTIONS,
   SERVICE_ICON_OPTIONS,
   SPORT_ICON_OPTIONS,
   servicePresentation,
@@ -47,6 +48,7 @@ export const Route = createFileRoute("/einstellungen")({
       search["liste"] === "sportarten" ||
       search["liste"] === "eventrollen" ||
       search["liste"] === "aufgabenkategorien" ||
+      search["liste"] === "nachrichtenarten" ||
       search["liste"] === "hardwareobjekte"
         ? search["liste"]
         : ("services" as const),
@@ -101,12 +103,14 @@ function Einstellungen() {
   const [newService, setNewService] = useState("");
   const hardwareObjects = selectionLists.hardwareObjects;
   const [newHardwareObject, setNewHardwareObject] = useState("");
+  const communicationChannels = selectionLists.communicationChannels;
+  const [newCommunicationChannel, setNewCommunicationChannel] = useState("");
   const [dragged, setDragged] = useState<{
-    kind: "sports" | "eventRoles" | "services" | "hardwareObjects";
+    kind: "sports" | "eventRoles" | "services" | "hardwareObjects" | "communicationChannels";
     id: string;
   } | null>(null);
   const [presentation, setPresentation] = useState<{
-    kind: "sports" | "eventRoles" | "services" | "hardwareObjects";
+    kind: "sports" | "eventRoles" | "services" | "hardwareObjects" | "communicationChannels";
     id: string;
   } | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
@@ -204,7 +208,9 @@ function Einstellungen() {
           ? saveEventRole
           : presentation.kind === "services"
             ? saveService
-            : saveHardwareObject;
+            : presentation.kind === "communicationChannels"
+              ? saveCommunicationChannel
+              : saveHardwareObject;
     await save(presentation.id, patch);
   }
   async function addService() {
@@ -257,8 +263,30 @@ function Einstellungen() {
       toast.error("Hardware-Objekt konnte nicht gespeichert werden.");
     }
   }
+  async function addCommunicationChannel() {
+    const name = newCommunicationChannel.trim();
+    if (!name) return;
+    try {
+      await createSelectionValue("communicationChannels", name);
+      setNewCommunicationChannel("");
+      toast.success("Nachrichtenart angelegt.");
+    } catch {
+      toast.error("Nachrichtenart konnte nicht angelegt werden.");
+    }
+  }
+  async function saveCommunicationChannel(
+    id: string,
+    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
+  ) {
+    try {
+      await updateSelectionValue("communicationChannels", id, patch);
+      toast.success("Nachrichtenart gespeichert.");
+    } catch {
+      toast.error("Nachrichtenart konnte nicht gespeichert werden.");
+    }
+  }
   async function reorder(
-    kind: "sports" | "eventRoles" | "services" | "hardwareObjects",
+    kind: "sports" | "eventRoles" | "services" | "hardwareObjects" | "communicationChannels",
     id: string,
   ) {
     if (!dragged || dragged.kind !== kind || dragged.id === id) return;
@@ -416,6 +444,7 @@ function Einstellungen() {
                         ["services", "Services"],
                         ["eventrollen", "Eventrollen"],
                         ["hardwareobjekte", "Hardware-Objekte"],
+                        ["nachrichtenarten", "Kommunikation / Nachrichtenarten"],
                         ["aufgabenkategorien", "Projektmanagement / Aufgaben"],
                       ] as const
                     ).map(([value, label]) => (
@@ -515,6 +544,91 @@ function Einstellungen() {
                           Hinzufügen
                         </Button>
                       </div>
+                    </CardContent>
+                  </Card>
+                )}
+                {liste === "nachrichtenarten" && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Nachrichtenarten</CardTitle>
+                      <CardDescription>
+                        Arten der Kommunikationseinträge samt Symbol. Sie tragen die Symbolspalte
+                        und die Filterleiste im Kommunikationsreiter eines Events.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex gap-2 pt-2">
+                        <Input
+                          aria-label="Neue Nachrichtenart"
+                          value={newCommunicationChannel}
+                          onChange={(event) => setNewCommunicationChannel(event.target.value)}
+                          placeholder="Nachrichtenart hinzufügen"
+                        />
+                        <Button type="button" onClick={() => void addCommunicationChannel()}>
+                          <Plus className="size-4" />
+                          Hinzufügen
+                        </Button>
+                      </div>
+                      {communicationChannels.map((channel) => (
+                        <div
+                          key={channel.id}
+                          draggable
+                          onDragStart={() =>
+                            setDragged({ kind: "communicationChannels", id: channel.id })
+                          }
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => void reorder("communicationChannels", channel.id)}
+                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
+                        >
+                          <span
+                            aria-label={`Vorschau Nachrichtenart: ${channel.name}`}
+                            className="flex min-w-0 items-center"
+                          >
+                            <SelectionBadge
+                              name={channel.name}
+                              icon={channel.icon}
+                              color={channel.color}
+                            />
+                          </span>
+                          <Input
+                            aria-label={`Nachrichtenart ${channel.name}`}
+                            defaultValue={channel.name}
+                            onBlur={(event) => {
+                              const name = event.target.value.trim();
+                              if (name && name !== channel.name)
+                                void saveCommunicationChannel(channel.id, { name });
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="justify-start"
+                            aria-label={`Darstellung für Nachrichtenart ${channel.name}`}
+                            onClick={() =>
+                              setPresentation({ kind: "communicationChannels", id: channel.id })
+                            }
+                          >
+                            <span
+                              className={`size-3 rounded-full border ${selectionPresentation(channel).className}`}
+                              aria-hidden="true"
+                            />
+                            Darstellung
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={channel.active ? "outline" : "secondary"}
+                            onClick={() =>
+                              void saveCommunicationChannel(channel.id, { active: !channel.active })
+                            }
+                          >
+                            {channel.active ? "Deaktivieren" : "Aktivieren"}
+                          </Button>
+                        </div>
+                      ))}
+                      <p className="pt-1 text-sm text-muted-foreground">
+                        Eine deaktivierte Art verschwindet aus der Filterleiste, sobald kein Eintrag
+                        mehr an ihr hängt. Bestehende Einträge behalten ihre Art.
+                      </p>
                     </CardContent>
                   </Card>
                 )}
@@ -724,7 +838,9 @@ function Einstellungen() {
                             <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
                               {(presentation.kind === "sports"
                                 ? SPORT_ICON_OPTIONS
-                                : SERVICE_ICON_OPTIONS
+                                : presentation.kind === "communicationChannels"
+                                  ? COMMUNICATION_ICON_OPTIONS
+                                  : SERVICE_ICON_OPTIONS
                               ).map((option) => {
                                 const Icon = selectionPresentation({
                                   name: presentationValue.name,

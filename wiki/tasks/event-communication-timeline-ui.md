@@ -1,5 +1,7 @@
 # Event Communication Timeline UI
 
+> **Abgelöst am 19.09.2026.** Diese Seite beschreibt die frühere Oberfläche mit drei Timeline-Varianten, aufklappbarer Vorschau und Thread-Kontext-Aside. Sie ist Historie; verbindlich ist die [Anzeigegrundlage Kommunikation](../concepts/communication-display-design.md).
+
 ## Decision
 
 The event communication tab presents synchronized Outlook messages and manual activities as a compact, date-grouped timeline rather than a flat card list.

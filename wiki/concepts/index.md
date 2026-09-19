@@ -5,6 +5,7 @@ Use this section for recurring ideas, workflows, business rules, technical patte
 ## Concepts
 
 - [Projektmanagement: verbindliche Designgrundlage](project-management-design.md)
+- [Kommunikation: Anzeigegrundlage (Zielbild, noch nicht umgesetzt)](communication-display-design.md)
 - [AI Delivery Workflow](ai-delivery-workflow.md)
 - [Event Communication Knowledge Service](event-communication-knowledge-service.md)
 - [Event Delivery Planning](event-delivery-planning.md)

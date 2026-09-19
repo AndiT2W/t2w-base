@@ -1,28 +1,40 @@
 import { ProjectManagement } from "@/components/t2w/ProjectManagement";
 import { DataTable } from "@/components/t2w/DataTable";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
+  ArrowDownLeft,
+  ArrowUpRight,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
-  CornerDownRight,
+  ExternalLink,
   FolderPlus,
   FolderSync,
   HelpCircle,
   Link2,
   Mail,
-  MessageSquare,
+  MessagesSquare,
   Paperclip,
-  PanelsTopLeft,
   Phone,
+  Plus,
   Search,
-  Rows3,
-  StickyNote,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,13 +85,13 @@ import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatDatumMitZeit, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
-import { projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
+import { highlightSegments, projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
-import { ServiceBadge, SelectionBadge } from "@/components/t2w/ServiceBadge";
+import { ServiceBadge, SelectionBadge, selectionPresentation } from "@/components/t2w/ServiceBadge";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 
@@ -132,6 +144,162 @@ function formatCommunicationTime(value: string) {
 
 function communicationDate(value: string) {
   return formatDatum(value);
+}
+
+/**
+ * Art und Richtung teilen sich eine schmale Symbolspalte. Der Text steht im
+ * barrierefreien Namen, nicht als zweite Spalte.
+ * Siehe wiki/concepts/communication-display-design.md.
+ */
+function communicationChannelIcon(
+  channel: string,
+  options: readonly { name: string; icon?: string | null; color?: string | null }[],
+) {
+  const option = options.find((value) => value.name === channel);
+  // Unbekannte Art: Sprechblase statt Lücke, damit die Zeile lesbar bleibt.
+  return selectionPresentation(option ?? { name: channel, icon: "message-circle" }).Icon;
+}
+
+function communicationChannelLabel(message: { kanal: string; richtung?: string }, sent: boolean) {
+  if (!message.richtung) return message.kanal;
+  if (message.richtung === "OUTGOING")
+    return sent ? `${message.kanal}, ausgehend von TIME2WIN` : `${message.kanal}, ausgehend`;
+  return `${message.kanal}, eingehend`;
+}
+
+function communicationParty(message: { richtung?: string; autor: string; empfaenger?: string }) {
+  return message.richtung === "OUTGOING"
+    ? `An ${message.empfaenger ?? "—"}`
+    : (message.autor ?? "—");
+}
+
+/** Kurze Zeitangabe für die Listenspalte: heute die Uhrzeit, sonst das Datum. */
+function communicationShortTime(value: string) {
+  const [datePart, timePart] = formatDatumMitZeit(value).split(", ");
+  if (datePart === formatDatum(heuteIso())) return timePart ?? value;
+  return datePart ?? value;
+}
+
+/** Hebt die Fundstellen der Suche im Text hervor. */
+function Highlighted({ text, query }: { text: string; query: string }) {
+  return (
+    <>
+      {highlightSegments(text, query).map((segment, index) =>
+        segment.match ? (
+          <mark key={index} className="rounded-sm bg-primary/25 text-foreground">
+            {segment.text}
+          </mark>
+        ) : (
+          <span key={index}>{segment.text}</span>
+        ),
+      )}
+    </>
+  );
+}
+
+type CommunicationBezug = { id: string; label: string; event: boolean } | null;
+
+/**
+ * Eine Zeile der Kommunikationsliste. Der Betreff ist die Schaltfläche, die das
+ * Nachrichtenpanel öffnet; der Bezug bleibt ein eigener Link auf die Person.
+ */
+function CommunicationRow({
+  message,
+  Icon,
+  query,
+  threadSize,
+  bezug,
+  sent,
+  onOpen,
+  dense = false,
+}: {
+  message: T2WEvent["kommunikation"][number];
+  Icon: LucideIcon;
+  query: string;
+  threadSize: number;
+  bezug: CommunicationBezug;
+  sent: boolean;
+  onOpen: () => void;
+  dense?: boolean;
+}) {
+  const label = communicationChannelLabel(message, sent);
+  return (
+    <div
+      id={`communication-${message.id}`}
+      data-communication-row={message.id}
+      className={cn(
+        "flex items-center gap-3.5 border-b px-4 last:border-b-0 hover:bg-muted/40",
+        dense ? "py-1.5" : "py-2",
+      )}
+    >
+      <span
+        role="img"
+        aria-label={label}
+        title={label}
+        className={cn(
+          "flex w-9 shrink-0 items-center gap-0.5",
+          sent ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        <Icon className="size-4" aria-hidden="true" />
+        {message.richtung === "INCOMING" && <ArrowDownLeft className="size-3" aria-hidden="true" />}
+        {message.richtung === "OUTGOING" && <ArrowUpRight className="size-3" aria-hidden="true" />}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Highlighted text={message.betreff} query={query} />
+          </button>
+          {threadSize > 1 && (
+            <span
+              className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-muted-foreground"
+              title={`Konversation, ${threadSize} Nachrichten`}
+            >
+              <MessagesSquare className="size-3" aria-hidden="true" />
+              {threadSize}
+            </span>
+          )}
+          {message.hatAnlagen && (
+            <span className="shrink-0 text-muted-foreground" title="Anlagen vorhanden">
+              <Paperclip className="size-3" aria-hidden="true" />
+              <span className="sr-only">Anlagen vorhanden</span>
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          <span className="font-medium text-foreground/75">{communicationParty(message)}</span>
+          {" · "}
+          <Highlighted text={message.text} query={query} />
+        </p>
+      </div>
+      <div className="hidden w-52 shrink-0 md:block">
+        {bezug ? (
+          <a
+            href={`/kontakte?person=${encodeURIComponent(bezug.id)}`}
+            className={cn(
+              badgeVariants({ variant: bezug.event ? "secondary" : "outline" }),
+              "max-w-full truncate",
+            )}
+          >
+            {bezug.label}
+          </a>
+        ) : (
+          <span className="text-xs text-muted-foreground">Kein Bezug</span>
+        )}
+      </div>
+      <time
+        dateTime={message.datum}
+        title={formatCommunicationTime(message.datum)}
+        className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground"
+      >
+        {communicationShortTime(message.datum)}
+      </time>
+    </div>
+  );
 }
 
 export const Route = createFileRoute("/events/$eventcode")({
@@ -291,19 +459,21 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     ),
   );
   const [createRelationship, setCreateRelationship] = useState(true);
-  const [communicationFilter, setCommunicationFilter] = useState<"all" | "email" | "activity">(
-    "all",
-  );
+  // "all" oder der Name einer konfigurierten Nachrichtenart.
+  const [communicationChannel, setCommunicationChannel] = useState<string>("all");
   const [communicationContactFilter, setCommunicationContactFilter] = useState("all");
+  const [communicationDirection, setCommunicationDirection] = useState<
+    "all" | "INCOMING" | "OUTGOING"
+  >("all");
   const [communicationSearch, setCommunicationSearch] = useState("");
-  const [communicationView, setCommunicationView] = useState<"cards" | "conversation" | "compact">(
-    "compact",
+  const [communicationAttachmentsOnly, setCommunicationAttachmentsOnly] = useState(false);
+  const [communicationView, setCommunicationView] = useState<"verlauf" | "konversationen">(
+    "verlauf",
   );
+  const [openConversation, setOpenConversation] = useState<string | null>(null);
+  const [showActivityForm, setShowActivityForm] = useState(false);
   const [selectedCommunicationId, setSelectedCommunicationId] = useState<string | null>(null);
-  const threadContextRef = useRef<HTMLElement | null>(null);
-  const communicationTimelineRef = useRef<HTMLDivElement | null>(null);
-  const [threadContextOffset, setThreadContextOffset] = useState(0);
-  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(() => new Set());
+  const communicationChannelOptions = selectionLists.communicationChannels;
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
   const services = selectionListChoices(selectionLists.services).filter(
     (service) => service.active || form.serviceIds?.includes(service.id),
@@ -321,16 +491,24 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         ...((form.outlookMailbox ?? settings.outlookMailbox)
           ? { mailbox: form.outlookMailbox ?? settings.outlookMailbox ?? "" }
           : {}),
+        channels: selectionListChoices(selectionLists.communicationChannels).map(
+          (channel) => channel.name,
+        ),
         criteria: {
-          kind: communicationFilter,
+          channel: communicationChannel,
           contactId: communicationContactFilter,
+          direction: communicationDirection,
           search: communicationSearch,
+          attachmentsOnly: communicationAttachmentsOnly,
           view: communicationView,
         },
       }),
     [
+      selectionLists.communicationChannels,
+      communicationAttachmentsOnly,
+      communicationChannel,
       communicationContactFilter,
-      communicationFilter,
+      communicationDirection,
       communicationSearch,
       communicationView,
       form.kontakte,
@@ -345,21 +523,20 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     () =>
       communicationTimeline.visibleMessages.find(
         (message) => message.id === selectedCommunicationId,
-      ) ?? communicationTimeline.visibleMessages[0],
+      ) ?? null,
     [communicationTimeline.visibleMessages, selectedCommunicationId],
   );
   const selectedThread = communicationTimeline.selectedThread(selectedCommunicationId);
-  const selectCommunication = (messageId: string) => {
-    setSelectedCommunicationId(messageId);
-    requestAnimationFrame(() => {
-      const selected = document.getElementById(`communication-${messageId}`);
-      const first = communicationTimelineRef.current?.querySelector<HTMLElement>("article");
-      if (selected && first) {
-        setThreadContextOffset(
-          Math.max(0, selected.getBoundingClientRect().top - first.getBoundingClientRect().top),
-        );
-      }
-    });
+  const communicationFilterCount =
+    (communicationContactFilter === "all" ? 0 : 1) +
+    (communicationDirection === "all" ? 0 : 1) +
+    (communicationAttachmentsOnly ? 1 : 0) +
+    (communicationChannel === "all" ? 0 : 1);
+  const resetCommunicationFilters = () => {
+    setCommunicationChannel("all");
+    setCommunicationContactFilter("all");
+    setCommunicationDirection("all");
+    setCommunicationAttachmentsOnly(false);
   };
 
   useEffect(() => {
@@ -1591,477 +1768,592 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="kommunikation">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Kommunikation</CardTitle>
-              <CardDescription>
-                Outlook-Nachrichten aus dem Eventordner und manuelle Aktivitäten in einer Timeline.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {form.kommunikation.length} Einträge in der Timeline
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {form.outlookMessageLastSuccessAt
-                      ? `Zuletzt synchronisiert: ${formatCommunicationTime(form.outlookMessageLastSuccessAt)}`
-                      : "Noch keine Outlook-Nachrichten synchronisiert."}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => void kommunikationSynchronisieren()}
-                  disabled={detail.communicationSyncing || !form.outlookFolderId}
-                >
-                  <FolderSync className="size-4" />
-                  {detail.communicationSyncing ? "Synchronisiere …" : "Synchronisieren"}
-                </Button>
-              </div>
-              {detail.communicationSyncMessage && (
-                <p role="status" className="text-sm text-muted-foreground">
-                  {detail.communicationSyncMessage}
-                </p>
-              )}
-              {!form.outlookFolderId && (
-                <p className="text-sm text-muted-foreground">
-                  Zuerst den Outlook-Eventordner synchronisieren.
-                </p>
-              )}
-              <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap gap-1" aria-label="Kommunikation filtern">
-                  {(
-                    [
-                      ["all", "Alle"],
-                      ["email", "E-Mails"],
-                      ["activity", "Aktivitäten"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <Button
-                      key={value}
-                      size="sm"
-                      variant={communicationFilter === value ? "secondary" : "ghost"}
-                      aria-pressed={communicationFilter === value}
-                      onClick={() => setCommunicationFilter(value)}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </div>
-                <div className="relative w-full sm:max-w-xs">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    aria-label="Kommunikation durchsuchen"
-                    className="pl-9"
-                    value={communicationSearch}
-                    onChange={(event) => setCommunicationSearch(event.target.value)}
-                    placeholder="Nachrichten durchsuchen …"
-                  />
-                </div>
-                <Select
-                  value={communicationContactFilter}
-                  onValueChange={setCommunicationContactFilter}
-                >
-                  <SelectTrigger
-                    aria-label="Kommunikation nach Kontakt filtern"
-                    className="w-full sm:w-56"
-                  >
-                    <SelectValue placeholder="Kontakt: Alle" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Kontakt: Alle</SelectItem>
-                    <SelectItem value="unassigned">Ohne Kontakt</SelectItem>
-                    {form.kontakte.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Timeline-Ansicht</p>
-                  <p className="text-xs text-muted-foreground">
-                    Drei Varianten zum direkten Vergleichen.
-                  </p>
-                </div>
-                <div
-                  className="flex flex-wrap gap-1 rounded-lg border border-border p-1"
-                  aria-label="Timeline-Ansicht auswählen"
-                >
-                  {(
-                    [
-                      ["cards", "Hybrid", PanelsTopLeft],
-                      ["conversation", "Dialog", MessageSquare],
-                      ["compact", "Kompakt", Rows3],
-                    ] as const
-                  ).map(([value, label, ViewIcon]) => (
-                    <Button
-                      key={value}
-                      size="sm"
-                      variant={communicationView === value ? "secondary" : "ghost"}
-                      aria-pressed={communicationView === value}
-                      onClick={() => setCommunicationView(value)}
-                    >
-                      <ViewIcon className="size-4" aria-hidden="true" />
-                      {label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              <details className="rounded-lg border border-border p-3">
-                <summary className="cursor-pointer text-sm font-medium text-foreground">
-                  Manuelle Aktivität erfassen
-                </summary>
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    aria-label="Neue Aktivität"
-                    value={detail.newActivity}
-                    onChange={(e) => detailWorkspace.setInput("newActivity", e.target.value)}
-                    placeholder="Betreff der Notiz"
-                  />
-                  <Button onClick={() => void addActivity()}>Aktivität anlegen</Button>
-                </div>
-              </details>
-              {form.kommunikation.length === 0 && (
-                <p className="text-sm text-muted-foreground">Noch keine Einträge.</p>
-              )}
-              {form.kommunikation.length > 0 && communicationGroups.length === 0 && (
-                <p className="text-sm text-muted-foreground">Keine Einträge für diese Auswahl.</p>
-              )}
-              <div
-                ref={communicationTimelineRef}
-                className={
-                  communicationView === "cards"
-                    ? "grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(19rem,0.65fr)]"
-                    : "space-y-5"
-                }
+        <TabsContent value="kommunikation" className="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Kommunikation</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                <span className="font-semibold tabular-nums text-foreground">
+                  {form.kommunikation.length}
+                </span>{" "}
+                Einträge
+                {form.outlookMessageLastSuccessAt
+                  ? ` · zuletzt synchronisiert ${formatCommunicationTime(form.outlookMessageLastSuccessAt)}`
+                  : " · noch nicht synchronisiert"}
+                {form.outlookOrdner ? (
+                  <>
+                    {" · Ordner "}
+                    <span className="font-medium text-foreground">{form.outlookOrdner}</span>
+                  </>
+                ) : null}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                aria-expanded={showActivityForm}
+                onClick={() => setShowActivityForm((open) => !open)}
               >
-                <div className={communicationView === "compact" ? "space-y-3" : "space-y-5"}>
-                  {communicationGroups.map((group) => (
-                    <section key={group.key} aria-label={`Kommunikation ${group.label}`}>
-                      {group.conversation ? (
-                        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2">
-                          <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
-                          <span className="text-xs text-muted-foreground">{group.period}</span>
-                        </div>
-                      ) : (
-                        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {group.label}
-                        </h3>
-                      )}
-                      <div
-                        className={
-                          communicationView === "compact"
-                            ? "overflow-hidden rounded-lg border border-border bg-background"
-                            : "space-y-3 border-l-2 border-border pl-4"
-                        }
-                      >
-                        {group.messages.map((message) => {
-                          const Icon =
-                            message.kanal === "E-Mail"
-                              ? Mail
-                              : message.kanal === "Telefon"
-                                ? Phone
-                                : StickyNote;
-                          const eventContact = communicationTimeline.eventContactsByMessageId.get(
-                            message.id,
-                          );
-                          const contact = communicationTimeline.contactsByMessageId.get(message.id);
-                          const linkedContact = eventContact
-                            ? {
-                                id: eventContact.id,
-                                label: eventContact.name,
-                                eventRole: eventContact.rolle,
-                              }
-                            : contact
-                              ? { id: contact.id, label: contact.name, eventRole: null }
-                              : null;
-                          const isTime2winOutgoing = communicationTimeline.time2winOutgoingIds.has(
-                            message.id,
-                          );
-                          const expanded = expandedMessages.has(message.id);
-                          const longPreview = message.text.length > 180;
-                          const isReply = communicationTimeline.replyMessageIds.has(message.id);
-                          const threadOrigin = message.conversationId
-                            ? communicationTimeline.visibleThreadOrigins.get(message.conversationId)
-                            : undefined;
-                          const viewClasses =
-                            communicationView === "compact"
-                              ? "rounded-none border-0 border-b border-border px-3 py-2 shadow-none last:border-b-0"
-                              : communicationView === "conversation"
-                                ? message.richtung === "OUTGOING"
-                                  ? "ml-8 rounded-2xl rounded-tr-sm p-4 shadow-sm sm:ml-24"
-                                  : "mr-8 rounded-2xl rounded-tl-sm p-4 shadow-sm sm:mr-24"
-                                : "rounded-lg p-4 shadow-sm";
-                          return (
-                            <article
-                              key={message.id}
-                              id={`communication-${message.id}`}
-                              tabIndex={-1}
-                              data-timeline-view={communicationView}
-                              data-reply={isReply ? "true" : "false"}
-                              className={`relative border ${viewClasses} ${
-                                isTime2winOutgoing
-                                  ? "border-primary/50 bg-primary/5"
-                                  : eventContact
-                                    ? "border-sky-300 bg-sky-50/70 dark:border-sky-800 dark:bg-sky-950/25"
-                                    : "border-border bg-background"
-                              }`}
-                              onClick={() => selectCommunication(message.id)}
-                              aria-current={
-                                selectedCommunicationId === message.id ? "true" : undefined
-                              }
-                            >
-                              {communicationView !== "compact" && (
-                                <span
-                                  className={`absolute -left-[1.58rem] top-5 size-3 rounded-full border-2 border-background ${
-                                    isTime2winOutgoing
-                                      ? "bg-primary"
-                                      : eventContact
-                                        ? "bg-sky-500"
-                                        : "bg-muted-foreground"
-                                  }`}
-                                />
-                              )}
-                              <div className="flex flex-wrap items-start justify-between gap-1.5">
-                                <div className="flex min-w-0 flex-1 items-center gap-2">
-                                  <Icon
-                                    className="size-4 shrink-0 text-muted-foreground"
-                                    aria-hidden="true"
-                                  />
-                                  <h4
-                                    className={`${communicationView === "compact" ? "truncate text-sm" : ""} font-medium text-foreground`}
-                                    title={message.betreff}
-                                  >
-                                    {message.betreff}
-                                  </h4>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <Badge variant="outline">{message.kanal}</Badge>
-                                  {message.richtung && (
-                                    <Badge
-                                      className={
-                                        isTime2winOutgoing
-                                          ? "border-transparent bg-primary text-primary-foreground"
-                                          : undefined
-                                      }
-                                      variant="outline"
-                                    >
-                                      {message.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}
-                                    </Badge>
-                                  )}
-                                  {isTime2winOutgoing && (
-                                    <Badge
-                                      className="size-7 shrink-0 rounded-full border-0 bg-transparent p-0"
-                                      variant="secondary"
-                                      aria-label="Von TIME2WIN gesendet"
-                                      title="Von TIME2WIN gesendet"
-                                    >
-                                      <img
-                                        className="size-7"
-                                        src="/time2win_logo_button.svg"
-                                        alt=""
-                                        aria-hidden="true"
-                                      />
-                                    </Badge>
-                                  )}
-                                  {isReply && (
-                                    <Badge className="gap-1" variant="secondary">
-                                      <CornerDownRight className="size-3" aria-hidden="true" />
-                                      Antwort
-                                    </Badge>
-                                  )}
-                                  <time dateTime={message.datum}>
-                                    {formatCommunicationTime(message.datum)}
-                                  </time>
-                                </div>
-                              </div>
-                              <p
-                                className={`${communicationView === "compact" ? "mt-1 truncate text-xs" : "mt-2 text-sm"} text-muted-foreground`}
-                                title={
-                                  message.richtung === "OUTGOING"
-                                    ? message.empfaenger
-                                    : message.autor
-                                }
-                              >
-                                {message.richtung === "OUTGOING" ? "An" : "Von"}:{" "}
-                                {message.richtung === "OUTGOING"
-                                  ? message.empfaenger
-                                  : message.autor}
-                              </p>
-                              {linkedContact ? (
-                                <a
-                                  className={`${communicationView === "compact" ? "mt-1" : "mt-2"} inline-block rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
-                                  href={`/kontakte?person=${encodeURIComponent(linkedContact.id)}`}
-                                >
-                                  <Badge
-                                    className={
-                                      eventContact
-                                        ? "border-sky-300 bg-sky-100 text-sky-950 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
-                                        : undefined
-                                    }
-                                    variant="secondary"
-                                  >
-                                    {eventContact
-                                      ? `Eventkontakt · ${linkedContact.label}${linkedContact.eventRole ? ` (${linkedContact.eventRole})` : ""}`
-                                      : `Kontakt: ${linkedContact.label}`}
-                                  </Badge>
-                                </a>
-                              ) : message.kanal === "E-Mail" ? (
-                                <Badge
-                                  className={communicationView === "compact" ? "mt-1" : "mt-2"}
-                                  variant="outline"
-                                >
-                                  Kein Kontakt zugeordnet
-                                </Badge>
-                              ) : null}
-                              {isReply && threadOrigin && communicationView !== "conversation" && (
-                                <button
-                                  type="button"
-                                  className={`${communicationView === "compact" ? "mt-1" : "mt-3"} flex max-w-full items-center gap-1 border-l-2 border-primary/40 pl-3 text-left text-xs font-medium text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
-                                  onClick={() => {
-                                    const original = document.getElementById(
-                                      `communication-${threadOrigin.id}`,
-                                    );
-                                    original?.scrollIntoView({
-                                      behavior: "smooth",
-                                      block: "center",
-                                    });
-                                    original?.focus({ preventScroll: true });
-                                  }}
-                                >
-                                  <CornerDownRight className="size-3 shrink-0" aria-hidden="true" />
-                                  <span className="truncate">
-                                    Antwort auf „{threadOrigin.betreff}“ vom{" "}
-                                    {communicationDate(threadOrigin.datum)}
-                                  </span>
-                                </button>
-                              )}
-                              <p
-                                data-communication-preview
-                                className={`${communicationView === "compact" ? "mt-1" : "mt-3"} whitespace-pre-line text-sm text-foreground/80 ${communicationView === "compact" && !expanded ? "line-clamp-1 leading-5" : "leading-6"}`}
-                              >
-                                {expanded || !longPreview
-                                  ? message.text
-                                  : `${message.text.slice(0, 180).trimEnd()} …`}
-                              </p>
-                              <div
-                                className={`${communicationView === "compact" ? "mt-1" : "mt-3"} flex flex-wrap items-center gap-3 text-xs`}
-                              >
-                                {longPreview && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-auto px-0 text-primary hover:bg-transparent hover:text-primary"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      setExpandedMessages((current) => {
-                                        const next = new Set(current);
-                                        if (expanded) {
-                                          next.delete(message.id);
-                                        } else {
-                                          next.add(message.id);
-                                        }
-                                        return next;
-                                      });
-                                    }}
-                                  >
-                                    {expanded ? (
-                                      <ChevronUp className="size-3" />
-                                    ) : (
-                                      <ChevronDown className="size-3" />
-                                    )}
-                                    {expanded ? "Weniger anzeigen" : "Vollständige Vorschau"}
-                                  </Button>
-                                )}
-                                {message.hatAnlagen && (
-                                  <span className="flex items-center gap-1 text-muted-foreground">
-                                    <Paperclip className="size-3" aria-hidden="true" /> Anlagen
-                                    vorhanden
-                                  </span>
-                                )}
-                                {message.outlookWebUrl && (
-                                  <a
-                                    className="font-medium text-primary hover:underline"
-                                    href={message.outlookWebUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
-                                    In Outlook öffnen
-                                  </a>
-                                )}
-                              </div>
-                            </article>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  ))}
-                </div>
-                {communicationView === "cards" && selectedCommunication && !communicationSearch && (
-                  <aside
-                    ref={threadContextRef}
-                    style={{ transform: `translateY(${threadContextOffset}px)` }}
-                    className={`h-fit rounded-lg border bg-muted/20 p-4 lg:sticky lg:top-4 lg:transition-transform lg:duration-200 ${selectedCommunicationId ? "border-primary/60 shadow-sm" : "border-border"}`}
-                    aria-label="Thread-Kontext"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          Thread-Kontext
-                        </p>
-                        <h3 className="mt-1 font-semibold text-foreground">
-                          {selectedCommunication.betreff}
-                        </h3>
-                      </div>
-                      <Badge variant="outline">{selectedThread.length} Nachrichten</Badge>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge variant="secondary">{selectedCommunication.kanal}</Badge>
-                      <Badge variant="outline">
-                        {selectedCommunication.richtung === "INCOMING" ? "Eingehend" : "Ausgehend"}
-                      </Badge>
-                      <Badge variant="outline">Rückfrage</Badge>
-                    </div>
-                    <div className="mt-4 space-y-3 border-l-2 border-border pl-3">
-                      {selectedThread.map((message) => (
-                        <button
-                          key={message.id}
-                          type="button"
-                          className={`block w-full rounded-md p-2 text-left hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${message.id === selectedCommunicationId ? "bg-background ring-1 ring-primary/30" : ""}`}
-                          onClick={() => {
-                            selectCommunication(message.id);
-                            document
-                              .getElementById(`communication-${message.id}`)
-                              ?.scrollIntoView({ behavior: "smooth", block: "center" });
-                          }}
-                        >
-                          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                            <span>
-                              {message.richtung === "INCOMING" ? message.autor : "TIME2WIN"}
-                            </span>
-                            <time dateTime={message.datum}>
-                              {formatCommunicationTime(message.datum)}
-                            </time>
-                          </div>
-                          <p className="mt-1 line-clamp-2 text-sm text-foreground/80">
-                            {message.text}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                    <p className="mt-4 text-xs text-muted-foreground">
-                      Kontakt und Tags können hier künftig direkt bearbeitet werden.
-                    </p>
-                  </aside>
-                )}
+                <Plus className="size-4" aria-hidden="true" />
+                Notiz erfassen
+              </Button>
+              <Button
+                onClick={() => void kommunikationSynchronisieren()}
+                disabled={detail.communicationSyncing || !form.outlookFolderId}
+              >
+                <FolderSync className="size-4" aria-hidden="true" />
+                {detail.communicationSyncing ? "Synchronisiere …" : "Synchronisieren"}
+              </Button>
+            </div>
+          </div>
+
+          {showActivityForm && (
+            <div className="flex flex-col gap-2 rounded-lg border bg-card p-3 sm:flex-row">
+              <Input
+                aria-label="Neue Aktivität"
+                value={detail.newActivity}
+                onChange={(e) => detailWorkspace.setInput("newActivity", e.target.value)}
+                placeholder="Betreff der Notiz"
+              />
+              <Button onClick={() => void addActivity()}>Aktivität anlegen</Button>
+            </div>
+          )}
+
+          {detail.communicationSyncMessage && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {detail.communicationSyncMessage}
+            </p>
+          )}
+
+          {!form.outlookFolderId && (
+            <p className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              Kein Outlook-Eventordner hinterlegt. Ohne Ordner fehlen die E-Mails; erfasste Einträge
+              bleiben sichtbar.
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-64 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                aria-label="Kommunikation durchsuchen"
+                className="pl-9"
+                value={communicationSearch}
+                onChange={(event) => setCommunicationSearch(event.target.value)}
+                placeholder="Betreff, Absender, Adresse oder Text durchsuchen …"
+              />
+            </div>
+            <div
+              role="group"
+              aria-label="Ansicht wählen"
+              className="flex shrink-0 gap-1 rounded-lg border bg-card p-1"
+            >
+              {(
+                [
+                  ["verlauf", "Verlauf"],
+                  ["konversationen", "Konversationen"],
+                ] as const
+              ).map(([value, label]) => (
+                <Button
+                  key={value}
+                  size="sm"
+                  variant={communicationView === value ? "secondary" : "ghost"}
+                  aria-pressed={communicationView === value}
+                  onClick={() => setCommunicationView(value)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2" aria-label="Kommunikation filtern">
+            <Button
+              size="sm"
+              className="rounded-full"
+              variant={communicationChannel === "all" ? "secondary" : "outline"}
+              aria-pressed={communicationChannel === "all"}
+              onClick={() => setCommunicationChannel("all")}
+            >
+              Alle{" "}
+              <span className="tabular-nums text-muted-foreground">
+                {communicationTimeline.totalCount}
+              </span>
+            </Button>
+            {communicationTimeline.channelNames.map((channel) => {
+              const ChannelIcon = communicationChannelIcon(channel, communicationChannelOptions);
+              const active = communicationChannel === channel;
+              return (
+                <Button
+                  key={channel}
+                  size="sm"
+                  className="rounded-full"
+                  variant={active ? "secondary" : "outline"}
+                  aria-pressed={active}
+                  onClick={() => setCommunicationChannel(active ? "all" : channel)}
+                >
+                  <ChannelIcon className="size-4" aria-hidden="true" />
+                  {channel}{" "}
+                  <span className="font-semibold tabular-nums">
+                    {communicationTimeline.channelCounts[channel]}
+                  </span>
+                </Button>
+              );
+            })}
+            <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+            <Select
+              value={communicationContactFilter}
+              onValueChange={setCommunicationContactFilter}
+            >
+              <SelectTrigger aria-label="Nach Bezug filtern" className="h-8 w-auto rounded-full">
+                <SelectValue placeholder="Bezug: Alle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Bezug: Alle</SelectItem>
+                <SelectItem value="unassigned">Ohne Bezug</SelectItem>
+                {form.kontakte.map((contact) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={communicationDirection}
+              onValueChange={(value) =>
+                setCommunicationDirection(value as "all" | "INCOMING" | "OUTGOING")
+              }
+            >
+              <SelectTrigger aria-label="Nach Richtung filtern" className="h-8 w-auto rounded-full">
+                <SelectValue placeholder="Richtung: Alle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Richtung: Alle</SelectItem>
+                <SelectItem value="INCOMING">Eingehend</SelectItem>
+                <SelectItem value="OUTGOING">Ausgehend</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              className="rounded-full"
+              variant={communicationAttachmentsOnly ? "secondary" : "outline"}
+              aria-pressed={communicationAttachmentsOnly}
+              onClick={() => setCommunicationAttachmentsOnly((only) => !only)}
+            >
+              <Paperclip className="size-4" aria-hidden="true" />
+              mit Anlagen{" "}
+              <span className="font-semibold tabular-nums">
+                {communicationTimeline.attachmentCount}
+              </span>
+            </Button>
+            {communicationFilterCount > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full"
+                onClick={resetCommunicationFilters}
+              >
+                <X className="size-4" aria-hidden="true" />
+                {communicationFilterCount} Filter zurücksetzen
+              </Button>
+            )}
+          </div>
+
+          {communicationSearch.trim() && (
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold tabular-nums text-foreground">
+                {communicationTimeline.matchCount}
+              </span>{" "}
+              Treffer für „{communicationSearch.trim()}“
+            </p>
+          )}
+
+          {form.kommunikation.length === 0 ? (
+            <div className="rounded-lg border bg-card px-4 py-8 text-center">
+              <p className="text-sm font-medium text-foreground">Noch keine Einträge</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Synchronisieren holt die E-Mails aus dem Eventordner; alles andere wird erfasst.
+              </p>
+            </div>
+          ) : communicationTimeline.matchCount === 0 ? (
+            <div className="rounded-lg border bg-card px-4 py-8 text-center">
+              <p className="text-sm font-medium text-foreground">
+                Keine Einträge für diese Auswahl.
+              </p>
+              {communicationFilterCount > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={resetCommunicationFilters}
+                >
+                  {communicationFilterCount} Filter zurücksetzen
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border bg-card">
+              <div className="hidden items-center gap-3.5 border-b bg-muted/30 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground md:flex">
+                <span className="w-9">Art</span>
+                <span className="flex-1">
+                  {communicationView === "verlauf" ? "Betreff und Vorschau" : "Konversation"}
+                </span>
+                <span className="w-52">Bezug</span>
+                <span className="w-20 text-right">
+                  {communicationView === "verlauf" ? "Zeit" : "Zeitraum"}
+                </span>
               </div>
-            </CardContent>
-          </Card>
+
+              {communicationView === "verlauf"
+                ? communicationGroups.map((group) => (
+                    <section key={group.key} aria-label={`Kommunikation ${group.label}`}>
+                      <h3 className="flex items-center gap-2 border-b bg-muted/40 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        {group.label}
+                        <span className="font-semibold tabular-nums opacity-70">
+                          {group.messages.length}
+                        </span>
+                      </h3>
+                      {group.messages.map((message) => {
+                        const eventContact = communicationTimeline.eventContactsByMessageId.get(
+                          message.id,
+                        );
+                        const crmContact = communicationTimeline.contactsByMessageId.get(
+                          message.id,
+                        );
+                        const bezug = eventContact
+                          ? {
+                              id: eventContact.id,
+                              label: eventContact.rolle
+                                ? `${eventContact.name} · ${eventContact.rolle}`
+                                : eventContact.name,
+                              event: true,
+                            }
+                          : crmContact
+                            ? { id: crmContact.id, label: crmContact.name, event: false }
+                            : null;
+                        return (
+                          <CommunicationRow
+                            key={message.id}
+                            message={message}
+                            Icon={communicationChannelIcon(
+                              message.kanal,
+                              communicationChannelOptions,
+                            )}
+                            query={communicationSearch}
+                            threadSize={communicationTimeline.threadSize(message)}
+                            bezug={bezug}
+                            sent={communicationTimeline.time2winOutgoingIds.has(message.id)}
+                            onOpen={() => setSelectedCommunicationId(message.id)}
+                          />
+                        );
+                      })}
+                    </section>
+                  ))
+                : [...communicationTimeline.conversations, ...communicationTimeline.singles].map(
+                    (conversation, index) => {
+                      const ConversationIcon = communicationChannelIcon(
+                        conversation.channel,
+                        communicationChannelOptions,
+                      );
+                      const open = openConversation === conversation.key;
+                      const last = conversation.messages[conversation.messages.length - 1];
+                      // Einträge ohne Konversation bekommen ihre eigene Überschrift.
+                      const startsSingles =
+                        index === communicationTimeline.conversations.length &&
+                        communicationTimeline.singles.length > 0;
+                      return (
+                        <Fragment key={conversation.key}>
+                          {startsSingles && (
+                            <h3 className="flex items-center gap-2 border-b bg-muted/40 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                              Einzelne Einträge
+                              <span className="font-semibold tabular-nums opacity-70">
+                                {communicationTimeline.singles.length}
+                              </span>
+                            </h3>
+                          )}
+                          <section
+                            aria-label={`Konversation ${conversation.label}`}
+                            className="border-b last:border-b-0"
+                          >
+                            <button
+                              type="button"
+                              aria-expanded={open}
+                              onClick={() => setOpenConversation(open ? null : conversation.key)}
+                              className="flex w-full items-center gap-3.5 px-4 py-2 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                            >
+                              <span className="flex w-9 shrink-0 items-center gap-0.5 text-muted-foreground">
+                                {open ? (
+                                  <ChevronDown className="size-4" aria-hidden="true" />
+                                ) : (
+                                  <ChevronRight className="size-4" aria-hidden="true" />
+                                )}
+                                <ConversationIcon className="size-4" aria-hidden="true" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center gap-2">
+                                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                                    <Highlighted
+                                      text={conversation.label}
+                                      query={communicationSearch}
+                                    />
+                                  </span>
+                                  {conversation.messages.length > 1 && (
+                                    <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                                      <MessagesSquare className="size-3" aria-hidden="true" />
+                                      {conversation.messages.length}
+                                    </span>
+                                  )}
+                                  {conversation.attachments > 0 && (
+                                    <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                                      <Paperclip className="size-3" aria-hidden="true" />
+                                      {conversation.attachments}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                                  {last
+                                    ? `Zuletzt: ${communicationParty(last)} · ${last.text}`
+                                    : ""}
+                                </span>
+                              </span>
+                              <span className="hidden w-52 shrink-0 truncate text-xs text-muted-foreground md:block">
+                                {(() => {
+                                  const contact = last
+                                    ? communicationTimeline.eventContactsByMessageId.get(last.id)
+                                    : undefined;
+                                  return contact ? contact.name : "Kein Bezug";
+                                })()}
+                              </span>
+                              <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                                {conversation.period}
+                              </span>
+                            </button>
+                            {open && (
+                              <div className="border-t bg-muted/20 pl-9">
+                                {conversation.messages.map((message) => {
+                                  const eventContact =
+                                    communicationTimeline.eventContactsByMessageId.get(message.id);
+                                  const crmContact = communicationTimeline.contactsByMessageId.get(
+                                    message.id,
+                                  );
+                                  const bezug = eventContact
+                                    ? {
+                                        id: eventContact.id,
+                                        label: eventContact.rolle
+                                          ? `${eventContact.name} · ${eventContact.rolle}`
+                                          : eventContact.name,
+                                        event: true,
+                                      }
+                                    : crmContact
+                                      ? { id: crmContact.id, label: crmContact.name, event: false }
+                                      : null;
+                                  return (
+                                    <CommunicationRow
+                                      key={message.id}
+                                      dense
+                                      message={message}
+                                      Icon={communicationChannelIcon(
+                                        message.kanal,
+                                        communicationChannelOptions,
+                                      )}
+                                      query={communicationSearch}
+                                      threadSize={1}
+                                      bezug={bezug}
+                                      sent={communicationTimeline.time2winOutgoingIds.has(
+                                        message.id,
+                                      )}
+                                      onOpen={() => setSelectedCommunicationId(message.id)}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </section>
+                        </Fragment>
+                      );
+                    },
+                  )}
+            </div>
+          )}
+
+          <Sheet
+            open={!!selectedCommunication}
+            onOpenChange={(shown) => !shown && setSelectedCommunicationId(null)}
+          >
+            <SheetContent
+              closeLabel="Nachricht schließen"
+              className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
+            >
+              {selectedCommunication && (
+                <>
+                  <SheetHeader className="space-y-0 border-b p-5 text-left">
+                    <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                      {(() => {
+                        const HeaderIcon = communicationChannelIcon(
+                          selectedCommunication.kanal,
+                          communicationChannelOptions,
+                        );
+                        return <HeaderIcon className="size-4" aria-hidden="true" />;
+                      })()}
+                      {communicationChannelLabel(
+                        selectedCommunication,
+                        communicationTimeline.time2winOutgoingIds.has(selectedCommunication.id),
+                      )}
+                    </p>
+                    <SheetTitle className="mt-2 text-lg leading-snug">
+                      {selectedCommunication.betreff}
+                    </SheetTitle>
+                    <SheetDescription className="mt-1">
+                      {communicationParty(selectedCommunication)} ·{" "}
+                      {formatCommunicationTime(selectedCommunication.datum)}
+                    </SheetDescription>
+                    {selectedThread.length > 1 && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        Nachricht{" "}
+                        <span className="font-semibold tabular-nums text-foreground">
+                          {selectedThread.findIndex(
+                            (message) => message.id === selectedCommunication.id,
+                          ) + 1}
+                        </span>{" "}
+                        von{" "}
+                        <span className="font-semibold tabular-nums text-foreground">
+                          {selectedThread.length}
+                        </span>{" "}
+                        in dieser Konversation
+                      </p>
+                    )}
+                  </SheetHeader>
+
+                  <div className="flex-1 space-y-5 overflow-auto p-5">
+                    <dl className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Von
+                        </dt>
+                        <dd className="mt-1 break-words text-sm">{selectedCommunication.autor}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          An
+                        </dt>
+                        <dd className="mt-1 break-words text-sm">
+                          {selectedCommunication.empfaenger || "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Zeitpunkt
+                        </dt>
+                        <dd className="mt-1 text-sm tabular-nums">
+                          {formatCommunicationTime(selectedCommunication.datum)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Bezug
+                        </dt>
+                        <dd className="mt-1 text-sm">
+                          {(() => {
+                            const eventContact = communicationTimeline.eventContactsByMessageId.get(
+                              selectedCommunication.id,
+                            );
+                            const crmContact = communicationTimeline.contactsByMessageId.get(
+                              selectedCommunication.id,
+                            );
+                            const contact = eventContact ?? crmContact;
+                            if (!contact)
+                              return <span className="text-muted-foreground">Kein Bezug</span>;
+                            return (
+                              <a
+                                href={`/kontakte?person=${encodeURIComponent(contact.id)}`}
+                                className={cn(
+                                  badgeVariants({
+                                    variant: eventContact ? "secondary" : "outline",
+                                  }),
+                                )}
+                              >
+                                {eventContact && eventContact.rolle
+                                  ? `${eventContact.name} · ${eventContact.rolle}`
+                                  : contact.name}
+                              </a>
+                            );
+                          })()}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Nachricht
+                      </p>
+                      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-foreground/90">
+                        {selectedCommunication.text}
+                      </p>
+                    </div>
+
+                    {selectedCommunication.hatAnlagen && (
+                      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Paperclip className="size-4" aria-hidden="true" />
+                        Anlagen vorhanden – sie liegen in Outlook.
+                      </p>
+                    )}
+
+                    {selectedThread.length > 1 && (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Konversation
+                        </p>
+                        <div className="mt-2 space-y-1 border-l-2 pl-3">
+                          {selectedThread.map((message) => (
+                            <button
+                              key={message.id}
+                              type="button"
+                              onClick={() => setSelectedCommunicationId(message.id)}
+                              className={cn(
+                                "block w-full rounded-md px-2 py-1.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                message.id === selectedCommunication.id && "bg-muted",
+                              )}
+                            >
+                              <span className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                                <span className="truncate">{communicationParty(message)}</span>
+                                <time dateTime={message.datum} className="shrink-0 tabular-nums">
+                                  {communicationShortTime(message.datum)}
+                                </time>
+                              </span>
+                              <span className="mt-0.5 block truncate text-sm text-foreground/80">
+                                {message.text}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <SheetFooter className="flex-row items-center gap-2 border-t bg-muted/20 p-4">
+                    {selectedCommunication.outlookWebUrl && (
+                      <a
+                        href={selectedCommunication.outlookWebUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={cn(buttonVariants({ size: "sm" }))}
+                      >
+                        <ExternalLink className="size-4" aria-hidden="true" />
+                        In Outlook öffnen
+                      </a>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedCommunicationId(null)}
+                    >
+                      Schließen
+                    </Button>
+                  </SheetFooter>
+                </>
+              )}
+            </SheetContent>
+          </Sheet>
         </TabsContent>
       </Tabs>
 

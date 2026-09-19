@@ -14,6 +14,8 @@ export class PrismaSelectionListAdapter implements SelectionListAdapter {
       return this.prisma.serviceOption.findMany({ orderBy: { name: "asc" } });
     if (kind === "hardwareObjects")
       return this.prisma.hardwareObjectOption.findMany({ orderBy: { name: "asc" } });
+    if (kind === "communicationChannels")
+      return this.prisma.communicationChannelOption.findMany({ orderBy: { name: "asc" } });
     return this.prisma.eventRoleOption.findMany({ orderBy: { name: "asc" } });
   }
   create(kind: SelectionListKind, name: string) {
@@ -21,6 +23,8 @@ export class PrismaSelectionListAdapter implements SelectionListAdapter {
     if (kind === "services") return this.prisma.serviceOption.create({ data: { name } });
     if (kind === "hardwareObjects")
       return this.prisma.hardwareObjectOption.create({ data: { name } });
+    if (kind === "communicationChannels")
+      return this.prisma.communicationChannelOption.create({ data: { name } });
     return this.prisma.eventRoleOption.create({ data: { name } });
   }
   update(kind: SelectionListKind, id: string, patch: SelectionListPatch) {
@@ -32,6 +36,8 @@ export class PrismaSelectionListAdapter implements SelectionListAdapter {
         where: { id },
         data: { name: patch.name, active: patch.active },
       });
+    if (kind === "communicationChannels")
+      return this.prisma.communicationChannelOption.update({ where: { id }, data: patch });
     return this.prisma.eventRoleOption.update({ where: { id }, data: patch });
   }
   async reorder(kind: SelectionListKind, ids: string[]) {
@@ -42,7 +48,9 @@ export class PrismaSelectionListAdapter implements SelectionListAdapter {
           ? this.prisma.serviceOption
           : kind === "hardwareObjects"
             ? this.prisma.hardwareObjectOption
-            : this.prisma.eventRoleOption;
+            : kind === "communicationChannels"
+              ? this.prisma.communicationChannelOption
+              : this.prisma.eventRoleOption;
     const current = await model.findMany({ orderBy: { name: "asc" } });
     if (
       current.length !== ids.length ||
