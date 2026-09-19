@@ -682,3 +682,7 @@ Geprüft: Migration auf frischer PostgreSQL-16-Datenbank, 59 Event-Service-Unit-
 ## 2026-09-18 — Frontend-Typecheck wiederhergestellt
 
 Der strenge projektweite Typecheck ist wieder fehlerfrei. Bereinigt wurden doppelte Übersetzungsschlüssel, unter `exactOptionalPropertyTypes` unzulässige `undefined`-Props, nicht abgesicherte Arrayzugriffe sowie veraltete CRM-, Event- und Auswahllisten-Testadapter. Damit ist die vorher im Eintrag zur Kategorienverwaltung dokumentierte Blockade aufgehoben. Geprüft mit `npx tsc --noEmit`, allen 111 Frontend-Unit-Tests, dem Produktions-Build und gezieltem ESLint für die geänderten Dateien. Quellen: Nutzerkonversation vom 2026-09-18, [Übersetzungen](../src/lib/i18n.tsx), [Event-API-Adapter](../src/lib/t2w/api.ts), [CRM-Adapter](../src/lib/crm/module.ts) und [Kontaktansicht](../src/routes/kontakte.tsx).
+
+## 2026-09-19 — Deployment-Verifikation an Anmeldung angepasst
+
+Die Deployments der Aufgabenkategorien und des nachfolgenden PM-Refactorings wurden vor dem Produktionsschritt gestoppt, weil zwei Hardware-Browsertests seit Einführung der verpflichtenden Anmeldung ohne Sitzung auf der Loginseite landeten. Die Hardware-Suite stellt nun für jeden Test eine vollständige Admin-Sitzung bereit. Der lokal identische CI-Aufruf besteht wieder mit drei aktiven Tests; ein bereits zuvor deaktivierter Test bleibt übersprungen. Quellen: Nutzerkonversation vom 2026-09-19, [Deployment-Workflow](../.github/workflows/deploy-hostinger.yml) und [Hardware-Browserregression](../tests/e2e/hardware.spec.ts).

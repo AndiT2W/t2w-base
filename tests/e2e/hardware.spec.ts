@@ -1,6 +1,21 @@
 import { test, expect } from "@playwright/test";
 import { event, mockEventManagementApi } from "./support/event-management-api";
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user-1",
+        email: "admin@time2win.cloud",
+        displayName: "Hardware Admin",
+        role: "ADMIN",
+        financeAccess: true,
+        organizerId: null,
+      },
+    }),
+  );
+});
+
 test("shows central hardware cases, filters them, and links to the event", async ({ page }) => {
   let lastEventChanges: Record<string, unknown> = {};
   const eventChanges: Record<string, unknown>[] = [];
@@ -194,9 +209,6 @@ test("keeps the event detail page usable when hardware API returns an error payl
 }) => {
   await mockEventManagementApi(page);
   await mockEventManagementApi(page);
-  await page.route("**/api/v1/auth/**", (route) =>
-    route.fulfill({ json: { id: "user-1", email: "admin@time2win.cloud", role: "ADMIN" } }),
-  );
   await page.route("**/api/v1/events/*/hardware", (route) =>
     route.fulfill({ status: 500, json: { message: "Database unavailable" } }),
   );
