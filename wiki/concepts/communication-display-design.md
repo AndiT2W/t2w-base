@@ -80,12 +80,15 @@ Die frühere Spalte „Kontakt“ heißt **Bezug** und nimmt zwei Arten von Wert
 
 Beides kann nebeneinander stehen; im Nachrichtenpanel sind Person und Thema getrennt änderbar. Die Themen kommen aus den Auswahllisten, nicht aus dem Code.
 
-**Zuordnungswege, von deterministisch nach unsicher:**
+**Zuordnungswege:**
 
 1. **Absenderadresse → Person.** Erst Eventkontakte, dann CRM. Bestehendes Verhalten in [`communication-timeline.ts`](../../src/lib/t2w/communication-timeline.ts).
-2. **Sammeladresse oder Domain → Thema.** Regel je Adresse oder Domain, gepflegt bei den Auswahllisten: `anmeldung@…` → Teilnehmer. Deckt den Regelfall ohne Modell ab.
-3. **Textanalyse → Vorschlag.** Siehe [Entscheidung zur Mailkategorisierung](../decisions/2026-09-19-mailkategorisierung-mit-ollama-cloud.md).
-4. **Von Hand im Panel**, auf Wunsch als Regel für denselben Absender gemerkt.
+2. **Thema von Hand im Panel.** Der gültige Weg für Themen. Umgesetzt am 19.09.2026.
+3. *(zurückgestellt)* **Sammeladresse oder Domain → Thema.** Regel je Adresse oder Domain,
+   etwa `anmeldung@…` → Teilnehmer. Auf Nutzerwunsch vom 19.09.2026 **vorerst nicht gebaut**:
+   das Thema wird manuell gesetzt. Kein Versäumnis, sondern eine Entscheidung — vor einem Neubau
+   dieser Stufe erst nachfragen.
+4. *(offen)* **Textanalyse → Vorschlag.** Siehe [Entscheidung zur Mailkategorisierung](../decisions/2026-09-19-mailkategorisierung-mit-ollama-cloud.md).
 
 **Vorschläge sind kein gesetzter Bezug.** Sie erscheinen gestrichelt mit dem Wort „Vorschlag“, tragen ein Häkchen zum Übernehmen und liegen in einem eigenen Feld. Der Filter „Vorschläge prüfen“ sammelt sie. Ohne Bestätigung wird nichts zugeordnet.
 
@@ -141,7 +144,8 @@ manuelle Notiz ist, statt die Herkunft durch die Anwendung zu reichen. „Ohne B
 Noch nicht umgesetzt, weil vom Datenmodell abhängig:
 - Vorschläge und der Filter „Vorschläge prüfen“ fehlen noch; sie kommen mit der
   [Mailkategorisierung](../decisions/2026-09-19-mailkategorisierung-mit-ollama-cloud.md).
-  Ebenso fehlen die Regeln für Adresse und Domain — Themen werden derzeit von Hand zugeordnet.
+- Regeln für Adresse und Domain sind **zurückgestellt** (Nutzerwunsch vom 19.09.2026). Themen
+  werden von Hand im Panel gesetzt; das ist der vorgesehene Weg, kein Zwischenstand.
 - Der Zeitraumfilter der Chipleiste fehlt; gefiltert wird derzeit über Art, Bezug, Richtung und
   Anlagen.
 - „Notiz erfassen“ legt weiterhin eine Aktivität im bestehenden Sinn an.
@@ -152,8 +156,8 @@ Noch nicht umgesetzt, weil vom Datenmodell abhängig:
 ## Offene Umsetzungsschritte
 
 1. ~~Nachrichtenarten als Auswahlliste mit Symbol~~ — erledigt am 19.09.2026.
-2. ~~Feld für den Bezug (Person und/oder Thema)~~ — erledigt am 19.09.2026. Offen bleiben das
-   getrennte Vorschlagsfeld und die Regeln für Adresse und Domain.
+2. ~~Feld für den Bezug (Person und/oder Thema)~~ — erledigt am 19.09.2026. Das getrennte
+   Vorschlagsfeld folgt mit der Kategorisierung; die Adress- und Domainregeln sind zurückgestellt.
 
 **Festlegungen vom 19.09.2026** (Nutzerkonversation): Nachrichtenarten und Themen entstehen als zwei neue Kinds des vorhandenen Auswahllisten-Mechanismus — `communicationChannels` und `communicationTopics` — mit je einem Options-Modell samt `icon`, `color`, `active` und `sortOrder`, wie `ServiceOption` und `EventRoleOption`. Damit gelten Adapter, Workspace und Einstellungsoberfläche unverändert; die Sonderverwaltung von `PmGroup` wird nicht kopiert. Die drei Bestandswerte `E-Mail`, `Telefon` und `Notiz` werden als Optionen vorbelegt. Eine Nachricht trägt **genau ein Thema**; die Person bleibt ein davon getrenntes Feld, beide können nebeneinander gesetzt sein. Referenzen: [Auswahllisten-Domain](../../packages/domain/src/selection-lists.ts), [Schema](../../services/event-service/prisma/schema.prisma).
 3. ~~Anzeige umbauen~~ — erledigt am 19.09.2026.

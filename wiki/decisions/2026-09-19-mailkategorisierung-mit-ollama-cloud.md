@@ -23,6 +23,12 @@ Die Kategorisierung wird **stufenweise** gebaut, deterministisch vor Modell:
 2. **Modell als Vorschlag.** Ollama Cloud liefert genau einen Themenvorschlag je Nachricht.
 3. **Bestätigte Zuordnungen** sind das Material, aus dem weitere Adressregeln entstehen.
 
+> **Änderung vom 19.09.2026, später am selben Tag:** Stufe 1 ist auf Nutzerwunsch **zurückgestellt**.
+> Das Thema wird von Hand im Nachrichtenpanel gesetzt. Damit entfällt vorerst der deterministische
+> Unterbau, auf dem diese Entscheidung aufsetzt — wer die Modellstufe angeht, muss also entweder
+> Stufe 1 nachholen oder begründen, warum das Modell ohne sie tragfähig ist. Die übrigen Auflagen
+> (Vorschlag statt Zuordnung, serverseitig, pro Event abschaltbar) bleiben unverändert gültig.
+
 Für die Modellstufe gilt:
 
 - **Serverseitig.** Der Aufruf läuft im `event-service` als Job nach dem Outlook-Sync, nicht im Browser. Der Zugangsschlüssel bleibt auf dem Server, die Liste bleibt schnell, ein Ausfall der Cloud macht die Seite nicht kaputt.
