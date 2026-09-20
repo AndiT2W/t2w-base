@@ -115,6 +115,43 @@ test("ordnet Tabellenspalten um und behält die Reihenfolge nach dem Neuladen", 
   await expect.poll(kopfNamen).toContain("Event");
 });
 
+test("ordnet Tabellenspalten auch per Ziehen um", async ({ page }) => {
+  await mockEventManagementApi(page);
+  let preference: { version: 1; visible: string[]; sort: { key: string; direction: string } } = {
+    version: 1,
+    visible: ["Status", "Event", "Veranstalter", "Zeitraum"],
+    sort: { key: "Zeitraum", direction: "asc" },
+  };
+  await page.route("**/api/v1/table-preferences/**", async (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: { value: preference } });
+    if (route.request().method() === "PUT") {
+      preference = route.request().postDataJSON() as typeof preference;
+      return route.fulfill({ json: { value: preference } });
+    }
+    return route.fallback();
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Spalten auswählen" }).click();
+
+  // Ziehen ist der Mausweg, die Pfeile bleiben der Weg für die Tastatur.
+  const zeitraum = page.locator('[data-column-row="Zeitraum"]');
+  const status = page.locator('[data-column-row="Status"]');
+  await expect(zeitraum).toHaveAttribute("draggable", "true");
+  await zeitraum.dispatchEvent("dragstart");
+  await status.dispatchEvent("dragover");
+  await status.dispatchEvent("drop");
+
+  await expect
+    .poll(() => preference.visible)
+    .toEqual(["Zeitraum", "Status", "Event", "Veranstalter"]);
+  await expect
+    .poll(() =>
+      page.locator('[data-density="compact"] table thead th').first().textContent(),
+    )
+    .toContain("Zeitraum");
+});
+
 test("hebt kompakte Tabellenköpfe mit der leichten Versalienvariante ab", async ({ page }) => {
   await mockEventManagementApi(page);
   await page.route("**/api/v1/table-preferences/**", (route) =>

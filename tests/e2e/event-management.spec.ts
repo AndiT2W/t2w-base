@@ -716,6 +716,62 @@ test("platziert die schmale TIME2WIN-Spalte nach dem Status und verlinkt die Eve
   }
 });
 
+test("zeigt die Schnellfilter der Übersicht als schaltbare Chips mit Zurücksetzen", async ({
+  page,
+}) => {
+  await mockApi(page);
+  await page.goto("/");
+
+  const filterZeile = page.getByRole("group", { name: "Eventfilter und Tabellenspalten" });
+  const alleAktiven = filterZeile.getByRole("button", { name: "Alle aktiven" });
+  const offene = filterZeile.getByRole("button", { name: "Offene Aufgaben", exact: true });
+
+  // Grundstellung: „Alle aktiven" gesetzt, nichts zurückzusetzen.
+  await expect(alleAktiven).toHaveAttribute("aria-pressed", "true");
+  await expect(offene).toHaveAttribute("aria-pressed", "false");
+  await expect(filterZeile.getByRole("button", { name: /Filter zurücksetzen/ })).toHaveCount(0);
+
+  await offene.click();
+  await expect(offene).toHaveAttribute("aria-pressed", "true");
+  await expect(alleAktiven).toHaveAttribute("aria-pressed", "false");
+
+  // Der Statusfilter ist ein Auswahlchip und zählt mit.
+  await filterZeile.getByLabel("Status filtern").selectOption("zugesagt");
+  const zuruecksetzen = filterZeile.getByRole("button", { name: "2 Filter zurücksetzen" });
+  await expect(zuruecksetzen).toBeVisible();
+
+  await zuruecksetzen.click();
+  await expect(alleAktiven).toHaveAttribute("aria-pressed", "true");
+  await expect(filterZeile.getByLabel("Status filtern")).toHaveValue("alle");
+});
+
+test("macht auch die Tabellen ohne Spaltenpräferenz sortierbar", async ({ page }) => {
+  await mockApi(page, {}, {}, [
+    {
+      id: "88888888-8888-4888-8888-888888888888",
+      eventCode: "260101_alpha",
+      name: "Alpha Cup",
+      startAt: "2026-01-01T00:00:00.000Z",
+      endAt: "2026-01-01T00:00:00.000Z",
+    },
+  ]);
+  await page.goto("/angebote");
+
+  const kopf = page.getByRole("button", { name: "Event sortieren" });
+  await expect(kopf).toBeVisible();
+  const namen = () =>
+    page.locator("table tbody tr td:nth-child(2)").allTextContents();
+
+  await kopf.click();
+  const aufsteigend = await namen();
+  expect(aufsteigend[0]).toBe("Alpha Cup");
+
+  await kopf.click();
+  const absteigend = await namen();
+  expect(absteigend[0]).not.toBe("Alpha Cup");
+  expect([...absteigend].reverse()).toEqual(aufsteigend);
+});
+
 test("stellt Spalten und Export in Kontakten und Kunden auf Höhe der Tab-Leiste", async ({
   page,
 }) => {

@@ -2,7 +2,7 @@
 title: Eventlisten und Tabellenwerkzeuge – Anzeigegrundlage
 type: concept
 status: active
-updated: 2026-09-19
+updated: 2026-09-20
 sources:
   - ../../src/components/t2w/DataTable.tsx
   - ../../src/components/t2w/EventTableColumns.tsx
@@ -59,9 +59,12 @@ Desktopbreite; schmale Ansichten zeigen Karten, die weder Spalten noch Export ke
 
 ## Spalten sind auswählbar und ordenbar
 
-Im Spaltenmenü steht die Liste in Anzeigereihenfolge — **oben ist links**. Jede sichtbare Spalte
-hat „nach links" und „nach rechts"; die gewählte Reihenfolge wird wie die Sichtbarkeit in der
-Präferenz `{ version, visible, sort }` gehalten und überlebt das Neuladen.
+Im Spaltenmenü steht die Liste in Anzeigereihenfolge — **oben ist links**. Sichtbare Spalten
+lassen sich **ziehen**; daneben bleiben „nach links" und „nach rechts" als Schaltflächen. Ziehen
+ist der Weg für die Maus, die Schaltflächen sind der Weg für Tastatur und Bildschirmleser — beide
+lösen dieselbe Aktion `moveColumn` aus, damit es nur eine Quelle der Reihenfolge gibt. Die gewählte
+Reihenfolge wird wie die Sichtbarkeit in der Präferenz `{ version, visible, sort }` gehalten und
+überlebt das Neuladen.
 
 Das war zur Hälfte schon gebaut: `table-model.ts` konnte `moveColumn` immer, aber nur die
 Hardwaretabelle reichte es durch, und Übersicht, Veranstaltungen und Kontakte gaben ihre Zellen in
@@ -69,8 +72,18 @@ einer fest verdrahteten Reihenfolge aus statt in der von `visible`. Die Reihenfo
 weder einstellen noch hätte sie gewirkt. Jetzt geben alle Tabellen Kopf und Zellen über
 `visibleColumns.map(…)` aus — das ist die Bedingung dafür, dass Umordnen überhaupt sichtbar wird.
 
-Sortieren nach Inhalt bleibt davon unberührt: dafür bleibt der Kopf jeder Spalte ein
-`SortHeader`-Knopf.
+## Jede Tabelle sortiert nach Inhalt
+
+Der Kopf jeder Spalte ist ein `SortHeader`-Knopf. Bis zum 20.09.2026 galt das nur für fünf
+Tabellen; Angebote, Rechnungen, Auszahlungen, Auditlog, Event-Auszahlungen, Event-Hardware und die
+beiden Event-Detailtabellen waren nicht sortierbar.
+
+Tabellen **mit** Spaltenpräferenz sortieren über `useTableBehavior` — die Sortierung wird mit
+Sichtbarkeit und Reihenfolge gespeichert. Tabellen **ohne** Präferenz verwenden `useTableSort`:
+nur lokaler Zustand, kein Speichern, keine Spaltenauswahl. So bekommt auch eine feste Tabelle
+sortierbare Köpfe, ohne eine Präferenzkennung erfinden zu müssen.
+
+Auswahl- und Aktionsspalten bleiben ungeordnet: sie tragen keinen Wert, nach dem man ordnen würde.
 
 ## Keine Aktionsspalte
 
@@ -92,6 +105,9 @@ und Präferenzhaltung bleiben bei den Seiten.
 
 ## Weitere Regeln der Eventliste
 
+- **Schnellfilter sind schaltbare Chips.** Die Übersicht zeigt ihre fünf Schnellfilter seit dem
+  20.09.2026 als `ToggleChip` mit `aria-pressed`; ein zweiter Klick führt zurück auf „Alle aktiven".
+  Ihr Statusfilter ist ein `FilterChip`, und „n Filter zurücksetzen" zählt beide.
 - **Filter sind Auswahlchips.** Status, Zeitraum und Archiv als rundes Chip mit kleiner
   Beschriftung, nativem `select` als Wert und Markenakzent sobald gesetzt. `FilterChip`, `DateChip`
   und `FilterResetChip` liegen in [`FilterChip.tsx`](../../src/components/t2w/FilterChip.tsx); die
@@ -169,13 +185,11 @@ ihren Leerzustand und die Werkzeuge entfallen, weil es nichts zu exportieren gib
 
 ## Offene Punkte
 
-1. Die Übersicht behält ihre **Schnellfilter als Schaltflächen** und ihren Statusfilter als
-   Auswahlfeld statt als Chip. Schnellfilter sind eine andere Sache als Auswahlchips; die
-   Umstellung braucht eine eigene Entscheidung.
-2. **Angebote, Rechnungen, Einstellungen und die Event-Detailtabellen** haben keine
-   Spaltenpräferenz. Ob sie eine bekommen sollen, ist nicht entschieden.
-3. Die Spaltenreihenfolge lässt sich über Schaltflächen ändern, **nicht per Ziehen**. Die
-   Kategorienverwaltung kann beides; für Tabellenspalten ist Ziehen noch nicht gebaut.
+1. **Angebote, Rechnungen, Einstellungen und die Event-Detailtabellen** haben keine
+   Spaltenpräferenz — sie sortieren, aber Sichtbarkeit und Reihenfolge ihrer Spalten sind fest.
+   Ob sie eine Präferenz bekommen sollen, ist nicht entschieden.
+2. Die Sortierung der Tabellen ohne Präferenz **überlebt das Neuladen nicht**; sie ist bewusst
+   lokaler Zustand.
 
 ## Weiterpflege bei Änderungen
 
