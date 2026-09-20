@@ -12,7 +12,7 @@ import {
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { formatDatum } from "@/lib/t2w/format";
 import { useT2W } from "@/lib/t2w/store";
-import { DataTable } from "@/components/t2w/DataTable";
+import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
 
 type Item = {
   id: string;
@@ -55,6 +55,18 @@ function displayNumber(item: Item) {
   }
   return "—";
 }
+
+/** Sortierwerte der Hardwarespalten; die Aktionsspalte bleibt ungeordnet. */
+const SPALTEN = [
+  { key: "Empfänger", sortValue: (item: Item) => item.recipientName },
+  { key: "Art", sortValue: (item: Item) => issueLabels[item.issueType] ?? item.issueType },
+  { key: "Objekt", sortValue: (item: Item) => item.objectName },
+  { key: "Nummer", sortValue: (item: Item) => displayNumber(item) },
+  { key: "Anzahl", sortValue: (item: Item) => item.quantity },
+  { key: "Status", sortValue: (item: Item) => statusLabels[item.status] ?? item.status },
+  { key: "Due Date", sortValue: (item: Item) => item.dueDate ?? "" },
+] as const;
+type Spalte = (typeof SPALTEN)[number]["key"];
 export function HardwareWorkspace({
   eventId,
   initialEditing,
@@ -70,6 +82,11 @@ export function HardwareWorkspace({
 }) {
   const { selectionLists } = useT2W();
   const [items, setItems] = useState<Item[]>([]);
+  const tabelle = useTableSort<Item, Spalte>(SPALTEN, {
+    key: "Empfänger",
+    direction: "asc",
+  });
+  const zeilen = tabelle.rows(items);
   const [editing, setEditing] = useState<Partial<Item> | null>(() =>
     createOnMount ? { objectNumberType: "NONE", issueType: "PARTICIPANT", quantity: 1 } : null,
   );
@@ -403,24 +420,21 @@ export function HardwareWorkspace({
         <DataTable exportName={eventId ? "Event-Hardware" : "Hardware"} className="text-sm">
           <thead className="t2w-table-header">
             <tr className="text-left">
-              {[
-                "Empfänger",
-                "Art",
-                "Objekt",
-                "Nummer",
-                "Anzahl",
-                "Status",
-                "Due Date",
-                "Aktionen",
-              ].map((h) => (
-                <th className="p-2" key={h}>
-                  {h}
+              {SPALTEN.map((spalte) => (
+                <th className="p-2" key={spalte.key}>
+                  <SortHeader
+                    label={spalte.key}
+                    active={tabelle.sort.key === spalte.key}
+                    direction={tabelle.sort.direction}
+                    onSort={() => tabelle.sortBy(spalte.key)}
+                  />
                 </th>
               ))}
+              <th className="p-2">Aktionen</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {zeilen.map((item) => (
               <tr className="border-b" key={item.id}>
                 <td className="p-2">{item.recipientName}</td>
                 <td className="p-2">{issueLabels[item.issueType] ?? item.issueType}</td>

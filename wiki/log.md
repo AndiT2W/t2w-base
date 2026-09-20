@@ -770,3 +770,15 @@ Netto rund 340 Zeilen weniger Anwendungscode.
 Tests: `tsc --noEmit`, ESLint und 124 Frontend-Unit-Tests bestanden. Neue Browserabläufe decken die Chipleiste samt Zurücksetzen, die Badges der mobilen Karte und das Umordnen der Spalten mit Reload ab. Bestehende Erwartungen mussten mit den Entscheidungen mitgehen: Spaltenzahl ohne Aktionsspalte, Spaltenauswahl und Export nicht mehr in der Filterzeile, der Zeitraumwechsel über `selectOption` statt über einen Radix-Trigger. `tests/e2e/table-preferences.spec.ts` lief seit der verpflichtenden Anmeldung komplett rot — der Datei fehlte der `auth/me`-Hook, den `event-management.spec.ts` schon hat; mit ihm bestehen alle Abläufe, und der Kopftest prüft jetzt die dokumentierten 10 px/Versalien/Haarlinie statt der abgelösten Variante „Ausgewogen".
 
 Nicht angefasst: die 16 roten Abläufe in `tests/e2e/event-management.spec.ts` stammen nicht aus dieser Arbeit und wurden vor der Änderung als Ausgangsstand festgehalten. Die PM-Browsertests brauchen weiterhin `PM_TEST_DATABASE_URL` und liefen hier nicht.
+
+## 2026-09-20 — Übersichtsfilter als Chips, Spalten ziehbar, alle Tabellen sortierbar
+
+Nutzerwunsch: die beiden offenen Punkte der Tabellenüberarbeitung umsetzen und Spalten zusätzlich sortierbar machen. Fortschreibung von [Eventlisten und Tabellenwerkzeuge](concepts/event-list-display-design.md).
+
+**Schnellfilter der Übersicht sind Chips.** Die fünf Schnellfilter sind `ToggleChip` mit `aria-pressed`; ein zweiter Klick führt zurück auf „Alle aktiven". Der Statusfilter ist ein `FilterChip` mit abweichendem barrierefreiem Namen („Status filtern"), und „n Filter zurücksetzen" zählt beide. Damit trägt die Übersicht dieselbe Filtersprache wie Veranstaltungen, Aufgaben und Kommunikation; ihre Kennzahlenzeile und der Überfällig-Hinweis bleiben.
+
+**Spalten lassen sich ziehen.** Sichtbare Spalten im Spaltenmenü sind `draggable` und bekommen einen Anfasser; die Pfeilschaltflächen bleiben daneben. Ziehen ist der Mausweg, die Schaltflächen sind der Weg für Tastatur und Bildschirmleser — beide lösen dieselbe Aktion `moveColumn` aus, damit die Präferenz die einzige Quelle der Reihenfolge bleibt. Das Ablegen verschiebt schrittweise, weil das Modell nur „ein Schritt nach links/rechts" kennt.
+
+**Alle Tabellen sortieren nach Inhalt.** Bisher galt das nur für fünf; Angebote, Rechnungen, Auszahlungen, Auditlog, Event-Auszahlungen, Event-Hardware und die beiden Event-Detailtabellen hatten keine sortierbaren Köpfe. Neu ist `useTableSort` — Sortierung ohne Präferenzspeicher und ohne Spaltenauswahl, damit auch eine feste Tabelle sortierbare Köpfe bekommt, ohne eine Präferenzkennung erfinden zu müssen. Auswahl- und Aktionsspalten bleiben ungeordnet. Die Sortierung dieser Tabellen ist bewusst lokaler Zustand und überlebt das Neuladen nicht.
+
+Tests: `tsc --noEmit`, ESLint und 124 Unit-Tests bestanden. Drei neue Browserabläufe decken die Schnellfilter-Chips samt Zurücksetzen, das Umordnen per Ziehen mit gespeicherter Reihenfolge und die Sortierung einer Tabelle ohne Spaltenpräferenz ab. Der Ziehtest schickt die HTML5-Drag-Ereignisse gezielt, weil ein Mauszug sie nicht auslöst.

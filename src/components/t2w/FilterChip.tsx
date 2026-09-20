@@ -11,12 +11,15 @@ import type { ReactNode } from "react";
  */
 export function FilterChip({
   label,
+  ariaLabel,
   value,
   inaktiv,
   onChange,
   children,
 }: {
   label: string;
+  /** Abweichender barrierefreier Name, wenn die sichtbare Beschriftung kürzer ist. */
+  ariaLabel?: string;
   value: string;
   inaktiv: string;
   onChange: (value: string) => void;
@@ -33,7 +36,7 @@ export function FilterChip({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        aria-label={label}
+        aria-label={ariaLabel ?? label}
         className={`max-w-40 cursor-pointer truncate bg-transparent pr-1 outline-none focus-visible:ring-2 focus-visible:ring-ring ${
           aktiv ? "font-semibold" : ""
         }`}
@@ -94,6 +97,36 @@ export function FilterResetChip({ count, onReset }: { count: number; onReset: ()
     >
       <X className="size-4" aria-hidden="true" />
       <span className="tabular-nums">{count}</span>
+    </button>
+  );
+}
+
+/**
+ * Ein Schnellfilter als schaltbares Chip — dieselbe Form wie die
+ * Dringlichkeitsfilter der Aufgabenübersicht.  Gesetzt heißt Markenakzent und
+ * `aria-pressed`, nie Farbe allein.
+ */
+export function ToggleChip({
+  aktiv,
+  onToggle,
+  children,
+}: {
+  aktiv: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={aktiv}
+      onClick={onToggle}
+      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-8 ${
+        aktiv
+          ? "border-primary/50 bg-primary/10 font-semibold text-foreground"
+          : "border-input bg-card text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
     </button>
   );
 }

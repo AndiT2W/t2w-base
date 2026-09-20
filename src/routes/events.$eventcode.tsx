@@ -1,5 +1,5 @@
 import { ProjectManagement } from "@/components/t2w/ProjectManagement";
-import { DataTable } from "@/components/t2w/DataTable";
+import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
 import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
@@ -87,7 +87,7 @@ import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
 import { highlightSegments, projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
-import { STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
+import { STATUS_ORDER, type Contact, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
@@ -305,6 +305,23 @@ function CommunicationRow({
   );
 }
 
+type Bewerb = { id: number; name: string; participantCount: number | null };
+/** Sortierwerte der Bewerbstabelle im TIME2WIN-Abgleich. */
+const BEWERB_SPALTEN = [
+  { key: "Bewerb", sortValue: (race: Bewerb) => race.name },
+  { key: "Gemeldete TN", sortValue: (race: Bewerb) => race.participantCount ?? -1 },
+] as const;
+type BewerbSpalte = (typeof BEWERB_SPALTEN)[number]["key"];
+
+/** Sortierwerte der Eventkontakte; die Aktionsspalte bleibt ungeordnet. */
+const KONTAKT_SPALTEN = [
+  { key: "Kontakt", sortValue: (k: Contact) => k.name },
+  { key: "Rolle", sortValue: (k: Contact) => k.rolle },
+  { key: "E-Mail", sortValue: (k: Contact) => k.email },
+  { key: "Telefon", sortValue: (k: Contact) => k.telefon },
+] as const;
+type KontaktSpalte = (typeof KONTAKT_SPALTEN)[number]["key"];
+
 export const Route = createFileRoute("/events/$eventcode")({
   head: () => ({
     meta: [
@@ -402,6 +419,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     detailWorkspace.snapshot,
   );
   const { form } = detail;
+  const bewerbTabelle = useTableSort<Bewerb, BewerbSpalte>(BEWERB_SPALTEN, {
+    key: "Bewerb",
+    direction: "asc",
+  });
+  const kontaktTabelle = useTableSort<Contact, KontaktSpalte>(KONTAKT_SPALTEN, {
+    key: "Kontakt",
+    direction: "asc",
+  });
   const [quartalsDialog, setQuartalsDialog] = useState(false);
   const [copyDialog, setCopyDialog] = useState(false);
   const [seriesDialog, setSeriesDialog] = useState(false);
@@ -1355,12 +1380,23 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   >
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Bewerb</TableHead>
-                        <TableHead className="text-right">Gemeldete TN</TableHead>
+                        {BEWERB_SPALTEN.map((spalte) => (
+                          <TableHead
+                            key={spalte.key}
+                            className={spalte.key === "Gemeldete TN" ? "text-right" : undefined}
+                          >
+                            <SortHeader
+                              label={spalte.key}
+                              active={bewerbTabelle.sort.key === spalte.key}
+                              direction={bewerbTabelle.sort.direction}
+                              onSort={() => bewerbTabelle.sortBy(spalte.key)}
+                            />
+                          </TableHead>
+                        ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {form.time2winSnapshot.races.map((race) => (
+                      {bewerbTabelle.rows(form.time2winSnapshot.races).map((race) => (
                         <TableRow key={race.id}>
                           <TableCell className="font-medium">{race.name}</TableCell>
                           <TableCell className="text-right tabular-nums">
@@ -1665,17 +1701,23 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 <DataTable exportName={`${form.name} Kontakte`} className="text-sm">
                   <thead className="t2w-table-header text-left">
                     <tr>
-                      <th className="px-3 py-2 font-medium">Kontakt</th>
-                      <th className="px-3 py-2 font-medium">Rolle</th>
-                      <th className="px-3 py-2 font-medium">E-Mail</th>
-                      <th className="px-3 py-2 font-medium">Telefon</th>
+                      {KONTAKT_SPALTEN.map((spalte) => (
+                        <th key={spalte.key} className="px-3 py-2">
+                          <SortHeader
+                            label={spalte.key}
+                            active={kontaktTabelle.sort.key === spalte.key}
+                            direction={kontaktTabelle.sort.direction}
+                            onSort={() => kontaktTabelle.sortBy(spalte.key)}
+                          />
+                        </th>
+                      ))}
                       <th className="px-3 py-2">
                         <span className="sr-only">Aktion</span>
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {form.kontakte.map((k) => (
+                    {kontaktTabelle.rows(form.kontakte).map((k) => (
                       <tr key={k.id}>
                         <td className="whitespace-nowrap px-3 py-2 font-medium text-foreground">
                           {k.name}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { Button } from "@/components/ui/button";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
 import { formatDatum } from "@/lib/t2w/format";
-import { DataTable } from "@/components/t2w/DataTable";
+import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
 
 type P = {
   id: string;
@@ -18,6 +18,18 @@ type P = {
   recipient?: { name: string } | null;
 };
 type Props = { eventId: string; recipientId?: string | null; recipientEmail?: string | null };
+
+/** Sortierwerte der Auszahlungsspalten; die Aktionsspalte bleibt ungeordnet. */
+const SPALTEN = [
+  { key: "Nummer", sortValue: (p: P) => p.payoutNumber },
+  { key: "Empfänger", sortValue: (p: P) => p.recipient?.name ?? p.mailRecipient ?? "" },
+  { key: "Betrag", sortValue: (p: P) => Number(p.amount) },
+  { key: "Status", sortValue: (p: P) => label(p) },
+  { key: "Maildatum", sortValue: (p: P) => p.mailSentAt ?? "" },
+  { key: "Auszahlungsdatum", sortValue: (p: P) => p.paidAt ?? "" },
+] as const;
+type Spalte = (typeof SPALTEN)[number]["key"];
+
 export type PayoutEventOption = {
   id: string;
   eventCode: string;
@@ -47,6 +59,8 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
     workspace.snapshot,
     workspace.snapshot,
   );
+  const tabelle = useTableSort<P, Spalte>(SPALTEN, { key: "Nummer", direction: "asc" });
+  const zeilen = tabelle.rows(items);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("EUR");
   const scope = useMemo(() => ({ eventId }), [eventId]);
@@ -106,17 +120,21 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
       <DataTable exportName="Event-Auszahlungen" className="text-sm">
         <thead className="t2w-table-header">
           <tr className="text-left">
-            <th className="px-2 py-1">Nummer</th>
-            <th className="px-2 py-1">Empfänger</th>
-            <th className="px-2 py-1">Betrag</th>
-            <th className="px-2 py-1">Status</th>
-            <th className="px-2 py-1">Maildatum</th>
-            <th className="px-2 py-1">Auszahlungsdatum</th>
+            {SPALTEN.map((spalte) => (
+              <th key={spalte.key} className="px-2 py-1">
+                <SortHeader
+                  label={spalte.key}
+                  active={tabelle.sort.key === spalte.key}
+                  direction={tabelle.sort.direction}
+                  onSort={() => tabelle.sortBy(spalte.key)}
+                />
+              </th>
+            ))}
             <th className="px-2 py-1">Aktionen</th>
           </tr>
         </thead>
         <tbody>
-          {items.map((p) => (
+          {zeilen.map((p) => (
             <tr key={p.id} className="border-t align-middle">
               <td className="px-2 py-1 font-mono">{p.payoutNumber}</td>
               <td className="px-2 py-1">

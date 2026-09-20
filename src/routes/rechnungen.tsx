@@ -4,10 +4,19 @@ import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
-import { STATUS_LABEL } from "@/lib/t2w/types";
+import { STATUS_LABEL, type T2WEvent } from "@/lib/t2w/types";
 import { invoiceReadyEvents } from "@/lib/t2w/event-projections";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
-import { DataTable } from "@/components/t2w/DataTable";
+import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
+
+const SPALTEN = [
+  { key: "Eventcode", sortValue: (event: T2WEvent) => event.eventcode },
+  { key: "Event", sortValue: (event: T2WEvent) => event.name },
+  { key: "Veranstalter", sortValue: (event: T2WEvent) => event.veranstalter },
+  { key: "Zeitraum", sortValue: (event: T2WEvent) => event.start },
+  { key: "Status", sortValue: (event: T2WEvent) => STATUS_LABEL[event.status] },
+] as const;
+type Spalte = (typeof SPALTEN)[number]["key"];
 
 export const Route = createFileRoute("/rechnungen")({
   head: () => ({
@@ -31,6 +40,11 @@ function Rechnungen() {
   const { events } = useT2W();
   const heute = heuteIso();
   const faellig = invoiceReadyEvents(events, heute);
+  const tabelle = useTableSort<T2WEvent, Spalte>(SPALTEN, {
+    key: "Zeitraum",
+    direction: "asc",
+  });
+  const zeilen = tabelle.rows(faellig);
 
   return (
     <div>
@@ -52,15 +66,20 @@ function Rechnungen() {
         <DataTable exportName="Rechnungen" className="min-w-[40rem] border-collapse text-sm">
           <thead className="t2w-table-header text-left">
             <tr>
-              <th className="px-3 py-2 font-semibold">Eventcode</th>
-              <th className="px-3 py-2 font-semibold">Event</th>
-              <th className="px-3 py-2 font-semibold">Veranstalter</th>
-              <th className="px-3 py-2 font-semibold">Zeitraum</th>
-              <th className="px-3 py-2 font-semibold">Status</th>
+              {SPALTEN.map((spalte) => (
+                <th key={spalte.key} className="px-3 py-2">
+                  <SortHeader
+                    label={spalte.key}
+                    active={tabelle.sort.key === spalte.key}
+                    direction={tabelle.sort.direction}
+                    onSort={() => tabelle.sortBy(spalte.key)}
+                  />
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {faellig.map((e) => (
+            {zeilen.map((e) => (
               <tr key={e.id} className="border-t border-border hover:bg-accent/50">
                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-muted-foreground">
                   {e.eventcode}

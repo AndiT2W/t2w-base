@@ -25,6 +25,7 @@ import {
   type EventColumn,
 } from "@/components/t2w/EventTableColumns";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
+import { FilterChip, FilterResetChip, ToggleChip } from "@/components/t2w/FilterChip";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -147,38 +148,45 @@ function Uebersicht() {
           </button>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
+        <div
+          role="group"
+          aria-label="Eventfilter und Tabellenspalten"
+          className="flex flex-wrap items-center gap-2 border-b border-border pb-3"
+        >
+          {/* Schnellfilter sind schaltbare Chips wie die Dringlichkeitsfilter
+              der Aufgabenübersicht; „Alle aktiven“ ist die Grundstellung. */}
           {SCHNELLFILTER.map((f) => (
-            <button
+            <ToggleChip
               key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "min-h-9 rounded-md px-3 py-1 text-xs font-medium transition-colors",
-                filter === f.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground",
-              )}
+              aktiv={filter === f.key}
+              onToggle={() => setFilter(filter === f.key ? "alle" : f.key)}
             >
               {t(f.label)}
-            </button>
+            </ToggleChip>
           ))}
-          <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-          <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Status</span>
-            <select
-              aria-label="Status filtern"
-              value={status}
-              onChange={(event) => setStatus(event.target.value as EventStatus | "alle")}
-              className="rounded border border-border bg-background px-2 py-1.5 text-foreground"
-            >
-              <option value="alle">{t("status.all")}</option>
-              {STATUS_ORDER.map((s) => (
-                <option key={s} value={s}>
-                  {t(`status.${s}` as Parameters<typeof t>[0])}
-                </option>
-              ))}
-            </select>
-          </label>
+
+          <FilterChip
+            label="Status"
+            ariaLabel="Status filtern"
+            value={status}
+            inaktiv="alle"
+            onChange={(wert) => setStatus(wert as EventStatus | "alle")}
+          >
+            <option value="alle">{t("status.all")}</option>
+            {STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {t(`status.${s}` as Parameters<typeof t>[0])}
+              </option>
+            ))}
+          </FilterChip>
+
+          <FilterResetChip
+            count={(filter === "alle" ? 0 : 1) + (status === "alle" ? 0 : 1)}
+            onReset={() => {
+              setFilter("alle");
+              setStatus("alle");
+            }}
+          />
 
           {/* Auf Filterhöhe statt in einer eigenen Zeile; mobil stehen Karten. */}
           <div className="hidden md:block">

@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Columns3,
+  GripVertical,
   FileSpreadsheet,
   LoaderCircle,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   createTableBehavior,
   createTablePreferences,
+  sortTableRows,
   type TableColumn,
   type TablePreferenceAdapter,
   type TableSortDirection,
@@ -370,9 +372,37 @@ export function useTableBehavior<T, K extends string>(options: {
 }
 
 /**
+ * Sortierung für Tabellen ohne Spaltenpräferenz: nur lokaler Zustand, kein
+ * Speichern, keine Spaltenauswahl.  Dadurch bekommt auch eine feste Tabelle
+ * sortierbare Köpfe, ohne dass sie eine Präferenzkennung erfinden muss.
+ */
+export function useTableSort<T, K extends string>(
+  columns: readonly TableColumn<T, K>[],
+  initialSort: { key: K; direction: TableSortDirection },
+) {
+  const [sort, setSort] = useState(initialSort);
+  const spalte = columns.find((column) => column.key === sort.key);
+  return {
+    sort,
+    sortBy: (key: K) =>
+      setSort((current) =>
+        current.key === key
+          ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+          : { key, direction: "asc" },
+      ),
+    rows: (rows: readonly T[]) =>
+      spalte ? sortTableRows(rows, spalte as TableColumn<T>, sort.direction) : [...rows],
+  };
+}
+
+/**
  * Spaltenauswahl und -reihenfolge.  Sie gehört in die Symbolleiste der Tabelle
  * (`DataTable` nimmt sie als `columnPicker` entgegen); die Liste steht in der
  * Anzeigereihenfolge der Spalten, oben ist links.
+ *
+ * Sichtbare Spalten lassen sich ziehen.  Die Pfeilschaltflächen bleiben
+ * daneben: Ziehen ist für die Maus, die Schaltflächen sind der Weg für
+ * Tastatur und Bildschirmleser — `moveColumn` ist für beide dieselbe Aktion.
  */
 export function ColumnPicker<T extends string>({
   columns,
@@ -385,10 +415,29 @@ export function ColumnPicker<T extends string>({
   toggleColumn: (column: T) => void;
   moveColumn?: (column: T, offset: -1 | 1) => void;
 }) {
+  const [gezogen, setGezogen] = useState<T | null>(null);
+  const [ziel, setZiel] = useState<T | null>(null);
   const orderedColumns = [
     ...visibleColumns,
     ...columns.filter((column) => !visibleColumns.includes(column)),
   ];
+
+  /**
+   * Verschiebt die gezogene Spalte schrittweise an die Zielposition — das
+   * Modell kennt nur „ein Schritt nach links/rechts", und so bleibt die
+   * Präferenz die einzige Quelle der Reihenfolge.
+   */
+  function ablegen(aufSpalte: T) {
+    if (!moveColumn || gezogen === null || gezogen === aufSpalte) return;
+    const von = visibleColumns.indexOf(gezogen);
+    const nach = visibleColumns.indexOf(aufSpalte);
+    if (von < 0 || nach < 0) return;
+    const richtung = nach > von ? 1 : -1;
+    for (let schritt = 0; schritt < Math.abs(nach - von); schritt += 1) {
+      moveColumn(gezogen, richtung);
+    }
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -405,13 +454,46 @@ export function ColumnPicker<T extends string>({
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 p-2">
         <p className="px-1 pb-1 text-xs text-muted-foreground">
-          Sichtbarkeit und Reihenfolge — oben ist links
+          Sichtbarkeit und Reihenfolge — oben ist links, ziehen oder Pfeile
         </p>
         {orderedColumns.map((column) => {
           const isVisible = visibleColumns.includes(column);
           const visibleIndex = visibleColumns.indexOf(column);
+          const ziehbar = Boolean(moveColumn) && isVisible;
           return (
-            <div key={column} className="flex min-h-8 items-center gap-1 px-1 text-sm">
+            <div
+              key={column}
+              data-column-row={column}
+              draggable={ziehbar}
+              onDragStart={() => setGezogen(column)}
+              onDragEnd={() => {
+                setGezogen(null);
+                setZiel(null);
+              }}
+              onDragOver={(event) => {
+                if (!ziehbar || gezogen === null) return;
+                event.preventDefault();
+                setZiel(column);
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                ablegen(column);
+                setGezogen(null);
+                setZiel(null);
+              }}
+              className={cn(
+                "flex min-h-8 items-center gap-1 rounded px-1 text-sm",
+                ziehbar && "cursor-grab",
+                gezogen === column && "opacity-50",
+                ziel === column && gezogen !== column && "bg-accent",
+              )}
+            >
+              {ziehbar && (
+                <GripVertical
+                  className="size-3.5 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              )}
               <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 truncate">
                 <input type="checkbox" checked={isVisible} onChange={() => toggleColumn(column)} />
                 <span className="truncate">{column}</span>

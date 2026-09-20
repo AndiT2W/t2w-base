@@ -31,9 +31,23 @@ import { createAuditLogWorkspace, type AuditLogEntity } from "@/lib/t2w/audit-lo
 import { createSettingsWorkspace } from "@/lib/t2w/settings-workspace";
 import { createSelectionListManagementWorkspace } from "@/lib/t2w/selection-list-management-workspace";
 import { formatDatumMitZeit } from "@/lib/t2w/format";
-import { DataTable } from "@/components/t2w/DataTable";
+import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
+import type { ApiAuditLog } from "@/lib/t2w/api";
 import { PmCategorySettings } from "@/components/t2w/PmCategorySettings";
 import { UserManagement } from "@/components/t2w/UserManagement";
+
+/** Sortierwerte des Auditlogs. */
+const AUDIT_SPALTEN = [
+  { key: "Zeitpunkt", sortValue: (entry: ApiAuditLog) => entry.createdAt },
+  { key: "Entität", sortValue: (entry: ApiAuditLog) => entry.entity },
+  { key: "Aktion", sortValue: (entry: ApiAuditLog) => entry.action },
+  {
+    key: "Benutzer",
+    sortValue: (entry: ApiAuditLog) => entry.user?.displayName ?? entry.user?.email ?? "System",
+  },
+  { key: "Datensatz", sortValue: (entry: ApiAuditLog) => entry.entityId },
+] as const;
+type AuditSpalte = (typeof AUDIT_SPALTEN)[number]["key"];
 
 export const Route = createFileRoute("/einstellungen")({
   validateSearch: (search) => ({
@@ -134,6 +148,11 @@ function Einstellungen() {
     workspace.snapshot,
   );
   const audit = useSyncExternalStore(auditLog.subscribe, auditLog.snapshot, auditLog.snapshot);
+  const auditTabelle = useTableSort<ApiAuditLog, AuditSpalte>(AUDIT_SPALTEN, {
+    key: "Zeitpunkt",
+    direction: "desc",
+  });
+  const auditZeilen = auditTabelle.rows(audit.visibleEntries);
   const { outlookJahresordner, jahresSites: sites, outlookMailbox: mailbox } = draft;
   const setOutlookJahresordner = (
     next:
@@ -1165,15 +1184,20 @@ function Einstellungen() {
                     <caption className="sr-only">Auditlog-Einträge</caption>
                     <thead className="t2w-table-header text-left">
                       <tr>
-                        <th className="px-3 py-2 font-medium">Zeitpunkt</th>
-                        <th className="px-3 py-2 font-medium">Entität</th>
-                        <th className="px-3 py-2 font-medium">Aktion</th>
-                        <th className="px-3 py-2 font-medium">Benutzer</th>
-                        <th className="px-3 py-2 font-medium">Datensatz</th>
+                        {AUDIT_SPALTEN.map((spalte) => (
+                          <th key={spalte.key} className="px-3 py-2">
+                            <SortHeader
+                              label={spalte.key}
+                              active={auditTabelle.sort.key === spalte.key}
+                              direction={auditTabelle.sort.direction}
+                              onSort={() => auditTabelle.sortBy(spalte.key)}
+                            />
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {audit.visibleEntries.map((entry) => (
+                      {auditZeilen.map((entry) => (
                         <tr key={entry.id}>
                           <td className="whitespace-nowrap px-3 py-2">
                             {formatDatumMitZeit(entry.createdAt)}
