@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar, SidebarShellProvider, useSidebarSchmal } from "@/components/t2w/AppSidebar";
+import { MobileNav } from "@/components/t2w/MobileNav";
 import { AppTopbar } from "@/components/t2w/AppTopbar";
 import { cn } from "@/lib/utils";
 import { T2WProvider, useT2W } from "@/lib/t2w/store";
@@ -152,7 +153,9 @@ function AppLayout({ allowed, organizer }: { allowed: boolean; organizer: boolea
       {/* "overflow-x-clip" statt "-hidden": "hidden" macht die Flaeche auch
           senkrecht zum Scrollbereich, und jeder klebende Tabellenkopf klebte
           dann an ihr statt am Fenster. "clip" beschneidet ohne Scrollbereich. */}
-      <main className="min-w-0 overflow-x-clip px-4 pb-10 sm:px-6 lg:px-7">
+      {/* Unten Platz fuer die Modulleiste des Telefons, damit die letzte
+          Zeile einer Liste nicht dahinter verschwindet. */}
+      <main className="min-w-0 overflow-x-clip px-4 pb-24 sm:px-6 md:pb-10 lg:px-7">
         {allowed ? (
           <Outlet />
         ) : (
@@ -170,6 +173,7 @@ function AppLayout({ allowed, organizer }: { allowed: boolean; organizer: boolea
           </div>
         )}
       </main>
+      <MobileNav />
     </div>
   );
 }

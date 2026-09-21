@@ -17,7 +17,21 @@ type P = {
   transactionReference?: string | null;
   recipient?: { name: string } | null;
 };
-type Props = { eventId: string; recipientId?: string | null; recipientEmail?: string | null };
+export type PayoutKennzahlen = {
+  waehrung: string;
+  offenBetrag: number;
+  offenAnzahl: number;
+  ausbezahltBetrag: number;
+  ausbezahltAnzahl: number;
+  belege: number;
+};
+type Props = {
+  eventId: string;
+  recipientId?: string | null;
+  recipientEmail?: string | null;
+  /** Meldet die Summen nach oben; siehe Kommentar an der Berechnung. */
+  onKennzahlen?: (werte: PayoutKennzahlen) => void;
+};
 
 /** Sortierwerte der Auszahlungsspalten; die Aktionsspalte bleibt ungeordnet. */
 const SPALTEN = [
@@ -52,13 +66,32 @@ function statusClasses(p: P) {
   if (p.mailStatus === "VERSENDEN") return "border-amber-200 bg-amber-50 text-amber-700";
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
-export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
+export function PayoutsPanel({ eventId, recipientId, recipientEmail, onKennzahlen }: Props) {
   const workspace = useMemo(() => createPayoutWorkspace<P>(createHttpPayoutAdapter<P>()), []);
   const { rows: items } = useSyncExternalStore(
     workspace.subscribe,
     workspace.snapshot,
     workspace.snapshot,
   );
+  /*
+   * Die Kennzahlen des Finanzreiters stehen ueber dem Reiterinhalt, die Zahlen
+   * dafuer liegen hier. Statt die Belege ein zweites Mal zu laden, meldet das
+   * Panel seine Summen nach oben.
+   */
+  useEffect(() => {
+    if (!onKennzahlen) return;
+    const offen = items.filter((p) => p.paymentStatus === "OFFEN");
+    const ausbezahlt = items.filter((p) => p.paymentStatus === "AUSBEZAHLT");
+    const summe = (liste: P[]) => liste.reduce((wert, p) => wert + Number(p.amount || 0), 0);
+    onKennzahlen({
+      waehrung: items[0]?.currency ?? "EUR",
+      offenBetrag: summe(offen),
+      offenAnzahl: offen.length,
+      ausbezahltBetrag: summe(ausbezahlt),
+      ausbezahltAnzahl: ausbezahlt.length,
+      belege: items.length,
+    });
+  }, [items, onKennzahlen]);
   const tabelle = useTableSort<P, Spalte>(SPALTEN, { key: "Nummer", direction: "asc" });
   const zeilen = tabelle.rows(items);
   const [amount, setAmount] = useState("");

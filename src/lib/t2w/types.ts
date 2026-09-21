@@ -121,6 +121,8 @@ export type T2WEvent = {
   teilnehmer: number;
   teilnehmerwerte?: Teilnehmerwerte;
   archiviert: boolean;
+  /** Zeitpunkt der letzten Änderung am Eventdatensatz, wie ihn der Dienst führt. */
+  zuletztGeaendertAm?: string;
   notizen: string;
   finanzNotizen?: string;
   kontakteNotizen?: string;

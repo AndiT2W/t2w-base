@@ -78,10 +78,15 @@ export function MetricTile({
     </button>
   );
 
-  if (!detail) return <div className="min-w-0 flex-1">{knopf}</div>;
+  /*
+   * `min-w-[9rem]` statt `min-w-0`: ohne Mindestbreite schrumpfen vier Kacheln
+   * auf dem Telefon nebeneinander, bis die Beschriftung dreizeilig bricht und
+   * die letzte aus dem Bild ragt. Mit ihr bricht die Reihe auf zwei um.
+   */
+  if (!detail) return <div className="min-w-[9rem] flex-1">{knopf}</div>;
 
   return (
-    <div className="group relative min-w-0 flex-1">
+    <div className="group relative min-w-[9rem] flex-1">
       {knopf}
       <div
         role="tooltip"

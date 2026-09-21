@@ -3,6 +3,9 @@ import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable"
 import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
+  FileText,
+  CircleCheck,
+  Receipt,
   ArrowDownLeft,
   ArrowUpRight,
   CheckCircle2,
@@ -92,12 +95,17 @@ import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_ORDER, type Contact, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
-import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
+import { PayoutsPanel, type PayoutKennzahlen } from "@/components/t2w/PayoutsPanel";
 import { FilterResetChip } from "@/components/t2w/FilterChip";
 import { ServiceBadge, SelectionBadge, selectionPresentation } from "@/components/t2w/ServiceBadge";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { Segment, segmentFeld } from "@/components/t2w/Segment";
 import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
+
+/** Betrag mit Waehrung, oesterreichische Schreibweise. */
+const geldbetrag = (wert: number, waehrung: string) =>
+  `${wert.toLocaleString("de-AT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${waehrung}`;
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
   const address = [
@@ -430,6 +438,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     key: "Kontakt",
     direction: "asc",
   });
+  const [finanzzahlen, setFinanzzahlen] = useState<PayoutKennzahlen>({
+    waehrung: "EUR",
+    offenBetrag: 0,
+    offenAnzahl: 0,
+    ausbezahltBetrag: 0,
+    ausbezahltAnzahl: 0,
+    belege: 0,
+  });
   const [quartalsDialog, setQuartalsDialog] = useState(false);
   const [copyDialog, setCopyDialog] = useState(false);
   const [seriesDialog, setSeriesDialog] = useState(false);
@@ -751,6 +767,14 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <>
             <OrganizerLink organizerId={event.veranstalterId} name={event.veranstalter} />
             {` · ${formatZeitraum(event.start, event.ende)} · ${event.eventcode}`}
+            {/* Wer den Datensatz zuletzt angefasst hat, steht im Auditlog --
+                den darf nur ein Admin lesen. Der Zeitpunkt kommt vom Event
+                selbst und gilt damit fuer jedes Konto. */}
+            {event.zuletztGeaendertAm && (
+              <span className="text-muted-foreground">
+                {` · zuletzt geändert ${formatDatumMitZeit(event.zuletztGeaendertAm)}`}
+              </span>
+            )}
           </>
         }
       />
@@ -1461,7 +1485,30 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
         </TabsContent>
 
         {currentUser.financeAccess && (
-          <TabsContent value="finanz">
+          <TabsContent value="finanz" className="space-y-4">
+            {/* Kennzahlen je Reiter, wie auf jeder Liste: was offen ist und was
+                schon geflossen ist, steht oben statt unter zwei Karten. */}
+            <MetricRow>
+              <MetricTile
+                icon={Receipt}
+                label="Auszahlung offen"
+                wert={geldbetrag(finanzzahlen.offenBetrag, finanzzahlen.waehrung)}
+                hinweis={`${finanzzahlen.offenAnzahl} ${finanzzahlen.offenAnzahl === 1 ? "Beleg" : "Belege"}`}
+                {...(finanzzahlen.offenAnzahl > 0 ? { ton: "warn" as const } : {})}
+              />
+              <MetricTile
+                icon={CircleCheck}
+                label="Bereits ausbezahlt"
+                wert={geldbetrag(finanzzahlen.ausbezahltBetrag, finanzzahlen.waehrung)}
+                hinweis={`${finanzzahlen.ausbezahltAnzahl} ${finanzzahlen.ausbezahltAnzahl === 1 ? "Beleg" : "Belege"}`}
+              />
+              <MetricTile
+                icon={FileText}
+                label="Belege gesamt"
+                wert={finanzzahlen.belege}
+                hinweis={detail.payoutRecipient?.name ?? "kein Empfänger gewählt"}
+              />
+            </MetricRow>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Finanz</CardTitle>
@@ -1576,6 +1623,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 </div>
                 <PayoutsPanel
                   eventId={event.id}
+                  onKennzahlen={setFinanzzahlen}
                   recipientId={detail.payoutRecipientId ?? null}
                   {...(detail.payoutRecipient?.email
                     ? { recipientEmail: detail.payoutRecipient.email }
@@ -1938,28 +1986,24 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 placeholder="Betreff, Absender, Adresse oder Text durchsuchen …"
               />
             </div>
-            <div
-              role="group"
-              aria-label="Ansicht wählen"
-              className="flex shrink-0 gap-1 rounded-lg border bg-card p-1"
-            >
+            <Segment label="Ansicht wählen" className="shrink-0">
               {(
                 [
                   ["verlauf", "Verlauf"],
                   ["konversationen", "Konversationen"],
                 ] as const
               ).map(([value, label]) => (
-                <Button
+                <button
                   key={value}
-                  size="sm"
-                  variant={communicationView === value ? "secondary" : "ghost"}
+                  type="button"
                   aria-pressed={communicationView === value}
                   onClick={() => setCommunicationView(value)}
+                  className={segmentFeld(communicationView === value)}
                 >
                   {label}
-                </Button>
+                </button>
               ))}
-            </div>
+            </Segment>
           </div>
 
           <div className="flex flex-wrap items-center gap-2" aria-label="Kommunikation filtern">

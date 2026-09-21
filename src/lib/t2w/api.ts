@@ -38,6 +38,7 @@ type ApiEvent = {
   outlookMessageLastError?: string | null;
   sharepointFolder: string | null;
   archived: boolean;
+  updatedAt?: string;
   organizer?: { id: string; name: string } | null;
   sport?: { id: string; name: string } | null;
   services?: { service: { id: string; name: string } }[];
@@ -116,6 +117,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
       aktuellSynchronisiertAm: null,
     },
     archiviert: event.archived,
+    ...(event.updatedAt ? { zuletztGeaendertAm: event.updatedAt } : {}),
     notizen: event.notes ?? "",
     finanzNotizen: event.financeNotes ?? "",
     kontakteNotizen: event.contactsNotes ?? "",
