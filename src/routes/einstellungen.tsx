@@ -31,7 +31,8 @@ import { createSelectionListManagementWorkspace } from "@/lib/t2w/selection-list
 import { formatDatumMitZeit } from "@/lib/t2w/format";
 import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
 import type { ApiAuditLog } from "@/lib/t2w/api";
-import { PmCategorySettings } from "@/components/t2w/PmCategorySettings";
+import { SelectionListPflege } from "@/components/t2w/SelectionListPflege";
+import type { SelectionListKind } from "@/lib/t2w/selection-list-workspace";
 import { UserManagement } from "@/components/t2w/UserManagement";
 
 /** Sortierwerte des Auditlogs. */
@@ -109,35 +110,17 @@ function Einstellungen() {
     [createSelectionValue, updateSelectionValue, reorderSelectionValues],
   );
   const sports = selectionLists.sports;
-  const [newSport, setNewSport] = useState("");
   const eventRoles = selectionLists.eventRoles;
-  const [newEventRole, setNewEventRole] = useState("");
   const services = selectionLists.services;
-  const [newService, setNewService] = useState("");
   const hardwareObjects = selectionLists.hardwareObjects;
-  const [newHardwareObject, setNewHardwareObject] = useState("");
   const communicationChannels = selectionLists.communicationChannels;
-  const [newCommunicationChannel, setNewCommunicationChannel] = useState("");
   const communicationTopics = selectionLists.communicationTopics;
-  const [newCommunicationTopic, setNewCommunicationTopic] = useState("");
   const [dragged, setDragged] = useState<{
-    kind:
-      | "sports"
-      | "eventRoles"
-      | "services"
-      | "hardwareObjects"
-      | "communicationChannels"
-      | "communicationTopics";
+    kind: SelectionListKind;
     id: string;
   } | null>(null);
   const [presentation, setPresentation] = useState<{
-    kind:
-      | "sports"
-      | "eventRoles"
-      | "services"
-      | "hardwareObjects"
-      | "communicationChannels"
-      | "communicationTopics";
+    kind: SelectionListKind;
     id: string;
   } | null>(null);
   const { draft, connection: outlookStatus } = useSyncExternalStore(
@@ -187,182 +170,59 @@ function Einstellungen() {
     link.click();
     URL.revokeObjectURL(url);
   }
-  async function addSport() {
-    const name = newSport.trim();
-    if (!name) return;
-    try {
-      await createSelectionValue("sports", name);
-      setNewSport("");
-      toast.success("Sportart angelegt.");
-    } catch {
-      toast.error("Sportart konnte nicht angelegt werden.");
-    }
-  }
-  async function saveSport(
-    id: string,
-    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
-  ) {
-    try {
-      await updateSelectionValue("sports", id, patch);
-      toast.success("Sportart gespeichert.");
-    } catch {
-      toast.error("Sportart konnte nicht gespeichert werden.");
-    }
-  }
-  async function addEventRole() {
-    const name = newEventRole.trim();
-    if (!name) return;
-    try {
-      await createSelectionValue("eventRoles", name);
-      setNewEventRole("");
-      toast.success("Eventrolle angelegt.");
-    } catch {
-      toast.error("Eventrolle konnte nicht angelegt werden.");
-    }
-  }
-  async function saveEventRole(
-    id: string,
-    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
-  ) {
-    try {
-      await updateSelectionValue("eventRoles", id, patch);
-      toast.success("Eventrolle gespeichert.");
-    } catch {
-      toast.error("Eventrolle konnte nicht gespeichert werden.");
-    }
-  }
+  const EINZAHL: Record<SelectionListKind, string> = {
+    sports: "Sportart",
+    services: "Service",
+    eventRoles: "Eventrolle",
+    hardwareObjects: "Hardware-Objekt",
+    communicationChannels: "Nachrichtenart",
+    communicationTopics: "Thema",
+    taskCategories: "Aufgabenkategorie",
+  };
+
   async function savePresentation(patch: { icon?: string | null; color?: string | null }) {
     if (!presentation) return;
-    const save =
-      presentation.kind === "sports"
-        ? saveSport
-        : presentation.kind === "eventRoles"
-          ? saveEventRole
-          : presentation.kind === "services"
-            ? saveService
-            : presentation.kind === "communicationChannels"
-              ? saveCommunicationChannel
-              : presentation.kind === "communicationTopics"
-                ? saveCommunicationTopic
-                : saveHardwareObject;
-    await save(presentation.id, patch);
+    await wertSpeichern(presentation.kind, EINZAHL[presentation.kind], presentation.id, patch);
   }
-  async function addService() {
-    const name = newService.trim();
-    if (!name) return;
+  /**
+   * Anlegen und Speichern melden sich beim Bedienenden -- vorher tat das je
+   * Liste eine eigene Funktion mit derselben Meldung in anderer Beugung.
+   * Das Hauptwort kommt jetzt von der Liste, der Rest ist einer.
+   */
+  async function wertAnlegen(kind: SelectionListKind, einzahl: string, name: string) {
     try {
-      await createSelectionValue("services", name);
-      setNewService("");
-      toast.success("Service angelegt.");
+      await createSelectionValue(kind, name);
+      toast.success(`${einzahl} angelegt.`);
     } catch {
-      toast.error("Service konnte nicht angelegt werden.");
+      toast.error(`${einzahl} konnte nicht angelegt werden.`);
     }
   }
-  async function saveService(
+
+  async function wertSpeichern(
+    kind: SelectionListKind,
+    einzahl: string,
     id: string,
     patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
   ) {
     try {
-      await updateSelectionValue("services", id, patch);
-      toast.success("Service gespeichert.");
+      await updateSelectionValue(kind, id, patch);
+      toast.success(`${einzahl} gespeichert.`);
     } catch {
-      toast.error("Service konnte nicht gespeichert werden.");
+      toast.error(`${einzahl} konnte nicht gespeichert werden.`);
     }
   }
-  async function addHardwareObject() {
-    const name = newHardwareObject.trim();
-    if (!name) return;
+
+  /**
+   * Gezogen wird auf den Zielplatz.  Das Umsortieren selbst liegt in der
+   * Domäne — sie kennt die Reihenfolge und schreibt sie zurück; hier bleibt
+   * nur die Rückmeldung an den Bedienenden.
+   */
+  async function reorderNach(kind: SelectionListKind, gezogenId: string, zielId: string) {
     try {
-      await createSelectionValue("hardwareObjects", name);
-      setNewHardwareObject("");
-      toast.success("Hardware-Objekt angelegt.");
+      await management.reorder(kind, gezogenId, zielId);
     } catch {
-      toast.error("Hardware-Objekt konnte nicht angelegt werden.");
-    }
-  }
-  async function saveHardwareObject(
-    id: string,
-    patch: {
-      name?: string;
-      active?: boolean;
-      icon?: string | null;
-      color?: string | null;
-      sortOrder?: number;
-    },
-  ) {
-    try {
-      await updateSelectionValue("hardwareObjects", id, patch);
-      toast.success("Hardware-Objekt gespeichert.");
-    } catch {
-      toast.error("Hardware-Objekt konnte nicht gespeichert werden.");
-    }
-  }
-  async function addCommunicationChannel() {
-    const name = newCommunicationChannel.trim();
-    if (!name) return;
-    try {
-      await createSelectionValue("communicationChannels", name);
-      setNewCommunicationChannel("");
-      toast.success("Nachrichtenart angelegt.");
-    } catch {
-      toast.error("Nachrichtenart konnte nicht angelegt werden.");
-    }
-  }
-  async function saveCommunicationChannel(
-    id: string,
-    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
-  ) {
-    try {
-      await updateSelectionValue("communicationChannels", id, patch);
-      toast.success("Nachrichtenart gespeichert.");
-    } catch {
-      toast.error("Nachrichtenart konnte nicht gespeichert werden.");
-    }
-  }
-  async function addCommunicationTopic() {
-    const name = newCommunicationTopic.trim();
-    if (!name) return;
-    try {
-      await createSelectionValue("communicationTopics", name);
-      setNewCommunicationTopic("");
-      toast.success("Thema angelegt.");
-    } catch {
-      toast.error("Thema konnte nicht angelegt werden.");
-    }
-  }
-  async function saveCommunicationTopic(
-    id: string,
-    patch: { name?: string; active?: boolean; icon?: string | null; color?: string | null },
-  ) {
-    try {
-      await updateSelectionValue("communicationTopics", id, patch);
-      toast.success("Thema gespeichert.");
-    } catch {
-      toast.error("Thema konnte nicht gespeichert werden.");
-    }
-  }
-  async function reorder(
-    kind:
-      | "sports"
-      | "eventRoles"
-      | "services"
-      | "hardwareObjects"
-      | "communicationChannels"
-      | "communicationTopics",
-    id: string,
-  ) {
-    if (!dragged || dragged.kind !== kind || dragged.id === id) return;
-    const values = selectionLists[kind];
-    const from = values.findIndex((value) => value.id === dragged.id);
-    const to = values.findIndex((value) => value.id === id);
-    if (from < 0 || to < 0) return;
-    const result = await management.reorder(kind, dragged.id, id);
-    if (result.kind === "failed") {
       toast.error("Reihenfolge konnte nicht gespeichert werden.");
-      return;
     }
-    setDragged(null);
-    toast.success("Reihenfolge gespeichert.");
   }
 
   async function speichern() {
@@ -529,441 +389,82 @@ function Einstellungen() {
                 </CardContent>
               </Card>
               <div className="space-y-5">
-                {liste === "aufgabenkategorien" && <PmCategorySettings />}
-                {liste === "sportarten" && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Sportarten</CardTitle>
-                      <CardDescription>
-                        Werte für die Sportart-Auswahl beim Anlegen und Bearbeiten eines Events.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neue Sportart"
-                          value={newSport}
-                          onChange={(event) => setNewSport(event.target.value)}
-                          placeholder="Sportart hinzufügen"
-                        />
-                        <Button type="button" onClick={() => void addSport()}>
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                      {sports.map((sport) => (
-                        <div
-                          key={sport.id}
-                          draggable
-                          onDragStart={() => setDragged({ kind: "sports", id: sport.id })}
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={() => void reorder("sports", sport.id)}
-                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
-                        >
-                          <span
-                            aria-label={`Sportartvorschau: ${sport.name}`}
-                            className="flex min-w-0 items-center"
-                          >
-                            <SelectionBadge {...sport} />
-                          </span>
-                          <Input
-                            aria-label={`Sportart ${sport.name}`}
-                            defaultValue={sport.name}
-                            onBlur={(event) => {
-                              const name = event.target.value.trim();
-                              if (name && name !== sport.name) void saveSport(sport.id, { name });
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            aria-label={`Darstellung für Sportart ${sport.name}`}
-                            onClick={() => setPresentation({ kind: "sports", id: sport.id })}
-                          >
-                            <span
-                              className={`size-3 rounded-full border ${selectionPresentation(sport).className}`}
-                              aria-hidden="true"
-                            />{" "}
-                            Darstellung
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={sport.active ? "outline" : "secondary"}
-                            onClick={() => void saveSport(sport.id, { active: !sport.active })}
-                          >
-                            {sport.active ? "Deaktivieren" : "Aktivieren"}
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neue Sportart"
-                          value={newSport}
-                          onChange={(event) => setNewSport(event.target.value)}
-                          placeholder="Sportart hinzufügen"
-                        />
-                        <Button type="button" onClick={() => void addSport()}>
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-                {liste === "themen" && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Themen</CardTitle>
-                      <CardDescription>
-                        Bezug eines Kommunikationseintrags, wenn keine einzelne Person dahintersteht
-                        — etwa eine Sammelmail aus dem Anmeldeportal zum Thema „Teilnehmer“.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neues Thema"
-                          value={newCommunicationTopic}
-                          onChange={(event) => setNewCommunicationTopic(event.target.value)}
-                          placeholder="Thema hinzufügen"
-                        />
-                        <Button type="button" onClick={() => void addCommunicationTopic()}>
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                      {communicationTopics.map((topic) => (
-                        <div
-                          key={topic.id}
-                          draggable
-                          onDragStart={() =>
-                            setDragged({ kind: "communicationTopics", id: topic.id })
-                          }
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={() => void reorder("communicationTopics", topic.id)}
-                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
-                        >
-                          <span
-                            aria-label={`Vorschau Thema: ${topic.name}`}
-                            className="flex min-w-0 items-center"
-                          >
-                            <SelectionBadge
-                              name={topic.name}
-                              icon={topic.icon}
-                              color={topic.color}
-                            />
-                          </span>
-                          <Input
-                            aria-label={`Thema ${topic.name}`}
-                            defaultValue={topic.name}
-                            onBlur={(event) => {
-                              const name = event.target.value.trim();
-                              if (name && name !== topic.name)
-                                void saveCommunicationTopic(topic.id, { name });
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="justify-start"
-                            aria-label={`Darstellung für Thema ${topic.name}`}
-                            onClick={() =>
-                              setPresentation({ kind: "communicationTopics", id: topic.id })
-                            }
-                          >
-                            <span
-                              className={`size-3 rounded-full border ${selectionPresentation(topic).className}`}
-                              aria-hidden="true"
-                            />
-                            Darstellung
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={topic.active ? "outline" : "secondary"}
-                            onClick={() =>
-                              void saveCommunicationTopic(topic.id, { active: !topic.active })
-                            }
-                          >
-                            {topic.active ? "Deaktivieren" : "Aktivieren"}
-                          </Button>
-                        </div>
-                      ))}
-                      <p className="pt-1 text-sm text-muted-foreground">
-                        Ein Eintrag trägt genau ein Thema. Wird ein Thema gelöscht, verlieren die
-                        Einträge nur ihren Bezug — sie bleiben erhalten.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                {liste === "nachrichtenarten" && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Nachrichtenarten</CardTitle>
-                      <CardDescription>
-                        Arten der Kommunikationseinträge samt Symbol. Sie tragen die Symbolspalte
-                        und die Filterleiste im Kommunikationsreiter eines Events.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neue Nachrichtenart"
-                          value={newCommunicationChannel}
-                          onChange={(event) => setNewCommunicationChannel(event.target.value)}
-                          placeholder="Nachrichtenart hinzufügen"
-                        />
-                        <Button type="button" onClick={() => void addCommunicationChannel()}>
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                      {communicationChannels.map((channel) => (
-                        <div
-                          key={channel.id}
-                          draggable
-                          onDragStart={() =>
-                            setDragged({ kind: "communicationChannels", id: channel.id })
-                          }
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={() => void reorder("communicationChannels", channel.id)}
-                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
-                        >
-                          <span
-                            aria-label={`Vorschau Nachrichtenart: ${channel.name}`}
-                            className="flex min-w-0 items-center"
-                          >
-                            <SelectionBadge
-                              name={channel.name}
-                              icon={channel.icon}
-                              color={channel.color}
-                            />
-                          </span>
-                          <Input
-                            aria-label={`Nachrichtenart ${channel.name}`}
-                            defaultValue={channel.name}
-                            onBlur={(event) => {
-                              const name = event.target.value.trim();
-                              if (name && name !== channel.name)
-                                void saveCommunicationChannel(channel.id, { name });
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="justify-start"
-                            aria-label={`Darstellung für Nachrichtenart ${channel.name}`}
-                            onClick={() =>
-                              setPresentation({ kind: "communicationChannels", id: channel.id })
-                            }
-                          >
-                            <span
-                              className={`size-3 rounded-full border ${selectionPresentation(channel).className}`}
-                              aria-hidden="true"
-                            />
-                            Darstellung
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={channel.active ? "outline" : "secondary"}
-                            onClick={() =>
-                              void saveCommunicationChannel(channel.id, { active: !channel.active })
-                            }
-                          >
-                            {channel.active ? "Deaktivieren" : "Aktivieren"}
-                          </Button>
-                        </div>
-                      ))}
-                      <p className="pt-1 text-sm text-muted-foreground">
-                        Eine deaktivierte Art verschwindet aus der Filterleiste, sobald kein Eintrag
-                        mehr an ihr hängt. Bestehende Einträge behalten ihre Art.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                {liste === "services" && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Services</CardTitle>
-                      <CardDescription>
-                        Mehrfach auswählbare Leistungen eines Events.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neuer Service"
-                          value={newService}
-                          onChange={(event) => setNewService(event.target.value)}
-                          placeholder="Service hinzufügen"
-                        />
-                        <Button type="button" onClick={() => void addService()}>
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                      {services.map((service) => (
-                        <div
-                          key={service.id}
-                          draggable
-                          onDragStart={() => setDragged({ kind: "services", id: service.id })}
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={() => void reorder("services", service.id)}
-                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
-                        >
-                          <span
-                            aria-label={`Servicevorschau: ${service.name}`}
-                            className="flex min-w-0 items-center"
-                          >
-                            <ServiceBadge
-                              name={service.name}
-                              icon={service.icon}
-                              color={service.color}
-                            />
-                          </span>
-                          <Input
-                            aria-label={`Service ${service.name}`}
-                            defaultValue={service.name}
-                            onBlur={(event) => {
-                              const name = event.target.value.trim();
-                              if (name && name !== service.name)
-                                void saveService(service.id, { name });
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="justify-start"
-                            aria-label={`Darstellung für Service ${service.name}`}
-                            onClick={() => setPresentation({ kind: "services", id: service.id })}
-                          >
-                            <span
-                              className={`size-3 rounded-full border ${servicePresentation(service).className}`}
-                              aria-hidden="true"
-                            />
-                            Darstellung
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={service.active ? "outline" : "secondary"}
-                            onClick={() =>
-                              void saveService(service.id, { active: !service.active })
-                            }
-                          >
-                            {service.active ? "Deaktivieren" : "Aktivieren"}
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neuer Service"
-                          value={newService}
-                          onChange={(event) => setNewService(event.target.value)}
-                          placeholder="Service hinzufügen"
-                        />
-                        <Button type="button" onClick={() => void addService()}>
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-                {liste === "hardwareobjekte" && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Hardware-Objekte</CardTitle>
-                      <CardDescription>
-                        Verfügbare Geräte und Transponder für Hardware-Ausgaben.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neues Hardware-Objekt"
-                          value={newHardwareObject}
-                          onChange={(event) => setNewHardwareObject(event.target.value)}
-                          placeholder="Hardware-Objekt hinzufügen"
-                        />
-                        <Button
-                          type="button"
-                          aria-label="Hardware-Objekt hinzufügen"
-                          onClick={() => void addHardwareObject()}
-                        >
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                      {hardwareObjects.map((hardwareObject) => (
-                        <div
-                          key={hardwareObject.id}
-                          draggable
-                          onDragStart={() =>
-                            setDragged({ kind: "hardwareObjects", id: hardwareObject.id })
-                          }
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={() => void reorder("hardwareObjects", hardwareObject.id)}
-                          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto] lg:items-center"
-                        >
-                          <span
-                            aria-label={`Hardware-Objektvorschau: ${hardwareObject.name}`}
-                            className="flex min-w-0 items-center"
-                          >
-                            <SelectionBadge {...hardwareObject} />
-                          </span>
-                          <Input
-                            aria-label={`Hardware-Objekt ${hardwareObject.name}`}
-                            defaultValue={hardwareObject.name}
-                            onBlur={(event) => {
-                              const name = event.target.value.trim();
-                              if (name && name !== hardwareObject.name)
-                                void saveHardwareObject(hardwareObject.id, { name });
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            aria-label={`Darstellung für Hardware-Objekt ${hardwareObject.name}`}
-                            onClick={() =>
-                              setPresentation({ kind: "hardwareObjects", id: hardwareObject.id })
-                            }
-                          >
-                            <span
-                              className={`size-3 rounded-full border ${selectionPresentation(hardwareObject).className}`}
-                              aria-hidden="true"
-                            />{" "}
-                            Darstellung
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={hardwareObject.active ? "outline" : "secondary"}
-                            onClick={() =>
-                              void saveHardwareObject(hardwareObject.id, {
-                                active: !hardwareObject.active,
-                              })
-                            }
-                          >
-                            {hardwareObject.active ? "Deaktivieren" : "Aktivieren"}
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neues Hardware-Objekt"
-                          value={newHardwareObject}
-                          onChange={(event) => setNewHardwareObject(event.target.value)}
-                          placeholder="Hardware-Objekt hinzufügen"
-                        />
-                        <Button
-                          type="button"
-                          aria-label="Hardware-Objekt hinzufügen"
-                          onClick={() => void addHardwareObject()}
-                        >
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {(
+                  [
+                    [
+                      "sportarten",
+                      "sports",
+                      "Sportarten",
+                      "Sportart",
+                      "Neue Sportart",
+                      "Werte für die Sportart-Auswahl beim Anlegen und Bearbeiten eines Events.",
+                    ],
+                    [
+                      "services",
+                      "services",
+                      "Services",
+                      "Service",
+                      "Neuer Service",
+                      "Leistungen, die ein Event bucht. Symbol und Farbe tragen die Servicespalte der Eventtabelle.",
+                    ],
+                    [
+                      "eventrollen",
+                      "eventRoles",
+                      "Eventrollen",
+                      "Eventrolle",
+                      "Neue Eventrolle",
+                      "Rollen, in denen Kontakte einem Event zugeordnet werden.",
+                    ],
+                    [
+                      "hardwareobjekte",
+                      "hardwareObjects",
+                      "Hardware-Objekte",
+                      "Hardware-Objekt",
+                      "Neues Hardware-Objekt",
+                      "Objektarten der Hardwareausgabe. Das Symbol steht in der Hardwaretabelle vor der Bezeichnung.",
+                    ],
+                    [
+                      "nachrichtenarten",
+                      "communicationChannels",
+                      "Kommunikation / Nachrichtenarten",
+                      "Nachrichtenart",
+                      "Neue Nachrichtenart",
+                      "Arten der Kommunikationseinträge samt Symbol. Sie tragen die Symbolspalte und die Filterleiste im Kommunikationsreiter.",
+                    ],
+                    [
+                      "themen",
+                      "communicationTopics",
+                      "Kommunikation / Themen",
+                      "Thema",
+                      "Neues Thema",
+                      "Bezug eines Kommunikationseintrags, wenn keine einzelne Person dahintersteht.",
+                    ],
+                    [
+                      "aufgabenkategorien",
+                      "taskCategories",
+                      "Projektmanagement / Aufgaben",
+                      "Aufgabenkategorie",
+                      "Neue Aufgabenkategorie",
+                      "Kategorien, nach denen die Aufgaben eines Events gruppiert werden.",
+                    ],
+                  ] as const
+                ).map(
+                  ([slug, kind, titel, einzahl, neuLabel, beschreibung]) =>
+                    liste === slug && (
+                      <SelectionListPflege
+                        key={slug}
+                        kind={kind}
+                        titel={titel}
+                        einzahl={einzahl}
+                        neuLabel={neuLabel}
+                        beschreibung={beschreibung}
+                        werte={selectionLists[kind]}
+                        anlegen={(name) => wertAnlegen(kind, einzahl, name)}
+                        speichern={(id, patch) => wertSpeichern(kind, einzahl, id, patch)}
+                        sortieren={(gezogenId, zielId) => reorderNach(kind, gezogenId, zielId)}
+                        darstellungOeffnen={(id) => setPresentation({ kind, id })}
+                      />
+                    ),
                 )}
                 <Dialog
                   open={presentationValue !== undefined}
@@ -1039,86 +540,6 @@ function Einstellungen() {
                     )}
                   </DialogContent>
                 </Dialog>
-                {liste === "eventrollen" && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Eventrollen</CardTitle>
-                      <CardDescription>
-                        Vorgegebene Rollen für Eventkontakte, z. B. Anmeldung oder Finanz.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neue Eventrolle"
-                          value={newEventRole}
-                          onChange={(event) => setNewEventRole(event.target.value)}
-                          placeholder="Eventrolle hinzufügen"
-                        />
-                        <Button type="button" onClick={() => void addEventRole()}>
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                      {eventRoles.map((role) => (
-                        <div
-                          key={role.id}
-                          draggable
-                          onDragStart={() => setDragged({ kind: "eventRoles", id: role.id })}
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={() => void reorder("eventRoles", role.id)}
-                          className="grid gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_auto] lg:items-center"
-                        >
-                          <span
-                            aria-label={`Eventrollenvorschau: ${role.name}`}
-                            className="flex min-w-0 items-center"
-                          >
-                            <SelectionBadge {...role} />
-                          </span>
-                          <Input
-                            aria-label={`Eventrolle ${role.name}`}
-                            defaultValue={role.name}
-                            onBlur={(event) => {
-                              const name = event.target.value.trim();
-                              if (name && name !== role.name) void saveEventRole(role.id, { name });
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            aria-label={`Darstellung für Eventrolle ${role.name}`}
-                            onClick={() => setPresentation({ kind: "eventRoles", id: role.id })}
-                          >
-                            <span
-                              className={`size-3 rounded-full border ${selectionPresentation(role).className}`}
-                              aria-hidden="true"
-                            />{" "}
-                            Darstellung
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={role.active ? "outline" : "secondary"}
-                            onClick={() => void saveEventRole(role.id, { active: !role.active })}
-                          >
-                            {role.active ? "Deaktivieren" : "Aktivieren"}
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="flex gap-2 pt-2">
-                        <Input
-                          aria-label="Neue Eventrolle"
-                          value={newEventRole}
-                          onChange={(event) => setNewEventRole(event.target.value)}
-                          placeholder="Eventrolle hinzufügen"
-                        />
-                        <Button type="button" onClick={() => void addEventRole()}>
-                          <Plus className="size-4" />
-                          Hinzufügen
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
               </div>
             </div>
           </TabsContent>

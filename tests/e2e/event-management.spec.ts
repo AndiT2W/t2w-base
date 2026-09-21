@@ -111,7 +111,9 @@ test("zeigt Sportarten, Services und Hardware-Objekte im einheitlichen verschieb
   page,
 }) => {
   await mockApi(page);
-  const rowClass = "lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem_auto]";
+  // Vier Spalten: Vorschau, Name, Darstellung, Aktivschalter. Die frühere
+  // Klasse deklarierte fünf — der fünfte Track blieb immer leer.
+  const rowClass = "lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem]";
 
   for (const [liste, textboxName] of [
     ["sportarten", "Sportart Triathlon"],
