@@ -32,6 +32,7 @@ import { formatDatumMitZeit } from "@/lib/t2w/format";
 import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
 import type { ApiAuditLog } from "@/lib/t2w/api";
 import { SelectionListPflege } from "@/components/t2w/SelectionListPflege";
+import { SymbolBibliothek } from "@/components/t2w/SymbolBibliothek";
 import type { SelectionListKind } from "@/lib/t2w/selection-list-workspace";
 import { UserManagement } from "@/components/t2w/UserManagement";
 
@@ -93,6 +94,7 @@ function Einstellungen() {
     createSelectionValue,
     updateSelectionValue,
     reorderSelectionValues,
+    currentUser,
   } = useT2W();
   const { tab, liste } = Route.useSearch();
   const navigate = useNavigate({ from: "/einstellungen" });
@@ -515,6 +517,16 @@ function Einstellungen() {
                                 );
                               })}
                             </div>
+                          </section>
+                          <section aria-labelledby="service-upload-heading">
+                            <h3 id="service-upload-heading" className="mb-2 text-sm font-medium">
+                              Eigene Symbole
+                            </h3>
+                            <SymbolBibliothek
+                              gewaehlt={presentationValue.icon}
+                              waehlen={(wert) => void savePresentation({ icon: wert })}
+                              darfPflegen={currentUser.role === "ADMIN"}
+                            />
                           </section>
                           <section aria-labelledby="service-color-heading">
                             <h3 id="service-color-heading" className="mb-2 text-sm font-medium">

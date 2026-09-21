@@ -65,8 +65,13 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   ).toBeVisible();
   await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
   await page.getByRole("button", { name: "Darstellung für Service UHF" }).click();
-  // 35 Symbole (ein Satz für alle Listen) + 8 Farben + Schließen.
-  await expect(page.getByRole("dialog").getByRole("button")).toHaveCount(44);
+  // Ein Symbolsatz für alle Listen: 35 Symbole. Gezaehlt wird der feste Satz
+  // selbst; frueher zaehlte die Zahl auch Farben, Schliessen und alles
+  // weitere im Dialog mit und stimmte nicht mehr, sobald etwas dazukam.
+  await expect(
+    page.getByRole("dialog").locator('[aria-labelledby="service-icon-heading"] button'),
+  ).toHaveCount(35);
+  await expect(page.getByRole("dialog").getByText("Eigene Symbole")).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Video" }).click();
   await expect(page.getByText("Service gespeichert.").last()).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Violett" }).click();

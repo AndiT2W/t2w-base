@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { badgeVariants } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { istHochgeladen, symbolkennung, symbolQuelle } from "@/lib/t2w/icons";
 
 type IconKey =
   | "radio"
@@ -199,10 +200,21 @@ export function servicePresentation(service: {
    * neutrale Vorgabewert.
    */
   const fallback = { icon: "panels-top-left" as IconKey, color: "graphit" as ColorKey };
-  const icon = service.icon && service.icon in icons ? (service.icon as IconKey) : fallback.icon;
   const color =
     service.color && service.color in colorClasses ? (service.color as ColorKey) : fallback.color;
-  return { Icon: icons[icon], className: colorClasses[color], icon, color };
+  // Ein hochgeladenes Symbol hat keine Komponente, sondern eine Kennung; es
+  // wird als Bild ausgeliefert. Der Rest der Darstellung -- Farbe, Rahmen,
+  // Form -- bleibt derselbe, damit beide Herkunftsarten gleich aussehen.
+  if (istHochgeladen(service.icon))
+    return {
+      Icon: icons[fallback.icon],
+      className: colorClasses[color],
+      icon: service.icon as string,
+      color,
+      hochgeladen: symbolkennung(service.icon as string),
+    };
+  const icon = service.icon && service.icon in icons ? (service.icon as IconKey) : fallback.icon;
+  return { Icon: icons[icon], className: colorClasses[color], icon, color, hochgeladen: null };
 }
 export const selectionPresentation = servicePresentation;
 export function ServiceBadge({
@@ -233,7 +245,16 @@ export function ServiceBadge({
       data-selection-icon={presentation.icon}
       data-selection-color={presentation.color}
     >
-      <Icon className="size-3.5" aria-hidden="true" />
+      {presentation.hochgeladen ? (
+        <img
+          src={symbolQuelle(presentation.hochgeladen)}
+          alt=""
+          aria-hidden="true"
+          className="size-3.5 shrink-0 object-contain"
+        />
+      ) : (
+        <Icon className="size-3.5" aria-hidden="true" />
+      )}
       <span className="truncate">{name}</span>
     </span>
   );
