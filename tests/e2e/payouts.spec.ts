@@ -50,6 +50,16 @@ test("legt eine Auszahlung im Event-Finanzreiter an und lädt sie nach Reload", 
   await expect(page.getByText("125.50 CHF")).toBeVisible();
   await page.getByRole("button", { name: "Für Mail markieren" }).click();
   await expect(page.getByText("Mail versenden").last()).toBeVisible();
+
+  // "Fuer Mail markieren" stellt den Beleg nur in die Warteschlange; auf
+  // GESENDET setzt ihn der Versandlauf im Dienst (automation.service.ts).
+  // Erst danach laesst sich ausbezahlt markieren -- die Attrappe muss diesen
+  // Schritt also nachstellen, sonst wartet der Test auf eine Schaltflaeche,
+  // die es zu Recht noch nicht gibt.
+  payouts = payouts.map((p) => ({ ...p, mailStatus: "GESENDET" }));
+  await page.reload();
+  await page.getByRole("tab", { name: "Finanz" }).click();
+  await expect(page.getByText("Mail gesendet").last()).toBeVisible();
   await page.getByRole("button", { name: "Als ausgezahlt markieren" }).click();
   await expect(page.getByText("Ausbezahlt").last()).toBeVisible();
   page.on("dialog", (dialog) => dialog.accept());

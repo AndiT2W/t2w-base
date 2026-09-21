@@ -1,5 +1,23 @@
 import { test, expect } from "@playwright/test";
 
+// Ohne Sitzung zeigt die App die Anmeldeseite, und keine der Erwartungen
+// dieser Datei findet ihr Element. Diese Suite mockt ihre Antworten selbst
+// und braucht die Sitzung deshalb auch selbst.
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user-1",
+        email: "admin@time2win.cloud",
+        displayName: "Event Admin",
+        role: "ADMIN",
+        financeAccess: true,
+        organizerId: null,
+      },
+    }),
+  );
+});
+
 test("switches language, preserves event data, and persists the preference", async ({ page }) => {
   await page.route("**/api/v1/settings**", (route) =>
     route.fulfill({
@@ -115,9 +133,12 @@ test("renders every application route in English", async ({ page }) => {
     ["/gantt", "Events"],
     ["/styleguide", "Style guide"],
   ] as const;
+  // Die Sprachwahl bleibt ueber die Routen hinweg erhalten, und ab der
+  // zweiten Runde heisst die Schaltflaeche deshalb "English" statt
+  // "Englisch". Beide Beschriftungen fuehren zum selben Ziel.
   for (const [path, heading] of routes) {
     await page.goto(path);
-    await page.getByRole("button", { name: "Englisch" }).click();
+    await page.getByRole("button", { name: /^(Englisch|English)$/ }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.getByText(heading, { exact: true }).first()).toBeVisible({ timeout: 10000 });
   }

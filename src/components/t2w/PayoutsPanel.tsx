@@ -153,31 +153,36 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail }: Props) {
               </td>
               <td className="px-2 py-1">{p.mailSentAt ? formatDatum(p.mailSentAt) : "—"}</td>
               <td className="px-2 py-1">{p.paidAt ? formatDatum(p.paidAt) : "—"}</td>
+              {/* Die drei Schaltflaechen standen ohne Huelle nebeneinander und
+                  stiessen aneinander; bei schmaler Spalte schoben sie sich
+                  sogar uebereinander. */}
               <td className="px-2 py-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void update(p.id, { mailStatus: "VERSENDEN" })}
-                >
-                  Für Mail markieren
-                </Button>
-                {p.paymentStatus === "OFFEN" && p.mailStatus === "GESENDET" && (
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      void update(p.id, {
-                        paymentStatus: "AUSBEZAHLT",
-                        paidAt: new Date().toISOString(),
-                      })
-                    }
+                    onClick={() => void update(p.id, { mailStatus: "VERSENDEN" })}
                   >
-                    Als ausgezahlt markieren
+                    Für Mail markieren
                   </Button>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => void remove(p.id)}>
-                  Löschen
-                </Button>
+                  {p.paymentStatus === "OFFEN" && p.mailStatus === "GESENDET" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        void update(p.id, {
+                          paymentStatus: "AUSBEZAHLT",
+                          paidAt: new Date().toISOString(),
+                        })
+                      }
+                    >
+                      Als ausgezahlt markieren
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => void remove(p.id)}>
+                    Löschen
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}
@@ -250,8 +255,11 @@ export function PayoutCreateForm({
         <option>CHF</option>
         <option>USD</option>
       </select>
+      {/* Kurz beschriftet, weil das Sheet darueber schon "Auszahlung
+          anlegen" heisst -- zweimal derselbe Name waere fuer die
+          Vorlesesoftware zwei nicht unterscheidbare Schaltflaechen. */}
       <Button size="sm" disabled={!eventId || !amount} onClick={() => void create()}>
-        Auszahlung anlegen
+        Anlegen
       </Button>
     </section>
   );

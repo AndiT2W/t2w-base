@@ -205,8 +205,10 @@ test("hält Tabellenkopf und Suchleiste beim Scrollen sichtbar", async ({ page }
   await page.goto("/");
   const table = page.locator('[data-density="compact"] table').first();
   const tableHeader = table.locator("thead");
+  // Beim Scrollen sichtbar bleibt die Kopfzeile mit der modulübergreifenden
+  // Suche. Der Filter der Liste steht bei der Liste und scrollt mit ihr.
   const pageHeader = page.locator("header.sticky").first();
-  const search = pageHeader.getByLabel("Suche", { exact: true }).first();
+  const search = pageHeader.getByLabel("Global suchen");
 
   await expect(tableHeader).toHaveCSS("position", "sticky");
   await expect(pageHeader).toHaveCSS("position", "sticky");

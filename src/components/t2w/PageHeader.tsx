@@ -43,10 +43,15 @@ export function PageHeader({
     };
   }, []);
 
+  /*
+   * Der Seitenkopf klebt unter der Kopfzeile, nicht an der Fensterkante:
+   * seit die globale Suche oben liegt, teilen sich sonst beide denselben
+   * Platz. Der Tabellenkopf hängt über `--t2w-page-header-bottom` daran.
+   */
   return (
     <header
       ref={headerRef}
-      className="sticky top-14 z-30 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-7 lg:top-0 lg:px-7"
+      className="sticky top-14 z-30 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-7 lg:px-7"
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">

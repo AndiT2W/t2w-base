@@ -59,21 +59,6 @@ const NEBEN_NAV_KEYS = {
   "/styleguide": "nav.styleguide",
 } as const;
 
-const ENGLISH_NAV = {
-  "nav.overview": "Overview",
-  "nav.events": "Events",
-  "nav.tasks": "Tasks",
-  "nav.contacts": "Contacts",
-  "nav.hardware": "Hardware",
-  "nav.payouts": "Auszahlungen",
-  "nav.offers": "Offers",
-  "nav.invoices": "Invoices",
-  "nav.settings": "Settings",
-  "nav.calendar": "Calendar",
-  "nav.variants": "Design variants",
-  "nav.styleguide": "Style guide",
-} as const;
-
 const SidebarUiContext = createContext<{
   offen: boolean;
   setOffen: (v: boolean) => void;

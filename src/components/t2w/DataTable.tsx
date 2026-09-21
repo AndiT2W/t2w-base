@@ -255,8 +255,15 @@ export const DataTable = React.forwardRef<HTMLTableElement, DataTableProps>(
             />
           </div>
         )}
+        {/*
+         * "overflow-y: clip" statt des voreingestellten "auto": ein Kasten mit
+         * "overflow-x: auto" wird sonst auch senkrecht zum Scrollbereich, und
+         * der klebende Tabellenkopf klebt dann an diesem Kasten statt am
+         * Fenster -- er scrollt also mit hinaus. "clip" beschneidet, ohne
+         * einen Scrollbereich zu eroeffnen.
+         */}
         <div
-          className="relative w-full overflow-x-auto rounded-xl border border-border bg-card xl:overflow-visible"
+          className="relative w-full overflow-x-auto overflow-y-clip rounded-xl border border-border bg-card xl:overflow-x-visible xl:overflow-y-visible"
           data-density="compact"
         >
           <table

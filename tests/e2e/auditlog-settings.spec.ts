@@ -1,5 +1,23 @@
 import { expect, test } from "@playwright/test";
 
+// Ohne Sitzung zeigt die App die Anmeldeseite, und keine der Erwartungen
+// dieser Datei findet ihr Element. Diese Suite mockt ihre Antworten selbst
+// und braucht die Sitzung deshalb auch selbst.
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user-1",
+        email: "admin@time2win.cloud",
+        displayName: "Event Admin",
+        role: "ADMIN",
+        financeAccess: true,
+        organizerId: null,
+      },
+    }),
+  );
+});
+
 test("zeigt den Auditlog in den Einstellungen und filtert nach Entität", async ({ page }) => {
   await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: { ok: true } }));
   await page.route("**/api/v1/events**", (route) => route.fulfill({ json: [] }));
@@ -20,10 +38,6 @@ test("zeigt den Auditlog in den Einstellungen und filtert nach Entität", async 
   await page.route("**/api/v1/audit-log**", (route) => route.fulfill({ json: entries }));
 
   await page.goto("/einstellungen?tab=auditlog");
-  if (await page.getByRole("button", { name: "Anmelden" }).isVisible()) {
-    await page.getByLabel("Passwort").fill("test");
-    await page.getByRole("button", { name: "Anmelden" }).click();
-  }
   await expect(
     page.getByText("Unveränderliche Aufzeichnungen über relevante Änderungen im System."),
   ).toBeVisible();

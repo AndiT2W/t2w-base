@@ -71,6 +71,25 @@ export async function mockEventManagementApi(
   additionalEventOverrides: Partial<typeof event>[] = [],
 ) {
   await page.clock.setFixedTime(TESTZEIT);
+  /*
+   * Ohne Sitzung zeigt die App die Anmeldeseite -- und jede Erwartung
+   * greift ins Leere.  Drei Spec-Dateien stellten die Sitzung selbst
+   * bereit, funf andere nicht; deren Tests scheiterten deshalb an
+   * Elementen, die es auf der Anmeldeseite gar nicht gibt.  Sie gehoert
+   * dorthin, wo auch die uebrigen Antworten liegen.
+   */
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user-1",
+        email: "admin@time2win.cloud",
+        displayName: "Event Admin",
+        role: "ADMIN",
+        financeAccess: true,
+        organizerId: null,
+      },
+    }),
+  );
   const requests: { method: string; url: string; body?: string }[] = [];
   let mockedEvent = { ...event, ...eventOverride };
   let relatedEvent = {

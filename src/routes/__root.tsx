@@ -149,7 +149,10 @@ function AppLayout({ allowed, organizer }: { allowed: boolean; organizer: boolea
     <div className={cn("min-h-screen bg-background", schmal ? "lg:pl-16" : "lg:pl-60")}>
       <AppSidebar />
       <AppTopbar />
-      <main className="min-w-0 overflow-x-hidden px-4 pb-10 sm:px-6 lg:px-7">
+      {/* "overflow-x-clip" statt "-hidden": "hidden" macht die Flaeche auch
+          senkrecht zum Scrollbereich, und jeder klebende Tabellenkopf klebte
+          dann an ihr statt am Fenster. "clip" beschneidet ohne Scrollbereich. */}
+      <main className="min-w-0 overflow-x-clip px-4 pb-10 sm:px-6 lg:px-7">
         {allowed ? (
           <Outlet />
         ) : (

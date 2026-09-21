@@ -1,6 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { event } from "./support/event-management-api";
 
+// Ohne Sitzung zeigt die App die Anmeldeseite. Diese Datei mockt ihre
+// Antworten selbst und braucht die Sitzung deshalb auch selbst.
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        id: "user-1",
+        email: "admin@time2win.cloud",
+        displayName: "Event Admin",
+        role: "ADMIN",
+        financeAccess: true,
+        organizerId: null,
+      },
+    }),
+  );
+});
+
 test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ page }) => {
   await page.route("**/api/v1/settings**", (route) =>
     route.fulfill({ json: { outlookJahresordner: [], jahresSites: [] } }),
@@ -79,9 +96,12 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
     .toBe(true);
   await page.getByLabel("Jahr filtern").fill("2026");
   await expect.poll(() => requestsForPayouts.at(-1)?.url()).toContain("year=2026");
+  // Angelegt wird seit der Vereinheitlichung im Sheet, nicht mehr in einem
+  // Formular ueber der Liste.
+  await page.getByRole("button", { name: "Auszahlung anlegen" }).click();
   await page.getByLabel("Event für neue Auszahlung").selectOption("event-1");
   await page.getByLabel("Neuer Auszahlungsbetrag").fill("12,50");
-  await page.getByRole("button", { name: "Auszahlung anlegen" }).click();
+  await page.getByRole("button", { name: "Anlegen", exact: true }).click();
   await expect
     .poll(() => requestsForPayouts.some((request) => request.method() === "POST"))
     .toBe(true);
