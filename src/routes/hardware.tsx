@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, PackageOpen, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Bell, PackageOpen, Search, TriangleAlert, type LucideIcon } from "lucide-react";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { formatDatum } from "@/lib/t2w/format";
@@ -8,9 +8,11 @@ import { useT2W } from "@/lib/t2w/store";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { RecordSheet } from "@/components/t2w/RecordSheet";
+import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
+import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
 import {
   ColumnPicker,
   DataTable,
@@ -334,31 +336,24 @@ function HardwarePage() {
       if (pendingSaves.current === 0) setSavingInline(false);
     });
   };
-  const metrics: { title: string; value: number; Icon: LucideIcon; iconClass: string }[] = [
+  const metrics: { title: string; value: number; Icon: LucideIcon; ton?: "warn" | "krit" }[] = [
     {
       title: "Offen",
       value: active.filter((item) => item.status === "OPEN").length,
       Icon: PackageOpen,
-      iconClass: "text-primary",
     },
     {
       title: "Benachrichtigt",
       value: active.filter((item) => item.status === "NOTIFIED").length,
       Icon: Bell,
-      iconClass: "text-muted-foreground",
     },
     {
       title: "Überfällig",
       value: overdueCount,
       Icon: TriangleAlert,
-      iconClass: overdueCount ? "text-destructive" : "text-muted-foreground",
+      ...(overdueCount ? { ton: "krit" as const } : {}),
     },
-    {
-      title: "Gesamt aktiv",
-      value: active.length,
-      Icon: PackageOpen,
-      iconClass: "text-foreground",
-    },
+    { title: "Gesamt aktiv", value: active.length, Icon: PackageOpen },
   ];
   return (
     <div>
@@ -366,501 +361,511 @@ function HardwarePage() {
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Hardware"
         beschreibung="Eventübergreifende Rückgabeübersicht"
-        suche={{
-          value: q,
-          onChange: setQ,
-          placeholder: "Empfänger, E-Mail, Telefon oder Objektnummer …",
-        }}
         aktion={<Button onClick={() => setNewHardware(true)}>Hardware-Ausgabe anlegen</Button>}
       />
       <div className="space-y-3">
-        <Sheet
+        <RecordSheet
           open={newHardware}
-          onOpenChange={(open) => {
-            setNewHardware(open);
-            if (!open) setSelectedEventId("none");
+          onOpenChange={(offen) => {
+            setNewHardware(offen);
+            if (!offen) setSelectedEventId("none");
           }}
+          titel="Hardware-Ausgabe anlegen"
+          beschreibung="Neue Ausgabe für ein Event erfassen"
+          marke={
+            <span
+              aria-hidden="true"
+              className="grid size-10 shrink-0 place-items-center rounded-[11px] bg-muted"
+            >
+              <PackageOpen className="size-5 text-table-header-foreground" />
+            </span>
+          }
         >
-          <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
-            <SheetHeader>
-              <SheetTitle>Hardware-Ausgabe anlegen</SheetTitle>
-              <SheetDescription>Neue Ausgabe für ein Event erfassen.</SheetDescription>
-            </SheetHeader>
-            <div className="mt-5 space-y-4">
-              <label className="grid gap-1.5 text-sm font-medium">
-                Event (optional)
-                <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                  <SelectTrigger aria-label="Event zuordnen">
-                    <SelectValue placeholder="Event (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Ohne Event (externer Verleih)</SelectItem>
-                    {events.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.name} ({e.eventCode})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </label>
-              <HardwareWorkspace
-                {...(selectedEventId === "none" ? {} : { eventId: selectedEventId })}
-                createOnMount
-                onSaved={() => {
-                  void loadItems();
-                  setNewHardware(false);
-                  setSelectedEventId("none");
-                }}
-                showList={false}
-              />
-            </div>
-          </SheetContent>
-        </Sheet>
-        <section
-          aria-label="Übersicht"
-          className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pb-3"
-        >
-          {metrics.map(({ title, value, Icon, iconClass }) => (
-            <div key={title} className="flex items-center gap-2">
-              <Icon className={`size-4 ${iconClass}`} aria-hidden="true" />
-              <span className="text-xs text-muted-foreground">{title}</span>
-              <span className="text-lg font-semibold tabular-nums">{value}</span>
-            </div>
+          <label className="grid gap-1.5 text-sm font-medium">
+            Event (optional)
+            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+              <SelectTrigger aria-label="Event zuordnen">
+                <SelectValue placeholder="Event (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Ohne Event (externer Verleih)</SelectItem>
+                {events.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.name} ({e.eventCode})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+          <HardwareWorkspace
+            {...(selectedEventId === "none" ? {} : { eventId: selectedEventId })}
+            createOnMount
+            onSaved={() => {
+              void loadItems();
+              setNewHardware(false);
+              setSelectedEventId("none");
+            }}
+            showList={false}
+          />
+        </RecordSheet>
+        <MetricRow>
+          {metrics.map(({ title, value, Icon, ton }) => (
+            <MetricTile
+              key={title}
+              icon={Icon}
+              label={title}
+              wert={value}
+              {...(ton ? { ton } : {})}
+            />
           ))}
-        </section>
-        <Card className="rounded-md border-border shadow-none">
-          <CardHeader className="gap-3 border-b border-border/70 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="font-semibold leading-none tracking-tight">Rückgabevorgänge</h2>
-                <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
-                  {active.length} {active.length === 1 ? "aktiver Vorgang" : "aktive Vorgänge"}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <FilterResetChip count={activeFilterCount} onReset={resetFilters} />
-                {/* Auf Filterhöhe statt in einer eigenen Zeile über der Tabelle. */}
-                <TableToolbar
-                  tableRef={tableRef}
-                  exportName="Hardware"
-                  columnPicker={
-                    <ColumnPicker
-                      columns={HARDWARE_COLUMNS}
-                      visibleColumns={table.visibleColumns}
-                      toggleColumn={table.toggleColumn}
-                      moveColumn={table.moveColumn}
-                    />
-                  }
-                />
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(14rem,1.2fr)_minmax(10rem,.8fr)_minmax(10rem,.8fr)_auto_auto] xl:items-end">
-              <label className="grid gap-1 text-[13px] font-medium">
-                Event
-                <Input
-                  placeholder="Event filtern …"
-                  value={event}
-                  onChange={(e) => setEvent(e.target.value)}
-                  className="h-8"
-                />
-              </label>
-              <label className="grid gap-1 text-[13px] font-medium">
-                Status
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Aktive</SelectItem>
-                    <SelectItem value="OPEN">Offen</SelectItem>
-                    <SelectItem value="MAIL_SEND">Mail senden</SelectItem>
-                    <SelectItem value="NOTIFIED">Benachrichtigt</SelectItem>
-                    <SelectItem value="RETURNED">Retourniert</SelectItem>
-                    <SelectItem value="COMPLETED">Abgeschlossen</SelectItem>
-                  </SelectContent>
-                </Select>
-              </label>
-              <label className="grid gap-1 text-[13px] font-medium">
-                Ausgabeart
-                <Select value={issueType} onValueChange={setIssueType}>
-                  <SelectTrigger className="h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle Ausgabearten</SelectItem>
-                    <SelectItem value="PARTICIPANT">Teilnehmer</SelectItem>
-                    <SelectItem value="RENTAL">Verleih</SelectItem>
-                    <SelectItem value="OTHER">Sonstige</SelectItem>
-                  </SelectContent>
-                </Select>
-              </label>
-              <label className="flex h-8 items-center gap-2 text-[13px] font-medium">
-                <input
-                  type="checkbox"
-                  checked={overdue}
-                  onChange={(e) => setOverdue(e.target.checked)}
-                />{" "}
-                Überfällig
-              </label>
-            </div>
-          </CardHeader>
-          <CardContent className="p-3">
-            {inlineError && (
-              <p
-                className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                role="alert"
-              >
-                {inlineError}
-              </p>
-            )}
-            <div>
-              <DataTable
-                ref={tableRef}
+        </MetricRow>
+        <FilterBar
+          werkzeuge={
+            <>
+              <FilterResetChip count={activeFilterCount} onReset={resetFilters} />
+              <TableToolbar
+                tableRef={tableRef}
                 exportName="Hardware"
-                tools="extern"
-                className="min-w-[1100px]"
+                columnPicker={
+                  <ColumnPicker
+                    columns={HARDWARE_COLUMNS}
+                    visibleColumns={table.visibleColumns}
+                    toggleColumn={table.toggleColumn}
+                    moveColumn={table.moveColumn}
+                  />
+                }
+              />
+            </>
+          }
+        >
+          {/* Die Seitensuche steht bei ihrer Liste; im Seitenkopf liegt die
+              Suche über alle Module. */}
+          <label className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Suche"
+              placeholder="Empfänger, E-Mail, Telefon oder Objektnummer …"
+              className="h-11 w-72 rounded-full pl-8 sm:h-8"
+            />
+          </label>
+
+          <FilterTrenner />
+
+          <Input
+            placeholder="Event filtern …"
+            aria-label="Event filtern"
+            value={event}
+            onChange={(e) => setEvent(e.target.value)}
+            className="h-11 w-44 rounded-full sm:h-8"
+          />
+          <label className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input bg-card px-3 text-sm text-muted-foreground md:min-h-8">
+            Status
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger
+                aria-label="Status filtern"
+                className="h-7 border-0 bg-transparent px-1 shadow-none"
               >
-                <caption className="sr-only">Aktive Hardware-Rückgabevorgänge</caption>
-                <thead>
-                  <tr className="h-[30px] border-b text-left">
-                    {table.visibleColumns.map((h) => (
-                      <th className="px-2 py-1.5" key={h}>
-                        <SortHeader
-                          label={h}
-                          active={table.sort.key === h}
-                          direction={table.sort.direction}
-                          onSort={() => table.sortBy(h)}
-                        />
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((i) => (
-                    <tr
-                      key={i.id}
-                      data-inline-editing={inlineEditingId === i.id ? "true" : undefined}
-                      aria-busy={savingInline && inlineEditingId === i.id}
-                      className="h-[34px] cursor-pointer border-b transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[inline-editing=true]:bg-accent/50"
-                      tabIndex={0}
-                      onClick={() => inlineEditingId !== i.id && beginInlineEdit(i)}
-                      onKeyDown={(event) => {
-                        if (inlineEditingId === i.id && event.key === "Escape") {
-                          setInlineEditingId(null);
-                          setInlineDraft(null);
-                          return;
-                        }
-                        if (
-                          inlineEditingId !== i.id &&
-                          (event.key === "Enter" || event.key === " ")
-                        ) {
-                          event.preventDefault();
-                          beginInlineEdit(i);
-                        }
-                      }}
-                    >
-                      {table.visibleColumns.map((h) => {
-                        const editing = inlineEditingId === i.id && inlineDraft;
-                        if (editing && h === "Event")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Select
-                                value={inlineDraft.eventId}
-                                onValueChange={(eventId) => {
-                                  setInlineDraft({ ...inlineDraft, eventId });
-                                  void saveInlineEdit(i, {
-                                    eventId: eventId === "none" ? null : eventId,
-                                  });
-                                }}
-                              >
-                                <SelectTrigger
-                                  aria-label="Event bearbeiten"
-                                  className="h-8 min-w-44"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">Kein Event zugeordnet</SelectItem>
-                                  {events.map((event) => (
-                                    <SelectItem key={event.id} value={event.id}>
-                                      {event.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
-                          );
-                        if (editing && h === "Empfänger")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Input
-                                aria-label="Empfänger bearbeiten"
-                                className="h-8 min-w-36"
-                                value={inlineDraft.recipientName}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) =>
-                                  setInlineDraft({ ...inlineDraft, recipientName: e.target.value })
-                                }
-                                onBlur={() =>
-                                  void saveInlineEdit(i, {
-                                    recipientName: inlineDraft.recipientName,
-                                  })
-                                }
-                              />
-                            </td>
-                          );
-                        if (editing && h === "E-Mail")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Input
-                                aria-label="E-Mail bearbeiten"
-                                aria-describedby={
-                                  inlineEmailError ? "hardware-email-error" : undefined
-                                }
-                                aria-invalid={inlineEmailError ? "true" : undefined}
-                                className="h-8 min-w-48"
-                                type="email"
-                                value={inlineDraft.email ?? ""}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) => {
-                                  setInlineEmailError(null);
-                                  setInlineDraft({ ...inlineDraft, email: e.target.value });
-                                }}
-                                onBlur={() => {
-                                  const email = inlineDraft.email?.trim() ?? "";
-                                  if (!validEmail(email)) {
-                                    setInlineEmailError(
-                                      "Bitte eine gültige E-Mail-Adresse angeben.",
-                                    );
-                                    return;
-                                  }
-                                  setInlineEmailError(null);
-                                  void saveInlineEdit(i, { email: email || null });
-                                }}
-                              />
-                              {inlineEmailError && (
-                                <p
-                                  id="hardware-email-error"
-                                  className="mt-1 text-xs text-destructive"
-                                  role="alert"
-                                >
-                                  {inlineEmailError}
-                                </p>
-                              )}
-                            </td>
-                          );
-                        if (editing && h === "Telefon")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Input
-                                aria-label="Telefon bearbeiten"
-                                className="h-8 min-w-36"
-                                type="tel"
-                                value={inlineDraft.phone ?? ""}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) =>
-                                  setInlineDraft({ ...inlineDraft, phone: e.target.value })
-                                }
-                                onBlur={() =>
-                                  void saveInlineEdit(i, { phone: inlineDraft.phone ?? null })
-                                }
-                              />
-                            </td>
-                          );
-                        if (editing && h === "Art")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Select
-                                value={inlineDraft.issueType}
-                                onValueChange={(issueType) => {
-                                  setInlineDraft({ ...inlineDraft, issueType });
-                                  void saveInlineEdit(i, { issueType });
-                                }}
-                              >
-                                <SelectTrigger
-                                  aria-label="Art bearbeiten"
-                                  className="h-8 min-w-32"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(labels)
-                                    .slice(5)
-                                    .map(([value, label]) => (
-                                      <SelectItem key={value} value={value}>
-                                        {label}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
-                          );
-                        if (editing && h === "Objekt")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Select
-                                value={inlineDraft.objectName}
-                                onValueChange={(objectName) => {
-                                  setInlineDraft({ ...inlineDraft, objectName });
-                                  void saveInlineEdit(i, { objectName });
-                                }}
-                              >
-                                <SelectTrigger
-                                  aria-label="Objekt bearbeiten"
-                                  className="h-8 min-w-56"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {!hardwareObjectNames.includes(inlineDraft.objectName) && (
-                                    <SelectItem value={inlineDraft.objectName}>
-                                      {inlineDraft.objectName}
-                                    </SelectItem>
-                                  )}
-                                  {hardwareObjectNames.map((objectName) => (
-                                    <SelectItem key={objectName} value={objectName}>
-                                      {objectName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
-                          );
-                        if (editing && h === "Nummer")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Input
-                                aria-label="Nummer bearbeiten"
-                                className="h-8 min-w-32"
-                                value={inlineDraft.objectNumber}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) =>
-                                  setInlineDraft({ ...inlineDraft, objectNumber: e.target.value })
-                                }
-                                onBlur={(event) =>
-                                  void saveInlineEdit(
-                                    i,
-                                    objectNumberChanges(event.currentTarget.value),
-                                  )
-                                }
-                              />
-                            </td>
-                          );
-                        if (editing && h === "Anzahl")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Input
-                                aria-label="Anzahl bearbeiten"
-                                className="h-8 w-20"
-                                type="number"
-                                min="1"
-                                value={inlineDraft.quantity}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) =>
-                                  setInlineDraft({
-                                    ...inlineDraft,
-                                    quantity: Number(e.target.value),
-                                  })
-                                }
-                                onBlur={() =>
-                                  void saveInlineEdit(i, { quantity: inlineDraft.quantity })
-                                }
-                              />
-                            </td>
-                          );
-                        if (editing && h === "Status")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Select
-                                value={inlineDraft.status}
-                                onValueChange={(status) => {
-                                  setInlineDraft({ ...inlineDraft, status });
-                                  void saveInlineEdit(i, { status });
-                                }}
-                              >
-                                <SelectTrigger
-                                  aria-label="Status bearbeiten"
-                                  className="h-8 min-w-32"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(labels)
-                                    .slice(0, 5)
-                                    .map(([value, label]) => (
-                                      <SelectItem key={value} value={value}>
-                                        {label}
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
-                          );
-                        if (editing && h === "Fälligkeit")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Input
-                                aria-label="Fälligkeit bearbeiten"
-                                className="h-8 min-w-32"
-                                type="date"
-                                value={inlineDraft.dueDate ?? ""}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) =>
-                                  setInlineDraft({
-                                    ...inlineDraft,
-                                    dueDate: e.target.value || undefined,
-                                  })
-                                }
-                                onBlur={() =>
-                                  void saveInlineEdit(i, { dueDate: inlineDraft.dueDate ?? null })
-                                }
-                              />
-                            </td>
-                          );
-                        if (editing && h === "Kommentar")
-                          return (
-                            <td className="px-2 py-1" key={h}>
-                              <Input
-                                aria-label="Kommentar bearbeiten"
-                                className="h-8 min-w-56"
-                                value={inlineDraft.note ?? ""}
-                                onClick={(e) => e.stopPropagation()}
-                                onChange={(e) =>
-                                  setInlineDraft({ ...inlineDraft, note: e.target.value })
-                                }
-                                onBlur={() =>
-                                  void saveInlineEdit(i, { note: inlineDraft.note ?? null })
-                                }
-                              />
-                            </td>
-                          );
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Aktive</SelectItem>
+                <SelectItem value="OPEN">Offen</SelectItem>
+                <SelectItem value="MAIL_SEND">Mail senden</SelectItem>
+                <SelectItem value="NOTIFIED">Benachrichtigt</SelectItem>
+                <SelectItem value="RETURNED">Retourniert</SelectItem>
+                <SelectItem value="COMPLETED">Abgeschlossen</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
+          <label className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input bg-card px-3 text-sm text-muted-foreground md:min-h-8">
+            Ausgabeart
+            <Select value={issueType} onValueChange={setIssueType}>
+              <SelectTrigger
+                aria-label="Ausgabeart filtern"
+                className="h-7 border-0 bg-transparent px-1 shadow-none"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Ausgabearten</SelectItem>
+                <SelectItem value="PARTICIPANT">Teilnehmer</SelectItem>
+                <SelectItem value="RENTAL">Verleih</SelectItem>
+                <SelectItem value="OTHER">Sonstige</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
+          <label className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input bg-card px-3 text-sm text-muted-foreground md:min-h-8">
+            <input
+              type="checkbox"
+              checked={overdue}
+              onChange={(e) => setOverdue(e.target.checked)}
+            />
+            Überfällig
+          </label>
+        </FilterBar>
+
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          <span className="font-semibold text-foreground">Rückgabevorgänge</span> · {active.length}{" "}
+          {active.length === 1 ? "aktiver Vorgang" : "aktive Vorgänge"}
+        </p>
+
+        <div>
+          {inlineError && (
+            <p
+              className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              role="alert"
+            >
+              {inlineError}
+            </p>
+          )}
+          <div>
+            <DataTable
+              ref={tableRef}
+              exportName="Hardware"
+              tools="extern"
+              className="min-w-[1100px]"
+            >
+              <caption className="sr-only">Aktive Hardware-Rückgabevorgänge</caption>
+              <thead>
+                <tr className="h-[30px] border-b text-left">
+                  {table.visibleColumns.map((h) => (
+                    <th className="px-2 py-1.5" key={h}>
+                      <SortHeader
+                        label={h}
+                        active={table.sort.key === h}
+                        direction={table.sort.direction}
+                        onSort={() => table.sortBy(h)}
+                      />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((i) => (
+                  <tr
+                    key={i.id}
+                    data-inline-editing={inlineEditingId === i.id ? "true" : undefined}
+                    aria-busy={savingInline && inlineEditingId === i.id}
+                    className="h-[34px] cursor-pointer border-b transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[inline-editing=true]:bg-accent/50"
+                    tabIndex={0}
+                    onClick={() => inlineEditingId !== i.id && beginInlineEdit(i)}
+                    onKeyDown={(event) => {
+                      if (inlineEditingId === i.id && event.key === "Escape") {
+                        setInlineEditingId(null);
+                        setInlineDraft(null);
+                        return;
+                      }
+                      if (
+                        inlineEditingId !== i.id &&
+                        (event.key === "Enter" || event.key === " ")
+                      ) {
+                        event.preventDefault();
+                        beginInlineEdit(i);
+                      }
+                    }}
+                  >
+                    {table.visibleColumns.map((h) => {
+                      const editing = inlineEditingId === i.id && inlineDraft;
+                      if (editing && h === "Event")
                         return (
                           <td className="px-2 py-1" key={h}>
-                            {cell(i, h, today)}
+                            <Select
+                              value={inlineDraft.eventId}
+                              onValueChange={(eventId) => {
+                                setInlineDraft({ ...inlineDraft, eventId });
+                                void saveInlineEdit(i, {
+                                  eventId: eventId === "none" ? null : eventId,
+                                });
+                              }}
+                            >
+                              <SelectTrigger
+                                aria-label="Event bearbeiten"
+                                className="h-8 min-w-44"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Kein Event zugeordnet</SelectItem>
+                                {events.map((event) => (
+                                  <SelectItem key={event.id} value={event.id}>
+                                    {event.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </td>
                         );
-                      })}
-                    </tr>
-                  ))}
-                  {!rows.length && (
-                    <tr>
-                      <td
-                        colSpan={table.visibleColumns.length}
-                        className="px-4 py-12 text-center text-muted-foreground"
-                      >
-                        Keine Hardware-Vorgänge entsprechen den aktuellen Filtern.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </DataTable>
-            </div>
-          </CardContent>
-        </Card>
+                      if (editing && h === "Empfänger")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Input
+                              aria-label="Empfänger bearbeiten"
+                              className="h-8 min-w-36"
+                              value={inlineDraft.recipientName}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                setInlineDraft({ ...inlineDraft, recipientName: e.target.value })
+                              }
+                              onBlur={() =>
+                                void saveInlineEdit(i, {
+                                  recipientName: inlineDraft.recipientName,
+                                })
+                              }
+                            />
+                          </td>
+                        );
+                      if (editing && h === "E-Mail")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Input
+                              aria-label="E-Mail bearbeiten"
+                              aria-describedby={
+                                inlineEmailError ? "hardware-email-error" : undefined
+                              }
+                              aria-invalid={inlineEmailError ? "true" : undefined}
+                              className="h-8 min-w-48"
+                              type="email"
+                              value={inlineDraft.email ?? ""}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                setInlineEmailError(null);
+                                setInlineDraft({ ...inlineDraft, email: e.target.value });
+                              }}
+                              onBlur={() => {
+                                const email = inlineDraft.email?.trim() ?? "";
+                                if (!validEmail(email)) {
+                                  setInlineEmailError("Bitte eine gültige E-Mail-Adresse angeben.");
+                                  return;
+                                }
+                                setInlineEmailError(null);
+                                void saveInlineEdit(i, { email: email || null });
+                              }}
+                            />
+                            {inlineEmailError && (
+                              <p
+                                id="hardware-email-error"
+                                className="mt-1 text-xs text-destructive"
+                                role="alert"
+                              >
+                                {inlineEmailError}
+                              </p>
+                            )}
+                          </td>
+                        );
+                      if (editing && h === "Telefon")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Input
+                              aria-label="Telefon bearbeiten"
+                              className="h-8 min-w-36"
+                              type="tel"
+                              value={inlineDraft.phone ?? ""}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                setInlineDraft({ ...inlineDraft, phone: e.target.value })
+                              }
+                              onBlur={() =>
+                                void saveInlineEdit(i, { phone: inlineDraft.phone ?? null })
+                              }
+                            />
+                          </td>
+                        );
+                      if (editing && h === "Art")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Select
+                              value={inlineDraft.issueType}
+                              onValueChange={(issueType) => {
+                                setInlineDraft({ ...inlineDraft, issueType });
+                                void saveInlineEdit(i, { issueType });
+                              }}
+                            >
+                              <SelectTrigger
+                                aria-label="Art bearbeiten"
+                                className="h-8 min-w-32"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(labels)
+                                  .slice(5)
+                                  .map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        );
+                      if (editing && h === "Objekt")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Select
+                              value={inlineDraft.objectName}
+                              onValueChange={(objectName) => {
+                                setInlineDraft({ ...inlineDraft, objectName });
+                                void saveInlineEdit(i, { objectName });
+                              }}
+                            >
+                              <SelectTrigger
+                                aria-label="Objekt bearbeiten"
+                                className="h-8 min-w-56"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {!hardwareObjectNames.includes(inlineDraft.objectName) && (
+                                  <SelectItem value={inlineDraft.objectName}>
+                                    {inlineDraft.objectName}
+                                  </SelectItem>
+                                )}
+                                {hardwareObjectNames.map((objectName) => (
+                                  <SelectItem key={objectName} value={objectName}>
+                                    {objectName}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        );
+                      if (editing && h === "Nummer")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Input
+                              aria-label="Nummer bearbeiten"
+                              className="h-8 min-w-32"
+                              value={inlineDraft.objectNumber}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                setInlineDraft({ ...inlineDraft, objectNumber: e.target.value })
+                              }
+                              onBlur={(event) =>
+                                void saveInlineEdit(
+                                  i,
+                                  objectNumberChanges(event.currentTarget.value),
+                                )
+                              }
+                            />
+                          </td>
+                        );
+                      if (editing && h === "Anzahl")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Input
+                              aria-label="Anzahl bearbeiten"
+                              className="h-8 w-20"
+                              type="number"
+                              min="1"
+                              value={inlineDraft.quantity}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                setInlineDraft({
+                                  ...inlineDraft,
+                                  quantity: Number(e.target.value),
+                                })
+                              }
+                              onBlur={() =>
+                                void saveInlineEdit(i, { quantity: inlineDraft.quantity })
+                              }
+                            />
+                          </td>
+                        );
+                      if (editing && h === "Status")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Select
+                              value={inlineDraft.status}
+                              onValueChange={(status) => {
+                                setInlineDraft({ ...inlineDraft, status });
+                                void saveInlineEdit(i, { status });
+                              }}
+                            >
+                              <SelectTrigger
+                                aria-label="Status bearbeiten"
+                                className="h-8 min-w-32"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(labels)
+                                  .slice(0, 5)
+                                  .map(([value, label]) => (
+                                    <SelectItem key={value} value={value}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        );
+                      if (editing && h === "Fälligkeit")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Input
+                              aria-label="Fälligkeit bearbeiten"
+                              className="h-8 min-w-32"
+                              type="date"
+                              value={inlineDraft.dueDate ?? ""}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                setInlineDraft({
+                                  ...inlineDraft,
+                                  dueDate: e.target.value || undefined,
+                                })
+                              }
+                              onBlur={() =>
+                                void saveInlineEdit(i, { dueDate: inlineDraft.dueDate ?? null })
+                              }
+                            />
+                          </td>
+                        );
+                      if (editing && h === "Kommentar")
+                        return (
+                          <td className="px-2 py-1" key={h}>
+                            <Input
+                              aria-label="Kommentar bearbeiten"
+                              className="h-8 min-w-56"
+                              value={inlineDraft.note ?? ""}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                setInlineDraft({ ...inlineDraft, note: e.target.value })
+                              }
+                              onBlur={() =>
+                                void saveInlineEdit(i, { note: inlineDraft.note ?? null })
+                              }
+                            />
+                          </td>
+                        );
+                      return (
+                        <td className="px-2 py-1" key={h}>
+                          {cell(i, h, today)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                {!rows.length && (
+                  <tr>
+                    <td
+                      colSpan={table.visibleColumns.length}
+                      className="px-4 py-12 text-center text-muted-foreground"
+                    >
+                      Keine Hardware-Vorgänge entsprechen den aktuellen Filtern.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </DataTable>
+          </div>
+        </div>
       </div>
     </div>
   );
