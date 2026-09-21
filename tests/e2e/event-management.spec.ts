@@ -23,35 +23,41 @@ test("pflegt Sportarten in den Auswahllisten der Einstellungen", async ({ page }
   await page.goto("/einstellungen?tab=auswahllisten&liste=sportarten");
   await expect(page.getByRole("link", { name: "Auswahllisten", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Sportarten", exact: true })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Sportart Triathlon" })).toBeVisible();
   await expect(page.getByLabel("Sportartvorschau: Triathlon")).toContainText("Triathlon");
-  await page.getByRole("button", { name: "Darstellung für Sportart Triathlon" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "Radfahren" }).click();
+
+  // Eine Zeile anklicken öffnet den Wert rechts; Name, Symbol, Farbe und
+  // Sichtbarkeit stehen dort zusammen statt in Zeile, Dialog und drittem Knopf.
+  await page.getByRole("button", { name: "Sportart Triathlon bearbeiten" }).click();
+  const sheet = page.getByRole("dialog");
+  await expect(sheet.getByRole("textbox", { name: "Sportart Triathlon" })).toBeVisible();
+  await sheet.getByRole("button", { name: "Radfahren" }).click();
   await expect(page.getByText("Sportart gespeichert.").last()).toBeVisible();
+  await sheet.getByRole("button", { name: "Deaktivieren" }).click();
+  await expect(sheet.getByRole("button", { name: "Aktivieren" })).toBeVisible();
   await page.keyboard.press("Escape");
+
   await page.getByLabel("Neue Sportart").first().fill("Radfahren");
   await page.getByRole("button", { name: "Hinzufügen" }).first().click();
   await expect(page.getByText("Sportart angelegt.")).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Sportart Radfahren" })).toBeVisible();
-  await page.getByRole("button", { name: "Deaktivieren" }).first().click();
-  await expect(page.getByRole("button", { name: "Aktivieren" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sportart Radfahren bearbeiten" })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("textbox", { name: "Sportart Radfahren" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sportart Radfahren bearbeiten" })).toBeVisible();
 });
 
 test("pflegt Hardware-Objekte als persistente Auswahlliste", async ({ page }) => {
   await mockApi(page);
   await page.goto("/einstellungen?tab=auswahllisten&liste=hardwareobjekte");
   await expect(page.getByRole("tab", { name: "Hardware-Objekte" })).toBeVisible();
-  await expect(
-    page.getByRole("textbox", { name: "Hardware-Objekt Active Transponder (T2W)" }),
-  ).toBeVisible();
+  const vorhanden = page.getByRole("button", {
+    name: "Hardware-Objekt Active Transponder (T2W) bearbeiten",
+  });
+  await expect(vorhanden).toBeVisible();
   await page.getByLabel("Neues Hardware-Objekt").first().fill("Decoder");
   await page.getByRole("button", { name: "Hardware-Objekt hinzufügen" }).first().click();
-  await expect(page.getByRole("textbox", { name: "Hardware-Objekt Decoder" })).toBeVisible();
+  const neuerWert = page.getByRole("button", { name: "Hardware-Objekt Decoder bearbeiten" });
+  await expect(neuerWert).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("textbox", { name: "Hardware-Objekt Decoder" })).toBeVisible();
+  await expect(neuerWert).toBeVisible();
 });
 
 test("pflegt Services in den Auswahllisten und speichert mehrere Services beim Event", async ({
@@ -59,12 +65,12 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
 }) => {
   const requests = await mockApi(page);
   await page.goto("/einstellungen?tab=auswahllisten&liste=services");
-  await expect(page.getByRole("textbox", { name: "Service UHF", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Service UHF bearbeiten" })).toBeVisible();
   await expect(
-    page.getByRole("textbox", { name: "Service Video (iRewind)", exact: true }),
+    page.getByRole("button", { name: "Service Video (iRewind) bearbeiten" }),
   ).toBeVisible();
   await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
-  await page.getByRole("button", { name: "Darstellung für Service UHF" }).click();
+  await page.getByRole("button", { name: "Service UHF bearbeiten" }).click();
   // Ein Symbolsatz für alle Listen: 35 Symbole. Gezaehlt wird der feste Satz
   // selbst; frueher zaehlte die Zahl auch Farben, Schliessen und alles
   // weitere im Dialog mit und stimmte nicht mehr, sobald etwas dazukam.
@@ -80,15 +86,16 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   await page.reload();
   await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
   const uhfName = await page
-    .getByRole("textbox", { name: "Service UHF", exact: true })
+    .getByRole("button", { name: "Service UHF bearbeiten", exact: true })
     .boundingBox();
   const videoName = await page
-    .getByRole("textbox", { name: "Service Video (iRewind)", exact: true })
+    .getByRole("button", { name: "Service Video (iRewind) bearbeiten", exact: true })
     .boundingBox();
+  // Alle Zeilen beginnen an derselben Kante, egal wie lang der Name ist.
   expect(uhfName?.x).toBe(videoName?.x);
   await page.getByLabel("Neuer Service").first().fill("Drohne");
   await page.getByRole("button", { name: "Hinzufügen" }).nth(1).click();
-  await expect(page.getByRole("textbox", { name: "Service Drohne", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Service Drohne bearbeiten" })).toBeVisible();
 
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Services auswählen" }).click();
@@ -116,45 +123,39 @@ test("zeigt Sportarten, Services und Hardware-Objekte im einheitlichen verschieb
   page,
 }) => {
   await mockApi(page);
-  // Vier Spalten: Vorschau, Name, Darstellung, Aktivschalter. Die frühere
-  // Klasse deklarierte fünf — der fünfte Track blieb immer leer.
-  const rowClass = "lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem]";
-
-  for (const [liste, textboxName] of [
-    ["sportarten", "Sportart Triathlon"],
-    ["services", "Service UHF"],
-    ["hardwareobjekte", "Hardware-Objekt Active Transponder (T2W)"],
+  // Alle sieben Listen tragen dieselbe Zeile: ziehbar, mit Vorschau und dem
+  // Klick, der den Wert rechts öffnet.
+  for (const [liste, zeilenName] of [
+    ["sportarten", "Sportart Triathlon bearbeiten"],
+    ["services", "Service UHF bearbeiten"],
+    ["hardwareobjekte", "Hardware-Objekt Active Transponder (T2W) bearbeiten"],
   ] as const) {
     await page.goto(`/einstellungen?tab=auswahllisten&liste=${liste}`);
-    const row = page.locator('[draggable="true"]').filter({
-      has: page.getByRole("textbox", { name: textboxName, exact: true }),
+    const zeile = page.locator('[draggable="true"]').filter({
+      has: page.getByRole("button", { name: zeilenName, exact: true }),
     });
-    await expect(row).toHaveCount(1);
-    await expect.poll(async () => row.getAttribute("class")).toContain(rowClass);
-    await expect(row).toHaveAttribute("draggable", "true");
+    await expect(zeile).toHaveCount(1);
+    await expect(zeile).toHaveAttribute("draggable", "true");
   }
 });
 
 test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page }) => {
   await mockApi(page);
   await page.goto("/einstellungen?tab=auswahllisten&liste=eventrollen");
-  await expect(page.getByRole("textbox", { name: "Eventrolle Anmeldung" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Eventrolle Finanz" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Eventrolle Anmeldung bearbeiten" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Eventrolle Finanz bearbeiten" })).toBeVisible();
   await expect(page.getByLabel("Eventrollenvorschau: Anmeldung")).toContainText("Anmeldung");
-  await page.getByRole("button", { name: "Darstellung für Eventrolle Anmeldung" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("dialog").getByRole("button", { name: "Rot" }).click();
+  await page.getByRole("button", { name: "Eventrolle Anmeldung bearbeiten" }).click();
+  // Farbe und Symbol stehen im selben Sheet; es bleibt für beide Griffe offen.
+  const rollenSheet = page.getByRole("dialog");
+  await rollenSheet.getByRole("button", { name: "Rot" }).click();
   await expect(page.getByText("Eventrolle gespeichert.").last()).toBeVisible();
-  // Der Dialog bleibt nach der Wahl offen; ohne Schliessen liegt seine
-  // Abdeckung ueber der Schaltflaeche, die ihn wieder oeffnen soll.
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Darstellung für Eventrolle Anmeldung" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Euro" }).click();
+  await rollenSheet.getByRole("button", { name: "Euro" }).click();
   await expect(page.getByText("Eventrolle gespeichert.").last()).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByLabel("Neue Eventrolle").fill("Presse");
   await page.getByRole("button", { name: "Hinzufügen" }).last().click();
-  await expect(page.getByRole("textbox", { name: "Eventrolle Presse" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Eventrolle Presse bearbeiten" })).toBeVisible();
   await page.goto("/events/260820_demo_event");
   await page.getByRole("tab", { name: "Kontakte" }).click();
   await page.getByLabel("Eventrolle").click();
@@ -1765,19 +1766,22 @@ test("pflegt Nachrichtenarten als Auswahlliste und zieht sie in die Kommunikatio
   });
 
   await page.goto("/einstellungen?tab=auswahllisten&liste=nachrichtenarten");
-  await expect(page.getByLabel("Nachrichtenart E-Mail", { exact: true })).toHaveValue("E-Mail");
+  await expect(
+    page.getByRole("button", { name: "Nachrichtenart E-Mail bearbeiten" }),
+  ).toBeVisible();
 
   await page.getByLabel("Neue Nachrichtenart").fill("WhatsApp");
   await page.getByRole("button", { name: "Hinzufügen" }).click();
-  await expect(page.getByLabel("Nachrichtenart WhatsApp", { exact: true })).toHaveValue("WhatsApp");
+  await expect(
+    page.getByRole("button", { name: "Nachrichtenart WhatsApp bearbeiten" }),
+  ).toBeVisible();
 
-  // Eine Art ohne Einträge verschwindet nach dem Deaktivieren aus der Filterleiste.
-  await page
-    .locator("div")
-    .filter({ has: page.getByLabel("Nachrichtenart Notiz", { exact: true }) })
-    .last()
-    .getByRole("button", { name: "Deaktivieren" })
-    .click();
+  // Eine Art ohne Einträge verschwindet nach dem Deaktivieren aus der
+  // Filterleiste. Deaktiviert wird im Sheet des Wertes, nicht in der Zeile.
+  await page.getByRole("button", { name: "Nachrichtenart Notiz bearbeiten" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Deaktivieren" }).click();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Aktivieren" })).toBeVisible();
+  await page.keyboard.press("Escape");
 
   await page.goto("/events/260820_demo_event");
   await page.getByRole("tab", { name: "Kommunikation" }).click();

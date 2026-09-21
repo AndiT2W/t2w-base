@@ -32,7 +32,7 @@ test("lädt ein eigenes Symbol hoch und wählt es für einen Service", async ({ 
   );
 
   await page.goto("/einstellungen?tab=auswahllisten&liste=services");
-  await page.getByRole("button", { name: "Darstellung für Service UHF" }).click();
+  await page.getByRole("button", { name: "Service UHF bearbeiten" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Noch keine eigenen Symbole.")).toBeVisible();
 
@@ -67,7 +67,7 @@ test("nennt den Grund, wenn der Dienst ein Symbol ablehnt", async ({ page }) => 
   );
 
   await page.goto("/einstellungen?tab=auswahllisten&liste=services");
-  await page.getByRole("button", { name: "Darstellung für Service UHF" }).click();
+  await page.getByRole("button", { name: "Service UHF bearbeiten" }).click();
   await page
     .getByRole("dialog")
     .getByLabel("Symboldatei auswählen")

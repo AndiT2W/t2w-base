@@ -32,6 +32,7 @@ import { formatDatumMitZeit } from "@/lib/t2w/format";
 import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
 import type { ApiAuditLog } from "@/lib/t2w/api";
 import { SelectionListPflege } from "@/components/t2w/SelectionListPflege";
+import { RecordSheet, SheetGruppe } from "@/components/t2w/RecordSheet";
 import { SymbolBibliothek } from "@/components/t2w/SymbolBibliothek";
 import type { SelectionListKind } from "@/lib/t2w/selection-list-workspace";
 import { UserManagement } from "@/components/t2w/UserManagement";
@@ -85,6 +86,19 @@ export const Route = createFileRoute("/einstellungen")({
   }),
   component: Einstellungen,
 });
+
+/**
+ * Die Beschreibung folgt dem Reiter.  Vorher stand auf jedem "Outlook- und
+ * SharePoint-Ordnerkonventionen zentral verwalten" -- auch über den
+ * Auswahllisten, den Benutzern und dem Auditlog.
+ */
+const REITER_BESCHREIBUNG: Record<string, string> = {
+  allgemein: "Outlook- und SharePoint-Ordnerkonventionen zentral verwalten.",
+  benutzer: "Zugänge einladen, Rollen vergeben und Konten sperren.",
+  auswahllisten: "Die Werte, aus denen Events, Kommunikation und Hardware wählen.",
+  outlook: "Verbindung zum Postfach und Zustand der Synchronisierung.",
+  auditlog: "Unveränderliche Aufzeichnungen über relevante Änderungen im System.",
+};
 
 function Einstellungen() {
   const {
@@ -182,7 +196,13 @@ function Einstellungen() {
     taskCategories: "Aufgabenkategorie",
   };
 
-  async function savePresentation(patch: { icon?: string | null; color?: string | null }) {
+  /** Ein Weg fuer alles am Wert: Name, Symbol, Farbe, Sichtbarkeit. */
+  async function wertPflegen(patch: {
+    name?: string;
+    active?: boolean;
+    icon?: string | null;
+    color?: string | null;
+  }) {
     if (!presentation) return;
     await wertSpeichern(presentation.kind, EINZAHL[presentation.kind], presentation.id, patch);
   }
@@ -241,7 +261,7 @@ function Einstellungen() {
       <PageHeader
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Einstellungen"
-        beschreibung="Outlook- und SharePoint-Ordnerkonventionen zentral verwalten."
+        beschreibung={REITER_BESCHREIBUNG[tab]}
       />
       <div className="space-y-4">
         <Tabs
@@ -470,96 +490,116 @@ function Einstellungen() {
                         beschreibung={beschreibung}
                         werte={selectionLists[kind]}
                         anlegen={(name) => wertAnlegen(kind, einzahl, name)}
-                        speichern={(id, patch) => wertSpeichern(kind, einzahl, id, patch)}
                         sortieren={(gezogenId, zielId) => reorderNach(kind, gezogenId, zielId)}
-                        darstellungOeffnen={(id) => setPresentation({ kind, id })}
+                        oeffnen={(id) => setPresentation({ kind, id })}
                       />
                     ),
                 )}
-                <Dialog
+                <RecordSheet
                   open={presentationValue !== undefined}
-                  onOpenChange={(open) => !open && setPresentation(null)}
+                  onOpenChange={(offen) => !offen && setPresentation(null)}
+                  titel={presentationValue?.name ?? ""}
+                  beschreibung={`${presentation ? EINZAHL[presentation.kind] : ""} bearbeiten: Name, Symbol, Farbe und Sichtbarkeit.`}
+                  marke={
+                    presentationValue ? (
+                      <span aria-hidden="true" className="flex shrink-0 items-center">
+                        <SelectionBadge {...presentationValue} />
+                      </span>
+                    ) : undefined
+                  }
+                  nebenaktion={
+                    presentationValue && presentation ? (
+                      <Button
+                        type="button"
+                        variant={presentationValue.active ? "outline" : "secondary"}
+                        onClick={() => void wertPflegen({ active: !presentationValue.active })}
+                      >
+                        {presentationValue.active ? "Deaktivieren" : "Aktivieren"}
+                      </Button>
+                    ) : undefined
+                  }
                 >
-                  <DialogContent className="max-w-2xl">
-                    {presentationValue && presentation && (
-                      <>
-                        <DialogHeader>
-                          <DialogTitle>Darstellung: {presentationValue.name}</DialogTitle>
-                          <DialogDescription>
-                            Symbol und Farbe direkt visuell auswählen.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-5">
-                          <section aria-labelledby="service-icon-heading">
-                            <h3 id="service-icon-heading" className="mb-2 text-sm font-medium">
-                              Symbol
-                            </h3>
-                            <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
-                              {ICON_OPTIONS.map((option) => {
-                                const Icon = selectionPresentation({
-                                  name: presentationValue.name,
-                                  icon: option.value,
-                                }).Icon;
-                                const selected =
-                                  selectionPresentation(presentationValue).icon === option.value;
-                                return (
-                                  <button
-                                    key={option.value}
-                                    type="button"
-                                    aria-label={option.label}
-                                    aria-pressed={selected}
-                                    title={option.label}
-                                    className={`grid min-h-11 place-items-center rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary bg-primary/10 text-primary" : "border-border"}`}
-                                    onClick={() => void savePresentation({ icon: option.value })}
-                                  >
-                                    <Icon className="size-5" aria-hidden="true" />
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </section>
-                          <section aria-labelledby="service-upload-heading">
-                            <h3 id="service-upload-heading" className="mb-2 text-sm font-medium">
-                              Eigene Symbole
-                            </h3>
-                            <SymbolBibliothek
-                              gewaehlt={presentationValue.icon}
-                              waehlen={(wert) => void savePresentation({ icon: wert })}
-                              darfPflegen={currentUser.role === "ADMIN"}
-                            />
-                          </section>
-                          <section aria-labelledby="service-color-heading">
-                            <h3 id="service-color-heading" className="mb-2 text-sm font-medium">
-                              Farbe
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                              {SERVICE_COLOR_OPTIONS.map((option) => {
-                                const selected =
-                                  selectionPresentation(presentationValue).color === option.value;
-                                return (
-                                  <button
-                                    key={option.value}
-                                    type="button"
-                                    aria-label={option.label}
-                                    aria-pressed={selected}
-                                    title={option.label}
-                                    className={`size-11 rounded-full border-2 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary" : "border-transparent"}`}
-                                    onClick={() => void savePresentation({ color: option.value })}
-                                  >
-                                    <span
-                                      className={`block size-full rounded-full border ${selectionPresentation({ name: presentationValue.name, color: option.value }).className}`}
-                                      aria-hidden="true"
-                                    />
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </section>
+                  {presentationValue && presentation && (
+                    <div className="space-y-5">
+                      <SheetGruppe titel="Name">
+                        <Input
+                          aria-label={`${EINZAHL[presentation.kind]} ${presentationValue.name}`}
+                          defaultValue={presentationValue.name}
+                          key={presentationValue.id}
+                          onBlur={(ereignis) => {
+                            const name = ereignis.target.value.trim();
+                            if (name && name !== presentationValue.name) void wertPflegen({ name });
+                          }}
+                        />
+                      </SheetGruppe>
+                      <section aria-labelledby="service-icon-heading">
+                        <h3 id="service-icon-heading" className="mb-2 text-sm font-medium">
+                          Symbol
+                        </h3>
+                        <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+                          {ICON_OPTIONS.map((option) => {
+                            const Icon = selectionPresentation({
+                              name: presentationValue.name,
+                              icon: option.value,
+                            }).Icon;
+                            const selected =
+                              selectionPresentation(presentationValue).icon === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                aria-label={option.label}
+                                aria-pressed={selected}
+                                title={option.label}
+                                className={`grid min-h-11 place-items-center rounded-md border p-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary bg-primary/10 text-primary" : "border-border"}`}
+                                onClick={() => void wertPflegen({ icon: option.value })}
+                              >
+                                <Icon className="size-5" aria-hidden="true" />
+                              </button>
+                            );
+                          })}
                         </div>
-                      </>
-                    )}
-                  </DialogContent>
-                </Dialog>
+                      </section>
+                      <section aria-labelledby="service-upload-heading">
+                        <h3 id="service-upload-heading" className="mb-2 text-sm font-medium">
+                          Eigene Symbole
+                        </h3>
+                        <SymbolBibliothek
+                          gewaehlt={presentationValue.icon}
+                          waehlen={(wert) => void wertPflegen({ icon: wert })}
+                          darfPflegen={currentUser.role === "ADMIN"}
+                        />
+                      </section>
+                      <section aria-labelledby="service-color-heading">
+                        <h3 id="service-color-heading" className="mb-2 text-sm font-medium">
+                          Farbe
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {SERVICE_COLOR_OPTIONS.map((option) => {
+                            const selected =
+                              selectionPresentation(presentationValue).color === option.value;
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                aria-label={option.label}
+                                aria-pressed={selected}
+                                title={option.label}
+                                className={`size-11 rounded-full border-2 p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "border-primary" : "border-transparent"}`}
+                                onClick={() => void wertPflegen({ color: option.value })}
+                              >
+                                <span
+                                  className={`block size-full rounded-full border ${selectionPresentation({ name: presentationValue.name, color: option.value }).className}`}
+                                  aria-hidden="true"
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    </div>
+                  )}
+                </RecordSheet>
               </div>
             </div>
           </TabsContent>
@@ -567,10 +607,9 @@ function Einstellungen() {
           <TabsContent value="auditlog" className="space-y-5">
             <Card>
               <CardHeader>
+                {/* Ohne eigene Beschreibung: denselben Satz trug seit dem
+                    reiterabhaengigen Untertitel auch der Seitenkopf. */}
                 <CardTitle className="text-base">Auditlog</CardTitle>
-                <CardDescription>
-                  Unveränderliche Aufzeichnungen über relevante Änderungen im System.
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end">

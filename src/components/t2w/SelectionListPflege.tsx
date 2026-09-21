@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { ChevronRight, GripVertical, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SelectionBadge, selectionPresentation } from "@/components/t2w/ServiceBadge";
+import { SelectionBadge } from "@/components/t2w/ServiceBadge";
 import type { SelectionListKind, SelectionListValue } from "@/lib/t2w/selection-list-workspace";
 
 /**
@@ -26,9 +26,8 @@ export function SelectionListPflege({
   vorschauLabel,
   werte,
   anlegen,
-  speichern,
   sortieren,
-  darstellungOeffnen,
+  oeffnen,
 }: {
   kind: SelectionListKind;
   titel: string;
@@ -49,9 +48,9 @@ export function SelectionListPflege({
   vorschauLabel: string;
   werte: SelectionListValue[];
   anlegen: (name: string) => Promise<void> | void;
-  speichern: (id: string, patch: { name?: string; active?: boolean }) => Promise<void> | void;
   sortieren: (gezogen: string, ziel: string) => Promise<void> | void;
-  darstellungOeffnen: (id: string) => void;
+  /** Öffnet den Wert im Sheet; dort wird er auch gespeichert. */
+  oeffnen: (id: string) => void;
 }) {
   const [neu, setNeu] = useState("");
   const [gezogen, setGezogen] = useState<string | null>(null);
@@ -93,50 +92,52 @@ export function SelectionListPflege({
 
       {hinzufuegen}
 
-      {werte.map((wert) => (
-        <div
-          key={wert.id}
-          draggable
-          onDragStart={() => setGezogen(wert.id)}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={() => {
-            if (gezogen && gezogen !== wert.id) void sortieren(gezogen, wert.id);
-            setGezogen(null);
-          }}
-          className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem] lg:items-center"
-        >
-          <span aria-label={`${vorschauLabel}: ${wert.name}`} className="flex min-w-0 items-center">
-            <SelectionBadge {...wert} />
-          </span>
-          <Input
-            aria-label={`${einzahl} ${wert.name}`}
-            defaultValue={wert.name}
-            onBlur={(event) => {
-              const name = event.target.value.trim();
-              if (name && name !== wert.name) void speichern(wert.id, { name });
+      {/* Eine Zeile anklicken öffnet den Wert rechts — dieselbe Bewegung wie
+          in jeder Liste der Anwendung. Vorher stand der Name in einem Feld in
+          der Zeile, Symbol und Farbe in einem Dialog und Aktiv als dritter
+          Knopf daneben: drei Wege für einen Datensatz. */}
+      <ul className="space-y-1.5">
+        {werte.map((wert) => (
+          <li
+            key={wert.id}
+            draggable
+            onDragStart={() => setGezogen(wert.id)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={() => {
+              if (gezogen && gezogen !== wert.id) void sortieren(gezogen, wert.id);
+              setGezogen(null);
             }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            aria-label={`Darstellung für ${einzahl} ${wert.name}`}
-            onClick={() => darstellungOeffnen(wert.id)}
+            className="flex min-w-0 items-center gap-2 rounded-md border border-border pl-2 transition-colors hover:bg-accent/40"
           >
-            <span
-              className={`size-3 rounded-full border ${selectionPresentation(wert).className}`}
+            <GripVertical
+              className="size-4 shrink-0 cursor-grab text-muted-foreground"
               aria-hidden="true"
-            />{" "}
-            Darstellung
-          </Button>
-          <Button
-            type="button"
-            variant={wert.active ? "outline" : "secondary"}
-            onClick={() => void speichern(wert.id, { active: !wert.active })}
-          >
-            {wert.active ? "Deaktivieren" : "Aktivieren"}
-          </Button>
-        </div>
-      ))}
+            />
+            <button
+              type="button"
+              aria-label={`${einzahl} ${wert.name} bearbeiten`}
+              onClick={() => oeffnen(wert.id)}
+              className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-md px-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span
+                aria-label={`${vorschauLabel}: ${wert.name}`}
+                className="flex min-w-0 items-center"
+              >
+                <SelectionBadge {...wert} />
+              </span>
+              <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+                {wert.name}
+              </span>
+              {!wert.active && (
+                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                  Inaktiv
+                </span>
+              )}
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
 
       {werte.length > 4 && hinzufuegen}
     </section>
