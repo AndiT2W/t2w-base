@@ -206,7 +206,7 @@ test("hält Tabellenkopf und Suchleiste beim Scrollen sichtbar", async ({ page }
   const table = page.locator('[data-density="compact"] table').first();
   const tableHeader = table.locator("thead");
   const pageHeader = page.locator("header.sticky").first();
-  const search = pageHeader.getByLabel("Suche").first();
+  const search = pageHeader.getByLabel("Suche", { exact: true }).first();
 
   await expect(tableHeader).toHaveCSS("position", "sticky");
   await expect(pageHeader).toHaveCSS("position", "sticky");

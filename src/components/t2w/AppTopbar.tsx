@@ -1,30 +1,24 @@
-import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useT2W } from "@/lib/t2w/store";
 import { SidebarMobileTrigger } from "@/components/t2w/AppSidebar";
+import { GlobalSearch } from "@/components/t2w/GlobalSearch";
 
 /**
  * Die Kopfzeile über allen Modulen.  Vorher baute jede Seite ihren eigenen
  * Kopf und trug ihr eigenes Suchfeld; die „globale“ Suche war eine Umleitung
  * auf die Eventliste.  Hier liegt sie einmal, über allem.
  *
- * Die Suche zielt heute weiterhin auf die Eventliste — die Suche über
- * Events, Personen und Hardware entsteht erst mit dem Suchendpunkt.  Bis
- * dahin ist das Feld ehrlich beschriftet.
+ * Die Suche findet über Events, Personen und Hardware; die Trefferliste
+ * steht in `GlobalSearch`.
  *
  * Veranstalterkonten sehen keine Suche: ihr Zugriff endet bei den eigenen
  * Eventaufgaben, und ein Suchfeld, das nur eine Handvoll Zeilen kennt,
  * verspricht mehr als es hält.
  */
 export function AppTopbar() {
-  const navigate = useNavigate();
   const { locale, setLocale, t } = useI18n();
   const { currentUser } = useT2W();
-  const [frage, setFrage] = useState("");
   const darfSuchen = currentUser.role !== "ORGANIZER";
 
   return (
@@ -32,26 +26,7 @@ export function AppTopbar() {
       <SidebarMobileTrigger />
 
       {darfSuchen ? (
-        <form
-          className="relative w-full max-w-[26rem]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void navigate({ to: "/veranstaltungen", search: { q: frage, ansicht: "liste" } });
-          }}
-        >
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            type="search"
-            value={frage}
-            onChange={(event) => setFrage(event.target.value)}
-            aria-label={t("Global suchen …")}
-            placeholder="Event, Veranstalter oder Ort suchen …"
-            className="h-9 pl-8"
-          />
-        </form>
+        <GlobalSearch />
       ) : (
         <span className="text-sm font-semibold tracking-tight text-foreground lg:hidden">
           TIME2WIN

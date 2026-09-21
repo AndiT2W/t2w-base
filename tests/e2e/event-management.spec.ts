@@ -468,7 +468,7 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await page.getByRole("textbox", { name: "E-Mail" }).fill("neu@example.com");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await page.waitForTimeout(100);
-  await page.getByLabel("Suche").first().fill("Kontaktperson");
+  await page.getByLabel("Suche", { exact: true }).first().fill("Kontaktperson");
   await expect(page.getByText("Neue Kontaktperson")).toBeVisible();
   await page.getByText("Neue Kontaktperson").click();
   const email = page.getByLabel("E-Mail").last();
@@ -476,14 +476,16 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await email.blur();
   await expect(page.getByText("E-Mail gespeichert")).toBeVisible();
   await page.reload();
-  await page.getByLabel("Suche").first().fill("geändert@example.com");
+  await page.getByLabel("Suche", { exact: true }).first().fill("geändert@example.com");
   await expect(page.getByText("Neue Kontaktperson")).toBeVisible();
+  // Die Seitensuche filtert beide Reiter; ohne Leeren zeigt "Kunden" null.
+  await page.getByLabel("Suche", { exact: true }).first().fill("");
   await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await expect(page.getByText("Nordwerk GmbH")).toBeVisible();
   await page.getByText("Nordwerk GmbH").click();
   await expect(page.getByLabel("Kundenname")).toHaveValue("Nordwerk GmbH");
   await page.getByRole("button", { name: "Detail schließen" }).click();
-  await page.getByLabel("Suche").first().fill("Jonas Feld");
+  await page.getByLabel("Suche", { exact: true }).first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
   const contactSearch = page.getByRole("combobox", { name: "Kontakt zuordnen" });
   await contactSearch.fill("Marion");
@@ -523,7 +525,7 @@ test("fügt einen per Combobox angeklickten Kontakt im Kundenprofil hinzu", asyn
   await mockApi(page);
   await page.goto("/kontakte");
   await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
-  await page.getByLabel("Suche").first().fill("Jonas Feld");
+  await page.getByLabel("Suche", { exact: true }).first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
   await expect(page.getByRole("heading", { name: "Jonas Feld" })).toBeVisible();
   const search = page.getByRole("combobox", { name: "Kontakt zuordnen" });
@@ -532,7 +534,7 @@ test("fügt einen per Combobox angeklickten Kontakt im Kundenprofil hinzu", asyn
   await expect(page.getByRole("button", { name: "Marion Kessler ×" })).toBeVisible();
   await page.reload();
   await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
-  await page.getByLabel("Suche").first().fill("Jonas Feld");
+  await page.getByLabel("Suche", { exact: true }).first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
   await expect(page.getByRole("button", { name: "Marion Kessler ×" })).toBeVisible();
 });
@@ -541,7 +543,7 @@ test("fügt einen per Combobox angeklickten Kunden im Kontakt hinzu", async ({ p
   await page.addInitScript(() => localStorage.removeItem("t2w-crm-v1"));
   const requests = await mockApi(page);
   await page.goto("/kontakte");
-  await page.getByLabel("Suche").first().fill("Marion Kessler");
+  await page.getByLabel("Suche", { exact: true }).first().fill("Marion Kessler");
   await page.getByText("Marion Kessler").click();
   await expect(page.getByRole("heading", { name: "Marion Kessler" })).toBeVisible();
   const search = page.getByRole("combobox", { name: "Kunde zuordnen" });
@@ -555,7 +557,7 @@ test("fügt einen per Combobox angeklickten Kunden im Kontakt hinzu", async ({ p
     ),
   ).toBeTruthy();
   await page.reload();
-  await page.getByLabel("Suche").first().fill("Marion Kessler");
+  await page.getByLabel("Suche", { exact: true }).first().fill("Marion Kessler");
   await page.getByText("Marion Kessler").click();
   await expect(page.getByRole("button", { name: "Jonas Feld", exact: true })).toBeVisible();
 });
@@ -1355,12 +1357,12 @@ test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async (
   await page.getByRole("textbox", { name: "Ort" }).fill("Graz");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByText("Datensatz angelegt")).toBeVisible();
-  await page.getByLabel("Suche").first().fill("Eva Persistenz");
+  await page.getByLabel("Suche", { exact: true }).first().fill("Eva Persistenz");
   await page.getByText("Eva Persistenz").click();
   await expect(page.getByLabel("Funktion").last()).toHaveValue("Projektleitung");
   await expect(page.getByLabel("Ort").last()).toHaveValue("Graz");
   await page.reload();
-  await page.getByLabel("Suche").first().fill("Eva Persistenz");
+  await page.getByLabel("Suche", { exact: true }).first().fill("Eva Persistenz");
   await page.getByText("Eva Persistenz").click();
   await expect(page.getByLabel("Funktion").last()).toHaveValue("Projektleitung");
   await expect(page.getByLabel("Ort").last()).toHaveValue("Graz");

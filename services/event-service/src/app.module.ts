@@ -23,6 +23,8 @@ import { PayoutController, AutomationController, AuditLogController } from "./pa
 import { PayoutImportService } from "./payout-import.service.js";
 import { AutomationService } from "./automation.service.js";
 import { TablePreferencesController } from "./table-preferences.controller.js";
+import { SearchController } from "./search.controller.js";
+import { SearchService } from "./search.service.js";
 import { IconController } from "./icon.controller.js";
 import { IconService } from "./icon.service.js";
 import { UserManagementController } from "./user-management.controller.js";
@@ -45,6 +47,7 @@ import { FinanceDataInterceptor } from "./finance-data.interceptor.js";
     TablePreferencesController,
     UserManagementController,
     IconController,
+    SearchController,
   ],
   providers: [
     ProjectManagementService,
@@ -61,6 +64,7 @@ import { FinanceDataInterceptor } from "./finance-data.interceptor.js";
     SecurityMailService,
     UserManagementService,
     IconService,
+    SearchService,
     {
       provide: EventMutations,
       inject: [PrismaService],
