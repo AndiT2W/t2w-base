@@ -42,6 +42,7 @@ enum SyncStatus {
 
 model User {
   pmTasks      PmTask[]
+  iconAssets   IconAsset[]
   id           String   @id @default(uuid()) @db.Uuid
   displayName  String
   firstName    String?
@@ -684,4 +685,22 @@ model AppSettings {
   outlookMailbox      String?
   outlookRootFolderId String?
   updatedAt           DateTime @updatedAt
+}
+
+/// Ein hochgeladenes Symbol. `monochrome` sagt, ob die gewaehlte Farbe greift:
+/// nur eine Datei mit hoechstens einer Farbe laesst sich einfaerben. Benutzte
+/// Symbole werden archiviert (`active = false`), nie geloescht.
+model IconAsset {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  mimeType    String
+  size        Int
+  content     Bytes
+  monochrome  Boolean  @default(false)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  createdById String   @db.Uuid
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([active, name])
 }
