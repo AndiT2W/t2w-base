@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, CalendarClock, CheckSquare, Plus } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckSquare, Link2Off, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -26,6 +26,9 @@ import {
 } from "@/components/t2w/EventTableColumns";
 import { EventMobileList } from "@/components/t2w/EventMobileList";
 import { FilterChip, FilterResetChip, ToggleChip } from "@/components/t2w/FilterChip";
+import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
+import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -78,10 +81,15 @@ function Uebersicht() {
   const aktive = useMemo(() => activeEvents(events), [events]);
 
   const kpi = useMemo(() => {
-    const kommend = aktive.filter((e) => e.ende >= heute && inTagen(e.start, 14, heute)).length;
+    const kommend = aktive.filter((e) => e.ende >= heute && inTagen(e.start, 14, heute));
     const aufgaben = aktive.reduce((n, e) => n + e.taskReadiness.openCount, 0);
-    const ueberfaellig = aktive.filter((e) => e.taskReadiness.overdueCount > 0).length;
-    return { kommend, aufgaben, ueberfaellig };
+    // Nach Dringlichkeit: das Event mit den meisten überfälligen Aufgaben zuerst.
+    const ueberfaellig = aktive
+      .filter((e) => e.taskReadiness.overdueCount > 0)
+      .sort((a, b) => b.taskReadiness.overdueCount - a.taskReadiness.overdueCount);
+    const ohneOrdner = aktive.filter((e) => !e.outlookOrdner || !e.sharepointOrdner).length;
+    const laufend = kommend.filter((e) => e.start <= heute).length;
+    return { kommend, aufgaben, ueberfaellig, ohneOrdner, laufend };
   }, [aktive, heute]);
 
   const gefilterte = useMemo(() => {
@@ -111,11 +119,7 @@ function Uebersicht() {
     <div>
       <PageHeader
         titel="Übersicht"
-        suche={{
-          value: suche,
-          onChange: setSuche,
-          placeholder: "Event, Veranstalter oder Ort suchen …",
-        }}
+        beschreibung="Was in den nächsten 14 Tagen ansteht und was gerade blockiert"
         aktion={
           <EventDialog
             trigger={
@@ -128,33 +132,110 @@ function Uebersicht() {
         }
       />
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pb-3">
-          <Kpi icon={CalendarClock} label="Events nächste 14 Tage" wert={kpi.kommend} />
-          <Kpi icon={CheckSquare} label="Offene Aufgaben" wert={kpi.aufgaben} />
-        </div>
+        {/* Jede Kachel ist zugleich ein Filter: anklicken setzt die Liste
+            darunter.  Der rote Balken, der früher unter den Kennzahlen stand,
+            hängt jetzt als Hinweisfeld an der Kachel, die ihn auslöst. */}
+        <MetricRow>
+          <MetricTile
+            icon={CalendarClock}
+            label={t("Events nächste 14 Tage")}
+            wert={kpi.kommend.length}
+            {...(kpi.laufend > 0 ? { hinweis: `davon ${kpi.laufend} laufend` } : {})}
+            aktiv={filter === "diese-woche"}
+            onClick={() => setFilter(filter === "diese-woche" ? "alle" : "diese-woche")}
+          />
+          <MetricTile
+            icon={CheckSquare}
+            label={t("Offene Aufgaben")}
+            wert={kpi.aufgaben}
+            aktiv={filter === "offen"}
+            onClick={() => setFilter(filter === "offen" ? "alle" : "offen")}
+          />
+          <MetricTile
+            icon={AlertTriangle}
+            label={t("Überfällige Aufgaben")}
+            wert={kpi.ueberfaellig.reduce((n, e) => n + e.taskReadiness.overdueCount, 0)}
+            ton="krit"
+            {...(kpi.ueberfaellig.length > 0
+              ? {
+                  hinweis: `in ${kpi.ueberfaellig.length} ${kpi.ueberfaellig.length === 1 ? "Event" : "Events"}`,
+                }
+              : {})}
+            aktiv={filter === "ueberfaellig"}
+            onClick={() => setFilter(filter === "ueberfaellig" ? "alle" : "ueberfaellig")}
+            {...(kpi.ueberfaellig.length > 0
+              ? {
+                  detail: (
+                    <>
+                      <p className="text-xs font-bold text-foreground">Überfällige Aufgaben</p>
+                      {kpi.ueberfaellig.slice(0, 4).map((e) => (
+                        <Link
+                          key={e.id}
+                          to="/events/$eventcode"
+                          params={{ eventcode: e.eventcode }}
+                          className="mt-1.5 flex items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5 no-underline"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[12.5px] font-semibold text-foreground">
+                              {e.name}
+                            </span>
+                            <span className="block text-[11px] text-muted-foreground">
+                              {e.eventcode}
+                            </span>
+                          </span>
+                          <span className="shrink-0 rounded-full bg-task-overdue-soft px-2 py-0.5 text-xs font-semibold text-task-overdue-strong">
+                            {e.taskReadiness.overdueCount} überfällig
+                          </span>
+                        </Link>
+                      ))}
+                    </>
+                  ),
+                }
+              : {})}
+          />
+          <MetricTile
+            icon={Link2Off}
+            label={t("Ordner fehlt")}
+            wert={kpi.ohneOrdner}
+            ton="warn"
+            hinweis="Outlook oder SharePoint"
+            aktiv={filter === "ohne-ordner"}
+            onClick={() => setFilter(filter === "ohne-ordner" ? "alle" : "ohne-ordner")}
+          />
+        </MetricRow>
 
-        {kpi.ueberfaellig > 0 && (
-          <button
-            type="button"
-            onClick={() => setFilter("ueberfaellig")}
-            className="flex min-h-11 w-full items-center gap-3 rounded-lg border border-risk-kritisch/40 bg-risk-kritisch/10 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-risk-kritisch/15"
-          >
-            <AlertTriangle className="size-5 shrink-0 text-risk-kritisch" aria-hidden="true" />
-            <span className="flex-1">
-              {kpi.ueberfaellig} {kpi.ueberfaellig === 1 ? "Event hat" : "Events haben"} überfällige
-              Aufgaben.
-            </span>
-            <span className="font-medium text-risk-kritisch">Anzeigen</span>
-          </button>
-        )}
-
-        <div
-          role="group"
-          aria-label="Eventfilter und Tabellenspalten"
-          className="flex flex-wrap items-center gap-2 border-b border-border pb-3"
+        <FilterBar
+          werkzeuge={
+            <div className="hidden md:block">
+              <TableToolbar
+                tableRef={tableRef}
+                exportName="Übersicht"
+                columnPicker={
+                  <ColumnPicker
+                    columns={EVENT_COLUMNS}
+                    visibleColumns={visibleColumns}
+                    toggleColumn={toggleColumn}
+                    moveColumn={moveColumn}
+                  />
+                }
+              />
+            </div>
+          }
         >
-          {/* Schnellfilter sind schaltbare Chips wie die Dringlichkeitsfilter
-              der Aufgabenübersicht; „Alle aktiven“ ist die Grundstellung. */}
+          {/* Die Seitensuche steht bei ihrer Liste, nicht im Seitenkopf: dort
+              liegt seit dem Umbau die Suche über alle Module. */}
+          <label className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={suche}
+              onChange={(e) => setSuche(e.target.value)}
+              aria-label="Suche"
+              placeholder={t("Event, Veranstalter oder Ort suchen …")}
+              className="h-11 w-60 rounded-full pl-8 sm:h-8"
+            />
+          </label>
+
           {SCHNELLFILTER.map((f) => (
             <ToggleChip
               key={f.key}
@@ -164,6 +245,8 @@ function Uebersicht() {
               {t(f.label)}
             </ToggleChip>
           ))}
+
+          <FilterTrenner />
 
           <FilterChip
             label="Status"
@@ -181,29 +264,14 @@ function Uebersicht() {
           </FilterChip>
 
           <FilterResetChip
-            count={(filter === "alle" ? 0 : 1) + (status === "alle" ? 0 : 1)}
+            count={(filter === "alle" ? 0 : 1) + (status === "alle" ? 0 : 1) + (suche ? 1 : 0)}
             onReset={() => {
               setFilter("alle");
               setStatus("alle");
+              setSuche("");
             }}
           />
-
-          {/* Auf Filterhöhe statt in einer eigenen Zeile; mobil stehen Karten. */}
-          <div className="hidden md:block">
-            <TableToolbar
-              tableRef={tableRef}
-              exportName="Übersicht"
-              columnPicker={
-                <ColumnPicker
-                  columns={EVENT_COLUMNS}
-                  visibleColumns={visibleColumns}
-                  toggleColumn={toggleColumn}
-                  moveColumn={moveColumn}
-                />
-              }
-            />
-          </div>
-        </div>
+        </FilterBar>
 
         <EventMobileList
           events={zeilen}
@@ -251,47 +319,6 @@ function Uebersicht() {
           {zeilen.length} Zeilen · Aufg. = offene Aufgaben, OL/SP = Outlook- bzw. SharePoint-Ordner
         </p>
       </div>
-    </div>
-  );
-}
-
-function Marke({ aktiv, text }: { aktiv: boolean; text: string }) {
-  return (
-    <span
-      className={cn(
-        "rounded px-1 py-0.5 text-[10px] font-semibold",
-        aktiv ? "bg-status-zugesagt/20 text-foreground" : "bg-secondary text-muted-foreground",
-      )}
-      title={`${text === "OL" ? "Outlook" : "SharePoint"}: ${aktiv ? "verknüpft" : "nicht verknüpft"}`}
-    >
-      {text}
-    </span>
-  );
-}
-
-function Kpi({
-  icon: Icon,
-  label,
-  wert,
-  ton,
-}: {
-  icon: typeof CalendarClock;
-  label: string;
-  wert: number;
-  ton?: "warn";
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "text-lg font-semibold tabular-nums",
-          ton === "warn" && wert > 0 ? "text-risk-kritisch" : "text-foreground",
-        )}
-      >
-        {wert}
-      </p>
     </div>
   );
 }

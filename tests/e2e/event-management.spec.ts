@@ -722,7 +722,7 @@ test("zeigt die Schnellfilter der Übersicht als schaltbare Chips mit Zurückset
   await mockApi(page);
   await page.goto("/");
 
-  const filterZeile = page.getByRole("group", { name: "Eventfilter und Tabellenspalten" });
+  const filterZeile = page.getByRole("group", { name: "Liste filtern" });
   const alleAktiven = filterZeile.getByRole("button", { name: "Alle aktiven" });
   const offene = filterZeile.getByRole("button", { name: "Offene Aufgaben", exact: true });
 
