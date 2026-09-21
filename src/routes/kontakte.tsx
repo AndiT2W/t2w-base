@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { RecordSheet } from "@/components/t2w/RecordSheet";
+import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
 import {
   ColumnPicker,
   DataTable,
@@ -112,6 +115,16 @@ const Chip = ({ children, good = false }: { children: ReactNode; good?: boolean 
     {children}
   </span>
 );
+
+/** Zwei Buchstaben als Marke im Sheetkopf — dieselbe Form wie im Entwurf. */
+function initialen(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((teil) => teil[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 function groupPersonEventRoles(eventRollen: Person["eventRollen"]) {
   const events = new Map<string, { eventcode: string; eventName: string; rollen: string[] }>();
@@ -261,13 +274,6 @@ function KundenKontakte() {
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Kunden & Kontakte"
         beschreibung="Stammdaten: Kontakte pflegen und Kundenprofile für Organisationen und Abrechnung verwalten"
-        suche={{
-          value: q,
-          onChange: setQ,
-          placeholder: currentUser.financeAccess
-            ? "Name, E-Mail, Telefon, UID, IBAN …"
-            : "Name, E-Mail, Telefon oder UID …",
-        }}
         aktion={
           <a
             ref={createTriggerRef}
@@ -280,7 +286,47 @@ function KundenKontakte() {
         }
       />
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
+        <FilterBar
+          werkzeuge={
+            <div className="hidden md:block">
+              {tab === "kontakte"
+                ? people.length > 0 && (
+                    <TableToolbar
+                      tableRef={tableRef}
+                      exportName="Kontakte"
+                      columnPicker={
+                        <ColumnPicker
+                          columns={PEOPLE_COLUMNS}
+                          visibleColumns={peopleTable.visibleColumns}
+                          toggleColumn={peopleTable.toggleColumn}
+                          moveColumn={peopleTable.moveColumn}
+                        />
+                      }
+                    />
+                  )
+                : customers.length > 0 && (
+                    <TableToolbar
+                      tableRef={tableRef}
+                      exportName="Kunden"
+                      columnPicker={
+                        <ColumnPicker
+                          columns={sichtbareKundenSpaltenVon(
+                            [...CUSTOMER_COLUMNS],
+                            currentUser.financeAccess,
+                          )}
+                          visibleColumns={sichtbareKundenSpaltenVon(
+                            customerTable.visibleColumns,
+                            currentUser.financeAccess,
+                          )}
+                          toggleColumn={customerTable.toggleColumn}
+                          moveColumn={customerTable.moveColumn}
+                        />
+                      }
+                    />
+                  )}
+            </div>
+          }
+        >
           <div className="flex gap-1" role="tablist" aria-label="Kontaktansicht">
             <button
               onClick={() => {
@@ -304,45 +350,26 @@ function KundenKontakte() {
             </button>
           </div>
 
-          {/* Auf Höhe der Tab-Leiste statt in einer eigenen Zeile über der Tabelle. */}
-          <div className="ml-auto hidden md:block">
-            {tab === "kontakte"
-              ? people.length > 0 && (
-                  <TableToolbar
-                    tableRef={tableRef}
-                    exportName="Kontakte"
-                    columnPicker={
-                      <ColumnPicker
-                        columns={PEOPLE_COLUMNS}
-                        visibleColumns={peopleTable.visibleColumns}
-                        toggleColumn={peopleTable.toggleColumn}
-                        moveColumn={peopleTable.moveColumn}
-                      />
-                    }
-                  />
-                )
-              : customers.length > 0 && (
-                  <TableToolbar
-                    tableRef={tableRef}
-                    exportName="Kunden"
-                    columnPicker={
-                      <ColumnPicker
-                        columns={sichtbareKundenSpaltenVon(
-                          [...CUSTOMER_COLUMNS],
-                          currentUser.financeAccess,
-                        )}
-                        visibleColumns={sichtbareKundenSpaltenVon(
-                          customerTable.visibleColumns,
-                          currentUser.financeAccess,
-                        )}
-                        toggleColumn={customerTable.toggleColumn}
-                        moveColumn={customerTable.moveColumn}
-                      />
-                    }
-                  />
-                )}
-          </div>
-        </div>
+          <FilterTrenner />
+
+          {/* Die Seitensuche steht bei ihrer Liste; im Seitenkopf liegt die
+              Suche über alle Module. */}
+          <label className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              aria-label="Suche"
+              placeholder={
+                currentUser.financeAccess
+                  ? "Name, E-Mail, Telefon, UID, IBAN …"
+                  : "Name, E-Mail, Telefon oder UID …"
+              }
+              className="h-11 w-72 rounded-full pl-8 sm:h-8"
+            />
+          </label>
+        </FilterBar>
         {tab === "kontakte" ? (
           <PeopleTable
             people={people}
@@ -368,50 +395,57 @@ function KundenKontakte() {
         </p>
       </div>
       {sel && (p || k) && (
-        <Sheet open onOpenChange={(open) => !open && setSel(null)}>
-          <SheetContent side="right" className="w-full max-w-xl overflow-y-auto p-5 sm:max-w-xl">
-            <SheetHeader className="mb-5 pr-10 text-left">
-              <SheetTitle>{p ? personName(p) : k?.name}</SheetTitle>
-              <SheetDescription className="sr-only">
-                Stammdaten und Zuordnungen bearbeiten
-              </SheetDescription>
-            </SheetHeader>
-            {p ? (
-              <>
-                <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
-                <AssociationRemover
-                  label="Kundenzuordnung entfernen"
-                  items={crm.kundenVonPerson(p).map((x) => [x.id, x.name] as const)}
-                  remove={(id) => crm.loeseVerknuepfung(p.id, id)}
-                />
-              </>
-            ) : (
-              <>
-                <CustomerDetail
-                  customer={k!}
-                  crm={crm}
-                  go={(id) => setSel({ art: "person", id })}
-                  financeAccess={currentUser.financeAccess}
-                />
-                <AssociationRemover
-                  label="Kontaktzuordnung entfernen"
-                  items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)] as const)}
-                  remove={(id) => crm.loeseVerknuepfung(id, k!.id)}
-                />
-              </>
-            )}
-            <div className="mt-8 border-t border-border pt-4">
-              <DeleteAction
-                label={p ? "Kontakt löschen" : "Kunde löschen"}
-                onDelete={async () => {
-                  if (p) await crm.deletePerson(p.id);
-                  else await crm.deleteKunde(k!.id);
-                  setSel(null);
-                }}
+        <RecordSheet
+          open
+          onOpenChange={(offen) => !offen && setSel(null)}
+          titel={p ? personName(p) : (k?.name ?? "")}
+          beschreibung={
+            p ? "Kontakt · Stammdaten und Zuordnungen" : "Kunde · Stammdaten und Zuordnungen"
+          }
+          marke={
+            <span
+              aria-hidden="true"
+              className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-sm font-bold text-table-header-foreground"
+            >
+              {initialen(p ? personName(p) : (k?.name ?? ""))}
+            </span>
+          }
+          nebenaktion={
+            <DeleteAction
+              label={p ? "Kontakt löschen" : "Kunde löschen"}
+              onDelete={async () => {
+                if (p) await crm.deletePerson(p.id);
+                else await crm.deleteKunde(k!.id);
+                setSel(null);
+              }}
+            />
+          }
+        >
+          {p ? (
+            <>
+              <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
+              <AssociationRemover
+                label="Kundenzuordnung entfernen"
+                items={crm.kundenVonPerson(p).map((x) => [x.id, x.name] as const)}
+                remove={(id) => crm.loeseVerknuepfung(p.id, id)}
               />
-            </div>
-          </SheetContent>
-        </Sheet>
+            </>
+          ) : (
+            <>
+              <CustomerDetail
+                customer={k!}
+                crm={crm}
+                go={(id) => setSel({ art: "person", id })}
+                financeAccess={currentUser.financeAccess}
+              />
+              <AssociationRemover
+                label="Kontaktzuordnung entfernen"
+                items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)] as const)}
+                remove={(id) => crm.loeseVerknuepfung(id, k!.id)}
+              />
+            </>
+          )}
+        </RecordSheet>
       )}
       {create && (
         <CreateDialog crm={crm} close={closeCreate} financeAccess={currentUser.financeAccess} />

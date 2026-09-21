@@ -68,8 +68,13 @@ export function RecordSheet({
           )}
           {nebenaktion}
           <div className="ml-auto flex gap-2">
+            {/*
+             * Ohne Speicherknopf gibt es nichts zu verwerfen: Felder, die beim
+             * Verlassen sichern, kennen kein Abbrechen.  Dann heißt der Knopf,
+             * was er tut.
+             */}
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Abbrechen
+              {speichern ? "Abbrechen" : "Schließen"}
             </Button>
             {speichern && (
               <Button onClick={speichern} disabled={dirty === false}>
