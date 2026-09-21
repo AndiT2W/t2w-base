@@ -23,6 +23,7 @@ export function SelectionListPflege({
   beschreibung,
   einzahl,
   neuLabel,
+  vorschauLabel,
   werte,
   anlegen,
   speichern,
@@ -40,6 +41,12 @@ export function SelectionListPflege({
    * nicht geraten.
    */
   neuLabel: string;
+  /**
+   * Der Name der Vorschau, etwa „Sportartvorschau" oder „Eventrollenvorschau".
+   * Zusammengesetzt wird er genannt, nicht aus der Einzahl geklebt: das Fugen-n
+   * folgt keiner Regel, die sich aus der Endung ablesen liesse.
+   */
+  vorschauLabel: string;
   werte: SelectionListValue[];
   anlegen: (name: string) => Promise<void> | void;
   speichern: (id: string, patch: { name?: string; active?: boolean }) => Promise<void> | void;
@@ -98,10 +105,7 @@ export function SelectionListPflege({
           }}
           className="grid min-w-0 gap-2 rounded-md border p-3 lg:grid-cols-[10rem_minmax(12rem,1fr)_9rem_9rem] lg:items-center"
         >
-          <span
-            aria-label={`${einzahl}vorschau: ${wert.name}`}
-            className="flex min-w-0 items-center"
-          >
+          <span aria-label={`${vorschauLabel}: ${wert.name}`} className="flex min-w-0 items-center">
             <SelectionBadge {...wert} />
           </span>
           <Input

@@ -397,6 +397,7 @@ function Einstellungen() {
                       "Sportarten",
                       "Sportart",
                       "Neue Sportart",
+                      "Sportartvorschau",
                       "Werte für die Sportart-Auswahl beim Anlegen und Bearbeiten eines Events.",
                     ],
                     [
@@ -405,6 +406,7 @@ function Einstellungen() {
                       "Services",
                       "Service",
                       "Neuer Service",
+                      "Servicevorschau",
                       "Leistungen, die ein Event bucht. Symbol und Farbe tragen die Servicespalte der Eventtabelle.",
                     ],
                     [
@@ -413,6 +415,7 @@ function Einstellungen() {
                       "Eventrollen",
                       "Eventrolle",
                       "Neue Eventrolle",
+                      "Eventrollenvorschau",
                       "Rollen, in denen Kontakte einem Event zugeordnet werden.",
                     ],
                     [
@@ -421,6 +424,7 @@ function Einstellungen() {
                       "Hardware-Objekte",
                       "Hardware-Objekt",
                       "Neues Hardware-Objekt",
+                      "Hardware-Objektvorschau",
                       "Objektarten der Hardwareausgabe. Das Symbol steht in der Hardwaretabelle vor der Bezeichnung.",
                     ],
                     [
@@ -429,6 +433,7 @@ function Einstellungen() {
                       "Kommunikation / Nachrichtenarten",
                       "Nachrichtenart",
                       "Neue Nachrichtenart",
+                      "Nachrichtenartvorschau",
                       "Arten der Kommunikationseinträge samt Symbol. Sie tragen die Symbolspalte und die Filterleiste im Kommunikationsreiter.",
                     ],
                     [
@@ -437,6 +442,7 @@ function Einstellungen() {
                       "Kommunikation / Themen",
                       "Thema",
                       "Neues Thema",
+                      "Themenvorschau",
                       "Bezug eines Kommunikationseintrags, wenn keine einzelne Person dahintersteht.",
                     ],
                     [
@@ -445,11 +451,12 @@ function Einstellungen() {
                       "Projektmanagement / Aufgaben",
                       "Aufgabenkategorie",
                       "Neue Aufgabenkategorie",
+                      "Aufgabenkategorievorschau",
                       "Kategorien, nach denen die Aufgaben eines Events gruppiert werden.",
                     ],
                   ] as const
                 ).map(
-                  ([slug, kind, titel, einzahl, neuLabel, beschreibung]) =>
+                  ([slug, kind, titel, einzahl, neuLabel, vorschauLabel, beschreibung]) =>
                     liste === slug && (
                       <SelectionListPflege
                         key={slug}
@@ -457,6 +464,7 @@ function Einstellungen() {
                         titel={titel}
                         einzahl={einzahl}
                         neuLabel={neuLabel}
+                        vorschauLabel={vorschauLabel}
                         beschreibung={beschreibung}
                         werte={selectionLists[kind]}
                         anlegen={(name) => wertAnlegen(kind, einzahl, name)}

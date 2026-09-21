@@ -53,8 +53,13 @@ export function PageHeader({
       ref={headerRef}
       className="sticky top-14 z-30 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-7 lg:px-7"
     >
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
+      {/* Suche und Aktion stehen genau einmal im Baum: sie lagen frueher
+          zweimal da, einmal fuer schmale und einmal fuer breite Fenster. Die
+          verborgene Haelfte nahm dabei Verweise entgegen, die ins Leere
+          liefen -- etwa den Fokus nach dem Schliessen eines Dialogs. Der
+          Umbruch erledigt jetzt, was zwei Kopien erledigen sollten. */}
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1 basis-full md:basis-auto">
           <nav
             aria-label="Breadcrumb"
             className="flex items-center gap-1 text-xs text-muted-foreground"
@@ -83,42 +88,25 @@ export function PageHeader({
           )}
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
-          {suche && (
-            <label className="relative w-64">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                value={suche.value}
-                onChange={(e) => suche.onChange(e.target.value)}
-                aria-label="Suche"
-                placeholder={t(suche.placeholder ?? "Liste durchsuchen …")}
-                className="h-11 pl-8 sm:h-9"
-              />
-            </label>
-          )}
-          {aktion}
-        </div>
+        {(suche || aktion) && (
+          <div className="flex w-full items-center gap-2 md:w-auto">
+            {suche && (
+              <label className="relative flex-1 md:w-64 md:flex-none">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={suche.value}
+                  onChange={(e) => suche.onChange(e.target.value)}
+                  aria-label="Suche"
+                  placeholder={t(suche.placeholder ?? "Liste durchsuchen …")}
+                  className="h-11 pl-8 sm:h-9"
+                />
+              </label>
+            )}
+            {aktion}
+          </div>
+        )}
       </div>
-
-      {(suche || aktion) && (
-        <div className="mt-3 flex items-center gap-2 md:hidden">
-          {suche && (
-            <label className="relative flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                value={suche.value}
-                onChange={(e) => suche.onChange(e.target.value)}
-                aria-label="Suche"
-                placeholder={t(suche.placeholder ?? "Liste durchsuchen …")}
-                className="h-11 pl-8"
-              />
-            </label>
-          )}
-          {aktion}
-        </div>
-      )}
     </header>
   );
 }

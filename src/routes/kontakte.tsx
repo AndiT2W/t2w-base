@@ -252,7 +252,6 @@ function KundenKontakte() {
   function closeCreate() {
     setCreate(false);
     window.history.replaceState({}, "", "/kontakte");
-    window.requestAnimationFrame(() => createTriggerRef.current?.focus());
   }
   const people = useMemo(
     () =>
@@ -448,7 +447,12 @@ function KundenKontakte() {
         </RecordSheet>
       )}
       {create && (
-        <CreateDialog crm={crm} close={closeCreate} financeAccess={currentUser.financeAccess} />
+        <CreateDialog
+          crm={crm}
+          close={closeCreate}
+          financeAccess={currentUser.financeAccess}
+          ausloeser={createTriggerRef}
+        />
       )}
     </div>
   );
@@ -1103,10 +1107,13 @@ function CreateDialog({
   crm,
   close,
   financeAccess,
+  ausloeser,
 }: {
   crm: ReturnType<typeof useCrm>;
   close: () => void;
   financeAccess: boolean;
+  /** Die Schaltflaeche, die den Dialog geoeffnet hat -- siehe unten. */
+  ausloeser: React.RefObject<HTMLAnchorElement | null>;
 }) {
   const [mode, setMode] = useState<Modus>("person");
   const [p, setP] = useState({
@@ -1183,7 +1190,19 @@ function CreateDialog({
   );
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto p-5">
+      {/* Der Dialog haengt an der Adresse, nicht an einem Ausloeser, den die
+          Bibliothek kennt: ihr eigener Fokussprung landete deshalb auf
+          <body>, und wer mit der Tastatur arbeitet, stand nach dem Schliessen
+          wieder am Seitenanfang.  Der Fokus gehoert hierher, weil die
+          Bibliothek erst danach aufraeumt -- ein spaeterer Aufruf wuerde
+          wieder ueberschrieben. */}
+      <DialogContent
+        onCloseAutoFocus={(ereignis) => {
+          ereignis.preventDefault();
+          ausloeser.current?.focus();
+        }}
+        className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto p-5"
+      >
         <DialogHeader className="pr-10">
           <DialogTitle>Neu anlegen</DialogTitle>
           <DialogDescription>

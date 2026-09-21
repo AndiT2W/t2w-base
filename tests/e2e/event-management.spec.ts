@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { event, mockEventManagementApi as mockApi } from "./support/event-management-api";
+import { TESTZEIT, event, mockEventManagementApi as mockApi } from "./support/event-management-api";
 
 // Seit der verpflichtenden Anmeldung landet jeder Ablauf ohne Sitzung auf der
 // Loginseite. Wie in hardware.spec.ts stellt der Hook eine Admin-Sitzung bereit.
@@ -140,6 +140,9 @@ test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page })
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Rot" }).click();
   await expect(page.getByText("Eventrolle gespeichert.").last()).toBeVisible();
+  // Der Dialog bleibt nach der Wahl offen; ohne Schliessen liegt seine
+  // Abdeckung ueber der Schaltflaeche, die ihn wieder oeffnen soll.
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Darstellung für Eventrolle Anmeldung" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Euro" }).click();
   await expect(page.getByText("Eventrolle gespeichert.").last()).toBeVisible();
@@ -225,7 +228,19 @@ test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) =>
 });
 
 test("verlinkt angezeigte Veranstalter mit ihrem Kundendatensatz", async ({ page }) => {
-  await mockApi(page);
+  // /rechnungen zeigt nur abgeschlossene Events. Das Demo-Event laeuft am
+  // Stichtag der Testuhr noch, deshalb braucht diese Liste ein eigenes,
+  // bereits vergangenes Event -- sonst bliebe sie leer.
+  await mockApi(page, {}, {}, [
+    {
+      id: "44444444-4444-4444-8444-444444444444",
+      eventCode: "260710_abgerechnet",
+      name: "Abgerechnetes Event",
+      status: "ZUGESAGT",
+      startAt: "2026-07-10T00:00:00.000Z",
+      endAt: "2026-07-10T00:00:00.000Z",
+    },
+  ]);
 
   for (const path of ["/", "/veranstaltungen", "/angebote", "/rechnungen"] as const) {
     await page.goto(path);
@@ -382,7 +397,14 @@ test("filtert die Übersicht über den Status-Dropdown und zeigt Ordner nur als 
   await mockApi(page);
   await page.goto("/");
   await expect(page.getByLabel("Status filtern")).toBeVisible();
+  // Das Demo-Event steht auf "Anfrage": ein anderer Status blendet es aus,
+  // der eigene zeigt es. Vorher stand hier nur "zugesagt" mit der Erwartung,
+  // das Event zu sehen -- der Filter haette also gar nicht wirken duerfen.
   await page.getByLabel("Status filtern").selectOption("zugesagt");
+  await expect(
+    page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
+  ).toHaveCount(0);
+  await page.getByLabel("Status filtern").selectOption("anfrage");
   await expect(
     page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
   ).toBeVisible();
@@ -513,6 +535,8 @@ test("bündelt Eventrollen je Event in Kunden- und Kontaktdetails", async ({ pag
   await expect(customerEvents).toContainText("Auszahlungsempfänger");
 
   await page.getByRole("button", { name: "Detail schließen" }).click();
+  // Zurueck auf den Kontaktreiter: die Kundenliste kennt Marion Kessler nicht.
+  await page.getByRole("tab", { name: /Kontakte \(/ }).click();
   await page.getByText("Marion Kessler", { exact: true }).click();
   const personEvents = page.locator('a[href="/events/260820_demo_event"]');
   await expect(personEvents).toHaveCount(1);
@@ -1207,7 +1231,9 @@ test("sortiert Kunden und Kontakte über die Tabellenüberschriften", async ({ p
   await page.goto("/kontakte");
 
   const contactRows = page.locator("tbody tr");
-  await expect(contactRows.first()).toContainText("Jonas Feld");
+  // Voreinstellung ist Name aufsteigend; seit Eva Beispiel zu den Testdaten
+  // gehoert, steht sie vor Jonas Feld.
+  await expect(contactRows.first()).toContainText("Eva Beispiel");
   await page.getByRole("button", { name: "E-Mail sortieren" }).click();
   await page.getByRole("button", { name: "E-Mail sortieren" }).click();
   await expect(contactRows.first()).toContainText("Marion Kessler");
@@ -1264,8 +1290,10 @@ test("navigiert mobil durch Kalender und Gantt ohne verlorenes Hauptmenü", asyn
 });
 
 test("filtert archivierte Events im Kalender und öffnet deren Detailseite", async ({ page }) => {
-  const today = new Date();
-  const currentMonthDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-20T00:00:00.000Z`;
+  // Der Monat muss der der Testuhr sein, nicht der des Rechners: der Kalender
+  // schlaegt den Monat auf, den die Anwendung fuer heute haelt.
+  const today = TESTZEIT;
+  const currentMonthDate = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}-20T00:00:00.000Z`;
   await mockApi(page, { archived: true, startAt: currentMonthDate, endAt: currentMonthDate });
   const eventsLoaded = page.waitForResponse(
     (response) =>
@@ -1306,8 +1334,10 @@ test("zeigt Events mobil priorisiert und hält wichtige Touch-Ziele sowie Sticky
     expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
   }
 
-  const appHeader = page.locator("div.sticky.top-0").first();
-  const pageHeader = page.locator("header.sticky").first();
+  // Zwei Kopfzeilen uebereinander: die Anwendungskopfzeile klebt am Fenster,
+  // die Seitenkopfzeile 56 px darunter. Frueher war die obere ein div.
+  const appHeader = page.locator("header.sticky.top-0").first();
+  const pageHeader = page.locator("header.sticky.top-14").first();
   const positions = await Promise.all([appHeader.boundingBox(), pageHeader.boundingBox()]);
   expect((positions[1]?.y ?? 0) + 1).toBeGreaterThanOrEqual(
     (positions[0]?.y ?? 0) + (positions[0]?.height ?? 0),
@@ -1561,7 +1591,9 @@ test("öffnet den Outlook-Ordner per Deep Link in Übersicht und Veranstaltungen
 test("zeigt den Eventcode in der Metadatenzeile des Events", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  const metadaten = page.locator("h1 + div");
+  // Veranstalter, Zeitraum und Eventcode stehen in der Beschreibungszeile des
+  // Seitenkopfs, direkt unter der Ueberschrift.
+  const metadaten = page.locator("h1 + p");
   await expect(metadaten).toContainText("260820_demo_event");
   await expect(metadaten).toContainText("Alter Veranstalter");
   await expect(metadaten).toContainText("20.08.2026");
