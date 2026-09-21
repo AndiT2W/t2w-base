@@ -35,20 +35,29 @@ test.describe("Eventdetail UX", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/events/260820_demo_event");
 
+    // Seit dem Umbau auf das Artboard tragen die Reiter keinen eigenen
+    // Kasten mehr: die Leiste hat eine Unterkante, der aktive Reiter einen
+    // gruenen Unterstrich.  Geprueft wird deshalb der Zustand, nicht der
+    // Abstand zwischen Pillen.
     const tabList = page.getByRole("tablist");
-    await expect(tabList).toHaveCSS("gap", "8px");
+    await expect(tabList).toHaveCSS("border-bottom-width", "1px");
+    const aktiv = page.getByRole("tab", { name: "Stammdaten" });
+    await expect(aktiv).toHaveAttribute("data-state", "active");
+    await expect(page.getByRole("tab", { name: "Anmeldung" })).toHaveAttribute(
+      "data-state",
+      "inactive",
+    );
     await expect(page.getByRole("tab", { name: "Dateien" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Kommunikation" })).toBeVisible();
   });
 
-  test("hält den Gefahrenbereich geschlossen und verlangt die Löschbestätigung", async ({
-    page,
-  }) => {
+  test("verlangt für das Löschen eine Bestätigung", async ({ page }) => {
     await mockApi(page);
     await page.goto("/events/260820_demo_event");
 
-    await expect(page.getByRole("button", { name: "Event löschen" })).toBeHidden();
-    await page.getByRole("button", { name: "Gefahrenbereich" }).click();
+    // Der Gefahrenbereich ist seit dem Umbau keine Klappe mehr, sondern die
+    // letzte Karte der Schiene; die Bestaetigung bleibt.
+    await expect(page.getByRole("heading", { name: "Gefahrenbereich", level: 2 })).toBeVisible();
     await page.getByRole("button", { name: "Event löschen" }).click();
     const dialog = page.getByRole("alertdialog");
     await expect(dialog).toContainText("Bestehendes Event");
@@ -63,7 +72,6 @@ test.describe("Eventdetail UX", () => {
     const requests = await mockApi(page);
     await page.goto("/events/260820_demo_event");
 
-    await page.getByRole("button", { name: "Gefahrenbereich" }).click();
     await page.getByRole("button", { name: "Event löschen" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Endgültig löschen" }).click();
 

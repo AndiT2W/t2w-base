@@ -1,4 +1,7 @@
 import { ProjectManagement } from "@/components/t2w/ProjectManagement";
+import { DetailKarte, DetailRaster, Feld } from "@/components/t2w/DetailKarte";
+import { TaskSummary } from "@/components/t2w/TaskSummary";
+import { pmRead, type PmState } from "@/lib/t2w/project-management";
 import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
 import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
@@ -451,6 +454,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   const [seriesDialog, setSeriesDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteAreaOpen, setDeleteAreaOpen] = useState(false);
+  const [ordnerpfadeOffen, setOrdnerpfadeOffen] = useState(false);
+  const [aufgabenlage, setAufgabenlage] = useState<PmState>();
   const [activeTab, updateActiveTab] = useState("stammdaten");
   const setActiveTab = (tab: string) => {
     if (tab === "finanz" && !currentUser.financeAccess) return;
@@ -599,6 +604,23 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
   useEffect(() => {
     void detailWorkspace.refreshOutlookPlan();
   }, [event.id, event.start, event.outlookOrdner, detailWorkspace]);
+  // Die Aufgabenkarte der Stammdatenschiene zeigt dieselbe Lage wie der
+  // Reiter Projektmanagement.  Sie liest sie eigenstaendig, damit die
+  // Stammdaten nicht vom Aufbau jenes Reiters abhaengen; ein Fehlschlag
+  // laesst die Karte einfach weg statt die Seite zu stoeren.
+  useEffect(() => {
+    let aktiv = true;
+    void pmRead(event.id)
+      .then((lage) => {
+        if (aktiv) setAufgabenlage(lage);
+      })
+      .catch(() => {
+        if (aktiv) setAufgabenlage(undefined);
+      });
+    return () => {
+      aktiv = false;
+    };
+  }, [event.id]);
   const vergangen = event.ende < heuteIso();
   const outlookVorschlag = detail.outlookPlan?.path ?? form.outlookOrdner ?? "";
   const outlookExistence = detail.outlookPlan?.existence ?? "UNKNOWN";
@@ -755,6 +777,35 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     toast.success("Aktivität angelegt.");
   }
 
+  // Die Rollenkarte der Kontaktschiene zaehlt jede bekannte Eventrolle, auch
+  // die unbesetzten: das Artboard zeigt gerade daran, was noch fehlt.
+  const eventRollenLage = useMemo(() => {
+    const gezaehlt = new Map<string, number>();
+    for (const rolle of selectionLists.eventRoles) {
+      if (rolle.active) gezaehlt.set(rolle.name, 0);
+    }
+    for (const kontakt of form.kontakte) {
+      gezaehlt.set(kontakt.rolle, (gezaehlt.get(kontakt.rolle) ?? 0) + 1);
+    }
+    return [...gezaehlt]
+      .map(([name, anzahl]) => ({ name, anzahl }))
+      .sort((a, b) => b.anzahl - a.anzahl || a.name.localeCompare(b.name, "de"));
+  }, [selectionLists.eventRoles, form.kontakte]);
+
+  // Dieselbe Notiz steht im Artboard auf mehreren Reitern in der Schiene --
+  // eine Notiz je Event, nicht je Reiter.  Deshalb steht die Karte hier
+  // einmal und wird von jedem Reiter eingesetzt, der sie zeigt.
+  const notizenKarte = (
+    <DetailKarte titel="Notizen" hinweis="Gilt für das ganze Event">
+      <Textarea
+        id="d-notizen"
+        rows={4}
+        value={form.notizen}
+        onChange={(e) => set("notizen", e.target.value)}
+      />
+    </DetailKarte>
+  );
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -767,20 +818,34 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <>
             <OrganizerLink organizerId={event.veranstalterId} name={event.veranstalter} />
             {` · ${formatZeitraum(event.start, event.ende)} · ${event.eventcode}`}
-            {/* Wer den Datensatz zuletzt angefasst hat, steht im Auditlog --
-                den darf nur ein Admin lesen. Der Zeitpunkt kommt vom Event
-                selbst und gilt damit fuer jedes Konto. */}
-            {event.zuletztGeaendertAm && (
-              <span className="text-muted-foreground">
-                {` · zuletzt geändert ${formatDatumMitZeit(event.zuletztGeaendertAm)}`}
+          </>
+        }
+        aktion={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <StatusBadge status={form.status} />
+            <Button variant="outline" onClick={openSeriesManagement}>
+              Eventserie verwalten
+            </Button>
+            <Button variant="outline" onClick={() => setCopyDialog(true)}>
+              Event kopieren
+            </Button>
+            {isDirty && (
+              <span className="text-xs text-muted-foreground" aria-live="polite">
+                Ungespeicherte Änderungen
               </span>
             )}
-          </>
+            <Button disabled={!isDirty || saving} onClick={speichern}>
+              {saving ? "Wird gespeichert …" : "Änderungen speichern"}
+            </Button>
+          </div>
         }
       />
 
-      <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-5">
-        <div className="min-w-0 space-y-2">
+      {/* Das Artboard zeigt hier eine leichte Zeile statt eines Kastens: links
+          die Serie, rechts der Zeitpunkt der letzten Aenderung.  Status und
+          Aktionen stehen jetzt oben neben dem Titel. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="min-w-0">
           {form.seriesId && (
             <nav
               aria-label="Eventserie"
@@ -830,28 +895,15 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               )}
             </nav>
           )}
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <StatusBadge status={form.status} />
-          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={openSeriesManagement}>
-            Eventserie verwalten
-          </Button>
-          <Button variant="outline" onClick={() => setCopyDialog(true)}>
-            Event kopieren
-          </Button>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {isDirty && (
-              <span className="text-xs text-muted-foreground" aria-live="polite">
-                Ungespeicherte Änderungen
-              </span>
-            )}
-            <Button disabled={!isDirty || saving} onClick={speichern}>
-              {saving ? "Wird gespeichert …" : "Änderungen speichern"}
-            </Button>
-          </div>
-        </div>
+        {/* Wer den Datensatz zuletzt angefasst hat, steht im Auditlog -- den
+            darf nur ein Admin lesen. Der Zeitpunkt kommt vom Event selbst und
+            gilt damit fuer jedes Konto. */}
+        {event.zuletztGeaendertAm && (
+          <span className="ml-auto text-xs text-muted-foreground">
+            {`Zuletzt geändert ${formatDatumMitZeit(event.zuletztGeaendertAm)}`}
+          </span>
+        )}
       </div>
 
       {quartalsAbweichung && (
@@ -869,25 +921,54 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
-          <TabsList className="min-w-0 w-full max-w-full gap-2 grid grid-cols-3 md:grid-cols-8">
-            <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-            <TabsTrigger value="time2win">Anmeldung</TabsTrigger>
-            {currentUser.financeAccess && <TabsTrigger value="finanz">Finanz</TabsTrigger>}
-            <TabsTrigger value="kontakte">Kontakte</TabsTrigger>
-            <TabsTrigger id="event-tab-aufgaben" className="hidden md:inline-flex" value="aufgaben">
+          <TabsList
+            variante="unterstrich"
+            className="min-w-0 w-full max-w-full flex-wrap justify-start"
+          >
+            <TabsTrigger variante="unterstrich" value="stammdaten">
+              Stammdaten
+            </TabsTrigger>
+            <TabsTrigger variante="unterstrich" value="time2win">
+              Anmeldung
+            </TabsTrigger>
+            {currentUser.financeAccess && (
+              <TabsTrigger variante="unterstrich" value="finanz">
+                Finanz
+              </TabsTrigger>
+            )}
+            <TabsTrigger variante="unterstrich" value="kontakte">
+              Kontakte
+            </TabsTrigger>
+            <TabsTrigger
+              variante="unterstrich"
+              id="event-tab-aufgaben"
+              className="hidden md:inline-flex"
+              value="aufgaben"
+            >
               Projektmanagement
             </TabsTrigger>
-            <TabsTrigger id="event-tab-dateien" className="hidden md:inline-flex" value="dateien">
+            <TabsTrigger
+              variante="unterstrich"
+              id="event-tab-dateien"
+              className="hidden md:inline-flex"
+              value="dateien"
+            >
               Dateien
             </TabsTrigger>
             <TabsTrigger
+              variante="unterstrich"
               id="event-tab-kommunikation"
               className="hidden md:inline-flex"
               value="kommunikation"
             >
               Kommunikation
             </TabsTrigger>
-            <TabsTrigger id="event-tab-hardware" className="hidden md:inline-flex" value="hardware">
+            <TabsTrigger
+              variante="unterstrich"
+              id="event-tab-hardware"
+              className="hidden md:inline-flex"
+              value="hardware"
+            >
               Hardware
             </TabsTrigger>
           </TabsList>
@@ -924,455 +1005,440 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             </DropdownMenu>
           </div>
         </div>
-        <TabsContent value="stammdaten" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("detail.basicData")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-start lg:gap-3">
-                <Label htmlFor="d-notizen">Notizen</Label>
-                <Textarea
-                  id="d-notizen"
-                  rows={4}
-                  value={form.notizen}
-                  onChange={(e) => set("notizen", e.target.value)}
-                />
-              </div>
-              <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)_minmax(15rem,auto)] lg:items-center lg:gap-3">
-                <Label htmlFor="d-name">Eventname</Label>
+        {/* Der Reiter folgt dem freigegebenen Artboard: links die Eckdaten in
+            drei Karten, rechts eine Schiene mit allem, was neben der Arbeit
+            steht.  Vorher war alles eine einzige Karte über die volle Breite.
+            „Bundesland“ und „Treffpunkt Team“ aus dem Entwurf fehlen weiter —
+            dafür gibt es kein Feld im Eventdatensatz. */}
+        <TabsContent value="stammdaten">
+          <DetailRaster
+            schiene={
+              <>
+                {notizenKarte}
+
+                <DetailKarte
+                  titel="Ordner"
+                  hinweis={
+                    form.outlookOrdner && form.sharepointOrdner
+                      ? "Beide verknüpft"
+                      : form.outlookOrdner
+                        ? "Nur Outlook"
+                        : form.sharepointOrdner
+                          ? "Nur SharePoint"
+                          : "Noch nicht verknüpft"
+                  }
+                  inhaltKlasse="space-y-2"
+                >
+                  {(
+                    [
+                      ["outlook", "Outlook", form.outlookOrdner],
+                      ["sharepoint", "SharePoint", form.sharepointOrdner],
+                    ] as const
+                  ).map(([id, label, pfad]) => (
+                    <div
+                      key={id}
+                      className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-2"
+                    >
+                      <FolderSync
+                        className="size-4 shrink-0 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold">{label}</span>
+                        <span className="block truncate font-mono text-[0.6875rem] text-muted-foreground">
+                          {pfad || "—"}
+                        </span>
+                      </span>
+                      <FolderLink destination={folders.find((ziel) => ziel.id === id)!} />
+                    </div>
+                  ))}
+                  <p
+                    aria-label="Outlook-Ordnerstatus"
+                    className="flex items-start gap-2 text-xs text-muted-foreground"
+                  >
+                    {outlookExistence === "EXISTS" ? (
+                      <CheckCircle2
+                        className="mt-0.5 size-3.5 shrink-0 text-status-zugesagt"
+                        aria-hidden="true"
+                      />
+                    ) : outlookExistence === "MISSING" ? (
+                      <FolderPlus
+                        className="mt-0.5 size-3.5 shrink-0 text-risk-beobachten"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <HelpCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                    )}
+                    <span>
+                      {outlookExistence === "EXISTS"
+                        ? "Ordner vorhanden – der bestehende Outlook-Ordner wird verwendet."
+                        : outlookExistence === "MISSING"
+                          ? "Ordner nicht vorhanden – er wird bei der Synchronisation neu erstellt."
+                          : "Ordnerstatus konnte noch nicht geprüft werden."}
+                    </span>
+                  </p>
+                  {/* Das Artboard zeigt die Ordner nur als zwei Zeilen zum
+                      Anklicken.  Die Pfade müssen aber weiter zu ändern sein,
+                      deshalb liegen sie eine Ebene tiefer statt offen in der
+                      schmalen Schiene. */}
+                  <Collapsible open={ordnerpfadeOffen} onOpenChange={setOrdnerpfadeOffen}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="-ml-2">
+                        <Link2 className="size-4" aria-hidden="true" />
+                        Pfade bearbeiten
+                        {ordnerpfadeOffen ? (
+                          <ChevronUp className="size-4" aria-hidden="true" />
+                        ) : (
+                          <ChevronDown className="size-4" aria-hidden="true" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3 pt-2">
+                      <Feld label="Outlook-Ordner" htmlFor="d-outlook">
+                        <Input
+                          id="d-outlook"
+                          value={form.outlookOrdner ?? ""}
+                          placeholder={outlookVorschlag}
+                          onChange={(e) => set("outlookOrdner", e.target.value || null)}
+                          className="font-mono text-xs"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="-ml-2 justify-self-start"
+                          onClick={() => set("outlookOrdner", outlookVorschlag)}
+                        >
+                          <Link2 className="size-4" aria-hidden="true" />
+                          Vorschlag übernehmen
+                        </Button>
+                      </Feld>
+                      <Feld label="SharePoint-Ordner" htmlFor="d-sp">
+                        <Input
+                          id="d-sp"
+                          value={form.sharepointOrdner ?? ""}
+                          placeholder={`Events ${jahr(form.start)}/${event.eventcode}`}
+                          onChange={(e) => set("sharepointOrdner", e.target.value || null)}
+                          className="font-mono text-xs"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Jahres-Site:{" "}
+                          {jahresSite ? jahresSite.url : "in Einstellungen noch nicht hinterlegt"}
+                        </p>
+                      </Feld>
+                      <Feld label="Outlook-Web-Link" htmlFor="d-outlook-url">
+                        <Input
+                          id="d-outlook-url"
+                          type="url"
+                          value={form.outlookWebUrl ?? ""}
+                          placeholder="https://outlook.office.com/mail/..."
+                          readOnly
+                          onChange={(e) => set("outlookWebUrl", e.target.value || null)}
+                          className="text-xs"
+                        />
+                      </Feld>
+                    </CollapsibleContent>
+                  </Collapsible>
+                  <div className="space-y-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      disabled={detail.outlookSyncing || !settings.outlookMailbox}
+                      onClick={() => void outlookSynchronisieren()}
+                    >
+                      {detail.outlookSyncing
+                        ? "Synchronisiere …"
+                        : "Outlook-Ordner synchronisieren"}
+                    </Button>
+                    {detail.outlookSyncMessage && (
+                      <p role="status" className="text-xs">
+                        {detail.outlookSyncMessage}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Graph-Sync:{" "}
+                      {form.outlookFolderSyncStatus === "SUCCESS"
+                        ? `erfolgreich${form.outlookFolderLastSuccessAt ? ` am ${formatDatum(form.outlookFolderLastSuccessAt.slice(0, 10))}` : ""}`
+                        : form.outlookFolderSyncStatus === "ERROR"
+                          ? `Fehler${form.outlookFolderLastError ? `: ${form.outlookFolderLastError}` : ""}`
+                          : form.outlookFolderSyncStatus === "SYNCING"
+                            ? "läuft …"
+                            : "noch nicht ausgeführt"}
+                    </p>
+                  </div>
+                </DetailKarte>
+
+                <DetailKarte
+                  titel="TIME2WIN-Abgleich"
+                  hinweis="Anmeldedaten aus dem Backend"
+                  inhaltKlasse="space-y-2.5"
+                >
+                  <p className="text-xs text-muted-foreground">
+                    {form.time2winLastSuccessAt
+                      ? `Letzter Abgleich am ${formatDatum(form.time2winLastSuccessAt.slice(0, 10))}${
+                          form.teilnehmerwerte?.aktuell != null
+                            ? ` · ${form.teilnehmerwerte.aktuell} Anmeldungen übernommen`
+                            : ""
+                        }.`
+                      : "Noch kein Abgleich gelaufen."}
+                  </p>
+                  {form.time2winLastError && (
+                    <p className="text-xs text-destructive">{form.time2winLastError}</p>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full"
+                    disabled={!form.t2wEventId || detail.time2winSyncing}
+                    onClick={() => void time2winSynchronisieren()}
+                  >
+                    <FolderSync className="size-4" aria-hidden="true" />
+                    {detail.time2winSyncing ? "Synchronisiere …" : "Jetzt synchronisieren"}
+                  </Button>
+                </DetailKarte>
+
+                {aufgabenlage && (
+                  <DetailKarte
+                    titel="Aufgaben"
+                    aktion={
+                      <Button variant="outline" size="sm" onClick={() => setActiveTab("aufgaben")}>
+                        Öffnen
+                      </Button>
+                    }
+                  >
+                    <TaskSummary tasks={aufgabenlage.tasks} eventStart={form.start} />
+                  </DetailKarte>
+                )}
+
+                <DetailKarte
+                  titel="Gefahrenbereich"
+                  className="border-destructive/30 bg-destructive/5"
+                  inhaltKlasse="space-y-3"
+                >
+                  <div
+                    data-testid="event-archive-toggle"
+                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2"
+                  >
+                    <p className="text-sm font-medium text-foreground">Archiviert</p>
+                    <Switch
+                      aria-label="Event archivieren"
+                      checked={form.archiviert}
+                      onCheckedChange={(v) => set("archiviert", v)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Das Event und die zugehörigen Daten werden dauerhaft gelöscht. Dieser Vorgang
+                    kann nicht rückgängig gemacht werden.
+                  </p>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setDeleteDialog(true)}
+                  >
+                    Event löschen
+                  </Button>
+                </DetailKarte>
+              </>
+            }
+          >
+            <DetailKarte titel="Eckdaten" inhaltKlasse="grid gap-3 sm:grid-cols-2">
+              <Feld label="Eventname" htmlFor="d-name">
                 <Input
                   id="d-name"
                   value={form.name}
                   onChange={(e) => set("name", e.target.value)}
                 />
-                <div
-                  data-testid="event-archive-toggle"
-                  className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+              </Feld>
+              <Feld label="Eventcode" hinweis="(unveränderlich)" htmlFor="d-code">
+                <Input id="d-code" value={form.eventcode} readOnly disabled className="font-mono" />
+              </Feld>
+              <Feld label="TIME2WIN-ID" htmlFor="d-t2w-basic">
+                <Input
+                  id="d-t2w-basic"
+                  type="number"
+                  step="1"
+                  value={form.t2wEventId ?? ""}
+                  onChange={(e) =>
+                    set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))
+                  }
+                  className="font-mono"
+                />
+              </Feld>
+              <Feld label="Veranstalter">
+                <Select
+                  value={form.veranstalterId ?? ""}
+                  onValueChange={(id) => {
+                    const customer = kunden.find((item) => item.id === id);
+                    if (customer) {
+                      set("veranstalterId", customer.id);
+                      set("veranstalter", customer.name);
+                    }
+                  }}
                 >
-                  <p className="text-sm font-medium text-foreground">Archiviert</p>
-                  <Switch
-                    aria-label="Event archivieren"
-                    checked={form.archiviert}
-                    onCheckedChange={(v) => set("archiviert", v)}
-                  />
-                </div>
-              </div>
-              <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
-                <section aria-labelledby="event-identity-period" className="space-y-3">
-                  <h3
-                    id="event-identity-period"
-                    className="border-b border-border pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                  >
-                    Identität &amp; Zeitraum
-                  </h3>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-code">
-                      Eventcode{" "}
-                      <span className="text-xs font-normal text-muted-foreground">
-                        (unveränderlich)
+                  <SelectTrigger aria-label="Veranstalter aus Stammdaten">
+                    <SelectValue placeholder="Kunde aus Stammdaten auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kunden.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Feld>
+              <Feld label="Sportart">
+                <Select value={form.sportartId ?? ""} onValueChange={(id) => set("sportartId", id)}>
+                  <SelectTrigger aria-label="Sportart">
+                    <SelectValue placeholder="Sportart auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sportarten.map((sport) => (
+                      <SelectItem key={sport.id} value={sport.id}>
+                        <SelectionBadge {...sport} />
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Feld>
+              <Feld label="Status">
+                <Select value={form.status} onValueChange={(v) => set("status", v as EventStatus)}>
+                  <SelectTrigger aria-label="Status">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <StatusDot status={form.status} />
+                      <span className="truncate">
+                        {t(`status.${form.status}` as Parameters<typeof t>[0])}
                       </span>
-                    </Label>
-                    <Input
-                      id="d-code"
-                      value={form.eventcode}
-                      readOnly
-                      disabled
-                      className="font-mono"
-                    />
-                  </div>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-t2w-basic">Event Id</Label>
-                    <Input
-                      id="d-t2w-basic"
-                      type="number"
-                      step="1"
-                      value={form.t2wEventId ?? ""}
-                      onChange={(e) =>
-                        set("t2wEventId", e.target.value === "" ? null : Number(e.target.value))
-                      }
-                      className="font-mono"
-                    />
-                  </div>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <span id="event-date-range-label" className="text-sm font-medium">
-                      {t("Start-/Enddatum")} <span aria-hidden="true">*</span>
-                      <span className="sr-only"> {t("Das Startdatum ist verpflichtend.")}</span>
                     </span>
-                    <div
-                      data-testid="event-date-range"
-                      role="group"
-                      aria-labelledby="event-date-range-label"
-                      className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2"
-                    >
-                      <div className="min-w-0">
-                        <Label htmlFor="d-start" className="sr-only">
-                          {t("Startdatum *")}
-                        </Label>
-                        <Input
-                          id="d-start"
-                          type="date"
-                          value={form.start}
-                          onChange={(e) => set("start", e.target.value)}
-                          className="min-w-0"
-                        />
-                      </div>
-                      <span aria-hidden="true" className="text-muted-foreground">
-                        –
-                      </span>
-                      <div className="min-w-0">
-                        <Label htmlFor="d-ende" className="sr-only">
-                          {t("Enddatum")}
-                        </Label>
-                        <Input
-                          id="d-ende"
-                          type="date"
-                          value={form.ende}
-                          onChange={(e) => set("ende", e.target.value)}
-                          className="min-w-0"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-forecast">Teilnehmerprognose</Label>
-                    <Input
-                      id="d-forecast"
-                      type="number"
-                      min="0"
-                      value={form.teilnehmerwerte?.prognose ?? form.teilnehmer}
-                      onChange={(e) =>
-                        set("teilnehmerwerte", {
-                          ...(form.teilnehmerwerte ?? {
-                            aktuell: null,
-                            aktuellQuelle: null,
-                            aktuellSynchronisiertAm: null,
-                          }),
-                          prognose: e.target.value === "" ? null : Number(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                </section>
-
-                <section aria-labelledby="event-organization" className="space-y-3">
-                  <h3
-                    id="event-organization"
-                    className="border-b border-border pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                  >
-                    Organisation &amp; Einordnung
-                  </h3>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-ver">Veranstalter</Label>
-                    <Select
-                      value={form.veranstalterId ?? ""}
-                      onValueChange={(id) => {
-                        const customer = kunden.find((item) => item.id === id);
-                        if (customer) {
-                          set("veranstalterId", customer.id);
-                          set("veranstalter", customer.name);
-                        }
-                      }}
-                    >
-                      <SelectTrigger aria-label="Veranstalter aus Stammdaten">
-                        <SelectValue placeholder="Kunde aus Stammdaten auswählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {kunden.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label>Sportart</Label>
-                    <Select
-                      value={form.sportartId ?? ""}
-                      onValueChange={(id) => set("sportartId", id)}
-                    >
-                      <SelectTrigger aria-label="Sportart">
-                        <SelectValue placeholder="Sportart auswählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sportarten.map((sport) => (
-                          <SelectItem key={sport.id} value={sport.id}>
-                            <SelectionBadge {...sport} />
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-ort">Ort</Label>
-                    <Input
-                      id="d-ort"
-                      value={form.ort}
-                      onChange={(e) => set("ort", e.target.value)}
-                    />
-                  </div>
-                  <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                    <Label htmlFor="d-resp">Hauptverantwortlich</Label>
-                    <Input
-                      id="d-resp"
-                      value={form.verantwortlicher}
-                      onChange={(e) => set("verantwortlicher", e.target.value)}
-                    />
-                  </div>
-                </section>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 sm:gap-6">
-                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                  <Label>Services</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        aria-label="Services auswählen"
-                        variant="outline"
-                        className="h-auto min-h-9 w-full justify-start font-normal"
-                      >
-                        {form.services?.length ? (
-                          <span className="flex flex-wrap gap-1.5">
-                            {form.serviceIds?.map((serviceId) => {
-                              const service = services.find((item) => item.id === serviceId);
-                              return service ? (
-                                <ServiceBadge key={service.id} {...service} />
-                              ) : null;
-                            })}
-                          </span>
-                        ) : (
-                          "Services auswählen"
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="start"
-                      className="max-h-[min(24rem,calc(100vh-2rem))] w-[min(28rem,calc(100vw-2rem))] overflow-y-auto p-2"
-                    >
-                      <div className="space-y-1" role="group" aria-label="Services">
-                        {services.map((service) => {
-                          const selected = form.serviceIds?.includes(service.id) ?? false;
-                          return (
-                            <label
-                              key={service.id}
-                              className="flex min-h-11 cursor-pointer items-center gap-3 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-                            >
-                              <Checkbox
-                                checked={selected}
-                                onCheckedChange={(checked) => {
-                                  const current = form.serviceIds ?? [];
-                                  const serviceIds = checked
-                                    ? [...current, service.id]
-                                    : current.filter((id) => id !== service.id);
-                                  set("serviceIds", serviceIds);
-                                  set(
-                                    "services",
-                                    services
-                                      .filter((item) => serviceIds.includes(item.id))
-                                      .map((item) => item.name),
-                                  );
-                                }}
-                              />
-                              <ServiceBadge {...service} />
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="grid gap-1.5 lg:grid-cols-[9rem_minmax(0,1fr)] lg:items-center lg:gap-3">
-                  <Label>Status</Label>
-                  <Select
-                    value={form.status}
-                    onValueChange={(v) => set("status", v as EventStatus)}
-                  >
-                    <SelectTrigger aria-label="Status">
-                      <span className="flex min-w-0 items-center gap-2">
-                        <StatusDot status={form.status} />
-                        <span className="truncate">
-                          {t(`status.${form.status}` as Parameters<typeof t>[0])}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_ORDER.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        <span className="flex items-center gap-2">
+                          <StatusDot status={s} />
+                          <span>{t(`status.${s}` as Parameters<typeof t>[0])}</span>
                         </span>
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_ORDER.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          <span className="flex items-center gap-2">
-                            <StatusDot status={s} />
-                            <span>{t(`status.${s}` as Parameters<typeof t>[0])}</span>
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Feld>
+            </DetailKarte>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Ordnerverknüpfungen</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="d-outlook">Outlook-Ordner</Label>
+            <DetailKarte titel="Ort und Zeit" inhaltKlasse="grid gap-3 sm:grid-cols-2">
+              <Feld label={<>{t("Startdatum *")}</>} htmlFor="d-start">
                 <Input
-                  id="d-outlook"
-                  value={form.outlookOrdner ?? ""}
-                  placeholder={outlookVorschlag}
-                  onChange={(e) => set("outlookOrdner", e.target.value || null)}
-                  className="mt-1.5 font-mono text-xs"
+                  id="d-start"
+                  type="date"
+                  value={form.start}
+                  onChange={(e) => set("start", e.target.value)}
+                  aria-describedby="event-start-hint"
                 />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-1.5"
-                  onClick={() => set("outlookOrdner", outlookVorschlag)}
-                >
-                  <Link2 className="size-4" />
-                  Vorschlag übernehmen
-                </Button>
-                <div
-                  aria-label="Outlook-Ordnerstatus"
-                  className="mt-2 flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
-                >
-                  {outlookExistence === "EXISTS" ? (
-                    <CheckCircle2
-                      className="mt-0.5 size-4 shrink-0 text-status-zugesagt"
-                      aria-hidden="true"
-                    />
-                  ) : outlookExistence === "MISSING" ? (
-                    <FolderPlus
-                      className="mt-0.5 size-4 shrink-0 text-risk-beobachten"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <HelpCircle
-                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <span>
-                    {outlookExistence === "EXISTS"
-                      ? "Ordner vorhanden – der bestehende Outlook-Ordner wird verwendet."
-                      : outlookExistence === "MISSING"
-                        ? "Ordner nicht vorhanden – er wird bei der Synchronisation neu erstellt."
-                        : "Ordnerstatus konnte noch nicht geprüft werden."}
-                  </span>
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <FolderLink destination={folders.find(({ id }) => id === "outlook")!} />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={detail.outlookSyncing || !settings.outlookMailbox}
-                    onClick={() => void outlookSynchronisieren()}
-                  >
-                    {detail.outlookSyncing ? "Synchronisiere …" : "Outlook-Ordner synchronisieren"}
-                  </Button>
-                  {detail.outlookSyncMessage && (
-                    <span role="status">{detail.outlookSyncMessage}</span>
-                  )}
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Graph-Sync:{" "}
-                  {form.outlookFolderSyncStatus === "SUCCESS"
-                    ? `erfolgreich${form.outlookFolderLastSuccessAt ? ` am ${formatDatum(form.outlookFolderLastSuccessAt.slice(0, 10))}` : ""}`
-                    : form.outlookFolderSyncStatus === "ERROR"
-                      ? `Fehler${form.outlookFolderLastError ? `: ${form.outlookFolderLastError}` : ""}`
-                      : form.outlookFolderSyncStatus === "SYNCING"
-                        ? "läuft …"
-                        : "noch nicht ausgeführt"}
-                </p>
-                <Label htmlFor="d-outlook-url" className="mt-3 block">
-                  Outlook-Web-Link
-                </Label>
+                <span id="event-start-hint" className="sr-only">
+                  {t("Das Startdatum ist verpflichtend.")}
+                </span>
+              </Feld>
+              <Feld label={t("Enddatum")} htmlFor="d-ende">
                 <Input
-                  id="d-outlook-url"
-                  type="url"
-                  value={form.outlookWebUrl ?? ""}
-                  placeholder="https://outlook.office.com/mail/..."
-                  readOnly
-                  onChange={(e) => set("outlookWebUrl", e.target.value || null)}
-                  className="mt-1.5 text-xs"
+                  id="d-ende"
+                  type="date"
+                  value={form.ende}
+                  onChange={(e) => set("ende", e.target.value)}
                 />
+              </Feld>
+              <Feld label="Ort" htmlFor="d-ort">
+                <Input id="d-ort" value={form.ort} onChange={(e) => set("ort", e.target.value)} />
+              </Feld>
+              <Feld label="Hauptverantwortlich" htmlFor="d-resp">
+                <Input
+                  id="d-resp"
+                  value={form.verantwortlicher}
+                  onChange={(e) => set("verantwortlicher", e.target.value)}
+                />
+              </Feld>
+            </DetailKarte>
+
+            {/* Das Artboard zeigt alle Leistungen als Chips zum An- und
+                Abwählen statt einer Auswahlliste, die nur das Gesetzte zeigt. */}
+            <DetailKarte titel="Leistungen" inhaltKlasse="space-y-3">
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Services">
+                {services.map((service) => {
+                  const gesetzt = form.serviceIds?.includes(service.id) ?? false;
+                  return (
+                    <button
+                      key={service.id}
+                      type="button"
+                      aria-pressed={gesetzt}
+                      onClick={() => {
+                        const bisher = form.serviceIds ?? [];
+                        const serviceIds = gesetzt
+                          ? bisher.filter((id) => id !== service.id)
+                          : [...bisher, service.id];
+                        set("serviceIds", serviceIds);
+                        set(
+                          "services",
+                          services
+                            .filter((item) => serviceIds.includes(item.id))
+                            .map((item) => item.name),
+                        );
+                      }}
+                      className={cn(
+                        "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
+                        gesetzt
+                          ? "border-primary bg-primary/10 font-semibold text-foreground"
+                          : "border-input text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <ServiceBadge {...service} />
+                    </button>
+                  );
+                })}
+                {services.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Keine Leistungen hinterlegt.</p>
+                )}
               </div>
-              <div>
-                <Label htmlFor="d-sp">SharePoint-Ordner</Label>
-                <Input
-                  id="d-sp"
-                  value={form.sharepointOrdner ?? ""}
-                  placeholder={`Events ${jahr(form.start)}/${event.eventcode}`}
-                  onChange={(e) => set("sharepointOrdner", e.target.value || null)}
-                  className="mt-1.5 font-mono text-xs"
-                />
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Jahres-Site:{" "}
-                  {jahresSite ? jahresSite.url : "in Einstellungen noch nicht hinterlegt"}
-                </p>
-                <div className="mt-2 text-xs">
-                  <FolderLink destination={folders.find(({ id }) => id === "sharepoint")!} />
-                </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Feld label="Erwartete Teilnehmer" htmlFor="d-forecast">
+                  <Input
+                    id="d-forecast"
+                    type="number"
+                    min="0"
+                    value={form.teilnehmerwerte?.prognose ?? form.teilnehmer}
+                    onChange={(e) =>
+                      set("teilnehmerwerte", {
+                        ...(form.teilnehmerwerte ?? {
+                          aktuell: null,
+                          aktuellQuelle: null,
+                          aktuellSynchronisiertAm: null,
+                        }),
+                        prognose: e.target.value === "" ? null : Number(e.target.value),
+                      })
+                    }
+                  />
+                </Feld>
+                <Feld label="Gemeldete Teilnehmer">
+                  <p className="flex min-h-9 items-center text-sm tabular-nums text-muted-foreground">
+                    {form.teilnehmerwerte?.aktuell ?? "—"}
+                  </p>
+                </Feld>
               </div>
-            </CardContent>
-          </Card>
-          <Collapsible open={deleteAreaOpen} onOpenChange={setDeleteAreaOpen}>
-            <section
-              className="rounded-lg border border-destructive/30 bg-destructive/5 p-5"
-              aria-labelledby="event-delete-heading"
-            >
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-between px-0 text-destructive hover:bg-transparent"
-                >
-                  <span id="event-delete-heading" className="font-semibold">
-                    Gefahrenbereich
-                  </span>
-                  {deleteAreaOpen ? (
-                    <ChevronUp className="size-4" />
-                  ) : (
-                    <ChevronDown className="size-4" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Das Event und die zugehörigen Daten werden dauerhaft gelöscht. Dieser Vorgang kann
-                  nicht rückgängig gemacht werden.
-                </p>
-                <Button
-                  variant="destructive"
-                  className="mt-4"
-                  onClick={() => setDeleteDialog(true)}
-                >
-                  Event löschen
-                </Button>
-              </CollapsibleContent>
-            </section>
-          </Collapsible>
+            </DetailKarte>
+          </DetailRaster>
         </TabsContent>
 
-        <TabsContent value="time2win" className="space-y-4">
-          {/* Die Zahlen lagen bisher als Fliesstext in der Karte; hier stehen
-              sie in derselben Kachel wie auf jeder Liste. */}
+        {/* Nach dem Artboard: Kennzahlen oben, die Bewerbstabelle als
+            Arbeitsfläche, die Verknüpfung in der Schiene.  „Nachmeldung“ und
+            „Abgleichverlauf“ aus dem Entwurf fehlen — beides liefert das
+            Backend nicht, und ein Verlauf wird nicht mitgeschrieben. */}
+        <TabsContent value="time2win" className="space-y-3">
           <MetricRow>
             <MetricTile
               icon={Users}
               label="Gemeldete Teilnehmer"
               wert={form.teilnehmerwerte?.aktuell ?? "—"}
-              {...(form.time2winSnapshot?.races.length
-                ? {
-                    hinweis: `${form.time2winSnapshot.races.length} ${
-                      form.time2winSnapshot.races.length === 1 ? "Bewerb" : "Bewerbe"
-                    }`,
-                  }
-                : {})}
+              hinweis={`von ${form.teilnehmerwerte?.prognose ?? form.teilnehmer} erwartet`}
             />
             <MetricTile
               icon={FolderSync}
@@ -1392,102 +1458,128 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               {...(form.ende !== form.start ? { hinweis: `bis ${formatDatum(form.ende)}` } : {})}
             />
           </MetricRow>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">TIME2WIN</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="d-t2w">Event Id</Label>
-                <p id="d-t2w" className="mt-1.5 text-sm text-muted-foreground">
-                  {form.t2wEventId ?? "—"}
-                </p>
-              </div>
-              <div className="text-sm">
-                <p>
-                  Verknüpftes Event: <strong>{form.time2winSnapshot?.name ?? "—"}</strong>
-                </p>
-                <p>TIME2WIN-Sportart: {form.time2winSnapshot?.sportName ?? "—"}</p>
-                <p>
-                  Gemeldete TN: <strong>{form.teilnehmerwerte?.aktuell ?? "—"}</strong>
-                </p>
-                <p>
-                  Letzter Sync:{" "}
-                  {form.time2winLastSuccessAt
-                    ? formatDatum(form.time2winLastSuccessAt.slice(0, 10))
-                    : "—"}
-                </p>
-                <p>Status: {form.time2winSyncStatus ?? "NEVER"}</p>
-                {form.time2winLastError && (
-                  <p className="text-destructive">{form.time2winLastError}</p>
-                )}
-                <Button
-                  type="button"
-                  className="mt-3"
-                  disabled={!form.t2wEventId || detail.time2winSyncing}
-                  onClick={() => void time2winSynchronisieren()}
+
+          <DetailRaster
+            schiene={
+              <>
+                {notizenKarte}
+
+                <DetailKarte
+                  titel="TIME2WIN-Verknüpfung"
+                  hinweis="Anmeldedaten kommen aus dem Backend"
+                  inhaltKlasse="space-y-2.5"
                 >
-                  {detail.time2winSyncing ? "Synchronisiere …" : "Jetzt synchronisieren"}
-                </Button>
-              </div>
-              <div className="sm:col-span-2">
-                <h3 className="text-sm font-medium text-foreground">Teilnehmer nach Bewerb</h3>
-                {form.time2winSnapshot?.races.length ? (
-                  <DataTable
-                    exportName={`${form.name} Teilnehmer nach Bewerb`}
-                    className="mt-2 min-w-[22rem]"
-                    aria-label="TIME2WIN Teilnehmer nach Bewerb"
+                  <Feld label="Event-ID">
+                    <p className="text-sm tabular-nums">{form.t2wEventId ?? "—"}</p>
+                  </Feld>
+                  <Feld label="Verknüpftes Event">
+                    <p className="text-sm">{form.time2winSnapshot?.name ?? "—"}</p>
+                  </Feld>
+                  <Feld label="TIME2WIN-Sportart">
+                    <p className="text-sm">{form.time2winSnapshot?.sportName ?? "—"}</p>
+                  </Feld>
+                  <p className="text-xs text-muted-foreground">
+                    {form.time2winLastSuccessAt
+                      ? `Abgleich ${form.time2winSyncStatus === "ERROR" ? "fehlgeschlagen" : "erfolgreich"} · ${formatDatum(form.time2winLastSuccessAt.slice(0, 10))}`
+                      : "Noch kein Abgleich gelaufen."}
+                  </p>
+                  {form.time2winLastError && (
+                    <p className="text-xs text-destructive">{form.time2winLastError}</p>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full"
+                    disabled={!form.t2wEventId || detail.time2winSyncing}
+                    onClick={() => void time2winSynchronisieren()}
                   >
-                    <TableHeader>
-                      <TableRow>
-                        {BEWERB_SPALTEN.map((spalte) => (
-                          <TableHead
-                            key={spalte.key}
-                            className={spalte.key === "Gemeldete TN" ? "text-right" : undefined}
-                          >
-                            <SortHeader
-                              label={spalte.key}
-                              active={bewerbTabelle.sort.key === spalte.key}
-                              direction={bewerbTabelle.sort.direction}
-                              onSort={() => bewerbTabelle.sortBy(spalte.key)}
-                            />
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {bewerbTabelle.rows(form.time2winSnapshot.races).map((race) => (
+                    <FolderSync className="size-4" aria-hidden="true" />
+                    {detail.time2winSyncing ? "Synchronisiere …" : "Jetzt synchronisieren"}
+                  </Button>
+                </DetailKarte>
+              </>
+            }
+          >
+            <DetailKarte
+              titel="Teilnehmer nach Bewerb"
+              hinweis={
+                form.time2winSnapshot?.races.length
+                  ? `${form.time2winSnapshot.races.length} ${form.time2winSnapshot.races.length === 1 ? "Bewerb" : "Bewerbe"} aus TIME2WIN übernommen`
+                  : undefined
+              }
+            >
+              {form.time2winSnapshot?.races.length ? (
+                <DataTable
+                  exportName={`${form.name} Teilnehmer nach Bewerb`}
+                  className="min-w-[22rem]"
+                  aria-label="TIME2WIN Teilnehmer nach Bewerb"
+                >
+                  <TableHeader>
+                    <TableRow>
+                      {BEWERB_SPALTEN.map((spalte) => (
+                        <TableHead
+                          key={spalte.key}
+                          className={spalte.key === "Gemeldete TN" ? "text-right" : undefined}
+                        >
+                          <SortHeader
+                            label={spalte.key}
+                            active={bewerbTabelle.sort.key === spalte.key}
+                            direction={bewerbTabelle.sort.direction}
+                            onSort={() => bewerbTabelle.sortBy(spalte.key)}
+                          />
+                        </TableHead>
+                      ))}
+                      {/* Der Anteil steht im Artboard neben der Zahl; er ist
+                          aus den Zahlen ableitbar und braucht keine neue
+                          Schnittstelle. */}
+                      <TableHead className="text-right">Anteil</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bewerbTabelle.rows(form.time2winSnapshot.races).map((race) => {
+                      const gesamt = form.teilnehmerwerte?.aktuell ?? 0;
+                      const anteil =
+                        gesamt > 0 && race.participantCount != null
+                          ? Math.round((race.participantCount / gesamt) * 100)
+                          : null;
+                      return (
                         <TableRow key={race.id}>
                           <TableCell className="font-medium">{race.name}</TableCell>
                           <TableCell className="text-right tabular-nums">
                             {race.participantCount ?? "—"}
                           </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {anteil == null ? "—" : `${anteil} %`}
+                          </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                    <TableFooter>
-                      <TableRow>
-                        <TableCell>Gesamt</TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {form.teilnehmerwerte?.aktuell ?? "—"}
-                        </TableCell>
-                      </TableRow>
-                    </TableFooter>
-                  </DataTable>
-                ) : (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Noch keine TIME2WIN-Bewerbe geladen.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                      );
+                    })}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>Gesamt</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {form.teilnehmerwerte?.aktuell ?? "—"}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableFooter>
+                </DataTable>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Noch keine TIME2WIN-Bewerbe geladen.
+                </p>
+              )}
+            </DetailKarte>
+          </DetailRaster>
         </TabsContent>
 
+        {/* Nach dem Artboard: Belege als Arbeitsfläche, die beiden Empfänger in
+            der Schiene rechts.  „Nenngeld gesamt“, „Rechnung offen“ und die
+            Tabelle „Leistungen und Konditionen“ aus dem Entwurf fehlen --
+            dafür gibt es weder Preise noch Rechnungen im Datenbestand. */}
         {currentUser.financeAccess && (
-          <TabsContent value="finanz" className="space-y-4">
-            {/* Kennzahlen je Reiter, wie auf jeder Liste: was offen ist und was
-                schon geflossen ist, steht oben statt unter zwei Karten. */}
+          <TabsContent value="finanz" className="space-y-3">
             <MetricRow>
               <MetricTile
                 icon={Receipt}
@@ -1509,279 +1601,276 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 hinweis={detail.payoutRecipient?.name ?? "kein Empfänger gewählt"}
               />
             </MetricRow>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Finanz</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <section
-                  aria-labelledby="finanz-notizen-heading"
-                  className="border-b border-border pb-5"
-                >
-                  <Textarea
-                    aria-label="Finanznotizen"
-                    className="mt-1 min-h-24"
-                    value={form.finanzNotizen ?? ""}
-                    onChange={(e) => set("finanzNotizen", e.target.value)}
-                    placeholder="z. B. Abweichende Zahlungsvereinbarungen …"
-                  />
-                </section>
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                  <section
-                    aria-labelledby="auszahlungsempfaenger-heading"
-                    className="rounded-lg border border-border bg-muted/20 p-4"
+
+            <DetailRaster
+              schiene={
+                <>
+                  {notizenKarte}
+
+                  {/* Die eigene Finanznotiz ist entfallen; die Eventnotiz
+                      darüber ersetzt sie.  Was früher eingetippt wurde, bleibt
+                      lesbar, damit nichts unerreichbar in der Datenbank
+                      liegt. */}
+                  {form.finanzNotizen && (
+                    <DetailKarte titel="Frühere Finanznotiz" hinweis="nur noch zum Nachlesen">
+                      <p className="whitespace-pre-line text-sm">{form.finanzNotizen}</p>
+                    </DetailKarte>
+                  )}
+
+                  <DetailKarte
+                    titel="Auszahlungsempfänger"
+                    hinweis="Wohin das Nenngeld fließt"
+                    inhaltKlasse="space-y-3"
                   >
-                    <div className="mb-3">
-                      <h3
-                        id="auszahlungsempfaenger-heading"
-                        className="font-medium text-foreground"
+                    <Feld label="Empfänger wählen">
+                      <Select
+                        value={detail.payoutRecipientId ?? ""}
+                        onValueChange={(id) => set("auszahlungsempfaengerId", id)}
                       >
-                        Auszahlungsempfänger
-                      </h3>
-                    </div>
-                    <Select
-                      value={detail.payoutRecipientId ?? ""}
-                      onValueChange={(id) => set("auszahlungsempfaengerId", id)}
-                    >
-                      <SelectTrigger aria-label="Auszahlungsempfänger" className="mt-1.5">
-                        <SelectValue placeholder="Veranstalter" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {kunden.map((kunde) => (
-                          <SelectItem key={kunde.id} value={kunde.id}>
-                            {kunde.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectTrigger aria-label="Auszahlungsempfänger">
+                          <SelectValue placeholder="Veranstalter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {kunden.map((kunde) => (
+                            <SelectItem key={kunde.id} value={kunde.id}>
+                              {kunde.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Feld>
                     {detail.payoutRecipient && (
-                      <div aria-label="Stammdaten Auszahlungsempfänger" className="mt-3">
+                      <div aria-label="Stammdaten Auszahlungsempfänger">
                         <RecipientMasterData recipient={detail.payoutRecipient} />
                       </div>
                     )}
-                  </section>
-                  <section
-                    aria-labelledby="rechnungsempfaenger-heading"
-                    className="rounded-lg border border-border bg-muted/20 p-4"
+                  </DetailKarte>
+
+                  <DetailKarte
+                    titel="Rechnungsempfänger"
+                    hinweis="Wer die Leistung bezahlt"
+                    inhaltKlasse="space-y-3"
                   >
-                    <div className="mb-3">
-                      <h3 id="rechnungsempfaenger-heading" className="font-medium text-foreground">
-                        Rechnungsempfänger
-                      </h3>
-                    </div>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          aria-label="Rechnungsempfänger auswählen"
-                          variant="outline"
-                          className="mt-2 w-full justify-start font-normal"
+                    <Feld label="Empfänger suchen">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            aria-label="Rechnungsempfänger auswählen"
+                            variant="outline"
+                            className="w-full justify-start font-normal"
+                          >
+                            <span className="min-w-0 truncate">
+                              {detail.invoiceRecipients.length
+                                ? detail.invoiceRecipients.map((kunde) => kunde.name).join(", ")
+                                : "Rechnungsempfänger auswählen"}
+                            </span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          align="start"
+                          className="w-[min(28rem,calc(100vw-2rem))] p-2"
                         >
-                          {detail.invoiceRecipients.length
-                            ? detail.invoiceRecipients.map((kunde) => kunde.name).join(", ")
-                            : "Rechnungsempfänger auswählen"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
-                        <Input
-                          aria-label="Rechnungsempfänger suchen"
-                          placeholder="Rechnungsempfänger suchen …"
-                          value={detail.invoiceRecipientSearch}
-                          onChange={(e) =>
-                            detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)
-                          }
-                        />
-                        <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                          {detail.visibleInvoiceRecipients.length ? (
-                            detail.visibleInvoiceRecipients.map((kunde) => (
-                              <label
-                                key={kunde.id}
-                                className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
-                              >
-                                <Checkbox
-                                  checked={detail.invoiceRecipientIds.includes(kunde.id)}
-                                  onCheckedChange={() =>
-                                    detailWorkspace.toggleInvoiceRecipient(kunde.id)
-                                  }
-                                />
-                                {kunde.name}
-                              </label>
-                            ))
-                          ) : (
-                            <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                          <Input
+                            aria-label="Rechnungsempfänger suchen"
+                            placeholder="Rechnungsempfänger suchen …"
+                            value={detail.invoiceRecipientSearch}
+                            onChange={(e) =>
+                              detailWorkspace.setInput("invoiceRecipientSearch", e.target.value)
+                            }
+                          />
+                          <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                            {detail.visibleInvoiceRecipients.length ? (
+                              detail.visibleInvoiceRecipients.map((kunde) => (
+                                <label
+                                  key={kunde.id}
+                                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                                >
+                                  <Checkbox
+                                    checked={detail.invoiceRecipientIds.includes(kunde.id)}
+                                    onCheckedChange={() =>
+                                      detailWorkspace.toggleInvoiceRecipient(kunde.id)
+                                    }
+                                  />
+                                  {kunde.name}
+                                </label>
+                              ))
+                            ) : (
+                              <p className="px-2 py-3 text-sm text-muted-foreground">
+                                Keine Treffer
+                              </p>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </Feld>
                     {detail.invoiceRecipients.length > 0 && (
-                      <div aria-label="Stammdaten Rechnungsempfänger" className="mt-3 space-y-3">
+                      <div aria-label="Stammdaten Rechnungsempfänger" className="space-y-3">
                         {detail.invoiceRecipients.map((kunde) => (
                           <RecipientMasterData key={kunde.id} recipient={kunde} />
                         ))}
                       </div>
                     )}
-                  </section>
-                </div>
+                  </DetailKarte>
+                </>
+              }
+            >
+              <DetailKarte
+                titel="Auszahlungen dieses Events"
+                hinweis={`${finanzzahlen.belege} ${finanzzahlen.belege === 1 ? "Beleg" : "Belege"}`}
+              >
                 <PayoutsPanel
                   eventId={event.id}
+                  ohneKopf
                   onKennzahlen={setFinanzzahlen}
                   recipientId={detail.payoutRecipientId ?? null}
                   {...(detail.payoutRecipient?.email
                     ? { recipientEmail: detail.payoutRecipient.email }
                     : {})}
                 />
-              </CardContent>
-            </Card>
+              </DetailKarte>
+            </DetailRaster>
           </TabsContent>
         )}
 
+        {/* Nach dem Artboard: die Zuordnungen als Arbeitsfläche, daneben die
+            Rollenübersicht.  Die eigene Kontaktnotiz ist entfallen, die
+            Eventnotiz in der Schiene ersetzt sie. */}
         <TabsContent value="kontakte">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("nav.contacts")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <section
-                aria-labelledby="kontakte-notizen-heading"
-                className="border-b border-border pb-5"
-              >
-                <Textarea
-                  aria-label="Kontaktnotizen"
-                  className="mt-3 min-h-24"
-                  value={form.kontakteNotizen ?? ""}
-                  onChange={(e) => set("kontakteNotizen", e.target.value)}
-                  placeholder="z. B. bevorzugte Ansprechpartner oder Erreichbarkeit …"
-                />
-              </section>
-              <section>
-                <h3 className="font-medium text-foreground">Kontakte des Veranstalters</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Stammdatenkontakte des ausgewählten Veranstalters.
-                </p>
-                {!event.veranstalterId ? (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Kein Veranstalter ausgewählt.
-                  </p>
-                ) : detail.organizerContacts.length === 0 ? (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Für diesen Veranstalter sind keine Kontakte hinterlegt.
-                  </p>
-                ) : (
-                  <div className="mt-3 space-y-2">
-                    {detail.organizerContacts.map((person) => {
-                      const alreadyAdded = form.kontakte.some((item) => item.id === person.id);
-                      return (
-                        <div
-                          key={person.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"
-                        >
-                          <div>
-                            <p className="font-medium text-foreground">
-                              {person.vorname} {person.nachname}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {person.email} ·{" "}
-                              {person.telefonBeruflich || person.telefonPrivat || "—"}
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              void addEventContact(person.id, "Kontakt").then(() =>
-                                toast.success("Als Eventkontakt übernommen."),
-                              )
-                            }
-                            disabled={alreadyAdded}
-                          >
-                            {alreadyAdded ? "Bereits Eventkontakt" : "Als Eventkontakt übernehmen"}
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
+          <DetailRaster
+            schiene={
+              <>
+                {notizenKarte}
+
+                {form.kontakteNotizen && (
+                  <DetailKarte titel="Frühere Kontaktnotiz" hinweis="nur noch zum Nachlesen">
+                    <p className="whitespace-pre-line text-sm">{form.kontakteNotizen}</p>
+                  </DetailKarte>
                 )}
-              </section>
-              <section className="border-t border-border pt-5">
-                <h3 className="font-medium text-foreground">Eventkontakte & Rollen</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Explizit für dieses Event zugeordnete Kontakte.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-56 justify-start font-normal"
-                        aria-label="Kontakt auswählen"
+
+                <DetailKarte
+                  titel="Rollen dieses Events"
+                  inhaltKlasse="space-y-3"
+                  aktion={
+                    <Link
+                      to="/einstellungen"
+                      search={{ tab: "auswahllisten", liste: "eventrollen" }}
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                      Rollen verwalten
+                    </Link>
+                  }
+                >
+                  <div className="space-y-1.5">
+                    {eventRollenLage.map((rolle) => (
+                      <div
+                        key={rolle.name}
+                        className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-1.5"
                       >
-                        {detail.contactId
-                          ? (() => {
-                              const person = personen.find((item) => item.id === detail.contactId);
-                              return person
-                                ? `${person.vorname} ${person.nachname}`
-                                : "Kontakt auswählen";
-                            })()
-                          : "Kontakt auswählen"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
-                      <Input
-                        aria-label="Kontakt suchen"
-                        placeholder="Kontakt suchen …"
-                        value={detail.contactSearch}
-                        onChange={(e) => detailWorkspace.setInput("contactSearch", e.target.value)}
-                      />
-                      <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                        {detail.visibleContacts.length ? (
-                          detail.visibleContacts.map((person) => (
-                            <button
-                              type="button"
-                              key={person.id}
-                              className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
-                              onClick={() => {
-                                detailWorkspace.selectContact(person.id);
-                              }}
-                            >
-                              {person.vorname} {person.nachname}
-                              <span className="ml-2 text-muted-foreground">{person.email}</span>
-                            </button>
-                          ))
-                        ) : (
-                          <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
-                        )}
+                        <span className="min-w-0 flex-1 truncate text-xs font-semibold">
+                          {rolle.name}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-xs tabular-nums",
+                            rolle.anzahl === 0 && "text-muted-foreground",
+                          )}
+                        >
+                          {rolle.anzahl === 0 ? "nicht besetzt" : rolle.anzahl}
+                        </span>
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                  <Select
-                    value={detail.contactRole}
-                    onValueChange={(value) => detailWorkspace.setInput("contactRole", value)}
-                  >
-                    <SelectTrigger aria-label="Eventrolle" className="w-36">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {eventContactRoleChoices(selectionLists.eventRoles, detail.contactRole).map(
-                        (role) => (
-                          <SelectItem key={role} value={role}>
-                            <SelectionBadge
-                              {...(selectionLists.eventRoles.find((item) => item.name === role) ?? {
-                                name: role,
-                              })}
-                            />
-                          </SelectItem>
-                        ),
+                    ))}
+                    {eventRollenLage.length === 0 && (
+                      <p className="text-sm text-muted-foreground">Keine Eventrollen hinterlegt.</p>
+                    )}
+                  </div>
+                  <p className="text-xs leading-snug text-muted-foreground">
+                    Inaktive Rollen bleiben an bestehenden Zuordnungen sichtbar, stehen für neue
+                    aber nicht zur Wahl.
+                  </p>
+                </DetailKarte>
+              </>
+            }
+          >
+            <DetailKarte
+              titel={t("nav.contacts")}
+              hinweis="Explizit für dieses Event zugeordnete Kontakte."
+              inhaltKlasse="space-y-3"
+            >
+              <div className="flex flex-wrap gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-56 justify-start font-normal"
+                      aria-label="Kontakt auswählen"
+                    >
+                      {detail.contactId
+                        ? (() => {
+                            const person = personen.find((item) => item.id === detail.contactId);
+                            return person
+                              ? `${person.vorname} ${person.nachname}`
+                              : "Kontakt auswählen";
+                          })()
+                        : "Kontakt auswählen"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-[min(28rem,calc(100vw-2rem))] p-2">
+                    <Input
+                      aria-label="Kontakt suchen"
+                      placeholder="Kontakt suchen …"
+                      value={detail.contactSearch}
+                      onChange={(e) => detailWorkspace.setInput("contactSearch", e.target.value)}
+                    />
+                    <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                      {detail.visibleContacts.length ? (
+                        detail.visibleContacts.map((person) => (
+                          <button
+                            type="button"
+                            key={person.id}
+                            className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
+                            onClick={() => {
+                              detailWorkspace.selectContact(person.id);
+                            }}
+                          >
+                            {person.vorname} {person.nachname}
+                            <span className="ml-2 text-muted-foreground">{person.email}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-2 py-3 text-sm text-muted-foreground">Keine Treffer</p>
                       )}
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={() => void addContact()} disabled={!detail.contactId}>
-                    Hinzufügen
-                  </Button>
-                </div>
-              </section>
-              {form.kontakte.length === 0 && (
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Select
+                  value={detail.contactRole}
+                  onValueChange={(value) => detailWorkspace.setInput("contactRole", value)}
+                >
+                  <SelectTrigger aria-label="Eventrolle" className="w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventContactRoleChoices(selectionLists.eventRoles, detail.contactRole).map(
+                      (role) => (
+                        <SelectItem key={role} value={role}>
+                          <SelectionBadge
+                            {...(selectionLists.eventRoles.find((item) => item.name === role) ?? {
+                              name: role,
+                            })}
+                          />
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => void addContact()} disabled={!detail.contactId}>
+                  <Plus className="size-4" aria-hidden="true" />
+                  Kontakt zuordnen
+                </Button>
+              </div>
+              {form.kontakte.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Noch keine Kontakte hinterlegt.</p>
-              )}
-              {form.kontakte.length > 0 && (
+              ) : (
                 <DataTable exportName={`${form.name} Kontakte`} className="text-sm">
                   <thead className="t2w-table-header text-left">
                     <tr>
@@ -1858,64 +1947,180 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   </tbody>
                 </DataTable>
               )}
-            </CardContent>
-          </Card>
+            </DetailKarte>
+
+            <DetailKarte
+              titel="Kontakte des Veranstalters"
+              hinweis="Stammdatenkontakte des ausgewählten Veranstalters."
+            >
+              {!event.veranstalterId ? (
+                <p className="text-sm text-muted-foreground">Kein Veranstalter ausgewählt.</p>
+              ) : detail.organizerContacts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Für diesen Veranstalter sind keine Kontakte hinterlegt.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {detail.organizerContacts.map((person) => {
+                    const alreadyAdded = form.kontakte.some((item) => item.id === person.id);
+                    return (
+                      <div
+                        key={person.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-3"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {person.vorname} {person.nachname}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {person.email} ·{" "}
+                            {person.telefonBeruflich || person.telefonPrivat || "—"}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            void addEventContact(person.id, "Kontakt").then(() =>
+                              toast.success("Als Eventkontakt übernommen."),
+                            )
+                          }
+                          disabled={alreadyAdded}
+                        >
+                          {alreadyAdded ? "Bereits Eventkontakt" : "Als Eventkontakt übernehmen"}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </DetailKarte>
+          </DetailRaster>
         </TabsContent>
 
         <TabsContent value="aufgaben">
           <ProjectManagement eventId={form.id} eventStart={form.start} />
         </TabsContent>
 
+        {/* Nach dem Artboard: die Dateiliste als Arbeitsfläche, der Ordner und
+            das Verknüpfen in der Schiene.  Der aus SharePoint gespiegelte
+            Ordnerinhalt aus dem Entwurf fehlt — dafür gibt es keine
+            Dienstschnittstelle; die Liste zeigt die einzeln verknüpften
+            Dateien. */}
         <TabsContent value="dateien">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Dateien</CardTitle>
-              <CardDescription>Ansicht des verknüpften SharePoint-Ordners.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  aria-label="Dateiverknüpfung"
-                  value={detail.newFile}
-                  onChange={(e) => detailWorkspace.setInput("newFile", e.target.value)}
-                  placeholder="Dateiname oder SharePoint-Link"
-                />
-                <Button onClick={() => void addFile()}>Verknüpfen</Button>
-              </div>
-              {form.dateien.length === 0 && (
-                <p className="text-sm text-muted-foreground">Keine Dateien verknüpft.</p>
-              )}
-              {form.dateien.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+          <DetailRaster
+            schiene={
+              <>
+                <DetailKarte
+                  titel="Verknüpfter Ordner"
+                  hinweis="Quelle der Ablage"
+                  inhaltKlasse="space-y-2"
                 >
-                  <span className="text-sm font-medium text-foreground">{f.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {f.groesse} · {formatDatum(f.aktualisiert)}
-                  </span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                  {form.sharepointOrdner ? (
+                    <>
+                      <div className="rounded-lg border border-border bg-muted/40 px-2.5 py-2">
+                        <span className="block text-xs font-semibold">SharePoint</span>
+                        <span className="block break-all font-mono text-[0.6875rem] text-muted-foreground">
+                          {form.sharepointOrdner}
+                        </span>
+                      </div>
+                      <FolderLink destination={folders.find(({ id }) => id === "sharepoint")!} />
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Kein SharePoint-Ordner hinterlegt. Einzeln verknüpfte Dateien bleiben
+                      sichtbar.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Dateien werden hier nicht gespeichert, nur verknüpft.
+                  </p>
+                </DetailKarte>
+
+                <DetailKarte
+                  titel="Einzeln verknüpfen"
+                  hinweis="Außerhalb des Eventordners"
+                  inhaltKlasse="space-y-2"
+                >
+                  <Input
+                    aria-label="Dateiverknüpfung"
+                    value={detail.newFile}
+                    onChange={(e) => detailWorkspace.setInput("newFile", e.target.value)}
+                    placeholder="Dateiname oder SharePoint-Link"
+                  />
+                  <Button className="w-full" onClick={() => void addFile()}>
+                    <Plus className="size-4" aria-hidden="true" />
+                    Verknüpfen
+                  </Button>
+                </DetailKarte>
+              </>
+            }
+          >
+            <DetailKarte
+              titel="Dateien"
+              hinweis={
+                form.dateien.length
+                  ? `${form.dateien.length} ${form.dateien.length === 1 ? "Eintrag" : "Einträge"}`
+                  : undefined
+              }
+            >
+              {form.dateien.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Keine Dateien verknüpft.</p>
+              ) : (
+                <DataTable exportName={`${form.name} Dateien`} className="text-sm">
+                  <thead className="t2w-table-header text-left">
+                    <tr>
+                      <th className="px-3 py-2">Name</th>
+                      <th className="px-3 py-2">Größe</th>
+                      <th className="px-3 py-2">Geändert</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {form.dateien.map((f) => (
+                      <tr key={f.id}>
+                        <td className="px-3 py-2 font-medium text-foreground">{f.name}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                          {f.groesse}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                          {formatDatum(f.aktualisiert)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </DataTable>
+              )}
+            </DetailKarte>
+          </DetailRaster>
         </TabsContent>
 
+        {/* Nach dem Artboard: die Ausgaben als Arbeitsfläche, der Hinweis zur
+            Rückgabe daneben.  Kennzahlkacheln, Statusfilter und das
+            Ausgabeprotokoll aus dem Entwurf fehlen noch — sie brauchen Zahlen
+            und einen Verlauf, die der Hardwarebestand heute nicht liefert. */}
         <TabsContent value="hardware">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Hardware</CardTitle>
-              <CardDescription>Ausgaben und Rückläufer dieses Events verwalten.</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <DetailRaster
+            schiene={
+              <DetailKarte titel="Hinweis zur Rückgabe">
+                <p className="text-xs leading-snug text-muted-foreground">
+                  Offene Positionen bleiben dem Event zugeordnet, bis die Rückgabe erfasst ist.
+                  Rückgabefristen stehen an der jeweiligen Ausgabe.
+                </p>
+              </DetailKarte>
+            }
+          >
+            <DetailKarte titel="Hardware" hinweis="Ausgaben und Rückläufer dieses Events verwalten.">
               <HardwareWorkspace eventId={event.id} />
-            </CardContent>
-          </Card>
+            </DetailKarte>
+          </DetailRaster>
         </TabsContent>
         <TabsContent value="kommunikation" className="space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
+            {/* Die Ueberschrift "Kommunikation" ist entfallen: der Reiter
+                darueber sagt es schon, und das Artboard beginnt mit der
+                Zeile darunter. */}
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Kommunikation</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 <span className="font-semibold tabular-nums text-foreground">
                   {form.kommunikation.length}
                 </span>{" "}

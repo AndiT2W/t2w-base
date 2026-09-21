@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { Button } from "@/components/ui/button";
 import { TaskDetailSheet } from "@/components/t2w/TaskDetailSheet";
 import { TaskSummary } from "@/components/t2w/TaskSummary";
+import { Segment, segmentFeld } from "@/components/t2w/Segment";
 import { TaskTimeline } from "@/components/t2w/TaskTimeline";
 import {
   CategoryRow,
@@ -80,13 +81,10 @@ export function ProjectManagement({
     state?.owners.find((owner) => owner.id === id)?.displayName ?? "nicht zugeordnet";
   return (
     <section aria-label="Projektmanagement" className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">Aufgaben</h2>
-          <p className="text-sm text-muted-foreground">
-            Kategorien, nächste Schritte und Voraussetzungen
-          </p>
-        </div>
+      {/* Die Ueberschrift "Aufgaben" ist entfallen: der Reiter darueber heisst
+          schon Projektmanagement, und das Artboard beginnt direkt mit dem
+          Fortschrittsband. */}
+      <header className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-3">
           <a className="min-h-11 py-2 underline" href="/aufgaben">
             Gesamtübersicht öffnen
@@ -127,23 +125,21 @@ export function ProjectManagement({
         <>
           <TaskSummary tasks={state.tasks} {...(eventStart ? { eventStart } : {})} />
 
-          <div className="flex gap-1 self-start rounded-lg bg-muted p-1">
+          {/* Dieselbe Segmentleiste wie auf den Listenansichten, seit das
+              Artboard den Unterstrich statt der Pille setzt. */}
+          <Segment label="Aufgabenansicht" className="self-start">
             {(["kategorien", "zeitachse"] as const).map((value) => (
               <button
                 key={value}
                 type="button"
                 aria-pressed={view === value}
                 onClick={() => setView(value)}
-                className={`min-h-11 rounded-md px-3 text-sm transition-colors md:min-h-8 ${
-                  view === value
-                    ? "bg-background font-semibold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={segmentFeld(view === value)}
               >
                 {value === "kategorien" ? "Kategorien" : "Zeitachse"}
               </button>
             ))}
-          </div>
+          </Segment>
 
           {view === "zeitachse" ? (
             <TaskTimeline

@@ -31,6 +31,8 @@ type Props = {
   recipientEmail?: string | null;
   /** Meldet die Summen nach oben; siehe Kommentar an der Berechnung. */
   onKennzahlen?: (werte: PayoutKennzahlen) => void;
+  /** Laesst die eigene Ueberschrift weg, wenn die Karte darum sie schon traegt. */
+  ohneKopf?: boolean;
 };
 
 /** Sortierwerte der Auszahlungsspalten; die Aktionsspalte bleibt ungeordnet. */
@@ -66,7 +68,13 @@ function statusClasses(p: P) {
   if (p.mailStatus === "VERSENDEN") return "border-amber-200 bg-amber-50 text-amber-700";
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
-export function PayoutsPanel({ eventId, recipientId, recipientEmail, onKennzahlen }: Props) {
+export function PayoutsPanel({
+  eventId,
+  recipientId,
+  recipientEmail,
+  onKennzahlen,
+  ohneKopf,
+}: Props) {
   const workspace = useMemo(() => createPayoutWorkspace<P>(createHttpPayoutAdapter<P>()), []);
   const { rows: items } = useSyncExternalStore(
     workspace.subscribe,
@@ -123,12 +131,19 @@ export function PayoutsPanel({ eventId, recipientId, recipientEmail, onKennzahle
   return (
     <section aria-label="Auszahlungen" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h3 className="font-medium text-foreground">Auszahlungen</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Neue Auszahlungen anlegen und den Versandstatus bearbeiten.
-          </p>
-        </div>
+        {/* Im Eventdetail traegt die umgebende Karte bereits die Ueberschrift
+            "Auszahlungen dieses Events"; dann waere die eigene die zweite
+            gleiche Zeile untereinander. */}
+        {ohneKopf ? (
+          <div />
+        ) : (
+          <div>
+            <h3 className="font-medium text-foreground">Auszahlungen</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Neue Auszahlungen anlegen und den Versandstatus bearbeiten.
+            </p>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           <input
             aria-label="Auszahlungsbetrag"

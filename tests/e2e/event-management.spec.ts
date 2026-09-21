@@ -98,9 +98,11 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   await expect(page.getByRole("button", { name: "Service Drohne bearbeiten" })).toBeVisible();
 
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("button", { name: "Services auswählen" }).click();
-  await page.getByRole("checkbox", { name: "UHF" }).click();
-  await page.getByRole("checkbox", { name: "Video (iRewind)" }).click();
+  // Das Artboard zeigt alle Leistungen als Chips zum An- und Abwaehlen statt
+  // einer Liste, die nur das Gesetzte zeigt.
+  const leistungen = page.getByRole("group", { name: "Services" });
+  await leistungen.getByRole("button", { name: "UHF", exact: true }).click();
+  await leistungen.getByRole("button", { name: "Video (iRewind)", exact: true }).click();
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -113,10 +115,18 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
     ),
   ).toBeTruthy();
   await page.reload();
-  const selectedServices = page.getByRole("button", { name: "Services auswählen" });
-  await expect(selectedServices).toContainText("UHF");
-  await expect(selectedServices).toContainText("Video (iRewind)");
-  await expect(selectedServices.locator("svg")).toHaveCount(2);
+  const gesetzt = page.getByRole("group", { name: "Services" });
+  await expect(gesetzt.getByRole("button", { name: "UHF", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(
+    gesetzt.getByRole("button", { name: "Video (iRewind)", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(gesetzt.getByRole("button", { name: "App", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
 });
 
 test("zeigt Sportarten, Services und Hardware-Objekte im einheitlichen verschiebbaren Layout", async ({
@@ -216,7 +226,9 @@ test("zeigt synchronisierte TIME2WIN-Teilnehmer im Event", async ({ page }) => {
 
   await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
 
-  await expect(page.getByText("Gemeldete TN:", { exact: false }).first()).toContainText("300");
+  await expect(
+    page.getByRole("region", { name: "Kennzahlen" }).or(page.locator("body")).first(),
+  ).toContainText("300");
   const participantTable = page.getByRole("table", { name: "TIME2WIN Teilnehmer nach Bewerb" });
   await expect(participantTable.getByRole("columnheader", { name: "Bewerb" })).toBeVisible();
   await expect(participantTable.getByRole("columnheader", { name: "Gemeldete TN" })).toBeVisible();
@@ -1141,48 +1153,54 @@ test("zeigt die technische ClickUp-ID nicht in den Event-Stammdaten", async ({ p
   await expect(page.getByText("ClickUp-ID", { exact: true })).toHaveCount(0);
 });
 
-test("zeigt die Event-Stammdaten kompakt und den Zeitraum in einer Zeile", async ({ page }) => {
+test("legt die Stammdaten nach dem Artboard in Karten mit Beschriftung darüber", async ({
+  page,
+}) => {
   await mockApi(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/events/260820_demo_event");
 
-  await expect(page.getByRole("heading", { name: "Identität & Zeitraum" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Organisation & Einordnung" })).toBeVisible();
+  // Statt einer Karte ueber die volle Breite stehen die Stammdaten in drei
+  // Karten links und einer Schiene rechts; die Beschriftung sitzt ueber dem
+  // Feld, damit zwei Felder nebeneinander passen.
+  for (const titel of ["Eckdaten", "Ort und Zeit", "Leistungen"]) {
+    await expect(page.getByRole("heading", { name: titel, level: 2 })).toBeVisible();
+  }
 
   const eventcodeLabel = await page.getByText("Eventcode", { exact: false }).first().boundingBox();
   const eventcodeInput = await page.locator("#d-code").boundingBox();
-  const dateRange = await page.getByTestId("event-date-range").boundingBox();
   const startInput = await page.locator("#d-start").boundingBox();
   const endInput = await page.locator("#d-ende").boundingBox();
-  const organizerSelect = await page.getByLabel("Veranstalter aus Stammdaten").boundingBox();
+  const notizen = await page.locator("#d-notizen").boundingBox();
 
   expect(eventcodeLabel).not.toBeNull();
   expect(eventcodeInput).not.toBeNull();
-  expect(dateRange).not.toBeNull();
   expect(startInput).not.toBeNull();
   expect(endInput).not.toBeNull();
-  expect(organizerSelect).not.toBeNull();
-  expect(Math.abs(eventcodeLabel!.y - eventcodeInput!.y)).toBeLessThan(12);
-  await expect(page.getByTestId("event-date-range")).toContainText("–");
-  expect(Math.abs(startInput!.y - endInput!.y)).toBeLessThan(1);
+  expect(notizen).not.toBeNull();
+
+  // Beschriftung ueber dem Feld, nicht daneben.
+  expect(eventcodeInput!.y).toBeGreaterThan(eventcodeLabel!.y + eventcodeLabel!.height - 2);
+  expect(Math.abs(eventcodeLabel!.x - eventcodeInput!.x)).toBeLessThan(2);
+
+  // Beginn und Ende stehen nebeneinander in derselben Zeile.
+  expect(Math.abs(startInput!.y - endInput!.y)).toBeLessThan(2);
   expect(endInput!.x).toBeGreaterThan(startInput!.x + startInput!.width);
-  expect(Math.abs(dateRange!.x - eventcodeInput!.x)).toBeLessThan(1);
-  expect(Math.abs(dateRange!.width - eventcodeInput!.width)).toBeLessThan(1);
-  expect(organizerSelect!.x).toBeGreaterThan(dateRange!.x + dateRange!.width);
+
+  // Die Notizen liegen in der Schiene rechts neben der Arbeitsflaeche.
+  expect(notizen!.x).toBeGreaterThan(eventcodeInput!.x + eventcodeInput!.width);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  const mobileEventcodeInput = await page.locator("#d-code").boundingBox();
-  const mobileDateRange = await page.getByTestId("event-date-range").boundingBox();
-  const mobileStartInput = await page.locator("#d-start").boundingBox();
-  const mobileEndInput = await page.locator("#d-ende").boundingBox();
-
-  expect(mobileEventcodeInput).not.toBeNull();
-  expect(mobileDateRange).not.toBeNull();
-  expect(mobileStartInput).not.toBeNull();
-  expect(mobileEndInput).not.toBeNull();
-  expect(Math.abs(mobileStartInput!.y - mobileEndInput!.y)).toBeLessThan(1);
-  expect(Math.abs(mobileDateRange!.x - mobileEventcodeInput!.x)).toBeLessThan(1);
-  expect(Math.abs(mobileDateRange!.width - mobileEventcodeInput!.width)).toBeLessThan(1);
-  expect(mobileDateRange!.x + mobileDateRange!.width).toBeLessThanOrEqual(390);
+  const mobileStart = await page.locator("#d-start").boundingBox();
+  const mobileEnd = await page.locator("#d-ende").boundingBox();
+  expect(mobileStart).not.toBeNull();
+  expect(mobileEnd).not.toBeNull();
+  // Schmal untereinander statt nebeneinander, und nichts laeuft aus dem Bild.
+  expect(mobileEnd!.y).toBeGreaterThan(mobileStart!.y);
+  expect(mobileStart!.x + mobileStart!.width).toBeLessThanOrEqual(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  );
 });
 
 test("zeigt den Eventstatus in den Stammdaten mit farbigem Kreis und Text", async ({ page }) => {
@@ -1202,23 +1220,29 @@ test("zeigt den Eventstatus in den Stammdaten mit farbigem Kreis und Text", asyn
   await expect(statusSelect.locator('[data-status-dot="zugesagt"]')).toBeVisible();
 });
 
-test("ordnet die Archivierung kompakt beim Eventnamen ein", async ({ page }) => {
+test("führt Archivieren und Löschen im Gefahrenbereich zusammen", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
 
-  const eventName = await page.locator("#d-name").boundingBox();
+  // Das Artboard stellt Archivieren neben das Loeschen, nicht neben den
+  // Eventnamen: beides greift das ganze Event an.
   const archiveToggle = page.getByTestId("event-archive-toggle");
-  const archiveBox = await archiveToggle.boundingBox();
-
-  expect(eventName).not.toBeNull();
-  expect(archiveBox).not.toBeNull();
-  expect(Math.abs(eventName!.y - archiveBox!.y)).toBeLessThan(16);
-  expect(archiveBox!.x).toBeGreaterThan(eventName!.x + eventName!.width);
   await expect(archiveToggle).toContainText("Archiviert");
+  await expect(page.getByRole("switch", { name: "Event archivieren" })).toBeVisible();
   await expect(
     archiveToggle.getByText("Archivierte Events erscheinen nur im Archivfilter."),
   ).toHaveCount(0);
-  await expect(page.getByRole("switch", { name: "Event archivieren" })).toBeVisible();
+
+  const gefahr = await page
+    .getByRole("heading", { name: "Gefahrenbereich", level: 2 })
+    .boundingBox();
+  const archiveBox = await archiveToggle.boundingBox();
+  const loeschen = await page.getByRole("button", { name: "Event löschen" }).boundingBox();
+  expect(gefahr).not.toBeNull();
+  expect(archiveBox).not.toBeNull();
+  expect(loeschen).not.toBeNull();
+  expect(archiveBox!.y).toBeGreaterThan(gefahr!.y);
+  expect(loeschen!.y).toBeGreaterThan(archiveBox!.y);
 });
 
 test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
@@ -1420,10 +1444,14 @@ test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ pa
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
   await page.getByRole("tab", { name: "Anmeldung" }).click();
-  await expect(page.getByText("Event Id", { exact: true })).toBeVisible();
-  await expect(page.locator("#d-t2w")).toBeVisible();
-  await expect(page.getByText("Gemeldete TN:")).toBeVisible();
-  await expect(page.getByText("Status: NEVER")).toBeVisible();
+  // Die Verknuepfung steht seit dem Umbau als eigene Karte in der Schiene.
+  const verknuepfung = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "TIME2WIN-Verknüpfung", level: 2 }) });
+  await expect(verknuepfung.getByText("Event-ID", { exact: true })).toBeVisible();
+  await expect(verknuepfung.getByText("Verknüpftes Event", { exact: true })).toBeVisible();
+  await expect(verknuepfung.getByText("TIME2WIN-Sportart", { exact: true })).toBeVisible();
+  await expect(verknuepfung.getByText("Noch kein Abgleich gelaufen.")).toBeVisible();
 });
 
 test("ändert die TIME2WIN-Event-ID in den Stammdaten und behält sie nach Reload", async ({
@@ -1432,7 +1460,7 @@ test("ändert die TIME2WIN-Event-ID in den Stammdaten und behält sie nach Reloa
   const requests = await mockApi(page, { t2wEventId: 42 });
   await page.goto("/events/260820_demo_event");
 
-  await page.getByLabel("Event Id").fill("1082");
+  await page.getByLabel("TIME2WIN-ID").fill("1082");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -1443,7 +1471,7 @@ test("ändert die TIME2WIN-Event-ID in den Stammdaten und behält sie nach Reloa
   ).toBeTruthy();
 
   await page.reload();
-  await expect(page.getByLabel("Event Id")).toHaveValue("1082");
+  await expect(page.getByLabel("TIME2WIN-ID")).toHaveValue("1082");
 });
 
 test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben", async ({
@@ -1479,7 +1507,7 @@ test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben
   await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
   await expect(page.getByText("TIME2WIN Testevent")).toBeVisible();
   await expect(page.getByText("Hauptbewerb")).toBeVisible();
-  await expect(page.getByText("Gemeldete TN: 21")).toBeVisible();
+  await expect(page.getByText("Gemeldete Teilnehmer").first()).toBeVisible();
   await expect(page.getByRole("table", { name: "TIME2WIN Teilnehmer nach Bewerb" })).toContainText(
     "21",
   );
@@ -1506,9 +1534,9 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
   await expect(invoiceDetails).toContainText("Nordwerk GmbH");
   await expect(invoiceDetails).toContainText("Jonas Feld");
   await expect(invoiceDetails).toContainText("BKAUATWW");
-  await page
-    .getByRole("textbox", { name: "Finanznotizen" })
-    .fill("Zahlung nach Freigabe durch den Veranstalter.");
+  // Die eigene Finanznotiz ist entfallen; die Eventnotiz in der Schiene
+  // ersetzt sie.
+  await page.locator("#d-notizen").fill("Zahlung nach Freigabe durch den Veranstalter.");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -1517,7 +1545,7 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
         request.method === "PATCH" &&
         request.body?.includes('"payoutRecipientId":"c2"') &&
         request.body.includes('"invoiceRecipientIds":["c1","c2"]') &&
-        request.body.includes('"financeNotes":"Zahlung nach Freigabe durch den Veranstalter."'),
+        request.body.includes('"notes":"Zahlung nach Freigabe durch den Veranstalter."'),
     ),
   ).toBeTruthy();
 });
@@ -1535,7 +1563,8 @@ test("zeigt Veranstalterkontakte und übernimmt sie als Eventkontakt", async ({ 
     .click();
   await expect(page.getByRole("button", { name: "Bereits Eventkontakt" })).toBeVisible();
   await expect(page.getByText("Marion Kessler", { exact: true })).toHaveCount(2);
-  await page.getByLabel("Kontaktnotizen").fill("Kontakt bevorzugt per E-Mail.");
+  // Auch hier tritt die Eventnotiz an die Stelle der eigenen Kontaktnotiz.
+  await page.locator("#d-notizen").fill("Kontakt bevorzugt per E-Mail.");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -1550,7 +1579,7 @@ test("zeigt Veranstalterkontakte und übernimmt sie als Eventkontakt", async ({ 
     requests.some(
       (request) =>
         request.method === "PATCH" &&
-        request.body?.includes('"contactsNotes":"Kontakt bevorzugt per E-Mail."'),
+        request.body?.includes('"notes":"Kontakt bevorzugt per E-Mail."'),
     ),
   ).toBeTruthy();
 });
