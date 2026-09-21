@@ -26,14 +26,69 @@ export function TaskSummary({
   tasks,
   eventStart,
   className,
+  variante = "breit",
 }: {
   tasks: readonly TaskStateInput[];
   eventStart?: string;
   className?: string;
+  /**
+   * `schmal` ist die Fassung fuer die Schiene der Eventdetailseite: kein
+   * eigener Rahmen, weil die Karte darum ihn schon traegt, und alles
+   * untereinander statt nebeneinander -- bei 330 px Breite bricht die breite
+   * Fassung sonst in vier Zeilen und die Tageszahl steht allein da.
+   */
+  variante?: "breit" | "schmal";
 }) {
   const counts = taskProgressCounts(tasks);
   const share = (value: number) => (counts.total ? `${(value / counts.total) * 100}%` : "0%");
   const days = eventStart ? daysUntil(eventStart) : null;
+  const tagetext =
+    days === null
+      ? null
+      : days > 0
+        ? `noch ${days} ${days === 1 ? "Tag" : "Tage"}`
+        : days === 0
+          ? "Event ist heute"
+          : `${Math.abs(days)} ${Math.abs(days) === 1 ? "Tag" : "Tage"} nach dem Event`;
+
+  if (variante === "schmal") {
+    return (
+      <div className={cn("space-y-2", className)}>
+        <p className="text-xs text-muted-foreground">
+          <strong className="font-semibold tabular-nums text-foreground">{counts.done}</strong> von{" "}
+          {counts.total} erledigt
+          {tagetext ? ` · ${tagetext}` : ""}
+        </p>
+        <div
+          role="img"
+          aria-label={`${counts.done} erledigt, ${counts.active} in Arbeit, ${counts.overdue} überfällig, ${counts.open} offen`}
+          className="flex h-2 overflow-hidden rounded-full bg-muted"
+        >
+          {SEGMENTS.filter((segment) => segment.bar).map((segment) => (
+            <span
+              key={segment.key}
+              className={segment.bar}
+              style={{ width: share(counts[segment.key]) }}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {SEGMENTS.map((segment) => (
+            <span
+              key={segment.key}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
+              <span className={cn("size-2 rounded-sm", segment.dot)} aria-hidden="true" />
+              <strong className="font-semibold tabular-nums text-foreground">
+                {counts[segment.key]}
+              </strong>
+              {segment.label}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -1207,7 +1207,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       </Button>
                     }
                   >
-                    <TaskSummary tasks={aufgabenlage.tasks} eventStart={form.start} />
+                    <TaskSummary
+                      variante="schmal"
+                      tasks={aufgabenlage.tasks}
+                      eventStart={form.start}
+                    />
                   </DetailKarte>
                 )}
 
@@ -2109,7 +2113,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </DetailKarte>
             }
           >
-            <DetailKarte titel="Hardware" hinweis="Ausgaben und Rückläufer dieses Events verwalten.">
+            <DetailKarte
+              titel="Hardware"
+              hinweis="Ausgaben und Rückläufer dieses Events verwalten."
+            >
               <HardwareWorkspace eventId={event.id} />
             </DetailKarte>
           </DetailRaster>
