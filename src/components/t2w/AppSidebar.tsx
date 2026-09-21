@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Fragment, createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   CalendarDays,
@@ -23,25 +23,116 @@ import { useI18n } from "@/lib/i18n";
 import { useT2W } from "@/lib/t2w/store";
 import { AccountDialog } from "@/components/t2w/AccountDialog";
 
+/**
+ * Drei Gruppen statt einer Liste: Arbeitsflächen, Geld, System.  Eine Liste
+ * aus neun Einträgen zwingt zum Lesen von oben; drei kurze Gruppen lassen
+ * einen an der Überschrift abbiegen.  Eine Gruppe, die für ein Konto leer
+ * bleibt, verschwindet samt Überschrift — wer keinen Finanzzugriff hat,
+ * sieht nicht, dass es dort etwas gäbe.
+ */
+/** Höchstens zwei Buchstaben; bei einem einzelnen Namen genügt der erste. */
+function initialen(name: string) {
+  const teile = name.trim().split(/\s+/).filter(Boolean);
+  if (teile.length === 0) return "?";
+  return (teile[0]![0]! + (teile.length > 1 ? teile.at(-1)![0]! : "")).toUpperCase();
+}
+
+const ROLLEN: Record<string, string> = {
+  ADMIN: "Admin",
+  USER: "Benutzer",
+  ORGANIZER: "Veranstalter",
+};
+const rollenname = (rolle: string) => ROLLEN[rolle] ?? rolle;
+
 export const HAUPT_NAV = [
-  { to: "/", label: "Übersicht", icon: LayoutDashboard, exact: true, available: true },
+  {
+    to: "/",
+    label: "Übersicht",
+    icon: LayoutDashboard,
+    exact: true,
+    available: true,
+    gruppe: "module",
+  },
   {
     to: "/veranstaltungen",
     label: "Veranstaltungen",
     icon: CalendarDays,
     exact: false,
     available: true,
+    gruppe: "module",
   },
-  { to: "/aufgaben", label: "Aufgaben", icon: CheckSquare, exact: false, available: true },
-  { to: "/kontakte", label: "Kontakte & Kunden", icon: Users, exact: false, available: true },
-  { to: "/hardware", label: "Hardware", icon: Package, exact: false, available: true },
-  { to: "/auszahlungen", label: "Auszahlungen", icon: Receipt, exact: false, available: true },
-  { to: "/angebote", label: "Angebote", icon: FileText, exact: false, available: false },
-  { to: "/rechnungen", label: "Rechnungen", icon: Receipt, exact: false, available: false },
-  { to: "/einstellungen", label: "Einstellungen", icon: Settings2, exact: false, available: true },
+  {
+    to: "/aufgaben",
+    label: "Aufgaben",
+    icon: CheckSquare,
+    exact: false,
+    available: true,
+    gruppe: "module",
+  },
+  {
+    to: "/kontakte",
+    label: "Kunden & Kontakte",
+    icon: Users,
+    exact: false,
+    available: true,
+    gruppe: "module",
+  },
+  {
+    to: "/hardware",
+    label: "Hardware",
+    icon: Package,
+    exact: false,
+    available: true,
+    gruppe: "module",
+  },
+  {
+    to: "/auszahlungen",
+    label: "Auszahlungen",
+    icon: Receipt,
+    exact: false,
+    available: true,
+    gruppe: "finanzen",
+  },
+  {
+    to: "/angebote",
+    label: "Angebote",
+    icon: FileText,
+    exact: false,
+    available: false,
+    gruppe: "finanzen",
+  },
+  {
+    to: "/rechnungen",
+    label: "Rechnungen",
+    icon: Receipt,
+    exact: false,
+    available: false,
+    gruppe: "finanzen",
+  },
+  {
+    to: "/einstellungen",
+    label: "Einstellungen",
+    icon: Settings2,
+    exact: false,
+    available: true,
+    gruppe: "system",
+  },
+  {
+    to: "/styleguide",
+    label: "Bausteine",
+    icon: Ruler,
+    exact: false,
+    available: true,
+    gruppe: "system",
+  },
 ] as const;
 
-export const NEBEN_NAV = [{ to: "/styleguide", label: "Styleguide", icon: Ruler }] as const;
+/** Die Gruppen in ihrer Reihenfolge, mit dem Schlüssel ihrer Überschrift. */
+const GRUPPEN = [
+  ["module", "nav.modules"],
+  ["finanzen", "nav.finance"],
+  ["system", "nav.system"],
+] as const;
 
 const HAUPT_NAV_KEYS = {
   "/": "nav.overview",
@@ -53,9 +144,6 @@ const HAUPT_NAV_KEYS = {
   "/angebote": "nav.offers",
   "/rechnungen": "nav.invoices",
   "/einstellungen": "nav.settings",
-} as const;
-
-const NEBEN_NAV_KEYS = {
   "/styleguide": "nav.styleguide",
 } as const;
 
@@ -146,97 +234,111 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
         </span>
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-1">
-        <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-          {t("nav.modules")}
-        </p>
-        {visibleMain.map((item) =>
-          item.available ? (
-            <Link
-              key={item.to}
-              to={item.to}
-              onClick={onNavigate}
-              activeOptions={{ exact: item.exact }}
-              className={linkClass}
-            >
-              <item.icon className="size-4 shrink-0" />
-              {t(HAUPT_NAV_KEYS[item.to])}
-              {item.to === "/einstellungen" && (
-                <ChevronDown
-                  className={cn(
-                    "ml-auto size-4 transition-transform",
-                    einstellungenAktiv && "rotate-180",
-                  )}
-                  aria-hidden="true"
-                />
+      {/* Scrollt statt zu ueberlaufen: mit drei Gruppen und dem offenen
+          Einstellungsmenue ist die Leiste hoeher als ein kurzer Bildschirm,
+          und der Benutzerblock am Fuss war nicht mehr zu sehen. */}
+      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+        {GRUPPEN.map(([gruppe, schluessel]) => {
+          const eintraege = visibleMain.filter((item) => item.gruppe === gruppe);
+          if (eintraege.length === 0) return null;
+          return (
+            <div key={gruppe} className="flex flex-col gap-1 pb-4 last:pb-0">
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
+                {t(schluessel)}
+              </p>
+              {eintraege.map((item) =>
+                item.available ? (
+                  <Fragment key={item.to}>
+                    <Link
+                      to={item.to}
+                      onClick={onNavigate}
+                      activeOptions={{ exact: item.exact }}
+                      className={linkClass}
+                    >
+                      <item.icon className="size-4 shrink-0" />
+                      {t(HAUPT_NAV_KEYS[item.to])}
+                      {item.to === "/einstellungen" && (
+                        <ChevronDown
+                          className={cn(
+                            "ml-auto size-4 transition-transform",
+                            einstellungenAktiv && "rotate-180",
+                          )}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </Link>
+                    {item.to === "/einstellungen" && einstellungenAktiv && (
+                      <div
+                        className="ml-3 border-l border-nav-active pl-2"
+                        aria-label="Einstellungen Untermenü"
+                      >
+                        {[
+                          ["allgemein", "Allgemein"],
+                          ["benutzer", "Benutzer"],
+                          ["auswahllisten", "Auswahllisten"],
+                          ["outlook", "Outlook"],
+                          ["auditlog", "Auditlog"],
+                        ].map(([value, label]) => (
+                          <Link
+                            key={value}
+                            to="/einstellungen"
+                            search={{
+                              tab: value as
+                                "allgemein" | "benutzer" | "auswahllisten" | "outlook" | "auditlog",
+                              liste: "services",
+                            }}
+                            onClick={onNavigate}
+                            className={cn(
+                              linkClass,
+                              "py-1.5 text-xs",
+                              "data-[status=active]:bg-nav-active data-[status=active]:text-nav-foreground",
+                            )}
+                          >
+                            {label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </Fragment>
+                ) : (
+                  <span
+                    key={item.to}
+                    aria-disabled="true"
+                    aria-label={`${t(HAUPT_NAV_KEYS[item.to])}: ${t("nav.inPreparation")}`}
+                    title={t("nav.inPreparation")}
+                    className="flex cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-nav-muted/60"
+                  >
+                    <item.icon className="size-4 shrink-0" />
+                    {t(HAUPT_NAV_KEYS[item.to])}
+                    <Clock3 className="ml-auto size-3.5 shrink-0" aria-hidden="true" />
+                    <span className="sr-only">{t("nav.inPreparation")}</span>
+                  </span>
+                ),
               )}
-            </Link>
-          ) : (
-            <span
-              key={item.to}
-              aria-disabled="true"
-              aria-label={`${t(HAUPT_NAV_KEYS[item.to])}: ${t("nav.inPreparation")}`}
-              title={t("nav.inPreparation")}
-              className="flex cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-nav-muted/60"
-            >
-              <item.icon className="size-4 shrink-0" />
-              {t(HAUPT_NAV_KEYS[item.to])}
-              <Clock3 className="ml-auto size-3.5 shrink-0" aria-hidden="true" />
-              <span className="sr-only">{t("nav.inPreparation")}</span>
-            </span>
-          ),
-        )}
-
-        {einstellungenAktiv && (
-          <div
-            className="ml-3 border-l border-nav-active pl-2"
-            aria-label="Einstellungen Untermenü"
-          >
-            {[
-              ["allgemein", "Allgemein"],
-              ["benutzer", "Benutzer"],
-              ["auswahllisten", "Auswahllisten"],
-              ["outlook", "Outlook"],
-              ["auditlog", "Auditlog"],
-            ].map(([value, label]) => (
-              <Link
-                key={value}
-                to="/einstellungen"
-                search={{
-                  tab: value as "allgemein" | "benutzer" | "auswahllisten" | "outlook" | "auditlog",
-                  liste: "services",
-                }}
-                onClick={onNavigate}
-                className={cn(
-                  linkClass,
-                  "py-1.5 text-xs",
-                  "data-[status=active]:bg-nav-active data-[status=active]:text-nav-foreground",
-                )}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {currentUser.role !== "ORGANIZER" && (
-          <p className="px-3 pb-1 pt-5 text-[11px] font-semibold uppercase tracking-wide text-nav-muted">
-            {t("nav.more")}
-          </p>
-        )}
-        {currentUser.role !== "ORGANIZER" &&
-          NEBEN_NAV.map((item) => (
-            <Link key={item.to} to={item.to} onClick={onNavigate} className={linkClass}>
-              <item.icon className="size-4 shrink-0" />
-              {t(NEBEN_NAV_KEYS[item.to])}
-            </Link>
-          ))}
+            </div>
+          );
+        })}
       </nav>
 
       <div className="space-y-3 px-3">
         <div className="border-t border-nav-active pt-3">
-          <p className="truncate text-sm font-medium">{currentUser.displayName}</p>
-          <p className="truncate text-xs text-nav-muted">{currentUser.email}</p>
+          {/* Die Rolle statt der Adresse: wer hier steht, kennt seine eigene
+              E-Mail. Was er darf, sieht er sonst nirgends. */}
+          <div className="flex items-center gap-2.5">
+            <span
+              aria-hidden="true"
+              className="grid size-8 shrink-0 place-items-center rounded-full bg-nav-active text-xs font-bold"
+            >
+              {initialen(currentUser.displayName)}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium">{currentUser.displayName}</span>
+              <span className="block truncate text-xs text-nav-muted">
+                {rollenname(currentUser.role)}
+                {currentUser.financeAccess && " · Finanzzugriff"}
+              </span>
+            </span>
+          </div>
           <div className="mt-2 flex gap-3">
             <button
               type="button"
