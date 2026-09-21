@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-09-21
+
+- Produktionsmigration `0035_hardware_object_presentation` auf der PostgreSQL-Datenbank `t2w_events` angewendet. Prisma meldete `All migrations have been successfully applied`; der anschließende Statuslauf bestätigte `Database schema is up to date`. Die Migration ergänzt optionale `icon`- und `color`-Spalten für `HardwareObjectOption`. Quelle: [Hostinger-Deploy #35641057897](https://github.com/AndiT2W/t2w-base/actions/runs/35641057897), [Migration SQL](../services/event-service/prisma/migrations/0035_hardware_object_presentation/migration.sql).
+
 ## 2026-09-19
 
 - Planungsarchitektur vertieft: Jede Aufgabenintention liefert nun einen aktuellen Planungsschnappschuss mit stabiler `affectedTaskId`; gleichnamige Aufgaben können damit nach einer Anlage nicht mehr falsch ausgewählt werden. Der Event-Service erzeugt die globale Aufgabenprojektion mit Eventkontext, Blockadegründen und Kategorieblöcken; die Route filtert nur noch diese Projektion. Anhänge durchlaufen den Task-Interaction-Workspace, während das Aufgabenpanel bei nativer Dateiauswahl und dem Speichern des Downloads bleibt. `ProjectManagementService` ist jetzt Fassade für Planung, Kategorienkatalog sowie Aufgabenverlauf/Anhänge. Eine Browser-Regression deckt die Anlage zweier gleichnamiger globaler Aufgaben mit Reload ab; Workspace- und Service-Regressionen sichern Anhänge, Ergebnisidentität und die Projektion. Quellen: Nutzerentscheidung vom 2026-09-19, [Planungskonzept](concepts/task-planning-and-table-deepening-2026-09-15.md), [PM-Service](../services/event-service/src/project-management.service.ts), [Workspace](../src/lib/t2w/task-interaction-workspace.ts), [Browser-Regression](../tests/pm-e2e/project-management.spec.ts).
