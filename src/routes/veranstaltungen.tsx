@@ -69,7 +69,14 @@ export const Route = createFileRoute("/veranstaltungen")({
 type Zeitraum = EventPeriod;
 type ArchivFilter = ArchiveSelection;
 /** Ungefilterter Zustand — Bezugspunkt für „n Filter zurücksetzen“. */
-const FILTER_GRUNDSTELLUNG = { status: "alle", zeitraum: "jahr", archiv: "aktiv" } as const;
+const FILTER_GRUNDSTELLUNG = {
+  status: "alle",
+  zeitraum: "jahr",
+  archiv: "aktiv",
+  sportart: "alle",
+  veranstalter: "alle",
+  service: "alle",
+} as const;
 function Veranstaltungen() {
   const { q, ansicht } = Route.useSearch();
   const { events, settings, selectionLists } = useT2W();
@@ -77,6 +84,11 @@ function Veranstaltungen() {
   const [status, setStatus] = useState<EventStatus | "alle">(FILTER_GRUNDSTELLUNG.status);
   const [zeitraum, setZeitraum] = useState<Zeitraum>(FILTER_GRUNDSTELLUNG.zeitraum);
   const [archiv, setArchiv] = useState<ArchivFilter>(FILTER_GRUNDSTELLUNG.archiv);
+  const [sportart, setSportart] = useState<string>(FILTER_GRUNDSTELLUNG.sportart);
+  const [veranstalterFilter, setVeranstalterFilter] = useState<string>(
+    FILTER_GRUNDSTELLUNG.veranstalter,
+  );
+  const [service, setService] = useState<string>(FILTER_GRUNDSTELLUNG.service);
   const tableRef = useRef<HTMLTableElement>(null);
   const table = useTableBehavior<T2WEvent, EventColumn>({
     storageKey: "t2w-event-table-columns",
@@ -93,8 +105,41 @@ function Veranstaltungen() {
       period: zeitraum,
       archive: archiv,
       today: heute,
-    });
-  }, [events, suche, status, zeitraum, archiv, heute]);
+    })
+      .filter((e) => sportart === FILTER_GRUNDSTELLUNG.sportart || e.sportart === sportart)
+      .filter(
+        (e) =>
+          veranstalterFilter === FILTER_GRUNDSTELLUNG.veranstalter ||
+          e.veranstalter === veranstalterFilter,
+      )
+      .filter(
+        (e) => service === FILTER_GRUNDSTELLUNG.service || (e.services ?? []).includes(service),
+      );
+  }, [events, suche, status, zeitraum, archiv, heute, sportart, veranstalterFilter, service]);
+
+  // Nur Werte, die im Bestand vorkommen: eine Auswahl, die ins Leere führt,
+  // ist keine Hilfe. Gleiches Muster wie in kalender.tsx.
+  const sportarten = useMemo(
+    () =>
+      [...new Set(events.map((e) => e.sportart).filter((x): x is string => !!x))].sort((a, b) =>
+        a.localeCompare(b, "de"),
+      ),
+    [events],
+  );
+  const veranstalterListe = useMemo(
+    () =>
+      [...new Set(events.map((e) => e.veranstalter).filter((x): x is string => !!x))].sort((a, b) =>
+        a.localeCompare(b, "de"),
+      ),
+    [events],
+  );
+  const serviceListe = useMemo(
+    () =>
+      [...new Set(events.flatMap((e) => e.services ?? []))].sort((a, b) =>
+        a.localeCompare(b, "de"),
+      ),
+    [events],
+  );
   const sortiere = table.sortBy;
   const zeilen = table.rows(gefiltert);
   const dateCollisions = useMemo(
@@ -108,12 +153,18 @@ function Veranstaltungen() {
     (suche.trim() ? 1 : 0) +
     (status === FILTER_GRUNDSTELLUNG.status ? 0 : 1) +
     (zeitraum === FILTER_GRUNDSTELLUNG.zeitraum ? 0 : 1) +
-    (archiv === FILTER_GRUNDSTELLUNG.archiv ? 0 : 1);
+    (archiv === FILTER_GRUNDSTELLUNG.archiv ? 0 : 1) +
+    (sportart === FILTER_GRUNDSTELLUNG.sportart ? 0 : 1) +
+    (veranstalterFilter === FILTER_GRUNDSTELLUNG.veranstalter ? 0 : 1) +
+    (service === FILTER_GRUNDSTELLUNG.service ? 0 : 1);
   const filterZuruecksetzen = () => {
     setSuche("");
     setStatus(FILTER_GRUNDSTELLUNG.status);
     setZeitraum(FILTER_GRUNDSTELLUNG.zeitraum);
     setArchiv(FILTER_GRUNDSTELLUNG.archiv);
+    setSportart(FILTER_GRUNDSTELLUNG.sportart);
+    setVeranstalterFilter(FILTER_GRUNDSTELLUNG.veranstalter);
+    setService(FILTER_GRUNDSTELLUNG.service);
   };
   if (ansicht === "kalender") return <KalenderSeite />;
   if (ansicht === "gantt") return <GanttSeite veranstaltungsmenue />;
@@ -187,6 +238,48 @@ function Veranstaltungen() {
             {STATUS_ORDER.map((s) => (
               <option key={s} value={s}>
                 {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </FilterChip>
+
+          <FilterChip
+            label="Sportart"
+            value={sportart}
+            inaktiv={FILTER_GRUNDSTELLUNG.sportart}
+            onChange={setSportart}
+          >
+            <option value="alle">Alle Sportarten</option>
+            {sportarten.map((art) => (
+              <option key={art} value={art}>
+                {art}
+              </option>
+            ))}
+          </FilterChip>
+
+          <FilterChip
+            label="Veranstalter"
+            value={veranstalterFilter}
+            inaktiv={FILTER_GRUNDSTELLUNG.veranstalter}
+            onChange={setVeranstalterFilter}
+          >
+            <option value="alle">Alle Veranstalter</option>
+            {veranstalterListe.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </FilterChip>
+
+          <FilterChip
+            label="Service"
+            value={service}
+            inaktiv={FILTER_GRUNDSTELLUNG.service}
+            onChange={setService}
+          >
+            <option value="alle">Alle Services</option>
+            {serviceListe.map((name) => (
+              <option key={name} value={name}>
+                {name}
               </option>
             ))}
           </FilterChip>

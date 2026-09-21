@@ -82,8 +82,7 @@ const CELL_CLASS: Partial<Record<EventColumn, string>> = {
 /** Kopfinhalt, wo die Spalte nicht mit ihrem Namen beschriftet ist. */
 function headContent(column: EventColumn) {
   if (column === "Status") return "St.";
-  if (column === "TIME2WIN")
-    return <img src="/time2win_logo_button.svg" alt="" aria-hidden="true" className="size-4" />;
+  if (column === "TIME2WIN") return "T2W";
   if (column === "Ordner")
     return (
       <span className="inline-flex gap-2" title="Outlook und SharePoint">

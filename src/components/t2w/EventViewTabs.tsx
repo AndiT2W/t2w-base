@@ -1,12 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { CalendarDays, GanttChartSquare, List } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Segment, segmentFeld } from "@/components/t2w/Segment";
 
 /**
  * Liste, Kalender und Gantt zeigen dieselben Events in drei Formen.  Die
  * Leiste dafür stand dreimal im Code — in `veranstaltungen.tsx` als Segment
  * auf Kartengrund, in `kalender.tsx` und `gantt.tsx` je als Reiterzeile mit
  * Unterkante.  Drei Bauweisen für eine Leiste, die überall dasselbe tut.
+ *
+ * Die Form kommt jetzt aus `Segment`, damit sie mit den übrigen Ansichts-
+ * leisten der Anwendung übereinstimmt.
  *
  * Die Ansichten bleiben Links: Zurück, Lesezeichen und „in neuem Tab öffnen“
  * sollen weiter funktionieren.  Die aktive Ansicht trägt `aria-current`, nicht
@@ -22,10 +25,7 @@ const ANSICHTEN = [
 
 export function EventViewTabs({ aktiv }: { aktiv: EventAnsicht }) {
   return (
-    <nav
-      aria-label="Veranstaltungsansichten"
-      className="flex w-fit gap-1 rounded-lg border border-border bg-card p-1"
-    >
+    <Segment als="nav" label="Veranstaltungsansichten">
       {ANSICHTEN.map((ansicht) => {
         const an = ansicht.key === aktiv;
         return (
@@ -34,18 +34,13 @@ export function EventViewTabs({ aktiv }: { aktiv: EventAnsicht }) {
             to="/veranstaltungen"
             search={(alt: { q?: string }) => ({ q: alt.q ?? "", ansicht: ansicht.key })}
             {...(an ? { "aria-current": "page" as const } : {})}
-            className={cn(
-              "inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors md:min-h-8",
-              an
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-            )}
+            className={segmentFeld(an)}
           >
             <ansicht.icon className="size-4" />
             {ansicht.label}
           </Link>
         );
       })}
-    </nav>
+    </Segment>
   );
 }

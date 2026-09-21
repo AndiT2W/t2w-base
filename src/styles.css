@@ -176,7 +176,13 @@ html[lang="en"] .lang-en-only {
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.24 0.02 255);
   --primary: var(--brand-green);
-  --primary-foreground: oklch(0.99 0.003 250);
+  /*
+   * Schrift auf der grünen Fläche: Weiß kam auf 2,1:1 und fiel damit unter
+   * jede Schwelle -- der Wert stammt aus der Vorlage, deren Primärfarbe dunkel
+   * war.  Der dunkle Modus hatte dafür bereits das Navy; als er entfiel, ging
+   * die einzige richtige Fassung mit.  Navy auf Brandgrün sind 8,6:1.
+   */
+  --primary-foreground: var(--brand-navy);
   --secondary: oklch(0.955 0.006 250);
   --secondary-foreground: oklch(0.3 0.02 255);
   --muted: oklch(0.962 0.005 250);
@@ -223,10 +229,10 @@ html[lang="en"] .lang-en-only {
 
 @layer components {
   /*
-   * Spaltenkopf: keine graue Fläche mehr, sondern Kleinbuchstaben in
-   * Versalien. Die Trennung zur ersten Zeile übernimmt eine Haarlinie
-   * statt eines 2px-Balkens — der Kopf soll die Daten einordnen, nicht
-   * mit ihnen um Aufmerksamkeit streiten.
+   * Spaltenkopf: seit 22.09.2026 dem freigegebenen Artboard angeglichen —
+   * normal große, kräftige Schrift in dunkler Vordergrundfarbe statt kleiner
+   * grauer Versalien. Die Trennung zur ersten Zeile übernimmt weiter eine
+   * Haarlinie statt eines 2px-Balkens.
    */
   .t2w-table-header,
   .t2w-data-table > thead {
@@ -234,10 +240,8 @@ html[lang="en"] .lang-en-only {
        (.t2w-data-table > thead), durchsichtig würden die Zeilen darunter
        durchscheinen. */
     background-color: color-mix(in oklab, var(--color-muted) 55%, var(--color-card));
-    color: var(--color-muted-foreground);
-    font-size: 0.625rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    color: var(--color-foreground);
+    font-size: 0.75rem;
   }
 
   .t2w-table-header > tr,

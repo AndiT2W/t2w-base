@@ -5,20 +5,13 @@ import { cn } from "@/lib/utils";
  * Ein Segment für die ganze Anwendung: zwei oder drei Ansichten derselben
  * Daten, von denen genau eine an ist.
  *
- * Die Leiste stand viermal im Code und sah viermal anders aus — weiße Schiene
- * mit grauem Feld in `EventViewTabs` und im Kommunikationsreiter, graue
- * Schiene mit weißem Feld in `aufgaben.tsx` und in `ui/tabs`.  Dieselbe
- * Bedienung, vier Erscheinungen; auf der Veranstaltungsseite fiel es am
- * meisten auf, weil dort Liste, Kalender und Gantt nebeneinander stehen.
+ * Die Leiste stand früher viermal im Code und sah viermal anders aus; seit der
+ * Vereinheitlichung kommt die Form hier aus einer Stelle. Der Stil folgt seit
+ * 22.09.2026 dem freigegebenen Artboard: Unterkante am Balken, grüner
+ * Unterstrich am aktiven Feld statt einer eigenen Fläche.
  *
- * Gewählt ist die graue Schiene mit erhabenem weißem Feld: der Seitengrund ist
- * fast weiß, eine weiße Schiene darauf hängt allein am Rahmen, und das aktive
- * Feld müsste dann dunkler sein als seine Nachbarn — genau verkehrt herum.
- *
- * Das aktive Feld wechselt die Fläche, nicht die Schriftstärke: fette Schrift
- * ist breiter, das Segment ruckelte beim Umschalten.  Die Fläche allein trägt
- * die Aussage nicht, deshalb setzt jede Aufrufstelle zusätzlich `aria-current`
- * (Links) oder `aria-pressed` (Schaltflächen).
+ * Die Fläche allein trägt die Aussage nie, deshalb setzt jede Aufrufstelle
+ * zusätzlich `aria-current` (Links) oder `aria-pressed` (Schaltflächen).
  *
  * Die Felder bleiben bei den Aufrufstellen, weil die einen Links sind (Zurück,
  * Lesezeichen, neuer Tab) und die anderen Schaltflächen; geteilt ist die Form.
@@ -34,10 +27,7 @@ export function Segment({
   className?: string;
   children: ReactNode;
 }) {
-  const klasse = cn(
-    "inline-flex w-fit items-center gap-1 rounded-lg border border-border bg-muted p-1",
-    className,
-  );
+  const klasse = cn("inline-flex w-fit items-center gap-0.5 border-b border-border", className);
   return als === "nav" ? (
     <nav aria-label={label} className={klasse}>
       {children}
@@ -52,11 +42,18 @@ export function Segment({
 /**
  * Die Form eines Feldes im Segment.  `min-h-11` ist die Fingerkuppe auf dem
  * Telefon, ab `md` reicht die kompakte Höhe.
+ *
+ * Die Schriftstärke bleibt bei Aktiv/Inaktiv gleich (`font-medium`), anders
+ * als im Artboard (700/500): fetterer Text ist breiter und ließ die Leiste
+ * beim Umschalten früher ruckeln — nur Farbe und Unterstrich tragen den
+ * Zustand.
  */
 export function segmentFeld(aktiv: boolean, className?: string) {
   return cn(
-    "inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors md:min-h-8",
-    aktiv ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+    "relative inline-flex min-h-11 cursor-pointer items-center justify-center gap-1.5 px-3.5 text-sm font-medium transition-colors md:min-h-8",
+    aktiv
+      ? "text-foreground after:absolute after:inset-x-2 after:-bottom-px after:h-[2.5px] after:rounded-full after:bg-primary after:content-['']"
+      : "text-muted-foreground hover:text-foreground",
     className,
   );
 }
