@@ -812,23 +812,28 @@ test("macht auch die Tabellen ohne Spaltenpräferenz sortierbar", async ({ page 
   expect([...absteigend].reverse()).toEqual(aufsteigend);
 });
 
-test("stellt Spalten und Export in Kontakten und Kunden auf Höhe der Tab-Leiste", async ({
-  page,
-}) => {
+test("stellt Spalten und Export in Kontakten und Kunden in die Filterleiste", async ({ page }) => {
   await mockApi(page);
   await page.goto("/kontakte");
 
-  // Nutzerwunsch 19.09.2026: keine eigene Werkzeugzeile, die Symbole stehen in
-  // der Zeile über der Tabelle — hier ist das die Tab-Leiste.
+  // Nutzerwunsch 19.09.2026: keine eigene Werkzeugzeile über der Tabelle. Die
+  // Symbole stehen rechts in der Filterleiste — seit die Leiste auch Rolle,
+  // Event und Kundenbezug trägt, bricht sie um, und sie stehen am Ende der
+  // letzten Zeile statt neben den Reitern. Geprüft wird deshalb, woran es
+  // liegt: in der Leiste, rechts, und über der Tabelle.
   const spalten = page.getByRole("button", { name: "Spalten auswählen" });
   await expect(spalten).toBeVisible();
   await expect(page.getByRole("button", { name: "Kontakte als Excel exportieren" })).toBeVisible();
 
-  const [leisteBox, werkzeugBox] = await Promise.all([
-    page.getByRole("tablist").boundingBox(),
+  const leiste = page.getByRole("group", { name: "Liste filtern" });
+  await expect(leiste.getByRole("button", { name: "Spalten auswählen" })).toHaveCount(1);
+  const [leisteBox, werkzeugBox, tabelleBox] = await Promise.all([
+    leiste.boundingBox(),
     spalten.boundingBox(),
+    page.locator("table").first().boundingBox(),
   ]);
-  expect(Math.abs(werkzeugBox!.y - leisteBox!.y)).toBeLessThan(24);
+  expect(werkzeugBox!.x).toBeGreaterThan(leisteBox!.x + leisteBox!.width / 2);
+  expect(werkzeugBox!.y).toBeLessThan(tabelleBox!.y);
 
   // Der Wechsel des Reiters wechselt auch den Exportnamen der Leiste.
   await page.getByRole("tab", { name: /Kunden/ }).click();

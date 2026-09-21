@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { RecordSheet } from "@/components/t2w/RecordSheet";
 import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
+import { FilterChip, ToggleChip } from "@/components/t2w/FilterChip";
+import { apiUsers, type ManagedUser } from "@/lib/t2w/users";
 import {
   ColumnPicker,
   DataTable,
@@ -225,10 +227,87 @@ function Field({
     </label>
   );
 }
+/**
+ * Veranstalterkonten: welcher Kunde sich anmelden kann und in welchem Zustand
+ * sein Konto ist. Gepflegt werden die Konten in den Einstellungen; hier stehen
+ * sie, weil die Frage "hat dieser Veranstalter einen Zugang?" beim Kunden
+ * aufkommt, nicht in der Benutzerverwaltung.
+ */
+function OrganizerAccounts({ konten, kunden }: { konten: ManagedUser[]; kunden: Kunde[] }) {
+  if (konten.length === 0)
+    return (
+      <p className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
+        Kein Veranstalterkonto gefunden.
+      </p>
+    );
+  const zustand: Record<ManagedUser["status"], string> = {
+    ACTIVE: "Aktiv",
+    INVITED: "Eingeladen",
+    DISABLED: "Gesperrt",
+  };
+  return (
+    <DataTable exportName="Veranstalterkonten" tools="extern">
+      <thead className="t2w-table-header">
+        <tr>
+          <th>Name</th>
+          <th>E-Mail</th>
+          <th>Kunde</th>
+          <th>Zustand</th>
+        </tr>
+      </thead>
+      <tbody>
+        {konten.map((konto) => {
+          const kunde = kunden.find((eintrag) => eintrag.id === konto.organizerId);
+          return (
+            <tr key={konto.id}>
+              <td className="font-medium text-foreground">{konto.displayName}</td>
+              <td>{konto.email}</td>
+              <td>{kunde?.name ?? "—"}</td>
+              <td>
+                <Chip good={konto.status === "ACTIVE"}>{zustand[konto.status]}</Chip>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </DataTable>
+  );
+}
+
 function KundenKontakte() {
   const crm = useCrm();
   const { currentUser } = useT2W();
-  const [tab, setTab] = useState<"kontakte" | "kunden">("kontakte");
+  const [tab, setTab] = useState<"kontakte" | "kunden" | "konten">("kontakte");
+  const [rolle, setRolle] = useState("alle");
+  const [eventFilter, setEventFilter] = useState("alle");
+  const [kundeFilter, setKundeFilter] = useState("alle");
+  const [ohneKunde, setOhneKunde] = useState(false);
+  const [nurKonto, setNurKonto] = useState(false);
+  const [kundenStatus, setKundenStatus] = useState("alle");
+  /**
+   * Veranstalterkonten sind Anmeldekonten, keine Stammdaten: sie liegen in
+   * der Benutzerverwaltung, die nur Admins lesen duerfen. Fuer alle anderen
+   * gibt es den Reiter und den Filter deshalb gar nicht -- ausgegraut waere
+   * eine Tuer, die sich nie oeffnet.
+   */
+  const darfKonten = currentUser.role === "ADMIN";
+  const [konten, setKonten] = useState<ManagedUser[]>([]);
+  useEffect(() => {
+    if (!darfKonten) return;
+    let abgemeldet = false;
+    apiUsers()
+      .then((liste) => {
+        if (!abgemeldet) setKonten(liste.filter((benutzer) => benutzer.role === "ORGANIZER"));
+      })
+      .catch(() => undefined);
+    return () => {
+      abgemeldet = true;
+    };
+  }, [darfKonten]);
+  const kontoKundenIds = useMemo(
+    () => new Set(konten.map((benutzer) => benutzer.organizerId).filter(Boolean) as string[]),
+    [konten],
+  );
   // Spaltenzustand beider Tabellen liegt hier, damit die Werkzeuge auf
   // Höhe der Tab-Leiste stehen können. Es ist immer nur eine Tabelle
   // gemountet, deshalb genügt eine Referenz für den Export.
@@ -257,14 +336,59 @@ function KundenKontakte() {
     () =>
       crm.personen
         .filter((p) => passtPerson(p, q, crm.kunden))
+        .filter((p) => rolle === "alle" || p.eventRollen.some((r) => r.rolle === rolle))
+        .filter(
+          (p) => eventFilter === "alle" || p.eventRollen.some((r) => r.eventcode === eventFilter),
+        )
+        .filter((p) => kundeFilter === "alle" || p.kundenIds.includes(kundeFilter))
+        .filter((p) => !ohneKunde || p.kundenIds.length === 0)
+        .filter((p) => !nurKonto || p.kundenIds.some((id) => kontoKundenIds.has(id)))
         .sort((a, b) => personName(a).localeCompare(personName(b), "de")),
-    [crm.personen, crm.kunden, q],
+    [
+      crm.personen,
+      crm.kunden,
+      q,
+      rolle,
+      eventFilter,
+      kundeFilter,
+      ohneKunde,
+      nurKonto,
+      kontoKundenIds,
+    ],
   );
   const customers = useMemo(
     () =>
-      crm.kunden.filter((k) => passtKunde(k, q)).sort((a, b) => a.name.localeCompare(b.name, "de")),
-    [crm.kunden, q],
+      crm.kunden
+        .filter((k) => passtKunde(k, q))
+        .filter((k) => kundenStatus === "alle" || k.status === kundenStatus)
+        .filter((k) => !nurKonto || kontoKundenIds.has(k.id))
+        .sort((a, b) => a.name.localeCompare(b.name, "de")),
+    [crm.kunden, q, kundenStatus, nurKonto, kontoKundenIds],
   );
+  /** Nur Rollen und Events, die tatsaechlich vorkommen -- ein Filter ins Leere hilft niemandem. */
+  const rollen = useMemo(
+    () => [...new Set(crm.personen.flatMap((p) => p.eventRollen.map((r) => r.rolle)))].sort(),
+    [crm.personen],
+  );
+  const eventWahl = useMemo(() => {
+    const paare = new Map<string, string>();
+    for (const person of crm.personen)
+      for (const rolle of person.eventRollen) paare.set(rolle.eventcode, rolle.eventName);
+    return [...paare].sort((a, b) => a[1].localeCompare(b[1], "de"));
+  }, [crm.personen]);
+  const sichtbareKonten = useMemo(() => {
+    const suche = q.trim().toLowerCase();
+    return konten
+      .filter(
+        (benutzer) =>
+          !suche ||
+          `${benutzer.displayName} ${benutzer.email}`.toLowerCase().includes(suche) ||
+          (crm.kunden.find((kunde) => kunde.id === benutzer.organizerId)?.name ?? "")
+            .toLowerCase()
+            .includes(suche),
+      )
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, "de"));
+  }, [konten, q, crm.kunden]);
   const p = sel?.art === "person" ? crm.personen.find((x) => x.id === sel.id) : undefined;
   const k = sel?.art === "kunde" ? crm.kunden.find((x) => x.id === sel.id) : undefined;
   return (
@@ -347,6 +471,18 @@ function KundenKontakte() {
             >
               Kunden ({customers.length})
             </button>
+            {darfKonten && (
+              <button
+                onClick={() => {
+                  setTab("konten");
+                }}
+                role="tab"
+                aria-selected={tab === "konten"}
+                className={`rounded-md px-3 py-1.5 text-sm ${tab === "konten" ? "bg-accent font-medium" : "hover:bg-secondary"}`}
+              >
+                Veranstalterkonten ({sichtbareKonten.length})
+              </button>
+            )}
           </div>
 
           <FilterTrenner />
@@ -368,6 +504,84 @@ function KundenKontakte() {
               className="h-11 w-72 rounded-full pl-8 sm:h-8"
             />
           </label>
+
+          {/* Die Chips gehoeren zur Liste darunter: der Kontaktreiter filtert
+              nach Rolle, Event und Kunde, der Kundenreiter nach Status. Die
+              Kontenliste traegt nur die Suche -- mehr gibt es dort nicht zu
+              unterscheiden. */}
+          {tab === "kontakte" && (
+            <>
+              <FilterChip
+                label="Rolle"
+                ariaLabel="Rolle filtern"
+                value={rolle}
+                inaktiv="alle"
+                onChange={setRolle}
+              >
+                <option value="alle">Alle Rollen</option>
+                {rollen.map((wert) => (
+                  <option key={wert} value={wert}>
+                    {wert}
+                  </option>
+                ))}
+              </FilterChip>
+              <FilterChip
+                label="Event"
+                ariaLabel="Event filtern"
+                value={eventFilter}
+                inaktiv="alle"
+                onChange={setEventFilter}
+              >
+                <option value="alle">Alle Events</option>
+                {eventWahl.map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {name}
+                  </option>
+                ))}
+              </FilterChip>
+              <FilterChip
+                label="Kunde"
+                ariaLabel="Kunde filtern"
+                value={kundeFilter}
+                inaktiv="alle"
+                onChange={setKundeFilter}
+              >
+                <option value="alle">Alle Kunden</option>
+                {crm.kunden
+                  .slice()
+                  .sort((a, b) => a.name.localeCompare(b.name, "de"))
+                  .map((kunde) => (
+                    <option key={kunde.id} value={kunde.id}>
+                      {kunde.name}
+                    </option>
+                  ))}
+              </FilterChip>
+              <ToggleChip aktiv={ohneKunde} onToggle={() => setOhneKunde(!ohneKunde)}>
+                Ohne Kundenbezug
+              </ToggleChip>
+            </>
+          )}
+          {tab === "kunden" && (
+            <FilterChip
+              label="Status"
+              ariaLabel="Kundenstatus filtern"
+              value={kundenStatus}
+              inaktiv="alle"
+              onChange={setKundenStatus}
+            >
+              <option value="alle">Alle Status</option>
+              {Object.entries(KUNDENSTATUS_LABEL).map(([wert, label]) => (
+                <option key={wert} value={wert}>
+                  {label}
+                </option>
+              ))}
+            </FilterChip>
+          )}
+          {darfKonten && tab !== "konten" && (
+            <ToggleChip aktiv={nurKonto} onToggle={() => setNurKonto(!nurKonto)}>
+              Nur mit Veranstalterkonto
+            </ToggleChip>
+          )}
         </FilterBar>
         {tab === "kontakte" ? (
           <PeopleTable
@@ -377,6 +591,8 @@ function KundenKontakte() {
             table={peopleTable}
             tableRef={tableRef}
           />
+        ) : tab === "konten" ? (
+          <OrganizerAccounts konten={sichtbareKonten} kunden={crm.kunden} />
         ) : (
           <CustomerTable
             customers={customers}
@@ -388,10 +604,12 @@ function KundenKontakte() {
             tableRef={tableRef}
           />
         )}
-        <p className="rounded border border-dashed border-border p-3 text-xs text-muted-foreground">
-          Inline-Änderungen werden beim Verlassen eines Feldes gespeichert. Outlook-/Gmail-Abgleich
-          ist vorbereitet.
-        </p>
+        {tab !== "konten" && (
+          <p className="rounded border border-dashed border-border p-3 text-xs text-muted-foreground">
+            Eine Zeile anklicken öffnet den Datensatz rechts; gespeichert wird dort.
+            Outlook-/Gmail-Abgleich ist vorbereitet.
+          </p>
+        )}
       </div>
       {sel && (p || k) && (
         <RecordSheet
