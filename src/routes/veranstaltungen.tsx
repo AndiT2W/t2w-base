@@ -115,7 +115,7 @@ function Veranstaltungen() {
     setZeitraum(FILTER_GRUNDSTELLUNG.zeitraum);
     setArchiv(FILTER_GRUNDSTELLUNG.archiv);
   };
-  if (ansicht === "kalender") return <KalenderSeite veranstaltungsmenue />;
+  if (ansicht === "kalender") return <KalenderSeite />;
   if (ansicht === "gantt") return <GanttSeite veranstaltungsmenue />;
 
   return (

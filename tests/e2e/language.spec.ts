@@ -124,7 +124,8 @@ test("renders every application route in English", async ({ page }) => {
   const routes = [
     ["/", "Overview"],
     ["/veranstaltungen", "Events"],
-    ["/kalender", "Calendar"],
+    // Der Kalender ist eine Ansicht der Veranstaltungen und traegt deren Titel.
+    ["/kalender", "Events"],
     ["/aufgaben", "Tasks"],
     ["/kontakte", "Customers & contacts"],
     ["/angebote", "Offers"],

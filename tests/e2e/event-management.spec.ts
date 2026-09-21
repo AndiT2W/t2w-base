@@ -373,7 +373,14 @@ test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) 
     .click();
   await expect(page).toHaveURL(/\/veranstaltungen\?(?:q=[^&]*&)?ansicht=kalender$/);
   await expect(page.getByRole("heading", { name: "Veranstaltungen" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
+  // Der Kalender trug frueher eine eigene Ueberschrift unter den Reitern. Er
+  // ist eine Ansicht der Veranstaltungen, also sagt der aktive Reiter, wo man
+  // steht -- die Seite behaelt ihren einen Titel.
+  await expect(
+    page
+      .getByRole("navigation", { name: "Veranstaltungsansichten" })
+      .getByRole("link", { name: "Kalender" }),
+  ).toHaveAttribute("aria-current", "page");
   await expect(
     page
       .getByRole("navigation", { name: "Veranstaltungsansichten" })
@@ -432,7 +439,7 @@ test("zeigt Kalender-Tagesansicht und Gantt-Zoom mit Eventzählung", async ({ pa
     .poll(() => calendarScroller.evaluate((element) => element.scrollWidth > element.clientWidth))
     .toBe(true);
   await page.getByRole("button", { name: "Tag" }).click();
-  await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tag" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("Keine Events", { exact: true })).not.toBeVisible();
 
   await page.goto("/veranstaltungen?ansicht=gantt");
@@ -997,7 +1004,7 @@ test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Even
     .getByRole("link", { name: "Kalender" })
     .click();
   await expect(page).toHaveURL(/\/veranstaltungen\?(?:q=[^&]*&)?ansicht=kalender$/);
-  await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Veranstaltungen" })).toBeVisible();
   await expect(page.getByText("Bestehendes Event", { exact: true })).toBeVisible();
   const trigger = page.getByRole("button", { name: "Event anlegen", exact: true }).first();
   await trigger.click();
@@ -1267,7 +1274,7 @@ test("navigiert mobil durch Kalender und Gantt ohne verlorenes Hauptmenü", asyn
   await mockApi(page);
   await page.setViewportSize({ width: 375, height: 700 });
   await page.goto("/kalender");
-  const heading = page.getByRole("heading", { name: "Kalender" });
+  const heading = page.getByRole("heading", { name: "Veranstaltungen" });
   await expect(heading).toBeVisible();
   const calendar = page.getByTestId("calendar-scroll-area");
   await expect

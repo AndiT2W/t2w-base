@@ -1,21 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  GanttChartSquare,
-  List,
-  Plus,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { EventViewTabs } from "@/components/t2w/EventViewTabs";
+import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
+import { FilterChip } from "@/components/t2w/FilterChip";
+import { Segment, segmentFeld } from "@/components/t2w/Segment";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
-import { STATUS_LABEL, STATUS_ORDER, type T2WEvent } from "@/lib/t2w/types";
-import { useI18n } from "@/lib/i18n";
+import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { cn } from "@/lib/utils";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { austrianHoliday } from "@/lib/t2w/event-projections";
@@ -28,7 +23,7 @@ import {
   segmenteFuerWoche,
   STATUS_BAR,
   WOCHENTAGE,
-  type Segment,
+  type Segment as Zeitbalken,
 } from "@/lib/t2w/kalender";
 
 export const Route = createFileRoute("/kalender")({
@@ -49,7 +44,7 @@ export const Route = createFileRoute("/kalender")({
   component: KalenderSeite,
 });
 
-function Balken({ seg }: { seg: Segment }) {
+function Balken({ seg }: { seg: Zeitbalken }) {
   const e = seg.event;
   return (
     <Link
@@ -139,13 +134,12 @@ function WochenGitter({
   );
 }
 
-export function KalenderSeite({
-  veranstaltungsmenue = false,
-}: { veranstaltungsmenue?: boolean } = {}) {
+export function KalenderSeite() {
   const { events } = useT2W();
-  const { t } = useI18n();
   const [modus, setModus] = useState<"monat" | "woche" | "tag">("monat");
   const [archiv, setArchiv] = useState<ArchiveSelection>("aktiv");
+  const [status, setStatus] = useState<EventStatus | "alle">("alle");
+  const [sportart, setSportart] = useState("alle");
   const [anker, setAnker] = useState(() => new Date());
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigatingScroll = useRef(false);
@@ -153,12 +147,22 @@ export function KalenderSeite({
     () =>
       selectEventCatalogue(events, {
         query: "",
-        status: "alle",
+        status,
         period: "alle",
         archive: archiv,
         today: heuteIso(),
-      }),
-    [archiv, events],
+      }).filter((e) => sportart === "alle" || e.sportart === sportart),
+    [archiv, events, sportart, status],
+  );
+
+  // Nur Sportarten, die im Bestand vorkommen: eine Auswahl, die ins Leere
+  // fuehrt, ist keine Hilfe.
+  const sportarten = useMemo(
+    () =>
+      [...new Set(events.map((e) => e.sportart).filter((x): x is string => !!x))].sort((a, b) =>
+        a.localeCompare(b, "de"),
+      ),
+    [events],
   );
 
   const monatsStart = new Date(anker.getFullYear(), anker.getMonth(), 1);
@@ -193,86 +197,100 @@ export function KalenderSeite({
         : `${anker.getDate()}. ${MONATE[anker.getMonth()]} ${anker.getFullYear()}`;
 
   return (
-    <div className="space-y-5">
-      {veranstaltungsmenue && (
-        <PageHeader
-          krumen={[{ label: "Übersicht", to: "/" }]}
-          titel="Veranstaltungen"
-          beschreibung={`${sichtbareEvents.length} aktive Events`}
-          aktion={
-            <EventDialog
-              trigger={
-                <Button>
-                  <Plus className="size-4" />
-                  Event anlegen
-                </Button>
-              }
-            />
-          }
-        />
-      )}
+    <div className="space-y-4">
+      {/* Der Kalender ist eine Ansicht der Veranstaltungen, keine eigene Welt:
+          derselbe Seitenkopf, dieselbe Reiterleiste, dieselbe Filterleiste wie
+          die Liste. Vorher trug er eine eigene Ueberschrift unter den Reitern
+          und schob die Primaeraktion mitten in die Steuerzeile. */}
+      <PageHeader
+        krumen={[{ label: "Übersicht", to: "/" }]}
+        titel="Veranstaltungen"
+        beschreibung={`${sichtbareEvents.length} ${sichtbareEvents.length === 1 ? "Event" : "Events"} im gewählten Filter`}
+        aktion={
+          <EventDialog
+            trigger={
+              <Button>
+                <Plus className="size-4" />
+                Event anlegen
+              </Button>
+            }
+          />
+        }
+      />
       <EventViewTabs aktiv="kalender" />
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {t("nav.calendar")}
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {!veranstaltungsmenue && (
-            <EventDialog
-              trigger={
-                <Button>
-                  <Plus className="size-4" />
-                  Event anlegen
-                </Button>
-              }
-            />
-          )}
-          <div className="flex rounded-md border border-border bg-surface p-0.5">
+      <FilterBar
+        werkzeuge={
+          <Segment label="Zeitraum der Ansicht">
             {(["monat", "woche", "tag"] as const).map((m) => (
               <button
                 key={m}
+                type="button"
+                aria-pressed={modus === m}
                 onClick={() => setModus(m)}
-                className={cn(
-                  "rounded px-3 py-1.5 text-sm font-medium transition-colors",
-                  modus === m
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
+                className={segmentFeld(modus === m)}
               >
                 {m === "monat" ? "Monat" : m === "woche" ? "Woche" : "Tag"}
               </button>
             ))}
-          </div>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Archiv</span>
-            <select
-              aria-label="Archiv filtern"
-              value={archiv}
-              onChange={(event) => setArchiv(event.target.value as ArchiveSelection)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
-            >
-              <option value="aktiv">Nur aktive</option>
-              <option value="archiv">Nur archivierte</option>
-              <option value="alle">Aktive & Archiv</option>
-            </select>
-          </label>
-          <Button variant="outline" size="icon" aria-label="Zurück" onClick={() => blaettern(-1)}>
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button variant="outline" onClick={() => setAnker(new Date())}>
-            Heute
-          </Button>
-          <Button variant="outline" size="icon" aria-label="Weiter" onClick={() => blaettern(1)}>
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
+          </Segment>
+        }
+      >
+        <FilterChip
+          label="Status"
+          ariaLabel="Status filtern"
+          value={status}
+          inaktiv="alle"
+          onChange={(wert) => setStatus(wert as EventStatus | "alle")}
+        >
+          <option value="alle">Alle Status</option>
+          {STATUS_ORDER.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </FilterChip>
+        <FilterChip
+          label="Sportart"
+          ariaLabel="Sportart filtern"
+          value={sportart}
+          inaktiv="alle"
+          onChange={setSportart}
+        >
+          <option value="alle">Alle Sportarten</option>
+          {sportarten.map((art) => (
+            <option key={art} value={art}>
+              {art}
+            </option>
+          ))}
+        </FilterChip>
+        <FilterTrenner />
+        <FilterChip
+          label="Archiv"
+          ariaLabel="Archiv filtern"
+          value={archiv}
+          inaktiv="aktiv"
+          onChange={(wert) => setArchiv(wert as ArchiveSelection)}
+        >
+          <option value="aktiv">Nur aktive</option>
+          <option value="archiv">Nur archivierte</option>
+          <option value="alle">Aktive & Archiv</option>
+        </FilterChip>
+      </FilterBar>
 
       <div className="rounded-lg border border-border bg-surface">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <h2 className="text-base font-semibold text-foreground">{titel}</h2>
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="icon" aria-label="Zurück" onClick={() => blaettern(-1)}>
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button variant="outline" onClick={() => setAnker(new Date())}>
+              Heute
+            </Button>
+            <Button variant="outline" size="icon" aria-label="Weiter" onClick={() => blaettern(1)}>
+              <ChevronRight className="size-4" />
+            </Button>
+            <h2 className="ml-1.5 text-base font-semibold text-foreground">{titel}</h2>
+          </div>
           <div className="flex flex-wrap gap-3">
             {STATUS_ORDER.map((s) => (
               <span key={s} className="flex items-center gap-1.5 text-xs text-muted-foreground">
