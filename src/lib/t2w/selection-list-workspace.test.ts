@@ -35,6 +35,7 @@ describe("selection list workspace", () => {
       hardwareObjects: [{ id: "hardware-1", name: "Active Transponder", active: true }],
       communicationChannels: [{ id: "channel-1", name: "E-Mail", active: true }],
       communicationTopics: [{ id: "topic-1", name: "Teilnehmer", active: true }],
+      taskCategories: [{ id: "group-1", name: "Material", active: true }],
     };
     const adapter: SelectionListAdapter = {
       load: async (kind) => values[kind],

@@ -32,6 +32,7 @@ export class PrismaSelectionListAdapter implements SelectionListAdapter {
       communicationChannels: this.prisma.communicationChannelOption,
       communicationTopics: this.prisma.communicationTopicOption,
       eventRoles: this.prisma.eventRoleOption,
+      taskCategories: this.prisma.pmGroup,
     };
     return nach[kind] as ListenModell;
   }

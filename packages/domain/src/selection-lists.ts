@@ -4,7 +4,8 @@ export type SelectionListKind =
   | "services"
   | "hardwareObjects"
   | "communicationChannels"
-  | "communicationTopics";
+  | "communicationTopics"
+  | "taskCategories";
 export type SelectionListValue = {
   id: string;
   name: string;
@@ -31,6 +32,7 @@ export const SELECTION_LIST_KINDS: readonly SelectionListKind[] = [
   "hardwareObjects",
   "communicationChannels",
   "communicationTopics",
+  "taskCategories",
 ];
 
 export interface SelectionListAdapter {
@@ -110,6 +112,7 @@ export function createSelectionListWorkspace(adapter: SelectionListAdapter) {
     hardwareObjects: [],
     communicationChannels: [],
     communicationTopics: [],
+    taskCategories: [],
     loaded: false,
   };
   const subscribers = new Set<() => void>();
