@@ -14,12 +14,14 @@ import {
   FolderSync,
   HelpCircle,
   Link2,
+  CalendarDays,
   Mail,
   MessagesSquare,
   Paperclip,
   Phone,
   Plus,
   Search,
+  Users,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -94,6 +96,7 @@ import { PayoutsPanel } from "@/components/t2w/PayoutsPanel";
 import { FilterResetChip } from "@/components/t2w/FilterChip";
 import { ServiceBadge, SelectionBadge, selectionPresentation } from "@/components/t2w/ServiceBadge";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 
 function RecipientMasterData({ recipient }: { recipient: Kunde }) {
@@ -1331,7 +1334,40 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           </Collapsible>
         </TabsContent>
 
-        <TabsContent value="time2win">
+        <TabsContent value="time2win" className="space-y-4">
+          {/* Die Zahlen lagen bisher als Fliesstext in der Karte; hier stehen
+              sie in derselben Kachel wie auf jeder Liste. */}
+          <MetricRow>
+            <MetricTile
+              icon={Users}
+              label="Gemeldete Teilnehmer"
+              wert={form.teilnehmerwerte?.aktuell ?? "—"}
+              {...(form.time2winSnapshot?.races.length
+                ? {
+                    hinweis: `${form.time2winSnapshot.races.length} ${
+                      form.time2winSnapshot.races.length === 1 ? "Bewerb" : "Bewerbe"
+                    }`,
+                  }
+                : {})}
+            />
+            <MetricTile
+              icon={FolderSync}
+              label="Letzter Abgleich"
+              wert={
+                form.time2winLastSuccessAt
+                  ? formatDatum(form.time2winLastSuccessAt.slice(0, 10))
+                  : "—"
+              }
+              hinweis={form.time2winSyncStatus ?? "NEVER"}
+              {...(form.time2winLastError ? { ton: "krit" as const } : {})}
+            />
+            <MetricTile
+              icon={CalendarDays}
+              label="Eventbeginn"
+              wert={formatDatum(form.start)}
+              {...(form.ende !== form.start ? { hinweis: `bis ${formatDatum(form.ende)}` } : {})}
+            />
+          </MetricRow>
           <Card>
             <CardHeader>
               <CardTitle className="text-base">TIME2WIN</CardTitle>
