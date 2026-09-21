@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Receipt, Search } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { RecordSheet } from "@/components/t2w/RecordSheet";
+import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
+import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
+import { FilterChip, FilterResetChip } from "@/components/t2w/FilterChip";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PayoutCreateForm } from "@/components/t2w/PayoutsPanel";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
@@ -58,6 +64,7 @@ function Auszahlungen() {
   const [events, setEvents] = useState<Array<{ id: string; eventCode: string; name: string }>>([]);
   const [recipients, setRecipients] = useState<Array<{ id: string; name: string }>>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [anlegen, setAnlegen] = useState(false);
   const scope = useMemo(
     () => ({ q, status: filter, eventId, year, recipientId }),
     [q, filter, eventId, year, recipientId],
@@ -118,73 +125,155 @@ function Auszahlungen() {
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Auszahlungen"
         beschreibung="Nenngeld-Auszahlungen über alle Events"
+        aktion={<Button onClick={() => setAnlegen(true)}>Auszahlung anlegen</Button>}
       />
-      <PayoutCreateForm events={events} onCreated={() => void load()} />
-      <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-border pb-3">
-        <input
-          aria-label="Auszahlungen durchsuchen"
-          placeholder="Nummer, Event oder Empfänger …"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="h-8 rounded-md border border-border bg-background px-3 text-[13px]"
+      {/* Anlegen oeffnet dasselbe Sheet wie ein Beleg, nur leer -- statt eines
+          Formulars, das die Liste dauerhaft nach unten schob. */}
+      <RecordSheet
+        open={anlegen}
+        onOpenChange={setAnlegen}
+        titel="Auszahlung anlegen"
+        beschreibung="Nenngeld-Auszahlung für ein Event erfassen"
+        marke={
+          <span
+            aria-hidden="true"
+            className="grid size-10 shrink-0 place-items-center rounded-[11px] bg-muted"
+          >
+            <Receipt className="size-5 text-table-header-foreground" />
+          </span>
+        }
+      >
+        <PayoutCreateForm
+          events={events}
+          onCreated={() => {
+            void load();
+            setAnlegen(false);
+          }}
         />
-        <select
-          aria-label="Status filtern"
+      </RecordSheet>
+
+      <MetricRow>
+        {Object.entries(sums).map(([currency, sum]) => (
+          <MetricTile
+            key={currency}
+            icon={Receipt}
+            label={`Summe gefiltert (${currency})`}
+            wert={sum.toFixed(2)}
+            hinweis={`${rows.length} ${rows.length === 1 ? "Beleg" : "Belege"}`}
+          />
+        ))}
+      </MetricRow>
+
+      <FilterBar>
+        <label className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Auszahlungen durchsuchen"
+            placeholder="Nummer, Event oder Empfänger …"
+            className="h-11 w-64 rounded-full pl-8 sm:h-8"
+          />
+        </label>
+
+        <FilterTrenner />
+
+        <FilterChip
+          label="Status"
+          ariaLabel="Status filtern"
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="h-8 rounded-md border border-border bg-background px-3 text-[13px]"
+          inaktiv=""
+          onChange={setFilter}
         >
-          <option value="">Alle Status</option>
+          <option value="">alle</option>
           <option value="OFFEN">Offen</option>
           <option value="VERSENDEN">Mail versenden</option>
           <option value="GESENDET">Mail gesendet</option>
           <option value="AUSBEZAHLT">Ausbezahlt</option>
           <option value="STORNIERT">Storniert</option>
-        </select>
-        <select
-          aria-label="Event filtern"
+        </FilterChip>
+
+        <FilterChip
+          label="Event"
+          ariaLabel="Event filtern"
           value={eventId}
-          onChange={(e) => setEventId(e.target.value)}
-          className="h-8 rounded-md border border-border bg-background px-3 text-[13px]"
+          inaktiv=""
+          onChange={setEventId}
         >
-          <option value="">Alle Events</option>
+          <option value="">alle</option>
           {events.map((event) => (
             <option key={event.id} value={event.id}>
               {event.eventCode} · {event.name}
             </option>
           ))}
-        </select>
-        <input
-          aria-label="Jahr filtern"
-          placeholder="Jahr"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          className="h-8 w-24 rounded-md border border-border bg-background px-3 text-[13px]"
-        />
-        <select
-          aria-label="Empfänger filtern"
+        </FilterChip>
+
+        <FilterChip
+          label="Empfänger"
+          ariaLabel="Empfänger filtern"
           value={recipientId}
-          onChange={(e) => setRecipientId(e.target.value)}
-          className="h-8 rounded-md border border-border bg-background px-3 text-[13px]"
+          inaktiv=""
+          onChange={setRecipientId}
         >
-          <option value="">Alle Empfänger</option>
+          <option value="">alle</option>
           {recipients.map((recipient) => (
             <option key={recipient.id} value={recipient.id}>
               {recipient.name}
             </option>
           ))}
-        </select>
-        <Button size="sm" disabled={!selected.length} onClick={() => void mark()}>
-          Für Mailversand markieren ({selected.length})
-        </Button>
-      </div>
-      <div className="mb-3 flex gap-4 text-sm text-muted-foreground">
-        {Object.entries(sums).map(([currency, sum]) => (
-          <span key={currency}>
-            {sum.toFixed(2)} {currency}
+        </FilterChip>
+
+        <label className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input bg-card px-3 text-sm text-muted-foreground md:min-h-8">
+          Jahr
+          <input
+            aria-label="Jahr filtern"
+            placeholder="alle"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="w-16 bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </label>
+
+        <FilterResetChip
+          count={
+            (q ? 1 : 0) +
+            (filter ? 1 : 0) +
+            (eventId ? 1 : 0) +
+            (recipientId ? 1 : 0) +
+            (year ? 1 : 0)
+          }
+          onReset={() => {
+            setQ("");
+            setFilter("");
+            setEventId("");
+            setRecipientId("");
+            setYear("");
+          }}
+        />
+      </FilterBar>
+
+      {/* Die Sammelaktion erscheint erst, wenn etwas ausgewaehlt ist -- vorher
+          stand ein dauerhaft graues Knopf-Paar ohne Bezug in der Filterzeile. */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary bg-primary/10 px-3.5 py-2.5">
+          <span className="text-sm text-foreground">
+            <strong className="font-bold">
+              {selected.length} {selected.length === 1 ? "Auszahlung" : "Auszahlungen"}
+            </strong>{" "}
+            ausgewählt
           </span>
-        ))}
-      </div>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
+              Auswahl aufheben
+            </Button>
+            <Button size="sm" onClick={() => void mark()}>
+              Für Mailversand markieren
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div>
         <DataTable exportName="Auszahlungen">
           <thead className="text-left">

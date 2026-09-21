@@ -145,7 +145,7 @@ test("pflegt Eventrollen und verwendet sie bei Eventkontakten", async ({ page })
   await page.getByRole("button", { name: "Hinzufügen" }).last().click();
   await expect(page.getByRole("textbox", { name: "Eventrolle Presse" })).toBeVisible();
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "KONTAKTE" }).click();
+  await page.getByRole("tab", { name: "Kontakte" }).click();
   await page.getByLabel("Eventrolle").click();
   await expect(page.getByRole("option", { name: "Anmeldung" })).toBeVisible();
   await expect(page.getByRole("option", { name: "Finanz" })).toBeVisible();
@@ -168,7 +168,7 @@ test("ändert eine bestehende Eventkontakt-Rolle per Dropdown und behält sie na
     ],
   });
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "KONTAKTE" }).click();
+  await page.getByRole("tab", { name: "Kontakte" }).click();
   await page.getByLabel("Eventrolle für Marion Kessler").click();
   await page.getByRole("option", { name: "Finanz" }).click();
   await expect(page.getByText("Eventrolle gespeichert.")).toBeVisible();
@@ -182,7 +182,7 @@ test("ändert eine bestehende Eventkontakt-Rolle per Dropdown und behält sie na
   ).toBeTruthy();
 
   await page.reload();
-  await page.getByRole("tab", { name: "KONTAKTE" }).click();
+  await page.getByRole("tab", { name: "Kontakte" }).click();
   await expect(page.getByLabel("Eventrolle für Marion Kessler")).toHaveText(/Finanz/);
 });
 
@@ -200,7 +200,7 @@ test("zeigt vor und nach Outlook-Sync, ob der Ordner neu erstellt oder bereits v
 test("zeigt synchronisierte TIME2WIN-Teilnehmer im Event", async ({ page }) => {
   await mockApi(page, { t2wEventId: 1082, time2winSyncStatus: "NEVER" });
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "ANMELDUNG" }).click();
+  await page.getByRole("tab", { name: "Anmeldung" }).click();
 
   await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
 
@@ -1366,7 +1366,7 @@ test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async (
 test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ page }) => {
   await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "ANMELDUNG" }).click();
+  await page.getByRole("tab", { name: "Anmeldung" }).click();
   await expect(page.getByText("Event Id", { exact: true })).toBeVisible();
   await expect(page.locator("#d-t2w")).toBeVisible();
   await expect(page.getByText("Gemeldete TN:")).toBeVisible();
@@ -1422,7 +1422,7 @@ test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben
       }),
   );
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "ANMELDUNG" }).click();
+  await page.getByRole("tab", { name: "Anmeldung" }).click();
   await page.getByRole("button", { name: "Jetzt synchronisieren" }).click();
   await expect(page.getByText("TIME2WIN Testevent")).toBeVisible();
   await expect(page.getByText("Hauptbewerb")).toBeVisible();
@@ -1436,7 +1436,7 @@ test("synchronisiert TIME2WIN-Bewerbe ohne die lokale Prognose zu überschreiben
 test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "FINANZ" }).click();
+  await page.getByRole("tab", { name: "Finanz" }).click();
   await page.getByRole("combobox", { name: "Auszahlungsempfänger" }).click();
   await page.getByRole("option", { name: "Jonas Feld" }).click();
   const recipientDetails = page.getByLabel("Stammdaten Auszahlungsempfänger");
@@ -1472,7 +1472,7 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
 test("zeigt Veranstalterkontakte und übernimmt sie als Eventkontakt", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/events/260820_demo_event");
-  await page.getByRole("tab", { name: "KONTAKTE" }).click();
+  await page.getByRole("tab", { name: "Kontakte" }).click();
   await expect(page.getByRole("heading", { name: "Kontakte des Veranstalters" })).toBeVisible();
   await expect(page.getByText("Marion Kessler", { exact: true })).toBeVisible();
   await page

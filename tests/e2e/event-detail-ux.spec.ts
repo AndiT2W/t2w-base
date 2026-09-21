@@ -26,7 +26,7 @@ test.describe("Eventdetail UX", () => {
       await page.evaluate(() => document.documentElement.clientWidth),
     );
     await page.getByRole("button", { name: "Weitere Eventbereiche" }).click();
-    await page.getByRole("menuitem", { name: "HARDWARE" }).click();
+    await page.getByRole("menuitem", { name: "Hardware" }).click();
     await expect(page.getByText("Hardware-Ausgabe anlegen")).toBeVisible();
   });
 
@@ -37,8 +37,8 @@ test.describe("Eventdetail UX", () => {
 
     const tabList = page.getByRole("tablist");
     await expect(tabList).toHaveCSS("gap", "8px");
-    await expect(page.getByRole("tab", { name: "DATEIEN" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "KOMMUNIKATION" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Dateien" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Kommunikation" })).toBeVisible();
   });
 
   test("hält den Gefahrenbereich geschlossen und verlangt die Löschbestätigung", async ({

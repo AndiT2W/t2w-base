@@ -39,13 +39,13 @@ test("legt eine Auszahlung im Event-Finanzreiter an und lädt sie nach Reload", 
     return route.fulfill({ json: payouts.find((p) => p.id === id) ?? null });
   });
   await page.goto(`/events/${event.eventCode}`);
-  await page.getByRole("tab", { name: "FINANZ" }).click();
+  await page.getByRole("tab", { name: "Finanz" }).click();
   await page.getByLabel("Auszahlungsbetrag").fill("125,50");
   await page.getByLabel("Auszahlungswährung").selectOption("CHF");
   await page.getByRole("button", { name: "Auszahlung anlegen" }).click();
   await expect(page.getByText("T260001")).toBeVisible();
   await page.reload();
-  await page.getByRole("tab", { name: "FINANZ" }).click();
+  await page.getByRole("tab", { name: "Finanz" }).click();
   await expect(page.getByText("T260001")).toBeVisible();
   await expect(page.getByText("125.50 CHF")).toBeVisible();
   await page.getByRole("button", { name: "Für Mail markieren" }).click();

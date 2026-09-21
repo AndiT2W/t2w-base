@@ -93,7 +93,7 @@ test("loads the event detail page", async ({ page }) => {
   await page.goto("/events/260820_demo_event");
   await page.getByRole("button", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("tab", { name: "STAMMDATEN" })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("tab", { name: "Stammdaten" })).toBeVisible({ timeout: 10000 });
   await expect(page.getByText("Basic data", { exact: true })).toBeVisible();
 });
 
