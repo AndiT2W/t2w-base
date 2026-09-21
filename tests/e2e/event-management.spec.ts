@@ -353,7 +353,7 @@ test("zeigt die kompakten Veranstaltungsansichten als Reiter", async ({ page }) 
     .getByRole("navigation", { name: "Veranstaltungsansichten" })
     .getByRole("link", { name: "Kalender" })
     .click();
-  await expect(page).toHaveURL(/\/veranstaltungen\?ansicht=kalender(?:&q=)?$/);
+  await expect(page).toHaveURL(/\/veranstaltungen\?(?:q=[^&]*&)?ansicht=kalender$/);
   await expect(page.getByRole("heading", { name: "Veranstaltungen" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
   await expect(
@@ -847,7 +847,7 @@ test("ordnet die Spaltenauswahl in Veranstaltungen bei den Filtern ein", async (
   await mockApi(page);
   await page.goto("/veranstaltungen");
 
-  const filterZeile = page.getByRole("group", { name: "Eventfilter und Tabellenspalten" });
+  const filterZeile = page.getByRole("group", { name: "Liste filtern" });
   await expect(filterZeile).toContainText("Alle Status");
   await expect(filterZeile).toContainText("Alle Zeiträume");
   await expect(filterZeile).toContainText("Nur aktive");
@@ -862,7 +862,7 @@ test("führt Eventfilter, Spalten und Excel-Export in einer Kompaktzeile und set
   await mockApi(page);
   await page.goto("/veranstaltungen");
 
-  const filterZeile = page.getByRole("group", { name: "Eventfilter und Tabellenspalten" });
+  const filterZeile = page.getByRole("group", { name: "Liste filtern" });
   const status = filterZeile.getByLabel("Status", { exact: true });
   const table = page.locator("table");
 
@@ -967,7 +967,7 @@ test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Even
     .getByRole("navigation", { name: "Veranstaltungsansichten" })
     .getByRole("link", { name: "Kalender" })
     .click();
-  await expect(page).toHaveURL(/\/veranstaltungen\?ansicht=kalender(?:&q=)?$/);
+  await expect(page).toHaveURL(/\/veranstaltungen\?(?:q=[^&]*&)?ansicht=kalender$/);
   await expect(page.getByRole("heading", { name: "Kalender" })).toBeVisible();
   await expect(page.getByText("Bestehendes Event", { exact: true })).toBeVisible();
   const trigger = page.getByRole("button", { name: "Event anlegen", exact: true }).first();

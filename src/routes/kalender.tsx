@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { EventViewTabs } from "@/components/t2w/EventViewTabs";
 import { StatusDot } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
@@ -210,22 +211,7 @@ export function KalenderSeite({
           }
         />
       )}
-      <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
-        <KalenderReiter to="/veranstaltungen" label="Liste" icon={List} />
-        <KalenderReiter
-          to="/veranstaltungen"
-          search={{ ansicht: "kalender" }}
-          label="Kalender"
-          icon={CalendarDays}
-          aktiv={veranstaltungsmenue}
-        />
-        <KalenderReiter
-          to="/veranstaltungen"
-          search={{ ansicht: "gantt" }}
-          label="Gantt"
-          icon={GanttChartSquare}
-        />
-      </nav>
+      <EventViewTabs aktiv="kalender" />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -348,36 +334,6 @@ export function KalenderSeite({
         </div>
       </div>
     </div>
-  );
-}
-
-function KalenderReiter({
-  to,
-  search,
-  label,
-  icon: Icon,
-  aktiv = false,
-}: {
-  to: "/veranstaltungen" | "/kalender" | "/gantt";
-  search?: { ansicht: "kalender" | "gantt" } | undefined;
-  label: string;
-  icon: typeof List;
-  aktiv?: boolean | undefined;
-}) {
-  return (
-    <Link
-      to={to}
-      {...(search ? { search } : {})}
-      {...(aktiv ? { "aria-current": "page" as const } : {})}
-      className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
-        aktiv
-          ? "border-primary text-foreground"
-          : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
-      }`}
-    >
-      <Icon className="size-4" />
-      {label}
-    </Link>
   );
 }
 

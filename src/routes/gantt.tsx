@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CalendarDays, GanttChartSquare, List } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { EventViewTabs } from "@/components/t2w/EventViewTabs";
 import { StatusBadge } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { formatZeitraum, heuteIso } from "@/lib/t2w/format";
@@ -70,22 +71,7 @@ export function GanttSeite({
         beschreibung={`${sichtbar.length} aktive Events`}
       />
       <div className="space-y-4">
-        <nav aria-label="Veranstaltungsansichten" className="flex gap-1 border-b border-border">
-          <Reiter to="/veranstaltungen" label="Liste" icon={List} />
-          <Reiter
-            to="/veranstaltungen"
-            search={{ ansicht: "kalender" }}
-            label="Kalender"
-            icon={CalendarDays}
-          />
-          <Reiter
-            to="/veranstaltungen"
-            search={{ ansicht: "gantt" }}
-            label="Gantt"
-            icon={GanttChartSquare}
-            aktiv={veranstaltungsmenue}
-          />
-        </nav>
+        <EventViewTabs aktiv="gantt" />
         <div className="flex items-center justify-end gap-2 rounded-t-lg border border-b-0 border-border bg-surface px-3 pt-3 text-sm">
           <label htmlFor="gantt-zoom" className="text-muted-foreground">
             Ansicht
@@ -239,30 +225,4 @@ function rasterHintergrund(tage: { wochenende: boolean; feiertag?: string }[]) {
     ];
   });
   return `linear-gradient(to right, ${stops.join(", ")})`;
-}
-
-function Reiter({
-  to,
-  search,
-  label,
-  icon: Icon,
-  aktiv = false,
-}: {
-  to: "/veranstaltungen" | "/kalender" | "/gantt";
-  search?: { ansicht: "kalender" | "gantt" } | undefined;
-  label: string;
-  icon: typeof List;
-  aktiv?: boolean | undefined;
-}) {
-  return (
-    <Link
-      to={to}
-      {...(search ? { search } : {})}
-      {...(aktiv ? { "aria-current": "page" as const } : {})}
-      className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${aktiv ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
-    >
-      <Icon className="size-4" />
-      {label}
-    </Link>
-  );
 }

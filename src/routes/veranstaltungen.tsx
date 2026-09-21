@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarDays, GanttChartSquare, List, Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { GanttSeite } from "@/routes/gantt";
@@ -20,6 +20,9 @@ import {
   type EventColumn,
 } from "@/components/t2w/EventTableColumns";
 import { FilterChip, FilterResetChip } from "@/components/t2w/FilterChip";
+import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
+import { EventViewTabs } from "@/components/t2w/EventViewTabs";
+import { Input } from "@/components/ui/input";
 import { StatusLegend } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { heuteIso } from "@/lib/t2w/format";
@@ -126,11 +129,6 @@ function Veranstaltungen() {
             {` von ${events.length} Events`}
           </>
         }
-        suche={{
-          value: suche,
-          onChange: setSuche,
-          placeholder: "Eventcode, Name, Veranstalter, Ort …",
-        }}
         aktion={
           <EventDialog
             trigger={
@@ -144,29 +142,41 @@ function Veranstaltungen() {
       />
 
       <div className="space-y-3">
-        <nav
-          aria-label="Veranstaltungsansichten"
-          className="flex w-fit gap-1 rounded-lg border border-border bg-card p-1"
+        <EventViewTabs aktiv="liste" />
+        <FilterBar
+          werkzeuge={
+            <div className="hidden md:block">
+              <TableToolbar
+                tableRef={tableRef}
+                exportName="Veranstaltungen"
+                columnPicker={
+                  <ColumnPicker
+                    columns={EVENT_COLUMNS}
+                    visibleColumns={visibleColumns}
+                    toggleColumn={toggleColumn}
+                    moveColumn={moveColumn}
+                  />
+                }
+              />
+            </div>
+          }
         >
-          <AnsichtsReiter to="/veranstaltungen" aktiv label="Liste" icon={List} />
-          <AnsichtsReiter
-            to="/veranstaltungen"
-            search={{ ansicht: "kalender" }}
-            label="Kalender"
-            icon={CalendarDays}
-          />
-          <AnsichtsReiter
-            to="/veranstaltungen"
-            search={{ ansicht: "gantt" }}
-            label="Gantt"
-            icon={GanttChartSquare}
-          />
-        </nav>
-        <div
-          role="group"
-          aria-label="Eventfilter und Tabellenspalten"
-          className="flex flex-wrap items-center gap-2 border-b border-border pb-3"
-        >
+          {/* Die Seitensuche steht bei ihrer Liste; im Seitenkopf liegt die
+              Suche über alle Module. */}
+          <label className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              value={suche}
+              onChange={(e) => setSuche(e.target.value)}
+              aria-label="Suche"
+              placeholder="Eventcode, Name, Veranstalter, Ort …"
+              className="h-11 w-60 rounded-full pl-8 sm:h-8"
+            />
+          </label>
+
+          <FilterTrenner />
+
           <FilterChip
             label="Status"
             value={status}
@@ -208,23 +218,7 @@ function Veranstaltungen() {
           </FilterChip>
 
           <FilterResetChip count={aktiveFilter} onReset={filterZuruecksetzen} />
-
-          {/* Auf Filterhöhe statt in einer eigenen Zeile; mobil stehen Karten. */}
-          <div className="ml-auto hidden md:block">
-            <TableToolbar
-              tableRef={tableRef}
-              exportName="Veranstaltungen"
-              columnPicker={
-                <ColumnPicker
-                  columns={EVENT_COLUMNS}
-                  visibleColumns={visibleColumns}
-                  toggleColumn={toggleColumn}
-                  moveColumn={moveColumn}
-                />
-              }
-            />
-          </div>
-        </div>
+        </FilterBar>
 
         {dateCollisions.size > 0 && <EventDateCollisionLegend />}
         <EventMobileList
@@ -292,41 +286,5 @@ function Veranstaltungen() {
         </div>
       </div>
     </div>
-  );
-}
-
-/**
- * Ein Segment der Ansichtsleiste.  Die Ansichten bleiben Links, damit Zurück,
- * Lesezeichen und „in neuem Tab öffnen“ weiter funktionieren; die Segmentoptik
- * entspricht den Leisten in Projektmanagement und Kommunikation.
- */
-function AnsichtsReiter({
-  to,
-  search,
-  label,
-  icon: Icon,
-  aktiv = false,
-}: {
-  to: "/veranstaltungen" | "/kalender" | "/gantt";
-  search?: { ansicht: "kalender" | "gantt" } | undefined;
-  label: string;
-  icon: typeof List;
-  aktiv?: boolean | undefined;
-}) {
-  return (
-    <Link
-      to={to}
-      {...(search ? { search } : {})}
-      {...(aktiv ? { "aria-current": "page" as const } : {})}
-      className={cn(
-        "inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors md:min-h-8",
-        aktiv
-          ? "bg-secondary text-foreground"
-          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-      )}
-    >
-      <Icon className="size-4" />
-      {label}
-    </Link>
   );
 }
