@@ -142,9 +142,11 @@ describe("ClickUp event import", () => {
     const upsert = vi.fn().mockResolvedValue({ id: "event-1" });
     const service = new ClickUpEventImportService({
       event: {
-        findMany: vi.fn().mockResolvedValue([
-          { clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId: null },
-        ]),
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId: null },
+          ]),
         upsert,
       },
       sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
@@ -191,7 +193,9 @@ describe("ClickUp event import", () => {
       event: {
         findMany: vi
           .fn()
-          .mockResolvedValue([{ clickUpId: null, eventCode: "260331_musterlauf", organizerId: null }]),
+          .mockResolvedValue([
+            { clickUpId: null, eventCode: "260331_musterlauf", organizerId: null },
+          ]),
         upsert,
       },
       sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
@@ -221,7 +225,9 @@ describe("ClickUp event import", () => {
         event: {
           findMany: vi
             .fn()
-            .mockResolvedValue([{ clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId }]),
+            .mockResolvedValue([
+              { clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId },
+            ]),
           upsert,
         },
         sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },
@@ -259,7 +265,9 @@ describe("ClickUp event import", () => {
       event: {
         findMany: vi
           .fn()
-          .mockResolvedValue([{ clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId: null }]),
+          .mockResolvedValue([
+            { clickUpId: "86abc", eventCode: "260331_musterlauf", organizerId: null },
+          ]),
         upsert,
       },
       sport: { upsert: vi.fn().mockResolvedValue({ id: "sport-1" }) },

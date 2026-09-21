@@ -6,7 +6,9 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", ".output", ".vinxi"] },
+  // `.playwright/` hält erzeugte Baseline-Konfigurationen; sie sind bereits in
+  // .gitignore und haben keinen Autor, den eine Formatregel erreichen könnte.
+  { ignores: ["**/dist/**", ".output", ".vinxi", ".playwright"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

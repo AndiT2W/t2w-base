@@ -23,7 +23,8 @@ export class SettingsController {
     return this.prisma.appSettings.upsert({ where: { id: 1 }, create: {}, update: {} });
   }
   @Roles("ADMIN")
-  @Patch() update(@Body() dto: UpdateSettingsDto) {
+  @Patch()
+  update(@Body() dto: UpdateSettingsDto) {
     return this.prisma.appSettings.upsert({
       where: { id: 1 },
       create: { ...dto, id: 1 },

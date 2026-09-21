@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  chainView,
-  foreignPredecessorIds,
-  splitFlows,
-  successorIds,
-} from "./task-flow-view";
+import { chainView, foreignPredecessorIds, splitFlows, successorIds } from "./task-flow-view";
 
 describe("splitFlows", () => {
   it("trennt Ketten von Aufgaben ohne Vorgänger", () => {

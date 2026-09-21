@@ -49,10 +49,7 @@ export type ClickUpOrganizerReview = {
   eventCode: string;
   eventName: string;
   sourceOrganizerNames: string[];
-  reason:
-    | "NO_MATCHING_ORGANIZER"
-    | "MULTIPLE_SOURCE_ORGANIZERS"
-    | "AMBIGUOUS_MATCHING_ORGANIZERS";
+  reason: "NO_MATCHING_ORGANIZER" | "MULTIPLE_SOURCE_ORGANIZERS" | "AMBIGUOUS_MATCHING_ORGANIZERS";
   candidates?: { id: string; name: string }[];
 };
 
@@ -172,8 +169,7 @@ const resolveOrganizer = (
 
   const candidates = organizersByName.get(normalizeOrganizerName(sourceOrganizerNames[0])) ?? [];
   if (!candidates.length) return { kind: "no-match", sourceOrganizerNames };
-  if (candidates.length > 1)
-    return { kind: "ambiguous-match", sourceOrganizerNames, candidates };
+  if (candidates.length > 1) return { kind: "ambiguous-match", sourceOrganizerNames, candidates };
   return { kind: "matched", sourceOrganizerNames, organizer: candidates[0] };
 };
 
@@ -479,7 +475,7 @@ export class ClickUpEventImportService {
             })
           : null;
         const serviceCandidates = item.serviceName
-          ? servicesByName.get(normalizeOrganizerName(item.serviceName)) ?? []
+          ? (servicesByName.get(normalizeOrganizerName(item.serviceName)) ?? [])
           : [];
         const service = serviceCandidates.length === 1 ? serviceCandidates[0] : null;
 
@@ -506,8 +502,7 @@ export class ClickUpEventImportService {
           ...(sport ? { sport: { connect: { id: sport.id } } } : {}),
         };
         const eventCode = codesByClickUpId.get(item.clickUpId) ?? item.eventCode;
-        const shouldSetOrganizer =
-          organizerResolution.kind === "matched" && !existing?.organizerId;
+        const shouldSetOrganizer = organizerResolution.kind === "matched" && !existing?.organizerId;
         const organizerData = shouldSetOrganizer
           ? { organizer: { connect: { id: organizerResolution.organizer.id } } }
           : {};

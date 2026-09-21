@@ -25,9 +25,7 @@ if (!listFile) throw new Error("Missing ClickUp list snapshot.");
 const listSnapshot = await parseJson<ListSnapshot>(path.join(importDirectory, listFile));
 if (!Array.isArray(listSnapshot.tasks)) throw new Error("Invalid ClickUp list snapshot.");
 
-const detailFiles = entries
-  .filter((entry) => /-live-\d{3}\.json$/.test(entry))
-  .sort();
+const detailFiles = entries.filter((entry) => /-live-\d{3}\.json$/.test(entry)).sort();
 const detailSnapshots = await Promise.all(
   detailFiles.map((file) => parseJson<DetailSnapshot>(path.join(importDirectory, file))),
 );
