@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n";
@@ -19,9 +19,7 @@ export function PageHeader({
   suche?: { value: string; onChange: (v: string) => void; placeholder?: string };
   aktion?: ReactNode;
 }) {
-  const navigate = useNavigate();
   const { t } = useI18n();
-  const [global, setGlobal] = useState("");
   const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -48,7 +46,7 @@ export function PageHeader({
   return (
     <header
       ref={headerRef}
-      className="sticky top-16 z-30 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-7 lg:top-0 lg:px-7"
+      className="sticky top-14 z-30 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-7 lg:top-0 lg:px-7"
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
@@ -81,47 +79,41 @@ export function PageHeader({
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <form
-            className="relative w-64"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!suche)
-                navigate({ to: "/veranstaltungen", search: { q: global, ansicht: "liste" } });
-            }}
-          >
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={suche ? suche.value : global}
-              onChange={(e) => (suche ? suche.onChange(e.target.value) : setGlobal(e.target.value))}
-              placeholder={t(suche?.placeholder ?? "Global suchen …")}
-              aria-label="Suche"
-              className="h-11 pl-8 sm:h-9"
-            />
-          </form>
+          {suche && (
+            <label className="relative w-64">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={suche.value}
+                onChange={(e) => suche.onChange(e.target.value)}
+                aria-label="Suche"
+                placeholder={t(suche.placeholder ?? "Liste durchsuchen …")}
+                className="h-11 pl-8 sm:h-9"
+              />
+            </label>
+          )}
           {aktion}
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-2 md:hidden">
-        <form
-          className="relative flex-1"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!suche)
-              navigate({ to: "/veranstaltungen", search: { q: global, ansicht: "liste" } });
-          }}
-        >
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={suche ? suche.value : global}
-            onChange={(e) => (suche ? suche.onChange(e.target.value) : setGlobal(e.target.value))}
-            placeholder={t(suche?.placeholder ?? "Global suchen …")}
-            aria-label="Suche"
-            className="h-11 pl-8 sm:h-9"
-          />
-        </form>
-        {aktion}
-      </div>
+      {(suche || aktion) && (
+        <div className="mt-3 flex items-center gap-2 md:hidden">
+          {suche && (
+            <label className="relative flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={suche.value}
+                onChange={(e) => suche.onChange(e.target.value)}
+                aria-label="Suche"
+                placeholder={t(suche.placeholder ?? "Liste durchsuchen …")}
+                className="h-11 pl-8"
+              />
+            </label>
+          )}
+          {aktion}
+        </div>
+      )}
     </header>
   );
 }

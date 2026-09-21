@@ -13,11 +13,9 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
-import {
-  AppSidebar,
-  SidebarMobileTrigger,
-  SidebarShellProvider,
-} from "@/components/t2w/AppSidebar";
+import { AppSidebar, SidebarShellProvider, useSidebarSchmal } from "@/components/t2w/AppSidebar";
+import { AppTopbar } from "@/components/t2w/AppTopbar";
+import { cn } from "@/lib/utils";
 import { T2WProvider, useT2W } from "@/lib/t2w/store";
 import { CrmProvider } from "@/lib/crm/store";
 import { createBrowserLocalCrmAdapter } from "@/lib/crm/local-adapter";
@@ -140,32 +138,36 @@ function AppShell() {
         !(pathname.startsWith("/einstellungen") && currentUser.role !== "ADMIN");
   return (
     <SidebarShellProvider>
-      <div className="min-h-screen bg-background lg:pl-60">
-        <AppSidebar />
-        <div className="sticky top-0 z-50 flex h-16 items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur lg:hidden">
-          <SidebarMobileTrigger />
-          <span className="text-sm font-semibold tracking-tight text-foreground">TIME2WIN</span>
-        </div>
-        <main className="min-w-0 overflow-x-hidden px-4 pb-10 sm:px-6 lg:px-7">
-          {allowed ? (
-            <Outlet />
-          ) : (
-            <div className="mx-auto mt-16 max-w-lg rounded-lg border bg-card p-6 text-center">
-              <h1 className="text-xl font-semibold">Kein Zugriff</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Für diesen Bereich fehlt die erforderliche Berechtigung.
-              </p>
-              <Link
-                to={currentUser.role === "ORGANIZER" ? "/aufgaben" : "/"}
-                className="mt-4 inline-block text-sm font-medium text-primary underline"
-              >
-                Zur erlaubten Startseite
-              </Link>
-            </div>
-          )}
-        </main>
-      </div>
+      <AppLayout allowed={allowed} organizer={currentUser.role === "ORGANIZER"} />
     </SidebarShellProvider>
+  );
+}
+
+function AppLayout({ allowed, organizer }: { allowed: boolean; organizer: boolean }) {
+  const schmal = useSidebarSchmal();
+  return (
+    <div className={cn("min-h-screen bg-background", schmal ? "lg:pl-16" : "lg:pl-60")}>
+      <AppSidebar />
+      <AppTopbar />
+      <main className="min-w-0 overflow-x-hidden px-4 pb-10 sm:px-6 lg:px-7">
+        {allowed ? (
+          <Outlet />
+        ) : (
+          <div className="mx-auto mt-16 max-w-lg rounded-lg border bg-card p-6 text-center">
+            <h1 className="text-xl font-semibold">Kein Zugriff</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Für diesen Bereich fehlt die erforderliche Berechtigung.
+            </p>
+            <Link
+              to={organizer ? "/aufgaben" : "/"}
+              className="mt-4 inline-block text-sm font-medium text-primary underline"
+            >
+              Zur erlaubten Startseite
+            </Link>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 

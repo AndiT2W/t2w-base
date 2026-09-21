@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   CalendarDays,
@@ -7,6 +7,8 @@ import {
   FileText,
   LayoutDashboard,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Receipt,
   Ruler,
   Settings2,
@@ -75,12 +77,43 @@ const ENGLISH_NAV = {
 const SidebarUiContext = createContext<{
   offen: boolean;
   setOffen: (v: boolean) => void;
+  schmal: boolean;
+  setSchmal: (v: boolean) => void;
 } | null>(null);
+
+/**
+ * Der eingeklappte Zustand ist eine Vorliebe am Gerät, nicht am Konto: am
+ * großen Schirm aufgeklappt, am Laptop neben einer breiten Tabelle
+ * eingeklappt.  Darum localStorage und nicht die Benutzerpräferenzen auf dem
+ * Server — über Geräte hinweg synchronisiert wäre es eher lästig.
+ */
+const SCHMAL_KEY = "t2w-nav-schmal";
 
 export function SidebarShellProvider({ children }: { children: ReactNode }) {
   const [offen, setOffen] = useState(false);
+  const [schmal, setSchmalState] = useState(false);
+
+  useEffect(() => {
+    try {
+      setSchmalState(window.localStorage.getItem(SCHMAL_KEY) === "1");
+    } catch {
+      // Privater Modus oder gesperrter Speicher: aufgeklappt bleiben.
+    }
+  }, []);
+
+  const setSchmal = (wert: boolean) => {
+    setSchmalState(wert);
+    try {
+      window.localStorage.setItem(SCHMAL_KEY, wert ? "1" : "0");
+    } catch {
+      // Nicht merkbar, aber für diese Sitzung gültig.
+    }
+  };
+
   return (
-    <SidebarUiContext.Provider value={{ offen, setOffen }}>{children}</SidebarUiContext.Provider>
+    <SidebarUiContext.Provider value={{ offen, setOffen, schmal, setSchmal }}>
+      {children}
+    </SidebarUiContext.Provider>
   );
 }
 
@@ -88,6 +121,11 @@ function useSidebarUi() {
   const ctx = useContext(SidebarUiContext);
   if (!ctx) throw new Error("SidebarShellProvider fehlt");
   return ctx;
+}
+
+/** Für das Seitengerüst: wie breit die Navigation gerade ist. */
+export function useSidebarSchmal() {
+  return useSidebarUi().schmal;
 }
 
 const linkClass =
@@ -269,12 +307,101 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/**
+ * Die schmale Leiste.  Auf breiten Tabellen — Gantt, Kalender, Auszahlungen —
+ * gibt die Navigation gut 180 px an den Inhalt ab und zeigt nur noch Symbole.
+ * Der Name steht im Tooltip und im barrierefreien Namen, nie nur als Bild.
+ */
+function NavRail() {
+  const { t } = useI18n();
+  const { currentUser } = useT2W();
+  const { setSchmal } = useSidebarUi();
+  const sichtbar = HAUPT_NAV.filter((item) => {
+    if (currentUser.role === "ORGANIZER") return item.to === "/aufgaben";
+    if (
+      ["/auszahlungen", "/angebote", "/rechnungen"].includes(item.to) &&
+      !currentUser.financeAccess
+    )
+      return false;
+    if (item.to === "/einstellungen" && currentUser.role !== "ADMIN") return false;
+    return true;
+  });
+  return (
+    <div className="flex h-full flex-col items-center gap-1 bg-nav px-3 py-4 text-nav-foreground">
+      <Link
+        to={currentUser.role === "ORGANIZER" ? "/aufgaben" : "/"}
+        className="mb-3"
+        aria-label="TIME2WIN"
+      >
+        <img src="/time2win_logo_button.svg" alt="TIME2WIN Logo" className="size-8 rounded-md" />
+      </Link>
+      <nav className="flex flex-1 flex-col gap-1">
+        {sichtbar.map((item) =>
+          item.available ? (
+            <Link
+              key={item.to}
+              to={item.to}
+              activeOptions={{ exact: item.exact }}
+              title={t(HAUPT_NAV_KEYS[item.to])}
+              aria-label={t(HAUPT_NAV_KEYS[item.to])}
+              className="grid size-11 place-items-center rounded-md text-nav-muted transition-colors hover:bg-nav-active/60 hover:text-nav-foreground data-[status=active]:bg-nav-active data-[status=active]:text-nav-foreground"
+            >
+              <item.icon className="size-[18px]" />
+            </Link>
+          ) : (
+            <span
+              key={item.to}
+              aria-disabled="true"
+              title={`${t(HAUPT_NAV_KEYS[item.to])}: ${t("nav.inPreparation")}`}
+              className="grid size-11 cursor-not-allowed place-items-center rounded-md text-nav-muted/60"
+            >
+              <item.icon className="size-[18px]" />
+              <span className="sr-only">
+                {t(HAUPT_NAV_KEYS[item.to])}: {t("nav.inPreparation")}
+              </span>
+            </span>
+          ),
+        )}
+      </nav>
+      <button
+        type="button"
+        onClick={() => setSchmal(false)}
+        aria-label="Navigation ausklappen"
+        title="Navigation ausklappen"
+        className="grid size-11 place-items-center rounded-md text-nav-muted transition-colors hover:bg-nav-active/60 hover:text-nav-foreground"
+      >
+        <PanelLeftOpen className="size-[18px]" />
+      </button>
+    </div>
+  );
+}
+
 export function AppSidebar() {
-  const { offen, setOffen } = useSidebarUi();
+  const { offen, setOffen, schmal, setSchmal } = useSidebarUi();
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 border-r border-nav-active lg:block">
-        <NavInhalt />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 hidden border-r border-nav-active lg:block",
+          schmal ? "w-16" : "w-60",
+        )}
+      >
+        {schmal ? (
+          <NavRail />
+        ) : (
+          <>
+            <NavInhalt />
+            <button
+              type="button"
+              onClick={() => setSchmal(true)}
+              aria-label="Navigation einklappen"
+              title="Navigation einklappen"
+              className="absolute bottom-3 right-3 grid size-9 place-items-center rounded-md text-nav-muted transition-colors hover:bg-nav-active/60 hover:text-nav-foreground"
+            >
+              <PanelLeftClose className="size-4" />
+            </button>
+          </>
+        )}
       </aside>
       <Sheet open={offen} onOpenChange={setOffen}>
         <SheetContent side="left" className="w-64 border-r-0 bg-nav p-0 lg:hidden">

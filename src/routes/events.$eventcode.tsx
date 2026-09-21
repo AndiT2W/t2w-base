@@ -843,25 +843,25 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="sticky top-0 z-20 flex max-w-full items-center gap-1">
           <TabsList className="min-w-0 w-full max-w-full gap-2 grid grid-cols-3 md:grid-cols-8">
-            <TabsTrigger value="stammdaten">STAMMDATEN</TabsTrigger>
-            <TabsTrigger value="time2win">ANMELDUNG</TabsTrigger>
-            {currentUser.financeAccess && <TabsTrigger value="finanz">FINANZ</TabsTrigger>}
-            <TabsTrigger value="kontakte">KONTAKTE</TabsTrigger>
+            <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
+            <TabsTrigger value="time2win">Anmeldung</TabsTrigger>
+            {currentUser.financeAccess && <TabsTrigger value="finanz">Finanz</TabsTrigger>}
+            <TabsTrigger value="kontakte">Kontakte</TabsTrigger>
             <TabsTrigger id="event-tab-aufgaben" className="hidden md:inline-flex" value="aufgaben">
-              PROJEKTMANAGEMENT
+              Projektmanagement
             </TabsTrigger>
             <TabsTrigger id="event-tab-dateien" className="hidden md:inline-flex" value="dateien">
-              DATEIEN
+              Dateien
             </TabsTrigger>
             <TabsTrigger
               id="event-tab-kommunikation"
               className="hidden md:inline-flex"
               value="kommunikation"
             >
-              KOMMUNIKATION
+              Kommunikation
             </TabsTrigger>
             <TabsTrigger id="event-tab-hardware" className="hidden md:inline-flex" value="hardware">
-              HARDWARE
+              Hardware
             </TabsTrigger>
           </TabsList>
           <div className="md:hidden">
@@ -873,10 +873,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {[
-                  ["aufgaben", "PROJEKTMANAGEMENT"],
-                  ["dateien", "DATEIEN"],
-                  ["kommunikation", "KOMMUNIKATION"],
-                  ["hardware", "HARDWARE"],
+                  ["aufgaben", "Projektmanagement"],
+                  ["dateien", "Dateien"],
+                  ["kommunikation", "Kommunikation"],
+                  ["hardware", "Hardware"],
                 ].map(([value, label]) => (
                   <DropdownMenuItem key={value} asChild>
                     <button
