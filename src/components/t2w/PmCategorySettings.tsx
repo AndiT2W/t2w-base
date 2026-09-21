@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   SelectionBadge,
   SERVICE_COLOR_OPTIONS,
-  SERVICE_ICON_OPTIONS,
+  ICON_OPTIONS,
   selectionPresentation,
 } from "@/components/t2w/ServiceBadge";
 import { Button } from "@/components/ui/button";
@@ -301,7 +301,7 @@ export function PmCategorySettings() {
                       Symbol
                     </h3>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                      {SERVICE_ICON_OPTIONS.map((option) => {
+                      {ICON_OPTIONS.map((option) => {
                         const Icon = selectionPresentation({
                           name: presentation.group.name,
                           icon: option.value,

@@ -65,7 +65,8 @@ test("pflegt Services in den Auswahllisten und speichert mehrere Services beim E
   ).toBeVisible();
   await expect(page.getByLabel("Servicevorschau: UHF")).toContainText("UHF");
   await page.getByRole("button", { name: "Darstellung für Service UHF" }).click();
-  await expect(page.getByRole("dialog").getByRole("button")).toHaveCount(47);
+  // 35 Symbole (ein Satz für alle Listen) + 8 Farben + Schließen.
+  await expect(page.getByRole("dialog").getByRole("button")).toHaveCount(44);
   await page.getByRole("dialog").getByRole("button", { name: "Video" }).click();
   await expect(page.getByText("Service gespeichert.").last()).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Violett" }).click();

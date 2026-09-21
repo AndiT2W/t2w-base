@@ -75,27 +75,14 @@ type IconKey =
   | "mountain"
   | "trophy"
   | "waves";
-type ColorKey =
-  | "sky"
-  | "lime"
-  | "violet"
-  | "amber"
-  | "rose"
-  | "orange"
-  | "indigo"
-  | "teal"
-  | "cyan"
-  | "fuchsia"
-  | "emerald"
-  | "green"
-  | "yellow"
-  | "red"
-  | "pink"
-  | "purple"
-  | "blue"
-  | "slate"
-  | "stone"
-  | "neutral";
+/**
+ * Acht Farben statt zwanzig.  Farbe bleibt ein Name, kein Hexwert: ein freier
+ * Farbwähler ließe jemanden ein Hellgelb wählen, das auf Weiß niemand sieht,
+ * und ein Palettenwechsel träfe eine Zuordnungstabelle statt gespeicherter
+ * Werte in sieben Tabellen.  Migration 0038 bildet die alten zwanzig ab.
+ */
+type ColorKey = "tanne" | "blau" | "violett" | "amber" | "rot" | "graphit" | "petrol" | "beere";
+
 type Presentation = { icon: IconKey; color: ColorKey };
 
 const icons: Record<IconKey, LucideIcon> = {
@@ -136,126 +123,82 @@ const icons: Record<IconKey, LucideIcon> = {
   waves: Waves,
 };
 const colorClasses: Record<ColorKey, string> = {
-  sky: "border-sky-300 bg-sky-100 text-sky-950",
-  lime: "border-lime-300 bg-lime-100 text-lime-950",
-  violet: "border-violet-300 bg-violet-100 text-violet-950",
+  tanne: "border-emerald-300 bg-emerald-100 text-emerald-950",
+  blau: "border-sky-300 bg-sky-100 text-sky-950",
+  violett: "border-violet-300 bg-violet-100 text-violet-950",
   amber: "border-amber-300 bg-amber-100 text-amber-950",
-  rose: "border-rose-300 bg-rose-100 text-rose-950",
-  orange: "border-orange-300 bg-orange-100 text-orange-950",
-  indigo: "border-indigo-300 bg-indigo-100 text-indigo-950",
-  teal: "border-teal-300 bg-teal-100 text-teal-950",
-  cyan: "border-cyan-300 bg-cyan-100 text-cyan-950",
-  fuchsia: "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-950",
-  emerald: "border-emerald-300 bg-emerald-100 text-emerald-950",
-  green: "border-green-300 bg-green-100 text-green-950",
-  yellow: "border-yellow-300 bg-yellow-100 text-yellow-950",
-  red: "border-red-300 bg-red-100 text-red-950",
-  pink: "border-pink-300 bg-pink-100 text-pink-950",
-  purple: "border-purple-300 bg-purple-100 text-purple-950",
-  blue: "border-blue-300 bg-blue-100 text-blue-950",
-  slate: "border-slate-300 bg-slate-100 text-slate-950",
-  stone: "border-stone-300 bg-stone-100 text-stone-950",
-  neutral: "border-border bg-muted text-foreground",
+  rot: "border-rose-300 bg-rose-100 text-rose-950",
+  graphit: "border-slate-300 bg-slate-100 text-slate-950",
+  petrol: "border-teal-300 bg-teal-100 text-teal-950",
+  beere: "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-950",
 };
-const defaults: Record<string, Presentation> = {
-  UHF: { icon: "radio", color: "sky" },
-  Active: { icon: "activity", color: "lime" },
-  Streaming: { icon: "radio", color: "violet" },
-  Foto: { icon: "camera", color: "amber" },
-  "Video (iRewind)": { icon: "video", color: "rose" },
-  GPS: { icon: "map-pin", color: "orange" },
-  Virtuell: { icon: "panels-top-left", color: "indigo" },
-  "Anmeldung (only)": { icon: "clipboard-list", color: "teal" },
-  App: { icon: "smartphone", color: "cyan" },
-  Jörg: { icon: "user-round", color: "fuchsia" },
-  // Nachrichtenarten: ohne eigene Auswahl trägt jede Art ihr naheliegendes Symbol.
-  "E-Mail": { icon: "mail", color: "neutral" },
-  Telefon: { icon: "phone", color: "neutral" },
-  Notiz: { icon: "sticky-note", color: "neutral" },
-  WhatsApp: { icon: "message-circle", color: "neutral" },
-  Gespräch: { icon: "users", color: "neutral" },
-  Videocall: { icon: "video", color: "neutral" },
-};
-export const SERVICE_ICON_OPTIONS: { value: IconKey; label: string }[] = [
-  { value: "radio", label: "Funk" },
+/** Symbole der Nachrichtenarten; die Sprechblase ist der Rückfall für unbekannte Arten. */
+/**
+ * Ein Symbolsatz für alle Auswahllisten.  Vorher gab es drei getrennte --
+ * eine Sportart konnte kein Symbol wählen, das für Services vorgesehen war.
+ * Die Trennung hatte keinen fachlichen Grund, nur einen historischen, und
+ * sie machte die Pflegemaske je nach Liste unterschiedlich.
+ */
+export const ICON_OPTIONS: { value: IconKey; label: string }[] = [
   { value: "activity", label: "Aktivität" },
-  { value: "camera", label: "Kamera" },
-  { value: "video", label: "Video" },
-  { value: "map-pin", label: "Standort" },
-  { value: "panels-top-left", label: "Virtuell" },
   { value: "clipboard-list", label: "Anmeldung" },
   { value: "smartphone", label: "App" },
-  { value: "user-round", label: "Person" },
-  { value: "bell", label: "Glocke" },
-  { value: "calendar", label: "Kalender" },
+  { value: "mountain", label: "Bergsport" },
   { value: "circle-check", label: "Bestätigung" },
+  { value: "zap", label: "Blitz" },
   { value: "cloud", label: "Cloud" },
-  { value: "headphones", label: "Headset" },
-  { value: "laptop", label: "Laptop" },
+  { value: "printer", label: "Drucker" },
   { value: "mail", label: "E-Mail" },
+  { value: "settings", label: "Einstellungen" },
+  { value: "euro", label: "Euro" },
+  { value: "star", label: "Favorit" },
+  { value: "radio", label: "Funk" },
+  { value: "users", label: "Gespräch" },
+  { value: "bell", label: "Glocke" },
+  { value: "headphones", label: "Headset" },
+  { value: "calendar", label: "Kalender" },
+  { value: "camera", label: "Kamera" },
+  { value: "laptop", label: "Laptop" },
+  { value: "footprints", label: "Laufen" },
   { value: "monitor", label: "Monitor" },
   { value: "music", label: "Musik" },
+  { value: "message-circle", label: "Nachricht" },
+  { value: "sticky-note", label: "Notiz" },
   { value: "package", label: "Paket" },
-  { value: "printer", label: "Drucker" },
-  { value: "settings", label: "Einstellungen" },
-  { value: "star", label: "Favorit" },
-  { value: "tag", label: "Tag" },
-  { value: "wifi", label: "WLAN" },
-  { value: "zap", label: "Blitz" },
-  { value: "euro", label: "Euro" },
-];
-export const SPORT_ICON_OPTIONS: { value: IconKey; label: string }[] = [
-  { value: "footprints", label: "Laufen" },
+  { value: "user-round", label: "Person" },
   { value: "bike", label: "Radfahren" },
   { value: "waves", label: "Schwimmen" },
-  { value: "mountain", label: "Bergsport" },
-  { value: "trophy", label: "Wettkampf" },
-  { value: "activity", label: "Sport" },
-  { value: "calendar", label: "Veranstaltung" },
-  { value: "euro", label: "Euro" },
-];
-/** Symbole der Nachrichtenarten; die Sprechblase ist der Rückfall für unbekannte Arten. */
-export const COMMUNICATION_ICON_OPTIONS: { value: IconKey; label: string }[] = [
-  { value: "mail", label: "E-Mail" },
+  { value: "map-pin", label: "Standort" },
+  { value: "tag", label: "Tag" },
   { value: "phone", label: "Telefon" },
-  { value: "message-circle", label: "Nachricht" },
-  { value: "users", label: "Gespräch" },
-  { value: "video", label: "Videocall" },
-  { value: "sticky-note", label: "Notiz" },
-  { value: "calendar", label: "Termin" },
-  { value: "package", label: "Post" },
+  { value: "video", label: "Video" },
+  { value: "panels-top-left", label: "Virtuell" },
+  { value: "trophy", label: "Wettkampf" },
+  { value: "wifi", label: "WLAN" },
 ];
+
 export const SERVICE_COLOR_OPTIONS: { value: ColorKey; label: string }[] = [
-  { value: "sky", label: "Blau" },
-  { value: "lime", label: "Limette" },
-  { value: "violet", label: "Violett" },
-  { value: "amber", label: "Bernstein" },
-  { value: "rose", label: "Rosé" },
-  { value: "orange", label: "Orange" },
-  { value: "indigo", label: "Indigo" },
-  { value: "teal", label: "Türkis" },
-  { value: "cyan", label: "Cyan" },
-  { value: "fuchsia", label: "Fuchsia" },
-  { value: "emerald", label: "Smaragd" },
-  { value: "green", label: "Grün" },
-  { value: "yellow", label: "Gelb" },
-  { value: "red", label: "Rot" },
-  { value: "pink", label: "Pink" },
-  { value: "purple", label: "Lila" },
-  { value: "blue", label: "Blau (kräftig)" },
-  { value: "slate", label: "Schiefer" },
-  { value: "stone", label: "Stein" },
-  { value: "neutral", label: "Neutral" },
+  { value: "tanne", label: "Tanne" },
+  { value: "blau", label: "Blau" },
+  { value: "violett", label: "Violett" },
+  { value: "amber", label: "Amber" },
+  { value: "rot", label: "Rot" },
+  { value: "petrol", label: "Petrol" },
+  { value: "beere", label: "Beere" },
+  { value: "graphit", label: "Graphit" },
 ];
 export function servicePresentation(service: {
   name: string;
   icon?: string | null | undefined;
   color?: string | null | undefined;
 }) {
-  const fallback = defaults[service.name] ?? {
-    icon: "panels-top-left" as IconKey,
-    color: "neutral" as ColorKey,
-  };
+  /*
+   * Kein Rueckgriff mehr auf den Namen: die Zuordnung nach Wertnamen stand
+   * frueher hier und ging bei jeder Umbenennung verloren.  Seit Migration
+   * 0038 stehen Symbol und Farbe in den Spalten; fehlt eines, gilt der
+   * neutrale Vorgabewert.
+   */
+  const fallback = { icon: "panels-top-left" as IconKey, color: "graphit" as ColorKey };
   const icon = service.icon && service.icon in icons ? (service.icon as IconKey) : fallback.icon;
   const color =
     service.color && service.color in colorClasses ? (service.color as ColorKey) : fallback.color;

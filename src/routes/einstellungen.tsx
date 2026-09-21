@@ -20,9 +20,7 @@ import {
   ServiceBadge,
   SelectionBadge,
   SERVICE_COLOR_OPTIONS,
-  COMMUNICATION_ICON_OPTIONS,
-  SERVICE_ICON_OPTIONS,
-  SPORT_ICON_OPTIONS,
+  ICON_OPTIONS,
   servicePresentation,
   selectionPresentation,
 } from "@/components/t2w/ServiceBadge";
@@ -986,13 +984,7 @@ function Einstellungen() {
                               Symbol
                             </h3>
                             <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
-                              {(presentation.kind === "sports"
-                                ? SPORT_ICON_OPTIONS
-                                : presentation.kind === "communicationChannels" ||
-                                    presentation.kind === "communicationTopics"
-                                  ? COMMUNICATION_ICON_OPTIONS
-                                  : SERVICE_ICON_OPTIONS
-                              ).map((option) => {
+                              {ICON_OPTIONS.map((option) => {
                                 const Icon = selectionPresentation({
                                   name: presentationValue.name,
                                   icon: option.value,
