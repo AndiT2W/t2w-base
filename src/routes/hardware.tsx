@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, PackageOpen, Search, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Bell, PackageOpen, Plus, Search, TriangleAlert, type LucideIcon } from "lucide-react";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { formatDatum } from "@/lib/t2w/format";
@@ -20,7 +20,7 @@ import {
   TableToolbar,
   useTableBehavior,
 } from "@/components/t2w/DataTable";
-import { FilterResetChip } from "@/components/t2w/FilterChip";
+import { FilterResetChip, ToggleChip } from "@/components/t2w/FilterChip";
 import {
   Sheet,
   SheetContent,
@@ -361,7 +361,12 @@ function HardwarePage() {
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Hardware"
         beschreibung="Eventübergreifende Rückgabeübersicht"
-        aktion={<Button onClick={() => setNewHardware(true)}>Hardware-Ausgabe anlegen</Button>}
+        aktion={
+          <Button onClick={() => setNewHardware(true)}>
+            <Plus className="size-4" />
+            Hardware-Ausgabe anlegen
+          </Button>
+        }
       />
       <div className="space-y-3">
         <RecordSheet
@@ -497,14 +502,11 @@ function HardwarePage() {
               </SelectContent>
             </Select>
           </label>
-          <label className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input bg-card px-3 text-sm text-muted-foreground md:min-h-8">
-            <input
-              type="checkbox"
-              checked={overdue}
-              onChange={(e) => setOverdue(e.target.checked)}
-            />
+          {/* Chip wie jeder andere Filter der Anwendung; als Ankreuzfeld fiel
+              er als einziger aus der Reihe. */}
+          <ToggleChip aktiv={overdue} onToggle={() => setOverdue(!overdue)}>
             Überfällig
-          </label>
+          </ToggleChip>
         </FilterBar>
 
         <p className="text-sm text-muted-foreground" aria-live="polite">

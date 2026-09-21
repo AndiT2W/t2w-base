@@ -1,16 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Receipt, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Plus, Receipt, Search } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { RecordSheet } from "@/components/t2w/RecordSheet";
 import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
 import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
-import { FilterChip, FilterResetChip } from "@/components/t2w/FilterChip";
+import { FilterChip, FilterResetChip, ToggleChip } from "@/components/t2w/FilterChip";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PayoutCreateForm } from "@/components/t2w/PayoutsPanel";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
-import { DataTable, SortHeader, useTableSort } from "@/components/t2w/DataTable";
+import {
+  ColumnPicker,
+  DataTable,
+  SortHeader,
+  TableToolbar,
+  useTableBehavior,
+} from "@/components/t2w/DataTable";
 import { formatDatum } from "@/lib/t2w/format";
 
 type Payout = {
@@ -40,17 +46,31 @@ function status(p: Payout) {
  * Sortierwerte der Auszahlungsspalten.  Auswahl- und Aktionsspalte bleiben
  * ohne Sortierung — sie tragen keinen Wert, nach dem man ordnen würde.
  */
-const SPALTEN = [
-  { key: "T-Nummer", sortValue: (p: Payout) => p.payoutNumber },
-  { key: "Event", sortValue: (p: Payout) => p.event?.name ?? "" },
-  { key: "Empfänger", sortValue: (p: Payout) => p.recipient?.name ?? p.mailRecipient ?? "" },
-  { key: "Betrag", sortValue: (p: Payout) => Number(p.amount) },
-  { key: "Status", sortValue: (p: Payout) => status(p) },
-  { key: "Mail gesendet am", sortValue: (p: Payout) => p.mailSentAt ?? "" },
-  { key: "Auszahlungsdatum", sortValue: (p: Payout) => p.paidAt ?? "" },
-  { key: "Transaktionsbestätigung", sortValue: (p: Payout) => p.transactionReference ?? "" },
+const SPALTEN_NAMEN = [
+  "T-Nummer",
+  "Event",
+  "Empfänger",
+  "Betrag",
+  "Status",
+  "Mail gesendet am",
+  "Auszahlungsdatum",
+  "Transaktionsbestätigung",
 ] as const;
-type Spalte = (typeof SPALTEN)[number]["key"];
+type Spalte = (typeof SPALTEN_NAMEN)[number];
+const SORTIERWERT: Record<Spalte, (p: Payout) => string | number> = {
+  "T-Nummer": (p) => p.payoutNumber,
+  Event: (p) => p.event?.name ?? "",
+  Empfänger: (p) => p.recipient?.name ?? p.mailRecipient ?? "",
+  Betrag: (p) => Number(p.amount),
+  Status: (p) => status(p),
+  "Mail gesendet am": (p) => p.mailSentAt ?? "",
+  Auszahlungsdatum: (p) => p.paidAt ?? "",
+  Transaktionsbestätigung: (p) => p.transactionReference ?? "",
+};
+const SPALTEN = SPALTEN_NAMEN.map((key) => ({ key, sortValue: SORTIERWERT[key] }));
+
+/** Die Reihenfolge der Chips; "Alle" steht vorne und ist die Grundstellung. */
+const STATUS_CHIPS = ["Offen", "Mail versenden", "Mail gesendet", "Ausbezahlt", "Storniert"];
 function Auszahlungen() {
   const workspace = useMemo(
     () => createPayoutWorkspace<Payout>(createHttpPayoutAdapter<Payout>()),
@@ -65,20 +85,37 @@ function Auszahlungen() {
   const [recipients, setRecipients] = useState<Array<{ id: string; name: string }>>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [anlegen, setAnlegen] = useState(false);
-  const scope = useMemo(
-    () => ({ q, status: filter, eventId, year, recipientId }),
-    [q, filter, eventId, year, recipientId],
-  );
+  /*
+   * Der Status filtert hier, nicht im Dienst: die Chips tragen ihre Anzahl,
+   * und die kennt nur, wer alle Zustaende geladen hat. Die uebrigen Filter
+   * bleiben beim Dienst, sie begrenzen die Menge.
+   */
+  const scope = useMemo(() => ({ q, eventId, year, recipientId }), [q, eventId, year, recipientId]);
   const { rows } = useSyncExternalStore(
     workspace.subscribe,
     workspace.snapshot,
     workspace.snapshot,
   );
-  const tabelle = useTableSort<Payout, Spalte>(SPALTEN, {
-    key: "T-Nummer",
-    direction: "asc",
+  const tabelle = useTableBehavior<Payout, Spalte>({
+    storageKey: "t2w-payout-table-columns",
+    columns: SPALTEN,
+    initialSort: { key: "T-Nummer", direction: "asc" },
   });
-  const zeilen = tabelle.rows(rows);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const gefiltert = useMemo(
+    () => (filter ? rows.filter((p) => status(p) === filter) : rows),
+    [rows, filter],
+  );
+  const anzahlJeStatus = useMemo(
+    () =>
+      rows.reduce<Record<string, number>>((zaehler, p) => {
+        const name = status(p);
+        zaehler[name] = (zaehler[name] ?? 0) + 1;
+        return zaehler;
+      }, {}),
+    [rows],
+  );
+  const zeilen = tabelle.rows(gefiltert);
   const load = useCallback(() => workspace.load(scope), [workspace, scope]);
   useEffect(() => {
     void load();
@@ -94,12 +131,61 @@ function Auszahlungen() {
   }, []);
   const sums = useMemo(
     () =>
-      rows.reduce<Record<string, number>>(
+      gefiltert.reduce<Record<string, number>>(
         (a, p) => ((a[p.currency] = (a[p.currency] ?? 0) + Number(p.amount)), a),
         {},
       ),
-    [rows],
+    [gefiltert],
   );
+  /**
+   * Eine Zelle je Spalte.  Vorher standen die Zellen fest in der Zeile und
+   * die Spaltenwahl hatte nichts, woran sie sich haette festhalten koennen.
+   */
+  function zelle(spalte: Spalte, p: Payout) {
+    if (spalte === "T-Nummer") return <span className="font-mono">{p.payoutNumber}</span>;
+    if (spalte === "Event")
+      return p.event ? (
+        <Link
+          className="text-primary hover:underline"
+          to="/events/$eventcode"
+          params={{ eventcode: p.event.eventCode }}
+        >
+          {p.event.name}
+        </Link>
+      ) : (
+        "Event nachzuordnen"
+      );
+    if (spalte === "Empfänger") return p.recipient?.name ?? "—";
+    if (spalte === "Betrag")
+      return (
+        <span className="tabular-nums">
+          <input
+            aria-label={`${p.payoutNumber} Betrag`}
+            defaultValue={p.amount}
+            onBlur={(e) => {
+              if (e.target.value !== p.amount) void update(p.id, { amount: e.target.value });
+            }}
+            className="w-24 rounded border px-1"
+          />{" "}
+          {p.currency}
+        </span>
+      );
+    if (spalte === "Status") return status(p);
+    if (spalte === "Mail gesendet am") return p.mailSentAt ? formatDatum(p.mailSentAt) : "—";
+    if (spalte === "Auszahlungsdatum") return p.paidAt ? formatDatum(p.paidAt) : "—";
+    return (
+      <input
+        aria-label={`${p.payoutNumber} Transaktionsbestätigung`}
+        defaultValue={p.transactionReference ?? ""}
+        placeholder="—"
+        onBlur={(e) => {
+          if (e.target.value !== (p.transactionReference ?? ""))
+            void update(p.id, { transactionReference: e.target.value });
+        }}
+        className="w-32 rounded border px-1"
+      />
+    );
+  }
   function toggle(id: string) {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   }
@@ -125,7 +211,12 @@ function Auszahlungen() {
         krumen={[{ label: "Übersicht", to: "/" }]}
         titel="Auszahlungen"
         beschreibung="Nenngeld-Auszahlungen über alle Events"
-        aktion={<Button onClick={() => setAnlegen(true)}>Auszahlung anlegen</Button>}
+        aktion={
+          <Button onClick={() => setAnlegen(true)}>
+            <Plus className="size-4" />
+            Auszahlung anlegen
+          </Button>
+        }
       />
       {/* Anlegen oeffnet dasselbe Sheet wie ein Beleg, nur leer -- statt eines
           Formulars, das die Liste dauerhaft nach unten schob. */}
@@ -159,12 +250,27 @@ function Auszahlungen() {
             icon={Receipt}
             label={`Summe gefiltert (${currency})`}
             wert={sum.toFixed(2)}
-            hinweis={`${rows.length} ${rows.length === 1 ? "Beleg" : "Belege"}`}
+            hinweis={`${gefiltert.length} ${gefiltert.length === 1 ? "Beleg" : "Belege"}`}
           />
         ))}
       </MetricRow>
 
-      <FilterBar>
+      <FilterBar
+        werkzeuge={
+          <TableToolbar
+            tableRef={tableRef}
+            exportName="Auszahlungen"
+            columnPicker={
+              <ColumnPicker
+                columns={SPALTEN_NAMEN}
+                visibleColumns={tabelle.visibleColumns}
+                toggleColumn={tabelle.toggleColumn}
+                moveColumn={tabelle.moveColumn}
+              />
+            }
+          />
+        }
+      >
         <label className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -179,20 +285,22 @@ function Auszahlungen() {
 
         <FilterTrenner />
 
-        <FilterChip
-          label="Status"
-          ariaLabel="Status filtern"
-          value={filter}
-          inaktiv=""
-          onChange={setFilter}
-        >
-          <option value="">alle</option>
-          <option value="OFFEN">Offen</option>
-          <option value="VERSENDEN">Mail versenden</option>
-          <option value="GESENDET">Mail gesendet</option>
-          <option value="AUSBEZAHLT">Ausbezahlt</option>
-          <option value="STORNIERT">Storniert</option>
-        </FilterChip>
+        {/* Chips mit Anzahl statt eines Auswahlfelds: wie viele Belege offen
+            sind, ist die erste Frage auf dieser Seite -- sie soll nicht erst
+            nach dem Aufklappen zu sehen sein. */}
+        <ToggleChip aktiv={filter === ""} onToggle={() => setFilter("")}>
+          Alle <span className="tabular-nums text-muted-foreground">{rows.length}</span>
+        </ToggleChip>
+        {STATUS_CHIPS.map((name) => (
+          <ToggleChip
+            key={name}
+            aktiv={filter === name}
+            onToggle={() => setFilter(filter === name ? "" : name)}
+          >
+            {name}{" "}
+            <span className="tabular-nums text-muted-foreground">{anzahlJeStatus[name] ?? 0}</span>
+          </ToggleChip>
+        ))}
 
         <FilterChip
           label="Event"
@@ -275,26 +383,26 @@ function Auszahlungen() {
       )}
 
       <div>
-        <DataTable exportName="Auszahlungen">
+        <DataTable exportName="Auszahlungen" tools="extern" ref={tableRef}>
           <thead className="text-left">
             <tr className="h-[30px]">
               <th className="px-2 py-1">
                 <input
                   aria-label="Alle sichtbaren auswählen"
                   type="checkbox"
-                  checked={rows.length > 0 && selected.length === rows.length}
+                  checked={zeilen.length > 0 && selected.length === zeilen.length}
                   onChange={() =>
-                    setSelected(selected.length === rows.length ? [] : rows.map((p) => p.id))
+                    setSelected(selected.length === zeilen.length ? [] : zeilen.map((p) => p.id))
                   }
                 />
               </th>
-              {SPALTEN.map((spalte) => (
-                <th key={spalte.key} className="px-2 py-1">
+              {tabelle.visibleColumns.map((spalte) => (
+                <th key={spalte} className="px-2 py-1">
                   <SortHeader
-                    label={spalte.key}
-                    active={tabelle.sort.key === spalte.key}
+                    label={spalte}
+                    active={tabelle.sort.key === spalte}
                     direction={tabelle.sort.direction}
-                    onSort={() => tabelle.sortBy(spalte.key)}
+                    onSort={() => tabelle.sortBy(spalte)}
                   />
                 </th>
               ))}
@@ -312,48 +420,11 @@ function Auszahlungen() {
                     onChange={() => toggle(p.id)}
                   />
                 </td>
-                <td className="px-2 py-1 font-mono">{p.payoutNumber}</td>
-                <td className="px-2 py-1">
-                  {p.event ? (
-                    <Link
-                      className="text-primary hover:underline"
-                      to="/events/$eventcode"
-                      params={{ eventcode: p.event.eventCode }}
-                    >
-                      {p.event.name}
-                    </Link>
-                  ) : (
-                    "Event nachzuordnen"
-                  )}
-                </td>
-                <td className="px-2 py-1">{p.recipient?.name ?? "—"}</td>
-                <td className="px-2 py-1 tabular-nums">
-                  <input
-                    aria-label={`${p.payoutNumber} Betrag`}
-                    defaultValue={p.amount}
-                    onBlur={(e) => {
-                      if (e.target.value !== p.amount)
-                        void update(p.id, { amount: e.target.value });
-                    }}
-                    className="w-24 rounded border px-1"
-                  />{" "}
-                  {p.currency}
-                </td>
-                <td className="px-2 py-1">{status(p)}</td>
-                <td className="px-2 py-1">{p.mailSentAt ? formatDatum(p.mailSentAt) : "—"}</td>
-                <td className="px-2 py-1">{p.paidAt ? formatDatum(p.paidAt) : "—"}</td>
-                <td className="px-2 py-1">
-                  <input
-                    aria-label={`${p.payoutNumber} Transaktionsbestätigung`}
-                    defaultValue={p.transactionReference ?? ""}
-                    placeholder="—"
-                    onBlur={(e) => {
-                      if (e.target.value !== (p.transactionReference ?? ""))
-                        void update(p.id, { transactionReference: e.target.value });
-                    }}
-                    className="w-32 rounded border px-1"
-                  />
-                </td>
+                {tabelle.visibleColumns.map((spalte) => (
+                  <td key={spalte} className="px-2 py-1">
+                    {zelle(spalte, p)}
+                  </td>
+                ))}
                 <td className="px-2 py-1">
                   <select
                     aria-label={`${p.payoutNumber} Mailstatus`}

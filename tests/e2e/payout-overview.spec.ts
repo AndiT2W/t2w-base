@@ -66,14 +66,13 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
     requestsForPayouts.push(route.request());
     if (route.request().method() === "POST") return route.fulfill({ json: payouts });
     const url = new URL(route.request().url());
-    const result =
-      url.searchParams.get("status") === "GESENDET"
-        ? [payouts[1]]
-        : payouts.filter(
-            (p) =>
-              !url.searchParams.get("q") ||
-              JSON.stringify(p).toLowerCase().includes(url.searchParams.get("q")!.toLowerCase()),
-          );
+    // Der Status filtert seit den Chips auf der Seite, nicht im Dienst -- nur
+    // so kennt jeder Chip seine Anzahl. Der Dienst sieht ihn nicht mehr.
+    const result = payouts.filter(
+      (p) =>
+        !url.searchParams.get("q") ||
+        JSON.stringify(p).toLowerCase().includes(url.searchParams.get("q")!.toLowerCase()),
+    );
     return route.fulfill({ json: result });
   });
   await page.goto("/auszahlungen");
@@ -82,7 +81,13 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
   await expect(page.getByText("Event nachzuordnen")).toBeVisible();
   await page.getByLabel("Auszahlungen durchsuchen").fill("Alpin");
   await expect(page.getByText("T260002")).toBeVisible();
-  await page.getByLabel("Status filtern").selectOption("GESENDET");
+  // Die Chips tragen ihre Anzahl; „Mail gesendet" führt genau einen Beleg.
+  const chip = page
+    .getByRole("group", { name: "Liste filtern" })
+    .getByRole("button", { name: /^Mail gesendet/ });
+  await expect(chip).toContainText("1");
+  await chip.click();
+  await expect(page.getByText("T260001")).toHaveCount(0);
   await page.getByLabel("T260002 auswählen").check();
   await expect(page.getByRole("button", { name: /Für Mailversand markieren/ })).toBeEnabled();
   await page.getByLabel("T260002 Mailstatus").selectOption("ENTWURF");
