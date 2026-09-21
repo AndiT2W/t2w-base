@@ -263,7 +263,7 @@ export function TaskDetailSheet({
                     ))}
                 </select>
                 {exposesTaskToOrganizer && (
-                  <p role="alert" className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  <p role="alert" className="mt-2 text-xs text-amber-700">
                     Mit der Zuweisung werden Aufgabeninhalt sowie vorhandene Kommentare und Dateien
                     für dieses Veranstalterkonto sichtbar.
                   </p>

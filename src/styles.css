@@ -12,20 +12,25 @@ html[lang="en"] .lang-en-only {
   display: inline;
 }
 
-@custom-variant dark (&:is(.dark *));
-
 /*
  * Design system definition.
  *
  * The @theme inline block maps CSS custom properties to Tailwind utility
  * classes (e.g. --color-primary -> bg-primary, text-primary).
  *
- * The :root and .dark blocks define the actual color values using oklch.
+ * The :root block defines the actual color values using oklch.
  * All colors MUST use oklch format.
  *
  * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
+ * 1. Add the variable to :root
  * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ *
+ * Es gibt nur einen hellen Modus. Der dunkle wurde am 21.09.2026 entfernt:
+ * er war nie einschaltbar, wurde aber bei jeder Farbänderung mitgepflegt.
+ * Mit ihm ist auch `@custom-variant dark` gefallen — ohne die Zeile fiele
+ * `dark:` auf `prefers-color-scheme` zurück und halbfertige dunkle Flächen
+ * erschienen bei Nutzern mit dunklem Betriebssystem. Darum tragen die
+ * Komponenten keine `dark:`-Klassen mehr.
  */
 
 @theme inline {
@@ -127,13 +132,19 @@ html[lang="en"] .lang-en-only {
    * 45–90° auseinander; Datum prüfen bleibt bewusst neutral („noch offen“).
    * Die Farbe trägt die Bedeutung nie allein: Tooltip, Screenreader-Text und
    * die Legende unter der Tabelle nennen den Status ausgeschrieben.
+   *
+   * Drei Werte wurden am 21.09.2026 nachgeschärft, ohne den Farbton zu ändern:
+   * Anfrage war mit 2,6:1 gegen Weiß als Punkt kaum zu sehen (jetzt 3,1:1);
+   * Zugesagt und Storniert waren exakt gleich hell — Grün und Rot bei
+   * gleicher Helligkeit trennt Rot-Grün-Blindheit nicht. Ihr Abstand liegt
+   * jetzt bei 0,10 statt 0,02.
    */
   --status-akquise: oklch(0.56 0.18 315);
-  --status-angefragt: oklch(0.72 0.15 70);
+  --status-angefragt: oklch(0.671 0.139 70.1);
   --status-angebot: oklch(0.6 0.15 255);
   --status-datum-pruefen: oklch(0.62 0.03 255);
-  --status-zugesagt: oklch(0.6 0.13 160);
-  --status-storniert: oklch(0.62 0.19 25);
+  --status-zugesagt: oklch(0.511 0.109 160.6);
+  --status-storniert: oklch(0.648 0.2 25.3);
   --risk-beobachten: oklch(0.75 0.16 82);
   --risk-kritisch: oklch(0.6 0.21 25);
 
@@ -175,7 +186,13 @@ html[lang="en"] .lang-en-only {
   --destructive: oklch(0.6 0.21 25);
   --destructive-foreground: oklch(0.99 0.003 250);
   --border: oklch(0.915 0.008 250);
-  --input: oklch(0.9 0.008 250);
+  /*
+   * Rahmen von Eingabefeldern und Schaltflächen. Der alte Wert lag bei 1,4:1
+   * gegen die weiße Karte — die Feldgrenze war praktisch unsichtbar; für
+   * Bedienelemente sind 3:1 gefordert. --border bleibt hell, es trennt nur
+   * Flächen und trägt keine Bedienung.
+   */
+  --input: oklch(0.662 0.006 247.9);
   --ring: var(--brand-green);
 
   --chart-1: oklch(0.646 0.222 41.116);
@@ -191,61 +208,6 @@ html[lang="en"] .lang-en-only {
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
-}
-
-.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: var(--brand-green);
-  --primary-foreground: var(--brand-navy);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --table-header: oklch(0.3235 0.012 258.37);
-  --table-header-foreground: oklch(0.9607 0.0017 247.84);
-  --table-header-border: oklch(0.4866 0.0149 255.57);
-
-  /* Auf dunklem Grund heller und weniger gesättigt, sonst glühen die Flächen. */
-  --task-done: oklch(0.72 0.12 165);
-  --task-done-soft: oklch(0.28 0.05 165);
-  --task-done-strong: oklch(0.82 0.11 165);
-  --task-active: oklch(0.7 0.09 235);
-  --task-active-soft: oklch(0.28 0.045 235);
-  --task-active-strong: oklch(0.82 0.08 235);
-  --task-waiting: oklch(0.75 0.12 75);
-  --task-waiting-soft: oklch(0.3 0.05 75);
-  --task-waiting-strong: oklch(0.85 0.1 80);
-  --task-overdue: oklch(0.7 0.16 27);
-  --task-overdue-soft: oklch(0.3 0.07 27);
-  --task-overdue-strong: oklch(0.82 0.12 27);
-  --task-open: oklch(0.5 0.02 255);
-  --task-open-soft: oklch(0.3 0.02 255);
-  --task-open-strong: oklch(0.78 0.02 255);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
 @layer base {

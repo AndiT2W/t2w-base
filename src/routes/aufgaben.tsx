@@ -75,10 +75,8 @@ const dateText = (date: Date, options: Intl.DateTimeFormatOptions) =>
 const taskStatusTone = (task: VisibleTask) => {
   if (task.overdue || task.blockedBy.length)
     return "border-destructive/30 bg-destructive/10 text-destructive";
-  if (task.status === "DONE")
-    return "border-emerald-700/25 bg-emerald-700/10 text-emerald-800 dark:text-emerald-300";
-  if (task.status === "IN_PROGRESS")
-    return "border-sky-700/25 bg-sky-700/10 text-sky-800 dark:text-sky-300";
+  if (task.status === "DONE") return "border-emerald-700/25 bg-emerald-700/10 text-emerald-800";
+  if (task.status === "IN_PROGRESS") return "border-sky-700/25 bg-sky-700/10 text-sky-800";
   return "border-border bg-muted text-muted-foreground";
 };
 type VisibleTask = PmGlobalTask;
@@ -96,19 +94,19 @@ function categoryHealthPresentation(
     return {
       Icon: Clock3,
       label: "In den nächsten 7 Tagen fällig",
-      tone: "border-amber-700/25 bg-amber-700/10 text-amber-800 dark:text-amber-300",
+      tone: "border-amber-700/25 bg-amber-700/10 text-amber-800",
     };
   if (health === "active")
     return {
       Icon: CirclePlay,
       label: "In Arbeit",
-      tone: "border-sky-700/25 bg-sky-700/10 text-sky-800 dark:text-sky-300",
+      tone: "border-sky-700/25 bg-sky-700/10 text-sky-800",
     };
   if (health === "done")
     return {
       Icon: CheckCircle2,
       label: "Erledigt",
-      tone: "border-emerald-700/25 bg-emerald-700/10 text-emerald-800 dark:text-emerald-300",
+      tone: "border-emerald-700/25 bg-emerald-700/10 text-emerald-800",
     };
   return {
     Icon: CircleDot,
