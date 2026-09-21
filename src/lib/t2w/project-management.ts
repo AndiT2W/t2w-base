@@ -74,7 +74,18 @@ export async function pmRequest<T>(path: string, body?: unknown): Promise<T> {
           body: JSON.stringify(body),
         }),
   });
-  const data = await response.json();
+  /*
+   * Antwortet etwas anderes als der Dienst -- ein Proxy, die Anmeldeseite,
+   * eine Fehlerseite des Servers --, dann steht HTML im Rumpf und `json()`
+   * wirft den Satz des JS-Parsers: "Unexpected token '<'". Der stand bisher
+   * woertlich in der roten Leiste der Aufgabenseite. Er nennt weder, was
+   * misslang, noch was zu tun ist.
+   */
+  const data = await response.json().catch(() => {
+    throw new Error(
+      `Der Dienst hat auf ${path || "/"} nicht mit Daten geantwortet (Status ${response.status}). Bitte neu laden; hält es an, ist der Event-Service nicht erreichbar.`,
+    );
+  });
   if (!response.ok)
     throw new Error(
       Array.isArray(data.message)

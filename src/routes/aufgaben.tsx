@@ -15,10 +15,11 @@ import {
 } from "lucide-react";
 import { DateChip, FilterChip, FilterResetChip } from "@/components/t2w/FilterChip";
 import { SelectionBadge } from "@/components/t2w/ServiceBadge";
-import { CalendarClock, Lock, Plus, TriangleAlert } from "lucide-react";
+import { CalendarClock, Lock, Plus, TriangleAlert, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
 import { FilterBar } from "@/components/t2w/FilterBar";
+import { Segment, segmentFeld } from "@/components/t2w/Segment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ import {
 } from "@/lib/t2w/project-management";
 import { createTaskInteractionWorkspace } from "@/lib/t2w/task-interaction-workspace";
 import { TaskQueue } from "@/components/t2w/TaskQueue";
+import { TaskTimeline } from "@/components/t2w/TaskTimeline";
 import { useT2W } from "@/lib/t2w/store";
 import {
   QUEUE_GROUP_LABEL,
@@ -117,7 +119,7 @@ function Aufgaben() {
   const { currentUser } = useT2W();
   const readOnly = currentUser.role === "ORGANIZER";
   const [data, setData] = useState<PmGlobal>();
-  const [view, setView] = useState<"table" | "gantt">("table");
+  const [view, setView] = useState<"table" | "zeitachse" | "gantt">("table");
   const [search, setSearch] = useState("");
   const [eventFilter, setEventFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -171,7 +173,8 @@ function Aufgaben() {
               .toLowerCase()
               .includes(search.toLowerCase())) &&
           (eventFilter === "all" || eventFilter === (item.event?.id ?? "global")) &&
-          (statusFilter === "all" || item.status === statusFilter) &&
+          (statusFilter === "all" ||
+            (statusFilter === "open" ? item.status !== "DONE" : item.status === statusFilter)) &&
           (ownerFilter === "all" || (item.ownerId ?? "none") === ownerFilter) &&
           (categoryFilter === "all" || (item.groupId ?? "none") === categoryFilter) &&
           (priorityFilter === "all" || item.priority === priorityFilter) &&
@@ -220,6 +223,11 @@ function Aufgaben() {
     toDate,
   ].filter(Boolean).length;
   const counts = useMemo(() => queueCounts(tasks), [tasks]);
+  const meineOffenen = useMemo(
+    () => tasks.filter((item) => item.ownerId === currentUser.id && item.status !== "DONE").length,
+    [tasks, currentUser.id],
+  );
+  const meineAktiv = ownerFilter === currentUser.id && statusFilter === "open";
   const sichtbareAufgaben = useMemo(
     () => (focus === "all" ? tasks : tasks.filter((item) => queueGroupOf(item) === focus)),
     [tasks, focus],
@@ -316,19 +324,51 @@ function Aufgaben() {
         }
       />
       {error && (
-        <p role="alert" className="rounded-md border border-destructive p-3 text-destructive">
-          {error}
-        </p>
-      )}
-      <div className="flex flex-wrap items-center gap-2">
         <div
-          role="group"
-          aria-label="Ansicht wählen"
-          className="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5"
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive bg-destructive/5 p-3 text-sm text-destructive"
         >
+          <span>{error}</span>
+          <Button variant="outline" size="sm" onClick={() => void load()}>
+            Erneut laden
+          </Button>
+        </div>
+      )}
+      {/* Die Kennzahlen stehen unter dem Seitenkopf wie auf jeder anderen
+          Seite. Sie standen hier unter der Filterleiste und nur in der
+          Listenansicht -- dieselbe Zahl, drei Zeilen tiefer als gewohnt und
+          je nach Ansicht da oder weg. */}
+      <div data-testid="task-priority-summary">
+        <MetricRow>
+          <MetricTile
+            icon={UserRound}
+            label="Meine offenen Aufgaben"
+            wert={meineOffenen}
+            aktiv={meineAktiv}
+            onClick={() => {
+              setStatusFilter(meineAktiv ? "all" : "open");
+              setOwnerFilter(meineAktiv ? "all" : currentUser.id);
+            }}
+          />
+          {FOKUS.map((fokus) => (
+            <MetricTile
+              key={fokus.key}
+              icon={fokus.icon}
+              label={fokus.label}
+              wert={counts[fokus.key]}
+              {...(fokus.ton ? { ton: fokus.ton } : {})}
+              aktiv={focus === fokus.key}
+              onClick={() => setFocus(focus === fokus.key ? "all" : fokus.key)}
+            />
+          ))}
+        </MetricRow>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Segment label="Ansicht wählen">
           {(
             [
               ["table", "Liste"],
+              ["zeitachse", "Zeitachse"],
               ["gantt", "Gantt"],
             ] as const
           ).map(([wert, label]) => (
@@ -337,16 +377,15 @@ function Aufgaben() {
               type="button"
               aria-pressed={view === wert}
               onClick={() => setView(wert)}
-              className={`min-h-11 rounded-md px-3 text-sm transition-colors md:min-h-8 ${
-                view === wert
-                  ? "border border-border bg-card font-bold text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              } ${wert === "gantt" ? "hidden md:inline-flex md:items-center" : ""}`}
+              className={segmentFeld(
+                view === wert,
+                wert === "gantt" ? "hidden md:inline-flex" : undefined,
+              )}
             >
               {label}
             </button>
           ))}
-        </div>
+        </Segment>
       </div>
       <FilterBar>
         <label className="relative">
@@ -376,6 +415,10 @@ function Aufgaben() {
 
         <FilterChip label="Status" value={statusFilter} onChange={setStatusFilter} inaktiv="all">
           <option value="all">alle</option>
+          {/* Sammelstellung: alles ausser erledigt. Die Kachel "Meine offenen
+              Aufgaben" setzt genau sie, damit ihr Filter in der Leiste sichtbar
+              und mit einem Griff wieder loesbar ist. */}
+          <option value="open">offen</option>
           {Object.entries(statusLabel).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -441,22 +484,6 @@ function Aufgaben() {
       </FilterBar>
       {view === "table" ? (
         <>
-          <div data-testid="task-priority-summary">
-            <MetricRow>
-              {FOKUS.map((fokus) => (
-                <MetricTile
-                  key={fokus.key}
-                  icon={fokus.icon}
-                  label={fokus.label}
-                  wert={counts[fokus.key]}
-                  {...(fokus.ton ? { ton: fokus.ton } : {})}
-                  aktiv={focus === fokus.key}
-                  onClick={() => setFocus(focus === fokus.key ? "all" : fokus.key)}
-                />
-              ))}
-            </MetricRow>
-          </div>
-
           <section data-testid="task-overview" aria-label="Aufgaben nach Dringlichkeit">
             <TaskQueue
               tasks={sichtbareAufgaben}
@@ -467,6 +494,33 @@ function Aufgaben() {
             />
           </section>
         </>
+      ) : view === "zeitachse" ? (
+        /* Dieselbe Achse wie im Eventreiter, hier je Event eine: Aufgaben
+           liegen relativ zum Eventdatum, nicht in einem Kalenderraster. */
+        <section aria-label="Aufgaben auf der Zeitachse" className="space-y-4">
+          {blocks.length === 0 ? (
+            <p className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">
+              Keine Aufgaben für diese Filter.
+            </p>
+          ) : (
+            blocks.map((block) => (
+              <div key={block.key} className="space-y-1.5">
+                <h2 className="text-sm font-semibold text-foreground">
+                  {block.event?.name ?? "Ohne Eventbezug"}
+                </h2>
+                <TaskTimeline
+                  categories={block.categories}
+                  tasks={block.categories.flatMap((category) => category.tasks)}
+                  {...(block.event?.startAt
+                    ? { eventStart: block.event.startAt.slice(0, 10) }
+                    : {})}
+                  onOpen={(task) => void interaction.open(task as PmGlobalTask)}
+                  categoryDetails={categoryDetails}
+                />
+              </div>
+            ))
+          )}
+        </section>
       ) : (
         <section className="hidden rounded-lg border p-4 md:block">
           <div className="mb-4 flex items-end justify-between gap-3">
