@@ -218,7 +218,7 @@ test("zeigt Events aus der zentralen API in der Übersicht", async ({ page }) =>
   await expect(
     page.locator("table").getByRole("link", { name: "Bestehendes Event", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("table").getByText("Alter Veranstalter")).toBeVisible();
+  await expect(page.locator("table").getByText("Alter Veranstalter").first()).toBeVisible();
 });
 
 test("verlinkt angezeigte Veranstalter mit ihrem Kundendatensatz", async ({ page }) => {
@@ -475,7 +475,7 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await page.reload();
   await page.getByLabel("Suche").first().fill("geändert@example.com");
   await expect(page.getByText("Neue Kontaktperson")).toBeVisible();
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await expect(page.getByText("Nordwerk GmbH")).toBeVisible();
   await page.getByText("Nordwerk GmbH").click();
   await expect(page.getByLabel("Kundenname")).toHaveValue("Nordwerk GmbH");
@@ -500,7 +500,7 @@ test("bündelt Eventrollen je Event in Kunden- und Kontaktdetails", async ({ pag
   await mockApi(page);
   await page.goto("/kontakte");
 
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await page.getByText("Nordwerk GmbH", { exact: true }).click();
   const customerEvents = page.locator('a[href="/events/260820_demo_event"]');
   await expect(customerEvents).toHaveCount(1);
@@ -519,7 +519,7 @@ test("fügt einen per Combobox angeklickten Kontakt im Kundenprofil hinzu", asyn
   await page.addInitScript(() => localStorage.removeItem("t2w-crm-v1"));
   await mockApi(page);
   await page.goto("/kontakte");
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await page.getByLabel("Suche").first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
   await expect(page.getByRole("heading", { name: "Jonas Feld" })).toBeVisible();
@@ -528,7 +528,7 @@ test("fügt einen per Combobox angeklickten Kontakt im Kundenprofil hinzu", asyn
   await page.getByRole("option", { name: "Marion Kessler" }).click();
   await expect(page.getByRole("button", { name: "Marion Kessler ×" })).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await page.getByLabel("Suche").first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
   await expect(page.getByRole("button", { name: "Marion Kessler ×" })).toBeVisible();
@@ -759,8 +759,7 @@ test("macht auch die Tabellen ohne Spaltenpräferenz sortierbar", async ({ page 
 
   const kopf = page.getByRole("button", { name: "Event sortieren" });
   await expect(kopf).toBeVisible();
-  const namen = () =>
-    page.locator("table tbody tr td:nth-child(2)").allTextContents();
+  const namen = () => page.locator("table tbody tr td:nth-child(2)").allTextContents();
 
   await kopf.click();
   const aufsteigend = await namen();
@@ -940,7 +939,7 @@ test("legt ein Event über POST an und öffnet den API-Datensatz", async ({ page
   await page.getByLabel(/Eventname/).fill("Neues E2E Event");
   await page.getByLabel("Veranstalter aus Stammdaten").fill("Jonas");
   await page.getByRole("button", { name: "Jonas Feld", exact: true }).click();
-  await page.getByLabel("Sportart").click();
+  await page.getByLabel("Sportart", { exact: true }).click();
   await page.getByRole("option", { name: "Triathlon" }).click();
   await page.getByLabel(/Startdatum/).fill("2026-08-21");
   const code = page.getByLabel("Eventcode-Vorschau");
@@ -981,7 +980,7 @@ test("öffnet das Anlage-Modal im Kalender, sucht Veranstalter und legt das Even
   await page.getByLabel("Veranstalter aus Stammdaten").fill("Jonas");
   await expect(page.getByRole("button", { name: "Jonas Feld", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Jonas Feld", exact: true }).click();
-  await page.getByLabel("Sportart").click();
+  await page.getByLabel("Sportart", { exact: true }).click();
   await page.getByRole("option", { name: "Laufen" }).click();
   await page.getByLabel(/Startdatum/).fill("2026-08-21");
   await page.getByRole("button", { name: "Event anlegen", exact: true }).last().click();
@@ -1178,7 +1177,7 @@ test("ordnet die Archivierung kompakt beim Eventnamen ein", async ({ page }) => 
 test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
   const requests = await mockApi(page);
   await page.goto("/kontakte");
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await page.getByText("Nordwerk GmbH", { exact: true }).click();
   await page.getByRole("combobox", { name: "Hauptansprechperson" }).selectOption("p1");
 
@@ -1193,7 +1192,7 @@ test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
     )
     .toBeTruthy();
   await page.reload();
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await page.getByText("Nordwerk GmbH", { exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Hauptansprechperson" })).toHaveValue("p1");
 });
@@ -1208,7 +1207,7 @@ test("sortiert Kunden und Kontakte über die Tabellenüberschriften", async ({ p
   await page.getByRole("button", { name: "E-Mail sortieren" }).click();
   await expect(contactRows.first()).toContainText("Marion Kessler");
 
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   const customerRows = page.locator("tbody tr");
   await expect(customerRows.first()).toContainText("Jonas Feld");
   await page.getByRole("button", { name: "UID sortieren" }).click();
@@ -1221,7 +1220,7 @@ test("speichert die gewählte Kunden-Tabellenspalten im Browser", async ({ page 
   await page.goto("/kontakte");
   await page.evaluate(() => localStorage.removeItem("t2w-customer-table-columns"));
   await page.reload();
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await expect(page.getByRole("button", { name: "E-Mail sortieren" })).toBeVisible();
 
   await page.getByRole("button", { name: "Spalten auswählen" }).click();
@@ -1229,7 +1228,7 @@ test("speichert die gewählte Kunden-Tabellenspalten im Browser", async ({ page 
   await expect(page.getByRole("button", { name: "E-Mail sortieren" })).toHaveCount(0);
 
   await page.reload();
-  await page.getByRole("button", { name: /Kunden \(2\)/ }).click();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await expect(page.getByRole("button", { name: "E-Mail sortieren" })).toHaveCount(0);
 });
 
@@ -1289,7 +1288,7 @@ test("zeigt Events mobil priorisiert und hält wichtige Touch-Ziele sowie Sticky
   const mobileList = page.getByLabel("Veranstaltungen mobile Liste");
   await expect(mobileList).toBeVisible();
   await expect(mobileList.getByText("Bestehendes Event")).toBeVisible();
-  await expect(mobileList.getByText("Alter Veranstalter")).toBeVisible();
+  await expect(mobileList.getByText("Alter Veranstalter").first()).toBeVisible();
   await expect(page.locator("table").first()).toBeHidden();
 
   for (const target of [

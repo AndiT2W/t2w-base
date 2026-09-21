@@ -146,9 +146,7 @@ test("ordnet Tabellenspalten auch per Ziehen um", async ({ page }) => {
     .poll(() => preference.visible)
     .toEqual(["Zeitraum", "Status", "Event", "Veranstalter"]);
   await expect
-    .poll(() =>
-      page.locator('[data-density="compact"] table thead th').first().textContent(),
-    )
+    .poll(() => page.locator('[data-density="compact"] table thead th').first().textContent())
     .toContain("Zeitraum");
 });
 

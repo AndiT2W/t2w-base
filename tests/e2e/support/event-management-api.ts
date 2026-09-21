@@ -52,12 +52,25 @@ export const event = {
   }[],
 };
 
+/**
+ * Die Fixtures liegen fest im August 2026 — das Demo-Event am 20.08., der
+ * Feiertag am 15.08., der Folgetermin 2027.  Ohne feste Uhr laufen alle
+ * Erwartungen weg, sobald der Kalender einen anderen Monat aufschlägt oder
+ * "Nächste 14 Tage" ins Leere greift.  Gemessen wird deshalb immer vom
+ * 20.08.2026, dem Tag des Demo-Events.
+ *
+ * `setFixedTime` friert nur `Date.now()` ein; Zeitgeber laufen weiter, anders
+ * als bei `clock.install()`.  Muss vor dem ersten `goto` gesetzt sein.
+ */
+export const TESTZEIT = new Date("2026-08-20T09:00:00.000Z");
+
 export async function mockEventManagementApi(
   page: Page,
   eventOverride: Partial<typeof event> = {},
   relatedEventOverride: Partial<typeof event> = {},
   additionalEventOverrides: Partial<typeof event>[] = [],
 ) {
+  await page.clock.setFixedTime(TESTZEIT);
   const requests: { method: string; url: string; body?: string }[] = [];
   let mockedEvent = { ...event, ...eventOverride };
   let relatedEvent = {

@@ -132,7 +132,7 @@ const linkClass =
   "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-nav-muted transition-colors hover:bg-nav-active/60 hover:text-nav-foreground data-[status=active]:bg-nav-active data-[status=active]:text-nav-foreground";
 
 function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
-  const { locale, setLocale, t } = useI18n();
+  const { t } = useI18n();
   const { currentUser, logout } = useT2W();
   const { pathname } = useLocation();
   const [accountOpen, setAccountOpen] = useState(false);
@@ -267,38 +267,6 @@ function NavInhalt({ onNavigate }: { onNavigate?: () => void }) {
             >
               <LogOut className="size-3.5" /> Abmelden
             </button>
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-2 text-xs text-nav-muted">
-          <div
-            className="flex rounded border border-nav-active p-0.5"
-            role="group"
-            aria-label={t("language")}
-          >
-            {(["de", "en"] as const).map((option) => (
-              <form
-                key={option}
-                action={`#locale=${option}`}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  setLocale(option);
-                }}
-              >
-                <button
-                  type="submit"
-                  aria-pressed={locale === option}
-                  aria-label={option === "de" ? t("language.de") : t("language.en")}
-                  className={cn(
-                    "min-h-11 min-w-11 rounded px-2 py-1 text-xs sm:min-h-0 sm:min-w-0",
-                    locale === option
-                      ? "bg-nav-active text-nav-foreground"
-                      : "text-nav-muted hover:text-nav-foreground",
-                  )}
-                >
-                  {option.toUpperCase()}
-                </button>
-              </form>
-            ))}
           </div>
         </div>
       </div>
