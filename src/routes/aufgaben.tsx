@@ -15,7 +15,10 @@ import {
 } from "lucide-react";
 import { DateChip, FilterChip, FilterResetChip } from "@/components/t2w/FilterChip";
 import { SelectionBadge } from "@/components/t2w/ServiceBadge";
+import { CalendarClock, Lock, Plus, TriangleAlert } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
+import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
+import { FilterBar } from "@/components/t2w/FilterBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,22 +46,17 @@ export const Route = createFileRoute("/aufgaben")({ component: Aufgaben });
 const FOKUS = [
   {
     key: "overdue" as const,
-    label: QUEUE_GROUP_LABEL.overdue.toLowerCase(),
-    dot: "bg-task-overdue",
-    activeClass: "border-task-overdue/50 bg-task-overdue-soft",
+    label: QUEUE_GROUP_LABEL.overdue,
+    icon: TriangleAlert,
+    ton: "krit" as const,
   },
   {
     key: "thisWeek" as const,
-    label: QUEUE_GROUP_LABEL.thisWeek.toLowerCase(),
-    dot: "bg-task-waiting",
-    activeClass: "border-task-waiting/50 bg-task-waiting-soft",
+    label: QUEUE_GROUP_LABEL.thisWeek,
+    icon: CalendarClock,
+    ton: "warn" as const,
   },
-  {
-    key: "blocked" as const,
-    label: QUEUE_GROUP_LABEL.blocked.toLowerCase(),
-    dot: "bg-task-open",
-    activeClass: "border-input bg-muted",
-  },
+  { key: "blocked" as const, label: QUEUE_GROUP_LABEL.blocked, icon: Lock, ton: undefined },
 ];
 
 const control =
@@ -291,56 +289,66 @@ function Aufgaben() {
       <PageHeader
         titel="Aufgaben"
         beschreibung="Gesamtübersicht über Event- und globale Aufgaben"
+        aktion={
+          readOnly ? undefined : (
+            <Button
+              onClick={() => {
+                void interaction.open({
+                  id: "",
+                  scope: "GLOBAL",
+                  eventId: null,
+                  title: "",
+                  description: "",
+                  status: "OPEN",
+                  priority: "NORMAL",
+                  ownerId: null,
+                  groupId: null,
+                  startDate: null,
+                  endDate: null,
+                  version: 0,
+                });
+              }}
+            >
+              <Plus className="size-4" />
+              Globale Aufgabe
+            </Button>
+          )
+        }
       />
       {error && (
         <p role="alert" className="rounded-md border border-destructive p-3 text-destructive">
           {error}
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border pb-3">
-        <Button
-          className="min-h-11 md:min-h-8"
-          size="sm"
-          variant={view === "table" ? "default" : "outline"}
-          onClick={() => setView("table")}
-        >
-          Übersicht
-        </Button>
-        <Button
-          className="hidden min-h-8 md:inline-flex"
-          size="sm"
-          variant={view === "gantt" ? "default" : "outline"}
-          onClick={() => setView("gantt")}
-        >
-          Gantt
-        </Button>
-        {!readOnly && (
-          <Button
-            className="min-h-11 md:min-h-8"
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              void interaction.open({
-                id: "",
-                scope: "GLOBAL",
-                eventId: null,
-                title: "",
-                description: "",
-                status: "OPEN",
-                priority: "NORMAL",
-                ownerId: null,
-                groupId: null,
-                startDate: null,
-                endDate: null,
-                version: 0,
-              });
-            }}
-          >
-            Globale Aufgabe anlegen
-          </Button>
-        )}
-      </div>
       <div className="flex flex-wrap items-center gap-2">
+        <div
+          role="group"
+          aria-label="Ansicht wählen"
+          className="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5"
+        >
+          {(
+            [
+              ["table", "Liste"],
+              ["gantt", "Gantt"],
+            ] as const
+          ).map(([wert, label]) => (
+            <button
+              key={wert}
+              type="button"
+              aria-pressed={view === wert}
+              onClick={() => setView(wert)}
+              className={`min-h-11 rounded-md px-3 text-sm transition-colors md:min-h-8 ${
+                view === wert
+                  ? "border border-border bg-card font-bold text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              } ${wert === "gantt" ? "hidden md:inline-flex md:items-center" : ""}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <FilterBar>
         <label className="relative">
           <span className="sr-only">Aufgaben durchsuchen</span>
           <Search
@@ -430,38 +438,24 @@ function Aufgaben() {
             setToDate("");
           }}
         />
-      </div>
+      </FilterBar>
       {view === "table" ? (
         <>
-          <section
-            aria-label="Aufgabenprioritäten"
-            data-testid="task-priority-summary"
-            className="flex flex-wrap gap-2"
-          >
-            {FOKUS.map((fokus) => {
-              const aktiv = focus === fokus.key;
-              return (
-                <button
+          <div data-testid="task-priority-summary">
+            <MetricRow>
+              {FOKUS.map((fokus) => (
+                <MetricTile
                   key={fokus.key}
-                  type="button"
-                  aria-pressed={aktiv}
-                  onClick={() => setFocus(aktiv ? "all" : fokus.key)}
-                  className={`flex min-h-11 min-w-44 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${
-                    aktiv ? fokus.activeClass : "border-border bg-card hover:bg-muted/40"
-                  }`}
-                >
-                  <span
-                    className={`size-2.5 shrink-0 rounded-full ${fokus.dot}`}
-                    aria-hidden="true"
-                  />
-                  <strong className="text-xl font-semibold tabular-nums">
-                    {counts[fokus.key]}
-                  </strong>
-                  <span className="text-sm text-muted-foreground">{fokus.label}</span>
-                </button>
-              );
-            })}
-          </section>
+                  icon={fokus.icon}
+                  label={fokus.label}
+                  wert={counts[fokus.key]}
+                  {...(fokus.ton ? { ton: fokus.ton } : {})}
+                  aktiv={focus === fokus.key}
+                  onClick={() => setFocus(focus === fokus.key ? "all" : fokus.key)}
+                />
+              ))}
+            </MetricRow>
+          </div>
 
           <section data-testid="task-overview" aria-label="Aufgaben nach Dringlichkeit">
             <TaskQueue
