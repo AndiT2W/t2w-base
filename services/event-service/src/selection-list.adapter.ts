@@ -3,71 +3,67 @@ import type {
   SelectionListKind,
   SelectionListPatch,
 } from "@t2w/domain/selection-lists";
+import type { Prisma } from "@prisma/client";
 import { PrismaService } from "./prisma.service.js";
+
+/**
+ * Prisma-Modelle sehen sich je Auswahlliste gleich genug, dass eine Zuordnung
+ * genügt.  Vorher stand in `load`, `create`, `update` und `reorder` dieselbe
+ * Fallunterscheidung viermal — und genau darin verschwand eine Sonderregel
+ * unauffällig zwischen den Zweigen: Hardware-Objekte bekamen `icon` und
+ * `color` stillschweigend abgeschnitten, weil ihnen die Spalten fehlten.
+ * Seit Migration 0035 tragen alle sechs Listen dieselben Felder, und die
+ * Sonderregel ist ersatzlos entfallen.
+ */
+type ListenModell = {
+  findMany: (args?: unknown) => Prisma.PrismaPromise<unknown[]>;
+  create: (args: unknown) => Prisma.PrismaPromise<unknown>;
+  update: (args: unknown) => Prisma.PrismaPromise<unknown>;
+};
 
 export class PrismaSelectionListAdapter implements SelectionListAdapter {
   constructor(private readonly prisma: PrismaService) {}
 
+  private modell(kind: SelectionListKind): ListenModell {
+    const nach: Record<SelectionListKind, unknown> = {
+      sports: this.prisma.sport,
+      services: this.prisma.serviceOption,
+      hardwareObjects: this.prisma.hardwareObjectOption,
+      communicationChannels: this.prisma.communicationChannelOption,
+      communicationTopics: this.prisma.communicationTopicOption,
+      eventRoles: this.prisma.eventRoleOption,
+    };
+    return nach[kind] as ListenModell;
+  }
+
   load(kind: SelectionListKind) {
-    if (kind === "sports") return this.prisma.sport.findMany({ orderBy: { name: "asc" } });
-    if (kind === "services")
-      return this.prisma.serviceOption.findMany({ orderBy: { name: "asc" } });
-    if (kind === "hardwareObjects")
-      return this.prisma.hardwareObjectOption.findMany({ orderBy: { name: "asc" } });
-    if (kind === "communicationChannels")
-      return this.prisma.communicationChannelOption.findMany({ orderBy: { name: "asc" } });
-    if (kind === "communicationTopics")
-      return this.prisma.communicationTopicOption.findMany({ orderBy: { name: "asc" } });
-    return this.prisma.eventRoleOption.findMany({ orderBy: { name: "asc" } });
+    return this.modell(kind).findMany({ orderBy: { name: "asc" } }) as ReturnType<
+      SelectionListAdapter["load"]
+    >;
   }
+
   create(kind: SelectionListKind, name: string) {
-    if (kind === "sports") return this.prisma.sport.create({ data: { name } });
-    if (kind === "services") return this.prisma.serviceOption.create({ data: { name } });
-    if (kind === "hardwareObjects")
-      return this.prisma.hardwareObjectOption.create({ data: { name } });
-    if (kind === "communicationChannels")
-      return this.prisma.communicationChannelOption.create({ data: { name } });
-    if (kind === "communicationTopics")
-      return this.prisma.communicationTopicOption.create({ data: { name } });
-    return this.prisma.eventRoleOption.create({ data: { name } });
+    return this.modell(kind).create({ data: { name } }) as ReturnType<
+      SelectionListAdapter["create"]
+    >;
   }
+
   update(kind: SelectionListKind, id: string, patch: SelectionListPatch) {
-    if (kind === "sports") return this.prisma.sport.update({ where: { id }, data: patch });
-    if (kind === "services")
-      return this.prisma.serviceOption.update({ where: { id }, data: patch });
-    if (kind === "hardwareObjects")
-      return this.prisma.hardwareObjectOption.update({
-        where: { id },
-        data: { name: patch.name, active: patch.active },
-      });
-    if (kind === "communicationChannels")
-      return this.prisma.communicationChannelOption.update({ where: { id }, data: patch });
-    if (kind === "communicationTopics")
-      return this.prisma.communicationTopicOption.update({ where: { id }, data: patch });
-    return this.prisma.eventRoleOption.update({ where: { id }, data: patch });
+    return this.modell(kind).update({ where: { id }, data: patch }) as ReturnType<
+      SelectionListAdapter["update"]
+    >;
   }
+
   async reorder(kind: SelectionListKind, ids: string[]) {
-    const model: any =
-      kind === "sports"
-        ? this.prisma.sport
-        : kind === "services"
-          ? this.prisma.serviceOption
-          : kind === "hardwareObjects"
-            ? this.prisma.hardwareObjectOption
-            : kind === "communicationChannels"
-              ? this.prisma.communicationChannelOption
-              : kind === "communicationTopics"
-                ? this.prisma.communicationTopicOption
-                : this.prisma.eventRoleOption;
-    const current = await model.findMany({ orderBy: { name: "asc" } });
-    if (
-      current.length !== ids.length ||
-      current.some((value: { id: string }) => !ids.includes(value.id))
-    )
+    const model = this.modell(kind);
+    const current = (await model.findMany({ orderBy: { name: "asc" } })) as { id: string }[];
+    if (current.length !== ids.length || current.some((value) => !ids.includes(value.id)))
       throw new Error("SELECTION_LIST_REORDER_CONFLICT");
     await this.prisma.$transaction(
       ids.map((id, sortOrder) => model.update({ where: { id }, data: { sortOrder } })),
     );
-    return model.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+    return model.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }) as ReturnType<
+      SelectionListAdapter["reorder"]
+    >;
   }
 }
