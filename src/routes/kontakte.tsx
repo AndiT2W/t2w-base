@@ -45,7 +45,21 @@ import { useCrm, passtKunde, passtPerson } from "@/lib/crm/store";
 import { KUNDENSTATUS_LABEL, personName, type Kunde, type Person } from "@/lib/crm/types";
 import { useT2W } from "@/lib/t2w/store";
 
-export const Route = createFileRoute("/kontakte")({ component: KundenKontakte });
+/*
+ * Die globale Suche schickt eine Frage als `?q=` hierher.  Bis 22.09.2026 las
+ * die Seite den Parameter nicht: ein Klick auf einen Personentreffer landete
+ * auf der ungefilterten Liste, und mit dem Wegfall des eigenen Suchfeldes tat
+ * sich gar nichts mehr.
+ */
+export const Route = createFileRoute("/kontakte")({
+  validateSearch: (search: Record<string, unknown>) => {
+    // Eine leere Frage steht nicht in der Adresse: sonst haengt an jedem Link
+    // auf diese Seite ein "?q=" ohne Inhalt.
+    const frage = typeof search["q"] === "string" ? search["q"] : "";
+    return frage ? { q: frage } : {};
+  },
+  component: KundenKontakte,
+});
 type Auswahl = { art: "person" | "kunde"; id: string } | null;
 type Modus = "person" | "kunde" | "beides";
 const CUSTOMER_COLUMN_STORAGE_KEY = "t2w-customer-table-columns";
@@ -344,7 +358,13 @@ function KundenKontakte() {
   const peopleTable = usePeopleTable();
   const customerTable = useCustomerTable(crm.personen);
   const tableRef = useRef<HTMLTableElement>(null);
-  const [q, setQ] = useState("");
+  const { q: frage = "" } = Route.useSearch();
+  const [q, setQ] = useState(frage);
+  // Ein zweiter Treffer aus der globalen Suche kommt als neue Adresse an,
+  // waehrend die Seite schon steht.
+  useEffect(() => {
+    setQ(frage);
+  }, [frage]);
   const [sel, setSel] = useState<Auswahl>(null);
   const [create, setCreate] = useState(false);
   const createTriggerRef = useRef<HTMLAnchorElement>(null);
@@ -1048,13 +1068,6 @@ function PersonDetail({
               onChange={(e) => setzen("telefonPrivat", e.target.value)}
             />
           </Feld>
-          <Feld label="Funktion" htmlFor="k-funktion">
-            <Input
-              id="k-funktion"
-              value={werte.funktion}
-              onChange={(e) => setzen("funktion", e.target.value)}
-            />
-          </Feld>
         </div>
       </Abschnitt>
 
@@ -1083,40 +1096,54 @@ function PersonDetail({
         </div>
       </Abschnitt>
 
-      <Abschnitt titel={`Zugehörigkeit (${assigned.length})`}>
-        <div className="flex flex-wrap gap-1.5">
-          {assigned.map((k) => (
-            // Zuordnen und Loesen stehen am selben Chip; vorher lag das Loesen
-            // als eigener Block unter den Events, weit weg von dem, was es
-            // betrifft.
-            <span
-              key={k.id}
-              className="inline-flex min-h-8 items-center rounded-full border border-border bg-muted/40 pl-3 text-sm"
-            >
-              <button type="button" onClick={() => go(k.id)} className="hover:underline">
-                {k.name}
-              </button>
-              <button
-                type="button"
-                aria-label={`Kundenzuordnung ${k.name} entfernen`}
-                onClick={() => void crm.loeseVerknuepfung(person.id, k.id)}
-                className="px-2 text-muted-foreground hover:text-destructive"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-          {assigned.length === 0 && (
-            <p className="text-sm text-muted-foreground">Kein Kunde zugeordnet.</p>
-          )}
+      <Abschnitt titel="Zugehörigkeit">
+        {/* Kunde und Position stehen wie im Artboard nebeneinander.  Der Kunde
+            bleibt eine Liste von Chips statt einer Auswahl: eine Person kann
+            zu mehreren Kunden gehoeren. */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Feld label={`Kunde${assigned.length > 1 ? ` (${assigned.length})` : ""}`}>
+            <div className="flex min-h-9 flex-wrap items-center gap-1.5">
+              {assigned.map((k) => (
+                // Zuordnen und Loesen stehen am selben Chip; vorher lag das Loesen
+                // als eigener Block unter den Events, weit weg von dem, was es
+                // betrifft.
+                <span
+                  key={k.id}
+                  className="inline-flex min-h-8 items-center rounded-full border border-border bg-muted/40 pl-3 text-sm"
+                >
+                  <button type="button" onClick={() => go(k.id)} className="hover:underline">
+                    {k.name}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Kundenzuordnung ${k.name} entfernen`}
+                    onClick={() => void crm.loeseVerknuepfung(person.id, k.id)}
+                    className="px-2 text-muted-foreground hover:text-destructive"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {assigned.length === 0 && (
+                <p className="text-sm text-muted-foreground">Kein Kunde zugeordnet.</p>
+              )}
+            </div>
+            <Assign
+              label="Kunde zuordnen"
+              options={crm.kunden
+                .filter((k) => !person.kundenIds.includes(k.id))
+                .map((k) => [k.id, k.name] as const)}
+              save={(id) => crm.verknuepfe(person.id, id)}
+            />
+          </Feld>
+          <Feld label="Position" htmlFor="k-funktion">
+            <Input
+              id="k-funktion"
+              value={werte.funktion}
+              onChange={(e) => setzen("funktion", e.target.value)}
+            />
+          </Feld>
         </div>
-        <Assign
-          label="Kunde zuordnen"
-          options={crm.kunden
-            .filter((k) => !person.kundenIds.includes(k.id))
-            .map((k) => [k.id, k.name] as const)}
-          save={(id) => crm.verknuepfe(person.id, id)}
-        />
       </Abschnitt>
 
       <Abschnitt titel="Notiz">

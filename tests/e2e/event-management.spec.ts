@@ -623,7 +623,13 @@ test("verwendet in Veranstaltungen dieselbe schlanke Eventtabelle wie in der Üb
   await expect(table.getByRole("columnheader", { name: "Sportart sortieren" })).toBeVisible();
   await expect(table.getByRole("columnheader", { name: "Services sortieren" })).toBeVisible();
   await expect(table.getByRole("columnheader", { name: "TIME2WIN sortieren" })).toBeVisible();
-  await expect(table.locator("thead img[src='/time2win_logo_button.svg']")).toBeVisible();
+  // Der Spaltenkopf traegt Klartext, kein Logo: das Artboard schreibt "T2W"
+  // in die Kopfzeile, und ein Markenzeichen als Spaltenkopf laesst sich
+  // weder sortieren noch vorlesen.
+  await expect(table.getByRole("columnheader", { name: "TIME2WIN sortieren" })).toContainText(
+    "T2W",
+  );
+  await expect(table.locator("thead img")).toHaveCount(0);
   const eventRow = table.locator("tbody tr").filter({ hasText: "Bestehendes Event" });
   await expect(eventRow.getByRole("cell").nth(4)).toHaveText("Triathlon");
   await expect(eventRow.getByRole("cell").nth(4).locator("svg")).toHaveCount(1);
@@ -755,7 +761,8 @@ test("platziert die schmale TIME2WIN-Spalte nach dem Status und verlinkt die Eve
     await expect(time2winHeader).toHaveAccessibleName("TIME2WIN sortieren");
     await expect(columnHeaders.nth(2)).toHaveAccessibleName("Event sortieren");
     expect((await time2winHeader.boundingBox())?.width).toBeLessThanOrEqual(56);
-    await expect(table.locator("thead img[src='/time2win_logo_button.svg']")).toBeVisible();
+    await expect(time2winHeader).toContainText("T2W");
+    await expect(table.locator("thead img")).toHaveCount(0);
     await expect(eventRow.getByRole("cell").nth(1)).toContainText("57");
     await expect(backendLink).toHaveText("57");
     await expect(backendLink).toHaveAttribute("href", "https://time2win.at/backend/event/57");
@@ -1426,11 +1433,11 @@ test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async (
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByText("Datensatz angelegt")).toBeVisible();
   await page.getByText("Eva Persistenz").click();
-  await expect(page.getByLabel("Funktion").last()).toHaveValue("Projektleitung");
+  await expect(page.getByLabel("Position").last()).toHaveValue("Projektleitung");
   await expect(page.getByLabel("Ort", { exact: true }).last()).toHaveValue("Graz");
   await page.reload();
   await page.getByText("Eva Persistenz").click();
-  await expect(page.getByLabel("Funktion").last()).toHaveValue("Projektleitung");
+  await expect(page.getByLabel("Position").last()).toHaveValue("Projektleitung");
   await expect(page.getByLabel("Ort", { exact: true }).last()).toHaveValue("Graz");
 });
 

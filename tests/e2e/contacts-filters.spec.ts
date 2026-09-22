@@ -87,3 +87,21 @@ test("blendet Veranstalterkonten aus, wo das Konto sie nicht lesen darf", async 
   await expect(page.getByRole("tab", { name: /Veranstalterkonten/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Nur mit Veranstalterkonto" })).toHaveCount(0);
 });
+
+test("übernimmt die Frage der globalen Suche und lässt sie abwählen", async ({ page }) => {
+  await mockEventManagementApi(page);
+  // Die globale Suche schickt einen Personentreffer als "?q=" hierher.  Bis
+  // 22.09.2026 las die Seite den Parameter nicht: der Klick landete auf der
+  // ungefilterten Liste, und ohne eigenes Suchfeld tat sich gar nichts.
+  await page.goto("/kontakte?q=Marion");
+
+  const chip = page.getByRole("button", { name: /Suche: Marion/ });
+  const liste = page.locator("table tbody");
+  await expect(chip).toBeVisible();
+  await expect(liste.getByText("Marion Kessler", { exact: true })).toBeVisible();
+  await expect(liste.getByText("Jonas Feld", { exact: true })).toHaveCount(0);
+
+  await chip.click();
+  await expect(chip).toHaveCount(0);
+  await expect(liste.getByText("Jonas Feld", { exact: true })).toBeVisible();
+});
