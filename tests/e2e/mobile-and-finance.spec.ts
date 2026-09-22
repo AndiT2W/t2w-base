@@ -1,19 +1,33 @@
 import { expect, test } from "@playwright/test";
 import { mockEventManagementApi } from "./support/event-management-api";
 
-test("hält die Kennzahlkacheln auf dem Telefon im Bild", async ({ page }) => {
+test("zeigt auf dem Telefon zwei Kacheln und drei Schnellfilter", async ({ page }) => {
   await mockEventManagementApi(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
-  // Vier Kacheln nebeneinander brachen den Text auf drei Zeilen und die
-  // letzte ragte aus dem Bild. Mit Mindestbreite bricht die Reihe um.
-  const kacheln = page.getByRole("button", { name: /Events nächste 14 Tage|Ordner fehlt/ });
-  for (const kachel of await kacheln.all()) {
-    const box = await kachel.boundingBox();
-    expect(box!.x).toBeGreaterThanOrEqual(0);
-    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  // Das Artboard führt auf dem Telefon nur die beiden Aufgabenkacheln und
+  // drei Chips: vier Kacheln nebeneinander brachen den Text auf drei Zeilen,
+  // und bis zur ersten Zeile der Liste musste man scrollen.
+  const kacheln = page.getByRole("group", { name: "Kennzahlen" });
+  await expect(kacheln.getByRole("button", { name: /Offene Aufgaben/ })).toBeVisible();
+  await expect(kacheln.getByRole("button", { name: /Überfällige Aufgaben/ })).toBeVisible();
+  await expect(kacheln.getByRole("button", { name: /Events nächste 14 Tage/ })).toBeHidden();
+  await expect(kacheln.getByRole("button", { name: /Ordner fehlt/ })).toBeHidden();
+
+  const leiste = page.getByRole("group", { name: "Liste filtern" });
+  for (const name of ["Alle aktiven", "Nächste 14 Tage", "Überfällige Aufgaben"]) {
+    await expect(leiste.getByRole("button", { name, exact: true })).toBeVisible();
   }
+  await expect(leiste.getByRole("button", { name: "Offene Aufgaben", exact: true })).toBeHidden();
+  await expect(leiste.getByRole("combobox", { name: "Status filtern" })).toBeHidden();
+
+  // Was auf dem Telefon wegfällt, steht auf breiten Ansichten wieder da.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(kacheln.getByRole("button", { name: /Ordner fehlt/ })).toBeVisible();
+  await expect(leiste.getByRole("combobox", { name: "Status filtern" })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.locator("body").evaluate((b) => b.scrollWidth <= window.innerWidth)).toBe(true);
 });
 

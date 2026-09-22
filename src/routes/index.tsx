@@ -56,12 +56,17 @@ export const Route = createFileRoute("/")({
 });
 
 type Schnellfilter = "alle" | "diese-woche" | "offen" | "ueberfaellig" | "ohne-ordner";
-const SCHNELLFILTER: { key: Schnellfilter; label: string }[] = [
+/*
+ * `nurBreit` steht an dem, was das Artboard auf dem Telefon weglaesst: dort
+ * traegt die Uebersicht drei Chips und zwei Kacheln, damit die erste Zeile
+ * der Liste ohne Scrollen zu sehen ist.  Ab `md` steht wieder alles da.
+ */
+const SCHNELLFILTER: { key: Schnellfilter; label: string; nurBreit?: boolean }[] = [
   { key: "alle", label: "Alle aktiven" },
   { key: "diese-woche", label: "Nächste 14 Tage" },
-  { key: "offen", label: "Offene Aufgaben" },
   { key: "ueberfaellig", label: "Überfällige Aufgaben" },
-  { key: "ohne-ordner", label: "Ordner fehlt" },
+  { key: "offen", label: "Offene Aufgaben", nurBreit: true },
+  { key: "ohne-ordner", label: "Ordner fehlt", nurBreit: true },
 ];
 
 function inTagen(iso: string, tage: number, heute: string) {
@@ -156,6 +161,7 @@ function Uebersicht() {
             hängt jetzt als Hinweisfeld an der Kachel, die ihn auslöst. */}
         <MetricRow>
           <MetricTile
+            className="hidden md:block"
             icon={CalendarClock}
             label={t("Events nächste 14 Tage")}
             wert={kpi.kommend.length}
@@ -213,6 +219,7 @@ function Uebersicht() {
               : {})}
           />
           <MetricTile
+            className="hidden md:block"
             icon={Link2Off}
             label={t("Ordner fehlt")}
             wert={kpi.ohneOrdner}
@@ -249,14 +256,16 @@ function Uebersicht() {
               key={f.key}
               aktiv={filter === f.key}
               onToggle={() => setFilter(filter === f.key ? "alle" : f.key)}
+              {...(f.nurBreit ? { className: "hidden md:inline-flex" } : {})}
             >
               {t(f.label)}
             </ToggleChip>
           ))}
 
-          <FilterTrenner />
+          <FilterTrenner className="hidden md:block" />
 
           <FilterChip
+            className="hidden md:inline-flex"
             label="Status"
             ariaLabel="Status filtern"
             value={status}

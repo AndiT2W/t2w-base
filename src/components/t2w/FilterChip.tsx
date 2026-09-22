@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Ein Filter als Chip.  Die Auswahl bleibt ein natives select: es bringt
@@ -16,6 +17,7 @@ export function FilterChip({
   inaktiv,
   onChange,
   children,
+  className,
 }: {
   label: string;
   /** Abweichender barrierefreier Name, wenn die sichtbare Beschriftung kürzer ist. */
@@ -24,13 +26,17 @@ export function FilterChip({
   inaktiv: string;
   onChange: (value: string) => void;
   children: ReactNode;
+  /** Fuer Chips, die eine Seite auf dem Telefon weglaesst. */
+  className?: string;
 }) {
   const aktiv = value !== inaktiv;
   return (
     <label
-      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm md:min-h-8 ${
-        aktiv ? "border-primary/50 bg-primary/10" : "border-input bg-card"
-      }`}
+      className={cn(
+        "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm md:min-h-8",
+        aktiv ? "border-primary/50 bg-primary/10" : "border-input bg-card",
+        className,
+      )}
     >
       <span className="text-muted-foreground">{label}</span>
       <select
@@ -110,21 +116,26 @@ export function ToggleChip({
   aktiv,
   onToggle,
   children,
+  className,
 }: {
   aktiv: boolean;
   onToggle: () => void;
   children: ReactNode;
+  /** Fuer Chips, die eine Seite auf dem Telefon weglaesst. */
+  className?: string;
 }) {
   return (
     <button
       type="button"
       aria-pressed={aktiv}
       onClick={onToggle}
-      className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-8 ${
+      className={cn(
+        "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:min-h-8",
         aktiv
           ? "border-primary/50 bg-primary/10 font-semibold text-foreground"
-          : "border-input bg-card text-muted-foreground hover:text-foreground"
-      }`}
+          : "border-input bg-card text-muted-foreground hover:text-foreground",
+        className,
+      )}
     >
       {children}
     </button>

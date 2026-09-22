@@ -26,6 +26,7 @@ export function MetricTile({
   aktiv,
   detail,
   onClick,
+  className,
 }: {
   icon: LucideIcon;
   label: string;
@@ -36,6 +37,8 @@ export function MetricTile({
   aktiv?: boolean;
   detail?: ReactNode;
   onClick?: () => void;
+  /** Fuer Kacheln, die eine Seite auf dem Telefon weglaesst. */
+  className?: string;
 }) {
   const detailId = useId();
   const zahlKlasse =
@@ -83,10 +86,10 @@ export function MetricTile({
    * auf dem Telefon nebeneinander, bis die Beschriftung dreizeilig bricht und
    * die letzte aus dem Bild ragt. Mit ihr bricht die Reihe auf zwei um.
    */
-  if (!detail) return <div className="min-w-[9rem] flex-1">{knopf}</div>;
+  if (!detail) return <div className={cn("min-w-[9rem] flex-1", className)}>{knopf}</div>;
 
   return (
-    <div className="group relative min-w-[9rem] flex-1">
+    <div className={cn("group relative min-w-[9rem] flex-1", className)}>
       {knopf}
       <div
         role="tooltip"

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Eine Filterleiste für alle Listen.  Die Chips stehen in `FilterChip.tsx`;
@@ -25,6 +26,6 @@ export function FilterBar({ children, werkzeuge }: { children: ReactNode; werkze
  * Trennt Schnellfilter von den Auswahlfeldern in derselben Leiste.
  * Rein sichtbar; für Bildschirmleser ist die Leiste eine Gruppe.
  */
-export function FilterTrenner() {
-  return <span aria-hidden="true" className="h-5 w-px shrink-0 bg-border" />;
+export function FilterTrenner({ className }: { className?: string }) {
+  return <span aria-hidden="true" className={cn("h-5 w-px shrink-0 bg-border", className)} />;
 }
