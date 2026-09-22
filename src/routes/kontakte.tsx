@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { ChevronRight, Plus, Search, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Segment, segmentFeld } from "@/components/t2w/Segment";
+import { Feld } from "@/components/t2w/DetailKarte";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { RecordSheet } from "@/components/t2w/RecordSheet";
 import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
@@ -65,10 +75,30 @@ type PeopleColumn = (typeof PEOPLE_COLUMNS)[number];
  * `visibleColumns` aus, damit die im Spaltenmenü gewählte Reihenfolge auch die
  * Anzeigereihenfolge ist.
  */
-function peopleCell(person: Person, column: PeopleColumn): ReactNode {
+function peopleCell(person: Person, column: PeopleColumn, kunden: Kunde[]): ReactNode {
   switch (column) {
-    case "Name":
-      return personName(person);
+    case "Name": {
+      // Das Artboard stellt Initialen vor den Namen und darunter die
+      // Organisation: in einer Liste mit 800 Kontakten sagt "Sabine Kern"
+      // allein zu wenig, um die richtige Sabine zu finden.
+      const organisation = kunden.find((kunde) => person.kundenIds.includes(kunde.id))?.name;
+      return (
+        <span className="flex items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-[11px] font-bold text-table-header-foreground"
+          >
+            {initialen(personName(person))}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-medium text-foreground">{personName(person)}</span>
+            {organisation && (
+              <span className="block truncate text-xs text-muted-foreground">{organisation}</span>
+            )}
+          </span>
+        </span>
+      );
+    }
     case "Funktion":
       return person.funktion || "–";
     case "E-Mail":
@@ -391,6 +421,63 @@ function KundenKontakte() {
   }, [konten, q, crm.kunden]);
   const p = sel?.art === "person" ? crm.personen.find((x) => x.id === sel.id) : undefined;
   const k = sel?.art === "kunde" ? crm.kunden.find((x) => x.id === sel.id) : undefined;
+  /*
+   * Der Datensatz wird als Ganzes gespeichert, nicht Feld fuer Feld beim
+   * Verlassen: so steht es im Artboard, und so verhaelt sich auch das
+   * Eventdetail.  Damit gibt es etwas zu verwerfen -- "Abbrechen" schliesst
+   * das Sheet und laesst die Aenderungen fallen.
+   */
+  const [entwurf, setEntwurf] = useState<Partial<Person>>({});
+  const [speichert, setSpeichert] = useState(false);
+  useEffect(() => {
+    setEntwurf({});
+  }, [sel?.id]);
+  const [kundenEntwurf, setKundenEntwurf] = useState<Partial<Kunde>>({});
+  useEffect(() => {
+    setKundenEntwurf({});
+  }, [sel?.id]);
+  const kundeWerte = k ? { ...k, ...kundenEntwurf } : undefined;
+  const kundeDirty = Object.keys(kundenEntwurf).length > 0;
+  async function kundeSpeichern() {
+    if (!k) return;
+    if (!validEmail(kundeWerte!.email)) {
+      toast.error("Bitte eine gültige Mail-Adresse angeben.");
+      return;
+    }
+    setSpeichert(true);
+    try {
+      await crm.updateKunde(k.id, kundenEntwurf);
+      setKundenEntwurf({});
+      toast.success("Änderungen gespeichert.");
+    } catch {
+      toast.error("Änderungen konnten nicht gespeichert werden.");
+    } finally {
+      setSpeichert(false);
+    }
+  }
+  const personWerte = p ? { ...p, ...entwurf } : undefined;
+  const personDirty = Object.keys(entwurf).length > 0;
+  async function personSpeichern() {
+    if (!p) return;
+    if (!validEmail(personWerte!.email)) {
+      toast.error("Bitte eine gültige Mail-Adresse angeben.");
+      return;
+    }
+    if (!validPhone(personWerte!.telefonPrivat) || !validPhone(personWerte!.telefonBeruflich)) {
+      toast.error("Bitte eine gültige Telefonnummer angeben.");
+      return;
+    }
+    setSpeichert(true);
+    try {
+      await crm.updatePerson(p.id, entwurf);
+      setEntwurf({});
+      toast.success("Änderungen gespeichert.");
+    } catch {
+      toast.error("Änderungen konnten nicht gespeichert werden.");
+    } finally {
+      setSpeichert(false);
+    }
+  }
   return (
     <div>
       <PageHeader
@@ -450,60 +537,49 @@ function KundenKontakte() {
             </div>
           }
         >
-          <div className="flex gap-1" role="tablist" aria-label="Kontaktansicht">
-            <button
-              onClick={() => {
-                setTab("kontakte");
-              }}
-              role="tab"
-              aria-selected={tab === "kontakte"}
-              className={`rounded-md px-3 py-1.5 text-sm ${tab === "kontakte" ? "bg-accent font-medium" : "hover:bg-secondary"}`}
-            >
-              Kontakte ({people.length})
-            </button>
-            <button
-              onClick={() => {
-                setTab("kunden");
-              }}
-              role="tab"
-              aria-selected={tab === "kunden"}
-              className={`rounded-md px-3 py-1.5 text-sm ${tab === "kunden" ? "bg-accent font-medium" : "hover:bg-secondary"}`}
-            >
-              Kunden ({customers.length})
-            </button>
-            {darfKonten && (
+          {/* Dieselbe Segmentleiste wie auf den uebrigen Listen: Unterkante am
+              Balken, gruener Unterstrich am aktiven Feld. */}
+          <Segment label="Kontaktansicht" className="shrink-0">
+            {(
+              [
+                ["kontakte", `Kontakte (${people.length})`],
+                ["kunden", `Kunden (${customers.length})`],
+                ...(darfKonten
+                  ? ([["konten", `Veranstalterkonten (${sichtbareKonten.length})`]] as const)
+                  : []),
+              ] as const
+            ).map(([wert, beschriftung]) => (
               <button
-                onClick={() => {
-                  setTab("konten");
-                }}
+                key={wert}
+                type="button"
                 role="tab"
-                aria-selected={tab === "konten"}
-                className={`rounded-md px-3 py-1.5 text-sm ${tab === "konten" ? "bg-accent font-medium" : "hover:bg-secondary"}`}
+                aria-selected={tab === wert}
+                onClick={() => setTab(wert as typeof tab)}
+                className={segmentFeld(tab === wert)}
               >
-                Veranstalterkonten ({sichtbareKonten.length})
+                {beschriftung}
               </button>
-            )}
-          </div>
+            ))}
+          </Segment>
 
           <FilterTrenner />
 
-          {/* Die Seitensuche steht bei ihrer Liste; im Seitenkopf liegt die
-              Suche über alle Module. */}
-          <label className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              aria-label="Suche"
-              placeholder={
-                currentUser.financeAccess
-                  ? "Name, E-Mail, Telefon, UID, IBAN …"
-                  : "Name, E-Mail, Telefon oder UID …"
-              }
-              className="h-11 w-72 rounded-full pl-8 sm:h-8"
-            />
-          </label>
+          {/* Kein eigenes Suchfeld mehr: das Artboard fuehrt die Suche nur
+              einmal, oben in der Kopfzeile ueber alle Module.  Eine offene
+              Suche bleibt als abwaehlbarer Chip sichtbar, sonst waere nicht zu
+              sehen, warum die Liste kurz ist. */}
+          {q.trim() && (
+            <button
+              type="button"
+              onClick={() => setQ("")}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-primary bg-primary/10 px-3 text-sm font-medium sm:min-h-8"
+            >
+              <Search className="size-3.5" aria-hidden="true" />
+              <span className="max-w-48 truncate">Suche: {q}</span>
+              <span aria-hidden="true">×</span>
+              <span className="sr-only">Suche zurücksetzen</span>
+            </button>
+          )}
 
           {/* Die Chips gehoeren zur Liste darunter: der Kontaktreiter filtert
               nach Rolle, Event und Kunde, der Kundenreiter nach Status. Die
@@ -586,6 +662,7 @@ function KundenKontakte() {
         {tab === "kontakte" ? (
           <PeopleTable
             people={people}
+            kunden={crm.kunden}
             select={(id) => setSel({ art: "person", id })}
             open={() => setCreate(true)}
             table={peopleTable}
@@ -615,6 +692,9 @@ function KundenKontakte() {
         <RecordSheet
           open
           onOpenChange={(offen) => !offen && setSel(null)}
+          dirty={p ? personDirty : kundeDirty}
+          speichern={() => void (p ? personSpeichern() : kundeSpeichern())}
+          speicherLabel={speichert ? "Wird gespeichert …" : "Änderungen speichern"}
           titel={p ? personName(p) : (k?.name ?? "")}
           beschreibung={
             p ? "Kontakt · Stammdaten und Zuordnungen" : "Kunde · Stammdaten und Zuordnungen"
@@ -640,25 +720,23 @@ function KundenKontakte() {
         >
           {p ? (
             <>
-              <PersonDetail person={p} crm={crm} go={(id) => setSel({ art: "kunde", id })} />
-              <AssociationRemover
-                label="Kundenzuordnung entfernen"
-                items={crm.kundenVonPerson(p).map((x) => [x.id, x.name] as const)}
-                remove={(id) => crm.loeseVerknuepfung(p.id, id)}
+              <PersonDetail
+                werte={personWerte!}
+                setzen={(feld, wert) => setEntwurf((alt) => ({ ...alt, [feld]: wert }))}
+                person={p}
+                crm={crm}
+                go={(id) => setSel({ art: "kunde", id })}
               />
             </>
           ) : (
             <>
               <CustomerDetail
+                werte={kundeWerte!}
+                setzen={(feld, wert) => setKundenEntwurf((alt) => ({ ...alt, [feld]: wert }))}
                 customer={k!}
                 crm={crm}
                 go={(id) => setSel({ art: "person", id })}
                 financeAccess={currentUser.financeAccess}
-              />
-              <AssociationRemover
-                label="Kontaktzuordnung entfernen"
-                items={crm.kontakteVonKunde(k!.id).map((x) => [x.id, personName(x)] as const)}
-                remove={(id) => crm.loeseVerknuepfung(id, k!.id)}
               />
             </>
           )}
@@ -702,12 +780,14 @@ function usePeopleTable() {
 
 function PeopleTable({
   people,
+  kunden,
   select,
   open,
   table,
   tableRef,
 }: {
   people: Person[];
+  kunden: Kunde[];
   select: (id: string) => void;
   open: () => void;
   table: ReturnType<typeof usePeopleTable>;
@@ -731,7 +811,7 @@ function PeopleTable({
             className="cursor-pointer border-t border-border hover:bg-accent/50"
           >
             {visibleColumns.map((column) => (
-              <td key={column}>{peopleCell(p, column)}</td>
+              <td key={column}>{peopleCell(p, column, kunden)}</td>
             ))}
           </tr>
         ))}
@@ -864,11 +944,64 @@ function Empty({ text, open, label }: { text: string; open: () => void; label: s
     </div>
   );
 }
+/**
+ * Ein Abschnitt im Datensatz, wie ihn das Artboard zeichnet: eine kurze
+ * Versalüberschrift über der Feldgruppe.  Vorher lagen alle elf Felder eines
+ * Kontakts in einem Block — was zur Person gehört und was zur Zugehörigkeit,
+ * war nur an den Beschriftungen zu erkennen.
+ */
+function Abschnitt({ titel, children }: { titel: string; children: ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <h3 className="text-[11px] font-bold uppercase tracking-[0.07em] text-muted-foreground">
+        {titel}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+/**
+ * Eine Eventzeile im Datensatz: Statuspunkt, Name, Zeitraum, Pfeil.  Das
+ * Artboard führt sie als anklickbare Zeile statt als Kette von Chips.
+ */
+function EventZeile({
+  eventcode,
+  name,
+  zusatz,
+  chips,
+}: {
+  eventcode: string;
+  name: string;
+  zusatz?: string;
+  chips: ReactNode;
+}) {
+  return (
+    <a
+      href={`/events/${eventcode}`}
+      className="flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-2.5 py-2 hover:bg-accent/50"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[12.5px] font-semibold text-foreground">{name}</span>
+        <span className="block truncate text-[11.5px] text-muted-foreground">
+          {zusatz ?? eventcode}
+        </span>
+      </span>
+      <span className="flex shrink-0 flex-wrap items-center gap-1">{chips}</span>
+      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+    </a>
+  );
+}
+
 function PersonDetail({
+  werte,
+  setzen,
   person,
   crm,
   go,
 }: {
+  werte: Person;
+  setzen: (feld: keyof Person, wert: string) => void;
   person: Person;
   crm: ReturnType<typeof useCrm>;
   go: (id: string) => void;
@@ -876,87 +1009,107 @@ function PersonDetail({
   const assigned = crm.kundenVonPerson(person);
   const events = groupPersonEventRoles(person.eventRollen);
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field
-          label="Vorname"
-          value={person.vorname}
-          save={(v) => crm.updatePerson(person.id, { vorname: v })}
-        />
-        <Field
-          label="Nachname"
-          value={person.nachname}
-          save={(v) => crm.updatePerson(person.id, { nachname: v })}
-        />
-        <Field
-          label="Funktion"
-          value={person.funktion}
-          save={(v) => crm.updatePerson(person.id, { funktion: v })}
-        />
-        <Field
-          label="E-Mail"
-          value={person.email}
-          save={(v) => crm.updatePerson(person.id, { email: v })}
-          validate={(value) =>
-            validEmail(value) ? null : "Bitte eine gültige Mail-Adresse angeben."
-          }
-        />
-        <Field
-          label="Telefon privat"
-          value={person.telefonPrivat}
-          save={(v) => crm.updatePerson(person.id, { telefonPrivat: v })}
-          validate={(value) =>
-            validPhone(value) ? null : "Bitte eine gültige Telefonnummer angeben."
-          }
-        />
-        <Field
-          label="Telefon beruflich"
-          value={person.telefonBeruflich}
-          save={(v) => crm.updatePerson(person.id, { telefonBeruflich: v })}
-          validate={(value) =>
-            validPhone(value) ? null : "Bitte eine gültige Telefonnummer angeben."
-          }
-        />
-        <Field
-          label="Ort"
-          value={person.ort}
-          save={(v) => crm.updatePerson(person.id, { ort: v })}
-        />
-        <Field
-          label="Straße"
-          value={person.strasse}
-          save={(v) => crm.updatePerson(person.id, { strasse: v })}
-        />
-        <Field
-          label="PLZ"
-          value={person.plz}
-          save={(v) => crm.updatePerson(person.id, { plz: v })}
-        />
-        <Field
-          label="Land"
-          value={person.land}
-          save={(v) => crm.updatePerson(person.id, { land: v })}
-        />
-        <div className="sm:col-span-2">
-          <Field
-            label="Notiz"
-            area
-            value={person.notiz}
-            save={(v) => crm.updatePerson(person.id, { notiz: v })}
-          />
+    <div className="space-y-4">
+      <Abschnitt titel="Person">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Feld label="Vorname" htmlFor="k-vorname">
+            <Input
+              id="k-vorname"
+              value={werte.vorname}
+              onChange={(e) => setzen("vorname", e.target.value)}
+            />
+          </Feld>
+          <Feld label="Nachname" htmlFor="k-nachname">
+            <Input
+              id="k-nachname"
+              value={werte.nachname}
+              onChange={(e) => setzen("nachname", e.target.value)}
+            />
+          </Feld>
+          <Feld label="E-Mail" htmlFor="k-email">
+            <Input
+              id="k-email"
+              type="email"
+              value={werte.email}
+              onChange={(e) => setzen("email", e.target.value)}
+            />
+          </Feld>
+          <Feld label="Telefon" htmlFor="k-telefon-beruflich">
+            <Input
+              id="k-telefon-beruflich"
+              value={werte.telefonBeruflich}
+              onChange={(e) => setzen("telefonBeruflich", e.target.value)}
+            />
+          </Feld>
+          <Feld label="Telefon privat" htmlFor="k-telefon-privat">
+            <Input
+              id="k-telefon-privat"
+              value={werte.telefonPrivat}
+              onChange={(e) => setzen("telefonPrivat", e.target.value)}
+            />
+          </Feld>
+          <Feld label="Funktion" htmlFor="k-funktion">
+            <Input
+              id="k-funktion"
+              value={werte.funktion}
+              onChange={(e) => setzen("funktion", e.target.value)}
+            />
+          </Feld>
         </div>
-      </div>
-      <section>
-        <h3 className="mb-2 font-semibold">Kundenverknüpfungen ({assigned.length})</h3>
-        {assigned.map((k) => (
-          <button
-            key={k.id}
-            onClick={() => go(k.id)}
-            className="mr-2 rounded border border-border px-2 py-1 text-sm"
-          >
-            {k.name}
-          </button>
-        ))}
+      </Abschnitt>
+
+      <Abschnitt titel="Anschrift">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Feld label="Straße" htmlFor="k-strasse">
+            <Input
+              id="k-strasse"
+              value={werte.strasse}
+              onChange={(e) => setzen("strasse", e.target.value)}
+            />
+          </Feld>
+          <Feld label="Ort" htmlFor="k-ort">
+            <Input id="k-ort" value={werte.ort} onChange={(e) => setzen("ort", e.target.value)} />
+          </Feld>
+          <Feld label="PLZ" htmlFor="k-plz">
+            <Input id="k-plz" value={werte.plz} onChange={(e) => setzen("plz", e.target.value)} />
+          </Feld>
+          <Feld label="Land" htmlFor="k-land">
+            <Input
+              id="k-land"
+              value={werte.land}
+              onChange={(e) => setzen("land", e.target.value)}
+            />
+          </Feld>
+        </div>
+      </Abschnitt>
+
+      <Abschnitt titel={`Zugehörigkeit (${assigned.length})`}>
+        <div className="flex flex-wrap gap-1.5">
+          {assigned.map((k) => (
+            // Zuordnen und Loesen stehen am selben Chip; vorher lag das Loesen
+            // als eigener Block unter den Events, weit weg von dem, was es
+            // betrifft.
+            <span
+              key={k.id}
+              className="inline-flex min-h-8 items-center rounded-full border border-border bg-muted/40 pl-3 text-sm"
+            >
+              <button type="button" onClick={() => go(k.id)} className="hover:underline">
+                {k.name}
+              </button>
+              <button
+                type="button"
+                aria-label={`Kundenzuordnung ${k.name} entfernen`}
+                onClick={() => void crm.loeseVerknuepfung(person.id, k.id)}
+                className="px-2 text-muted-foreground hover:text-destructive"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {assigned.length === 0 && (
+            <p className="text-sm text-muted-foreground">Kein Kunde zugeordnet.</p>
+          )}
+        </div>
         <Assign
           label="Kunde zuordnen"
           options={crm.kunden
@@ -964,34 +1117,49 @@ function PersonDetail({
             .map((k) => [k.id, k.name] as const)}
           save={(id) => crm.verknuepfe(person.id, id)}
         />
-      </section>
-      <section>
-        <h3 className="mb-2 font-semibold">Events ({events.length})</h3>
-        <div className="space-y-2">
-          {events.map((event) => (
-            <a
-              key={event.eventcode}
-              href={`/events/${event.eventcode}`}
-              className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-sm hover:bg-accent/50"
-            >
-              <span className="font-medium">{event.eventName}</span>
-              <span className="font-mono text-xs text-muted-foreground">{event.eventcode}</span>
-              {event.rollen.map((rolle) => (
-                <Chip key={rolle}>{rolle}</Chip>
-              ))}
-            </a>
-          ))}
-        </div>
-      </section>
+      </Abschnitt>
+
+      <Abschnitt titel="Notiz">
+        <Textarea
+          aria-label="Notiz"
+          rows={3}
+          value={werte.notiz}
+          onChange={(e) => setzen("notiz", e.target.value)}
+        />
+      </Abschnitt>
+
+      <Abschnitt titel={`Events (${events.length})`}>
+        {events.length ? (
+          <div className="space-y-1.5">
+            {events.map((event) => (
+              <EventZeile
+                key={event.eventcode}
+                eventcode={event.eventcode}
+                name={event.eventName}
+                chips={event.rollen.map((rolle) => (
+                  <Chip key={rolle}>{rolle}</Chip>
+                ))}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Keine Events zugeordnet.</p>
+        )}
+      </Abschnitt>
     </div>
   );
 }
+
 function CustomerDetail({
+  werte,
+  setzen,
   customer,
   crm,
   go,
   financeAccess,
 }: {
+  werte: Kunde;
+  setzen: (feld: keyof Kunde, wert: string) => void;
   customer: Kunde;
   crm: ReturnType<typeof useCrm>;
   go: (id: string) => void;
@@ -1000,143 +1168,172 @@ function CustomerDetail({
   const contacts = crm.kontakteVonKunde(customer.id);
   const events = groupCustomerEvents(customer.events);
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field
-          label="Kundenname"
-          value={customer.name}
-          save={(v) => crm.updateKunde(customer.id, { name: v })}
-        />
-        <label className="text-xs text-muted-foreground">
-          Status
-          <select
-            aria-label="Status"
-            className={input}
-            value={customer.status}
-            onChange={(e) =>
-              crm.updateKunde(customer.id, { status: e.target.value as Kunde["status"] })
+    <div className="space-y-4">
+      <Abschnitt titel="Organisation">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Feld label="Kundenname" htmlFor="ku-name">
+            <Input
+              id="ku-name"
+              value={werte.name}
+              onChange={(e) => setzen("name", e.target.value)}
+            />
+          </Feld>
+          <Feld label="Status">
+            <Select
+              value={werte.status}
+              onValueChange={(wert) => setzen("status", wert as Kunde["status"])}
+            >
+              <SelectTrigger aria-label="Status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="aktiv">Aktiv</SelectItem>
+                <SelectItem value="inaktiv">Inaktiv</SelectItem>
+              </SelectContent>
+            </Select>
+          </Feld>
+          <Feld label="UID-Nummer" htmlFor="ku-uid">
+            <Input id="ku-uid" value={werte.uid} onChange={(e) => setzen("uid", e.target.value)} />
+          </Feld>
+          <Feld label="Mail" htmlFor="ku-mail">
+            <Input
+              id="ku-mail"
+              type="email"
+              value={werte.email}
+              onChange={(e) => setzen("email", e.target.value)}
+            />
+          </Feld>
+        </div>
+      </Abschnitt>
+
+      <Abschnitt titel="Anschrift">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Feld label="Straße" htmlFor="ku-strasse">
+            <Input
+              id="ku-strasse"
+              value={werte.strasse}
+              onChange={(e) => setzen("strasse", e.target.value)}
+            />
+          </Feld>
+          <Feld label="Ort" htmlFor="ku-ort">
+            <Input id="ku-ort" value={werte.ort} onChange={(e) => setzen("ort", e.target.value)} />
+          </Feld>
+          <Feld label="PLZ" htmlFor="ku-plz">
+            <Input id="ku-plz" value={werte.plz} onChange={(e) => setzen("plz", e.target.value)} />
+          </Feld>
+          <Feld label="Land" htmlFor="ku-land">
+            <Input
+              id="ku-land"
+              value={werte.land}
+              onChange={(e) => setzen("land", e.target.value)}
+            />
+          </Feld>
+        </div>
+      </Abschnitt>
+
+      {financeAccess && (
+        <Abschnitt titel="Bankverbindung">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Feld label="IBAN" htmlFor="ku-iban">
+              <Input
+                id="ku-iban"
+                value={werte.iban}
+                onChange={(e) => setzen("iban", e.target.value)}
+                className="font-mono"
+              />
+            </Feld>
+            <Feld label="BIC" htmlFor="ku-bic">
+              <Input
+                id="ku-bic"
+                value={werte.bic}
+                onChange={(e) => setzen("bic", e.target.value)}
+                className="font-mono"
+              />
+            </Feld>
+            <Feld label="Bank" htmlFor="ku-bank">
+              <Input
+                id="ku-bank"
+                value={werte.bank}
+                onChange={(e) => setzen("bank", e.target.value)}
+              />
+            </Feld>
+          </div>
+        </Abschnitt>
+      )}
+
+      <Abschnitt titel={`Kontakte (${contacts.length})`}>
+        <Feld label="Hauptansprechperson">
+          <Select
+            value={werte.primaryContactId ?? "keine"}
+            onValueChange={(wert) =>
+              void crm.updateKunde(customer.id, {
+                primaryContactId: wert === "keine" ? null : wert,
+              })
             }
           >
-            <option value="aktiv">Aktiv</option>
-            <option value="inaktiv">Inaktiv</option>
-          </select>
-        </label>
-        <Field
-          label="UID-Nummer"
-          value={customer.uid}
-          save={(v) => crm.updateKunde(customer.id, { uid: v })}
-        />
-        <Field
-          label="Mail"
-          value={customer.email}
-          save={(v) => crm.updateKunde(customer.id, { email: v })}
-          validate={(value) =>
-            validEmail(value) ? null : "Bitte eine gültige Mail-Adresse angeben."
-          }
-        />
-        <div className="sm:col-span-2">
-          <Field
-            label="Straße"
-            value={customer.strasse}
-            save={(v) => crm.updateKunde(customer.id, { strasse: v })}
-          />
-          <Field
-            label="PLZ"
-            value={customer.plz}
-            save={(v) => crm.updateKunde(customer.id, { plz: v })}
-          />
-          <Field
-            label="Ort"
-            value={customer.ort}
-            save={(v) => crm.updateKunde(customer.id, { ort: v })}
-          />
-          <Field
-            label="Land"
-            value={customer.land}
-            save={(v) => crm.updateKunde(customer.id, { land: v })}
-          />
-        </div>
-        {financeAccess && (
-          <Field
-            label="IBAN"
-            value={customer.iban}
-            save={(v) => crm.updateKunde(customer.id, { iban: v })}
-          />
-        )}
-        {financeAccess && (
-          <Field
-            label="BIC"
-            value={customer.bic}
-            save={(v) => crm.updateKunde(customer.id, { bic: v })}
-          />
-        )}
-        {financeAccess && (
-          <Field
-            label="Bank"
-            value={customer.bank}
-            save={(v) => crm.updateKunde(customer.id, { bank: v })}
-          />
-        )}
-      </div>
-      <section>
-        <h3 className="mb-2 font-semibold">Hauptansprechperson</h3>
-        <select
-          aria-label="Hauptansprechperson"
-          className={input}
-          value={customer.primaryContactId ?? ""}
-          onChange={(e) =>
-            void crm.updateKunde(customer.id, { primaryContactId: e.target.value || null })
-          }
-        >
-          <option value="">Keine Hauptansprechperson</option>
+            <SelectTrigger aria-label="Hauptansprechperson">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="keine">Keine Hauptansprechperson</SelectItem>
+              {contacts.map((person) => (
+                <SelectItem key={person.id} value={person.id}>
+                  {personName(person)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Feld>
+        <div className="flex flex-wrap gap-1.5">
           {contacts.map((person) => (
-            <option key={person.id} value={person.id}>
-              {personName(person)}
-            </option>
+            <span
+              key={person.id}
+              className="inline-flex min-h-8 items-center rounded-full border border-border bg-muted/40 pl-3 text-sm"
+            >
+              <button type="button" onClick={() => go(person.id)} className="hover:underline">
+                {personName(person)}
+              </button>
+              <button
+                type="button"
+                aria-label={`Kontaktzuordnung ${personName(person)} entfernen`}
+                onClick={() => void crm.loeseVerknuepfung(person.id, customer.id)}
+                className="px-2 text-muted-foreground hover:text-destructive"
+              >
+                ×
+              </button>
+            </span>
           ))}
-        </select>
-      </section>
-      <section>
-        <h3 className="mb-2 font-semibold">Kontakte ({contacts.length})</h3>
-        {contacts.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => go(p.id)}
-            className="mr-2 rounded border border-border px-2 py-1 text-sm"
-          >
-            {personName(p)}
-          </button>
-        ))}
+          {contacts.length === 0 && (
+            <p className="text-sm text-muted-foreground">Kein Kontakt zugeordnet.</p>
+          )}
+        </div>
         <Assign
           label="Kontakt zuordnen"
           options={crm.personen
-            .filter((p) => !p.kundenIds.includes(customer.id))
-            .map((p) => [p.id, personName(p)] as const)}
+            .filter((person) => !person.kundenIds.includes(customer.id))
+            .map((person) => [person.id, personName(person)] as const)}
           save={(id) => crm.verknuepfe(id, customer.id)}
         />
-      </section>
-      <section>
-        <h3 className="mb-2 font-semibold">Events ({events.length})</h3>
+      </Abschnitt>
+
+      <Abschnitt titel={`Events (${events.length})`}>
         {events.length ? (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {events.map((event) => (
-              <a
+              <EventZeile
                 key={event.eventcode}
-                href={`/events/${event.eventcode}`}
-                className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-sm hover:bg-accent/50"
-              >
-                <span className="font-medium">{event.eventName}</span>
-                <span className="font-mono text-xs text-muted-foreground">{event.eventcode}</span>
-                {event.funktionen.map((funktion) => (
+                eventcode={event.eventcode}
+                name={event.eventName}
+                chips={event.funktionen.map((funktion) => (
                   <Chip key={funktion}>{customerEventFunctionLabel[funktion]}</Chip>
                 ))}
-              </a>
+              />
             ))}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">Keine Events zugeordnet.</p>
         )}
-      </section>
+      </Abschnitt>
     </div>
   );
 }

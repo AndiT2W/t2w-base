@@ -515,24 +515,21 @@ test("pflegt Personen und Kunden im Menü Kunden & Kontakte", async ({ page }) =
   await page.getByRole("textbox", { name: "E-Mail" }).fill("neu@example.com");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await page.waitForTimeout(100);
-  await page.getByLabel("Suche", { exact: true }).first().fill("Kontaktperson");
   await expect(page.getByText("Neue Kontaktperson")).toBeVisible();
   await page.getByText("Neue Kontaktperson").click();
   const email = page.getByLabel("E-Mail").last();
   await email.fill("geändert@example.com");
-  await email.blur();
-  await expect(page.getByText("E-Mail gespeichert")).toBeVisible();
+  // Der Datensatz wird als Ganzes gespeichert, nicht Feld fuer Feld beim
+  // Verlassen -- so zeichnet es das Artboard.
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   await page.reload();
-  await page.getByLabel("Suche", { exact: true }).first().fill("geändert@example.com");
   await expect(page.getByText("Neue Kontaktperson")).toBeVisible();
-  // Die Seitensuche filtert beide Reiter; ohne Leeren zeigt "Kunden" null.
-  await page.getByLabel("Suche", { exact: true }).first().fill("");
   await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await expect(page.getByText("Nordwerk GmbH")).toBeVisible();
   await page.getByText("Nordwerk GmbH").click();
   await expect(page.getByLabel("Kundenname")).toHaveValue("Nordwerk GmbH");
   await page.getByRole("button", { name: "Detail schließen" }).click();
-  await page.getByLabel("Suche", { exact: true }).first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
   const contactSearch = page.getByRole("combobox", { name: "Kontakt zuordnen" });
   await contactSearch.fill("Marion");
@@ -574,25 +571,22 @@ test("fügt einen per Combobox angeklickten Kontakt im Kundenprofil hinzu", asyn
   await mockApi(page);
   await page.goto("/kontakte");
   await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
-  await page.getByLabel("Suche", { exact: true }).first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
   await expect(page.getByRole("heading", { name: "Jonas Feld" })).toBeVisible();
   const search = page.getByRole("combobox", { name: "Kontakt zuordnen" });
   await search.fill("Marion");
   await page.getByRole("option", { name: "Marion Kessler" }).click();
-  await expect(page.getByRole("button", { name: "Marion Kessler ×" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Marion Kessler", exact: true })).toBeVisible();
   await page.reload();
   await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
-  await page.getByLabel("Suche", { exact: true }).first().fill("Jonas Feld");
   await page.getByText("Jonas Feld").click();
-  await expect(page.getByRole("button", { name: "Marion Kessler ×" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Marion Kessler", exact: true })).toBeVisible();
 });
 
 test("fügt einen per Combobox angeklickten Kunden im Kontakt hinzu", async ({ page }) => {
   await page.addInitScript(() => localStorage.removeItem("t2w-crm-v1"));
   const requests = await mockApi(page);
   await page.goto("/kontakte");
-  await page.getByLabel("Suche", { exact: true }).first().fill("Marion Kessler");
   await page.getByText("Marion Kessler").click();
   await expect(page.getByRole("heading", { name: "Marion Kessler" })).toBeVisible();
   const search = page.getByRole("combobox", { name: "Kunde zuordnen" });
@@ -606,7 +600,6 @@ test("fügt einen per Combobox angeklickten Kunden im Kontakt hinzu", async ({ p
     ),
   ).toBeTruthy();
   await page.reload();
-  await page.getByLabel("Suche", { exact: true }).first().fill("Marion Kessler");
   await page.getByText("Marion Kessler").click();
   await expect(page.getByRole("button", { name: "Jonas Feld", exact: true })).toBeVisible();
 });
@@ -1250,7 +1243,8 @@ test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
   await page.goto("/kontakte");
   await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await page.getByText("Nordwerk GmbH", { exact: true }).click();
-  await page.getByRole("combobox", { name: "Hauptansprechperson" }).selectOption("p1");
+  await page.getByRole("combobox", { name: "Hauptansprechperson" }).click();
+  await page.getByRole("option", { name: "Marion Kessler" }).click();
 
   await expect
     .poll(() =>
@@ -1265,7 +1259,9 @@ test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
   await page.reload();
   await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
   await page.getByText("Nordwerk GmbH", { exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Hauptansprechperson" })).toHaveValue("p1");
+  await expect(page.getByRole("combobox", { name: "Hauptansprechperson" })).toContainText(
+    "Marion Kessler",
+  );
 });
 
 test("sortiert Kunden und Kontakte über die Tabellenüberschriften", async ({ page }) => {
@@ -1429,15 +1425,13 @@ test("speichert Funktion und Ort eines neuen Kontakts auch nach Reload", async (
   await page.getByRole("textbox", { name: "Ort" }).fill("Graz");
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByText("Datensatz angelegt")).toBeVisible();
-  await page.getByLabel("Suche", { exact: true }).first().fill("Eva Persistenz");
   await page.getByText("Eva Persistenz").click();
   await expect(page.getByLabel("Funktion").last()).toHaveValue("Projektleitung");
-  await expect(page.getByLabel("Ort").last()).toHaveValue("Graz");
+  await expect(page.getByLabel("Ort", { exact: true }).last()).toHaveValue("Graz");
   await page.reload();
-  await page.getByLabel("Suche", { exact: true }).first().fill("Eva Persistenz");
   await page.getByText("Eva Persistenz").click();
   await expect(page.getByLabel("Funktion").last()).toHaveValue("Projektleitung");
-  await expect(page.getByLabel("Ort").last()).toHaveValue("Graz");
+  await expect(page.getByLabel("Ort", { exact: true }).last()).toHaveValue("Graz");
 });
 
 test("zeigt die getrennte TIME2WIN-Verknüpfung im Event-Workspace", async ({ page }) => {
@@ -1585,18 +1579,23 @@ test("prüft Mail- und Telefonnummern im Kontakt-Detailformular", async ({ page 
   await mockApi(page);
   await page.goto("/kontakte");
   await page.getByText("Marion Kessler", { exact: true }).click();
+  const speichern = page.getByRole("button", { name: "Änderungen speichern" });
+  // Geprueft wird beim Speichern des Datensatzes, nicht mehr beim Verlassen
+  // eines einzelnen Feldes.
   const email = page.getByRole("textbox", { name: "E-Mail" });
   await email.fill("keine-mail");
-  await email.blur();
-  await expect(page.getByRole("alert")).toHaveText("Bitte eine gültige Mail-Adresse angeben.");
-  await expect(email).toHaveAttribute("aria-invalid", "true");
+  await speichern.click();
+  await expect(page.getByText("Bitte eine gültige Mail-Adresse angeben.")).toBeVisible();
+
+  await email.fill("marion@example.at");
   const phone = page.getByLabel("Telefon privat");
   await phone.fill("nicht-erlaubt");
-  await phone.blur();
-  await expect(phone.locator("xpath=..").getByRole("alert")).toHaveText(
-    "Bitte eine gültige Telefonnummer angeben.",
-  );
-  await expect(phone).toHaveAttribute("aria-invalid", "true");
+  await speichern.click();
+  await expect(page.getByText("Bitte eine gültige Telefonnummer angeben.")).toBeVisible();
+
+  await phone.fill("+43 664 123456");
+  await speichern.click();
+  await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
 });
 
 test("zeigt Outlook und SharePoint als Symbole in der Übersicht", async ({ page }) => {
