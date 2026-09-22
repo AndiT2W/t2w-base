@@ -319,7 +319,6 @@ function Veranstaltungen() {
           <FilterResetChip count={aktiveFilter} onReset={filterZuruecksetzen} />
         </FilterBar>
 
-        {dateCollisions.size > 0 && <EventDateCollisionLegend />}
         <EventMobileList
           events={zeilen}
           settings={settings}
@@ -383,6 +382,11 @@ function Veranstaltungen() {
             <StatusLegend />
           </div>
         </div>
+        {dateCollisions.size > 0 && (
+          <div className="mt-1.5">
+            <EventDateCollisionLegend />
+          </div>
+        )}
       </div>
     </div>
   );
