@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n";
+import { useSchmal, useSeitenkopf } from "@/components/t2w/Seitenkopf";
 
 export type Krume = { label: string; to?: "/" | "/veranstaltungen" };
 
@@ -21,6 +22,17 @@ export function PageHeader({
 }) {
   const { t } = useI18n();
   const headerRef = useRef<HTMLElement>(null);
+  /*
+   * Auf dem Telefon traegt die dunkle Leiste oben den Seitentitel; hier
+   * bleiben nur die Aktionen stehen.  Gemeldet wird der uebersetzte Titel
+   * und, wenn die Beschreibung ein einfacher Text ist, auch die.
+   */
+  const { melde } = useSeitenkopf();
+  const schmal = useSchmal();
+  const unterzeile = typeof beschreibung === "string" ? t(beschreibung) : "";
+  useEffect(() => {
+    melde({ titel: t(titel), unterzeile });
+  }, [melde, t, titel, unterzeile]);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -59,30 +71,44 @@ export function PageHeader({
           liefen -- etwa den Fokus nach dem Schliessen eines Dialogs. Der
           Umbruch erledigt jetzt, was zwei Kopien erledigen sollten. */}
       <div className="flex flex-wrap items-start gap-3">
+        {/* Auf dem Telefon traegt die Kopfzeile oben Titel und Brotkrume; hier
+            bleibt die Zeile darunter stehen.  Sie fuehrt oft Verweise --
+            etwa den Veranstalter eines Events -- und ist damit mehr als
+            Beiwerk. */}
         <div className="min-w-0 flex-1 basis-full md:basis-auto">
-          <nav
-            aria-label="Breadcrumb"
-            className="flex items-center gap-1 text-xs text-muted-foreground"
-          >
-            {krumen.map((k) => (
-              <span key={k.label} className="flex items-center gap-1">
-                {k.to ? (
-                  <Link to={k.to} className="transition-colors hover:text-foreground">
-                    {t(k.label)}
-                  </Link>
-                ) : (
-                  <span>{t(k.label)}</span>
-                )}
-                <ChevronRight className="size-3" />
-              </span>
-            ))}
-            <span className="font-medium text-foreground">{t(titel)}</span>
-          </nav>
-          <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground">
-            {t(titel)}
-          </h1>
+          {!schmal && (
+            <>
+              <nav
+                aria-label="Breadcrumb"
+                className="flex items-center gap-1 text-xs text-muted-foreground"
+              >
+                {krumen.map((k) => (
+                  <span key={k.label} className="flex items-center gap-1">
+                    {k.to ? (
+                      <Link to={k.to} className="transition-colors hover:text-foreground">
+                        {t(k.label)}
+                      </Link>
+                    ) : (
+                      <span>{t(k.label)}</span>
+                    )}
+                    <ChevronRight className="size-3" />
+                  </span>
+                ))}
+                <span className="font-medium text-foreground">{t(titel)}</span>
+              </nav>
+              <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground">
+                {t(titel)}
+              </h1>
+            </>
+          )}
           {beschreibung && (
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
+            <p
+              className={
+                schmal
+                  ? "text-[13px] text-muted-foreground"
+                  : "mt-0.5 text-[13px] text-muted-foreground"
+              }
+            >
               {typeof beschreibung === "string" ? t(beschreibung) : beschreibung}
             </p>
           )}

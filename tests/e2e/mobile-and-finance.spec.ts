@@ -79,3 +79,50 @@ test("fasst die Auszahlungen des Events als Kennzahlen zusammen", async ({ page 
   );
   await expect(page.getByRole("button", { name: /Belege gesamt/ })).toContainText("2");
 });
+
+test("trägt den Seitentitel auf dem Telefon in der Kopfzeile und die Suche als Lupe", async ({
+  page,
+}) => {
+  await mockEventManagementApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/veranstaltungen");
+
+  // Das Artboard führt Titel und Suche auf dem Telefon in der dunklen
+  // Leiste; Brotkrume und große Überschrift darunter entfallen. Der Titel
+  // steht dabei genau einmal im Baum, nicht zweimal mit „hidden".
+  const kopfzeile = page.getByRole("banner").first();
+  await expect(kopfzeile.getByRole("heading", { name: "Veranstaltungen" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Veranstaltungen" })).toHaveCount(1);
+  await expect(page.getByLabel("Breadcrumb")).toHaveCount(0);
+
+  // Das Suchfeld klappt erst auf Druck auf.
+  await expect(page.getByRole("combobox", { name: "Global suchen" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Suchen" }).click();
+  await expect(page.getByRole("combobox", { name: "Global suchen" })).toBeVisible();
+  await page.getByRole("button", { name: "Suche schließen" }).click();
+  await expect(page.getByRole("combobox", { name: "Global suchen" })).toHaveCount(0);
+
+  // Breit bleibt alles wie gehabt: Brotkrume, große Überschrift, offenes Feld.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.getByLabel("Breadcrumb")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Global suchen" })).toBeVisible();
+});
+
+test("zeigt Eventkarten auf dem Telefon mit Statuspunkt, Eventcode und Aufgabenlage", async ({
+  page,
+}) => {
+  await mockEventManagementApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/veranstaltungen");
+
+  // Nach dem Artboard: die ganze Karte führt ins Event, der Status steht als
+  // Punkt vor dem Namen statt als Chip in einer eigenen Zeile.
+  const karte = page.getByLabel("Veranstaltungen mobile Liste").locator("article").first();
+  await expect(karte.getByRole("link", { name: /Bestehendes Event/ })).toHaveAttribute(
+    "href",
+    "/events/260820_demo_event",
+  );
+  await expect(karte.locator("[data-status-dot]")).toBeVisible();
+  await expect(karte).toContainText("260820_demo_event");
+  await expect(karte).toContainText("offen");
+});

@@ -21,6 +21,7 @@ import {
 } from "@/components/t2w/AppSidebar";
 import { MobileNav } from "@/components/t2w/MobileNav";
 import { AppTopbar } from "@/components/t2w/AppTopbar";
+import { SeitenkopfProvider } from "@/components/t2w/Seitenkopf";
 import { cn } from "@/lib/utils";
 import { T2WProvider, useT2W } from "@/lib/t2w/store";
 import { CrmProvider } from "@/lib/crm/store";
@@ -144,7 +145,11 @@ function AppShell() {
         !(pathname.startsWith("/einstellungen") && currentUser.role !== "ADMIN");
   return (
     <SidebarShellProvider>
-      <AppLayout allowed={allowed} organizer={currentUser.role === "ORGANIZER"} />
+      {/* Der Seitentitel wandert auf dem Telefon in die Kopfzeile; der
+          Anbieter dafuer liegt ueber Kopfzeile und Inhalt. */}
+      <SeitenkopfProvider>
+        <AppLayout allowed={allowed} organizer={currentUser.role === "ORGANIZER"} />
+      </SeitenkopfProvider>
     </SidebarShellProvider>
   );
 }
