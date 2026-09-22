@@ -31,6 +31,7 @@
 - [Architekturvertiefung vom 2026-08-28](concepts/architecture-deepening-2026-08-28.md)
 - [Aufgabenplanung und Tabellen-Vertiefung](concepts/task-planning-and-table-deepening-2026-09-15.md)
 - [Maintenance Log](log.md)
+- [Mail-Klassifizierungs-Testservice](tasks/mail-classifier-testservice.md) (Dry-Run mit Ollama Cloud, 2026-09-22)
 
 ## Knowledge Areas
 

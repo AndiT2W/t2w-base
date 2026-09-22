@@ -822,3 +822,5 @@ Tests: `tsc --noEmit`, ESLint und 124 Unit-Tests bestanden. Drei neue Browserabl
 ## 2026-09-22 — Mail-Klassifizierungs-Testservice als Dry-Run
 
 Der Event-Service besitzt jetzt `POST /api/v1/mail-classifier/test`. Der Dienst klassifiziert eine Mail über Ollama Cloud, validiert Kategorie und Eventcode gegen eine erlaubte Liste und liefert einen nachvollziehbaren Outlook-Markierungs- sowie optionalen Weiterleitungsplan. Es gibt noch keine Outlook-Mutation und keinen Versand; jede Weiterleitung bleibt explizit freigabepflichtig. Die Regressionen decken sichere Eventübernahme, unbekannte Eventcodes und fehlerhafte Cloudantworten ab.
+
+Der Testservice ist nun im Eventdetail unter **Kommunikation → Mail analysieren** als rechtes Sheet erreichbar. Das aktuelle Event wird als Kontext gezeigt, die Anfrage vergleicht standardmäßig alle aktiven Events. Betreff, Kategorie, Eventtreffer, Outlook-Plan und ein möglicher Weiterleitungsentwurf werden angezeigt; der Ablauf bleibt vollständig schreibgeschützt. Geprüft mit dem neuen Browser-E2E-Ablauf `tests/e2e/mail-classifier.spec.ts`, Frontend-Build und Lint.

@@ -105,6 +105,7 @@ import { PageHeader } from "@/components/t2w/PageHeader";
 import { Segment, segmentFeld } from "@/components/t2w/Segment";
 import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
+import { MailClassifierTestSheet } from "@/components/t2w/MailClassifierTestSheet";
 
 /** Betrag mit Waehrung, oesterreichische Schreibweise. */
 const geldbetrag = (wert: number, waehrung: string) =>
@@ -2156,6 +2157,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <MailClassifierTestSheet event={event} />
               <Button
                 variant="outline"
                 aria-expanded={showActivityForm}

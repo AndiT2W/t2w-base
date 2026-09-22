@@ -9,7 +9,7 @@ sources:
 
 # Mailkategorisierung mit Ollama Cloud
 
-**Status:** als Zielbild beschlossen, Umsetzung offen. Nutzerkonversation vom 19.09.2026.
+**Status:** als Zielbild beschlossen; erster Dry-Run umgesetzt. Nutzerkonversation vom 19.09.2026.
 
 ## Kontext
 
@@ -56,3 +56,11 @@ Mit Stufe 2 **verlassen Mailinhalte den eigenen Server** und gehen an Ollama Clo
 - Modellwahl, Kosten je Sync und Verhalten bei Zeitüberschreitung sind nicht festgelegt.
 - ~~Ob mehrere Themen je Nachricht zulässig sind~~ — entschieden am 19.09.2026: **genau ein Thema je Nachricht**. Das Modell liefert dementsprechend einen Wert, nicht eine Liste.
 - Der Umgang mit Bestandsnachrichten — einmalige Nachkategorisierung oder nur neue Nachrichten — ist offen.
+
+## Erster Testservice (2026-09-22)
+
+Der erste vertikale Schnitt ist als Dry-Run im Event-Service umgesetzt. `POST /api/v1/mail-classifier/test` liefert Kategorie, Eventvorschlag, Gründe, Outlook-Markierungsplan und bei Eventfragen einen Weiterleitungsplan. Er verändert Outlook nicht und versendet nichts. Eventnamen werden ausschließlich aus der erlaubten Eventkandidatenliste übernommen; unbekannte Modellwerte führen zu `T2W | Prüfung` und einer Review-Anforderung.
+
+Die Testkategorien modellieren die Mailabsicht getrennt vom bestehenden Kommunikationsthema. Damit wird `EVENT_QUESTION` nicht fälschlich als dauerhaftes Thema gespeichert. Die Ausarbeitung und die vorgeschlagenen Outlook-Markierungen stehen in [Mail-Klassifizierungs-Testservice](../tasks/mail-classifier-testservice.md).
+
+Die manuelle Prüfung ist im Eventdetail unter **Kommunikation → Mail analysieren** als Sheet erreichbar. Das aktuelle Event wird als Kontext angezeigt, die Testanfrage vergleicht aber standardmäßig alle aktiven Events. So lässt sich die Eventfindung testen, ohne bereits eine Zuordnung oder Outlook-Aktion auszulösen. Der Browserablauf ist in [`mail-classifier.spec.ts`](../../tests/e2e/mail-classifier.spec.ts) abgesichert.

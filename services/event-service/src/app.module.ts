@@ -31,6 +31,12 @@ import { UserManagementController } from "./user-management.controller.js";
 import { UserManagementService } from "./user-management.service.js";
 import { SecurityMailService } from "./security-mail.service.js";
 import { FinanceDataInterceptor } from "./finance-data.interceptor.js";
+import { MailClassifierController } from "./mail-classifier/mail-classifier.controller.js";
+import {
+  MailClassifierService,
+  OLLAMA_CHAT_CLIENT,
+} from "./mail-classifier/mail-classifier.service.js";
+import { OllamaCloudClient } from "./mail-classifier/ollama-cloud.client.js";
 
 @Module({
   imports: [OutlookModule],
@@ -48,6 +54,7 @@ import { FinanceDataInterceptor } from "./finance-data.interceptor.js";
     UserManagementController,
     IconController,
     SearchController,
+    MailClassifierController,
   ],
   providers: [
     ProjectManagementService,
@@ -65,6 +72,9 @@ import { FinanceDataInterceptor } from "./finance-data.interceptor.js";
     UserManagementService,
     IconService,
     SearchService,
+    MailClassifierService,
+    OllamaCloudClient,
+    { provide: OLLAMA_CHAT_CLIENT, useExisting: OllamaCloudClient },
     {
       provide: EventMutations,
       inject: [PrismaService],
