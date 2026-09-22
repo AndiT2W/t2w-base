@@ -66,7 +66,7 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 ## Next Best Actions
 
-CI-Branding aktualisiert: TIME2WIN-Farben `#8DC63F` und `#05193A` sowie das freigegebene Logo-Asset sind integriert; der vorherige Style ist als `src/styles_begin.css` rückwechselbar archiviert. Siehe [TIME2WIN CI und Branding](concepts/time2win-ci-branding.md).
+CI-Branding aktualisiert: TIME2WIN-Farben `#8DC63F` und `#05193A` sowie das freigegebene Logo-Asset sind integriert; der vorherige Style liegt seit dem 22.09.2026 nicht mehr als Datei im Arbeitsverzeichnis, sondern in der Git-Historie (`git show 52bd4fad:src/styles_begin.css`). Siehe [TIME2WIN CI und Branding](concepts/time2win-ci-branding.md).
 
 - PM v4 gegen eine Staging-/Produktionsdatenbank migrieren und die bewusste Entfernung der bisherigen PM-Aufgaben vor dem Rollout erneut prüfen. Details: [PM v4](tasks/project-management-spec-v4.md).
 - Normalize current ClickUp CRM-like data, especially customer duplicates and non-person contact records.

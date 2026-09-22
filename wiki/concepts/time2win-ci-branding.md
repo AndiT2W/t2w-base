@@ -6,7 +6,7 @@
 - Dunkelblau: `#05193A`
 - Logo-intern: Schwarz `#1D1D1B`, Weiß `#FFFFFF` und Grün `#95C11F` gemäß bereitgestellter SVG-Datei.
 
-Die Anwendung verwendet die CI-Farben zentral in `src/styles.css` über `--brand-green` und `--brand-navy`. Die vorherige Farbdefinition ist als [styles_begin.css](../../src/styles_begin.css) archiviert.
+Die Anwendung verwendet die CI-Farben zentral in `src/styles.css` über `--brand-green` und `--brand-navy`. Die vorherige Farbdefinition lag bis zum 22.09.2026 als Datei `src/styles_begin.css` im Arbeitsverzeichnis; sie steht jetzt nur noch in der Git-Historie unter [`52bd4fad:src/styles_begin.css`](https://github.com/AndiT2W/t2w-base/blob/52bd4fad/src/styles_begin.css), lokal abrufbar mit `git show 52bd4fad:src/styles_begin.css`.
 
 ## Logo
 
@@ -20,4 +20,4 @@ Die Änderung wurde am 2026-08-21 auf `https://base.time2win.cloud` deployed. De
 
 - [Aktuelle Farbtokens](../../src/styles.css)
 - [Logo-Asset](../../public/time2win_logo_button.svg)
-- [Archivierter Ausgangsstand](../../src/styles_begin.css)
+- [Archivierter Ausgangsstand in der Historie](https://github.com/AndiT2W/t2w-base/blob/52bd4fad/src/styles_begin.css) (`git show 52bd4fad:src/styles_begin.css`)
