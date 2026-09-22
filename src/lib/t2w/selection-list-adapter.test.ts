@@ -51,8 +51,8 @@ describe("selection-list HTTP adapter", () => {
     await adapter.load("taskCategories");
     await adapter.reorder("taskCategories", ["g1"]);
 
-    expect(holen.mock.calls[0]?.[0]).toBe("/api/v1/project-management/groups");
-    expect(holen.mock.calls[1]?.[0]).toBe("/api/v1/project-management/groups/reorder");
+    expect(holen.mock.calls[0]?.[0]).toBe("/api/v1/pm/groups");
+    expect(holen.mock.calls[1]?.[0]).toBe("/api/v1/pm/groups/reorder");
     vi.unstubAllGlobals();
   });
 });

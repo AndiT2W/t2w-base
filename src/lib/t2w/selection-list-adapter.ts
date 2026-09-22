@@ -52,11 +52,11 @@ async function senden(pfad: string, body: unknown, fehler: string) {
 
 /**
  * Aufgabenkategorien sind eine Auswahlliste wie die anderen sechs, liegen im
- * Backend aber seit jeher unter dem Projektmanagement.  Statt dafür einen
- * zweiten Satz Endpunkte für dieselben Daten aufzumachen, führt die Karte
- * hier auf die vorhandenen.
+ * Backend aber seit jeher unter dem Projektmanagement-Controller (api/v1/pm).
+ * Statt dafür einen zweiten Satz Endpunkte für dieselben Daten aufzumachen,
+ * führt die Karte hier auf die vorhandenen.
  */
-const gruppenPfad = "project-management/groups";
+const gruppenPfad = "pm/groups";
 
 async function gruppenLaden(): Promise<SelectionListValue[]> {
   const antwort = await fetch(`/api/v1/${gruppenPfad}`, { credentials: "include" });
