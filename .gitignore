@@ -41,3 +41,8 @@ tmp/
 .env.*
 !.env.example
 docker-compose.local.yml
+
+# Claude Code: die Startkonfiguration des Browser-Panes gehoert ins Repository,
+# der Rest ist maschinenlokal -- eigene Berechtigungen und Arbeitskopien.
+.claude/*
+!.claude/launch.json
