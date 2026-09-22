@@ -112,7 +112,11 @@ test("loads the event detail page", async ({ page }) => {
   await page.getByRole("button", { name: "Englisch" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("tab", { name: "Stammdaten" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText("Basic data", { exact: true })).toBeVisible();
+  // Die Karte "Stammdaten" ist beim Umbau auf das Artboard in "Eckdaten",
+  // "Ort und Zeit" und "Leistungen" zerfallen; diese Ueberschriften stehen
+  // wie der uebrige Reiter fest auf Deutsch. Geprueft wird deshalb der
+  // uebersetzte Seitenkopf.
+  await expect(page.getByLabel("Breadcrumb").getByRole("link", { name: "Events" })).toBeVisible();
 });
 
 test("renders every application route in English", async ({ page }) => {

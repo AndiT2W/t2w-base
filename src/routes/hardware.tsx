@@ -201,11 +201,26 @@ const HARDWARE_TABLE_COLUMNS = HARDWARE_COLUMNS.map((key) => ({
   key: HardwareColumn;
   sortValue: (item: Hardware) => string | number;
 }[];
-export const Route = createFileRoute("/hardware")({ component: HardwarePage });
+/*
+ * Die globale Suche schickt einen Hardwaretreffer als "?q=" hierher.  Eine
+ * leere Frage steht nicht in der Adresse, sonst haengt an jedem Link auf
+ * diese Seite ein leeres "?q=".
+ */
+export const Route = createFileRoute("/hardware")({
+  validateSearch: (search: Record<string, unknown>) => {
+    const frage = typeof search["q"] === "string" ? search["q"] : "";
+    return frage ? { q: frage } : {};
+  },
+  component: HardwarePage,
+});
 function HardwarePage() {
   const { selectionLists } = useT2W();
   const [items, setItems] = useState<Hardware[]>([]);
-  const [q, setQ] = useState("");
+  const { q: frage = "" } = Route.useSearch();
+  const [q, setQ] = useState(frage);
+  useEffect(() => {
+    setQ(frage);
+  }, [frage]);
   const [status, setStatus] = useState("active");
   const [issueType, setIssueType] = useState("all");
   const [event, setEvent] = useState("");
@@ -443,21 +458,25 @@ function HardwarePage() {
             </>
           }
         >
-          {/* Die Seitensuche steht bei ihrer Liste; im Seitenkopf liegt die
-              Suche über alle Module. */}
-          <label className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              aria-label="Suche"
-              placeholder="Empfänger, E-Mail, Telefon oder Objektnummer …"
-              className="h-11 w-72 rounded-full pl-8 sm:h-8"
-            />
-          </label>
+          {/* Kein eigenes Suchfeld mehr: das Artboard fuehrt die Suche nur
+              einmal, oben in der Kopfzeile.  Kommt man von dort mit einer
+              Frage her, steht sie als abwaehlbarer Chip in der Leiste. */}
+          {q.trim() && (
+            <>
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-primary bg-primary/10 px-3 text-sm font-medium sm:min-h-8"
+              >
+                <Search className="size-3.5" aria-hidden="true" />
+                <span className="max-w-48 truncate">Suche: {q}</span>
+                <span aria-hidden="true">×</span>
+                <span className="sr-only">Suche zurücksetzen</span>
+              </button>
 
-          <FilterTrenner />
+              <FilterTrenner />
+            </>
+          )}
 
           <Input
             placeholder="Event filtern …"

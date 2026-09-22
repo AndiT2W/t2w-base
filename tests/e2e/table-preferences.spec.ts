@@ -160,12 +160,11 @@ test("hebt kompakte Tabellenköpfe mit der leichten Versalienvariante ab", async
   const table = page.locator('[data-density="compact"] table').first();
   const header = table.locator("thead");
 
-  // Tabellenstandard seit 17.09.2026: 10 px, Versalien, Haarlinie statt
-  // grauem Balken. Die abgelöste Variante "Ausgewogen" stand auf 12 px,
-  // ohne Versalsatz und mit 2-px-Unterkante.
-  await expect(header).toHaveCSS("font-size", "10px");
-  await expect(header).toHaveCSS("text-transform", "uppercase");
-  await expect(header).toHaveCSS("letter-spacing", "0.8px");
+  // Tabellenstandard seit dem Artboard-Abgleich vom 22.09.2026: 12 px in
+  // Normalschreibung. Die Versalien mit 10 px davor waren zu klein und
+  // standen nicht im freigegebenen Entwurf.
+  await expect(header).toHaveCSS("font-size", "12px");
+  await expect(header).toHaveCSS("text-transform", "none");
   await expect(header.locator("th").first()).toHaveCSS("font-weight", "700");
   await expect(header.locator("tr")).toHaveCSS("border-bottom-width", "1px");
 

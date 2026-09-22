@@ -1,7 +1,14 @@
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, CalendarClock, CheckSquare, Link2Off, Plus, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  AlertTriangle,
+  CalendarClock,
+  CalendarDays,
+  CheckSquare,
+  Link2Off,
+  Plus,
+} from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { StatusDot, StatusLegend } from "@/components/t2w/StatusBadge";
@@ -121,14 +128,26 @@ function Uebersicht() {
         titel="Übersicht"
         beschreibung="Was in den nächsten 14 Tagen ansteht und was gerade blockiert"
         aktion={
-          <EventDialog
-            trigger={
-              <Button>
-                <Plus className="size-4" />
-                Event anlegen
-              </Button>
-            }
-          />
+          <>
+            {/* Das Artboard stellt den Weg in den Kalender neben das Anlegen:
+                "was steht an" fuehrt oft direkt zur Terminansicht. */}
+            <Link
+              to="/veranstaltungen"
+              search={{ q: "", ansicht: "kalender" }}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <CalendarDays className="size-4" aria-hidden="true" />
+              Kalender
+            </Link>
+            <EventDialog
+              trigger={
+                <Button>
+                  <Plus className="size-4" />
+                  Event anlegen
+                </Button>
+              }
+            />
+          </>
         }
       />
       <div className="space-y-3">
@@ -222,20 +241,9 @@ function Uebersicht() {
             </div>
           }
         >
-          {/* Die Seitensuche steht bei ihrer Liste, nicht im Seitenkopf: dort
-              liegt seit dem Umbau die Suche über alle Module. */}
-          <label className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              value={suche}
-              onChange={(e) => setSuche(e.target.value)}
-              aria-label="Suche"
-              placeholder={t("Event, Veranstalter oder Ort suchen …")}
-              className="h-11 w-60 rounded-full pl-8 sm:h-8"
-            />
-          </label>
-
+          {/* Kein eigenes Suchfeld: die Uebersicht zeigt die naechsten 14 Tage
+              und filtert ueber die Chips.  Gesucht wird oben in der Kopfzeile
+              ueber alle Module -- so zeichnet es das Artboard. */}
           {SCHNELLFILTER.map((f) => (
             <ToggleChip
               key={f.key}

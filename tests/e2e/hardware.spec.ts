@@ -191,9 +191,11 @@ test("shows central hardware cases, filters them, and links to the event", async
   await page.getByLabel("Empfänger bearbeiten").fill("Ohne Event aktualisiert");
   await page.getByRole("heading", { name: "Hardware" }).click();
   await expect.poll(() => lastUnassignedChanges.recipientName).toBe("Ohne Event aktualisiert");
-  await page.getByRole("searchbox", { name: "Suche" }).first().fill("max@example.com");
+  // Die Liste hat kein eigenes Suchfeld mehr; eine Frage kommt aus der
+  // globalen Suche als "?q=" und steht als abwaehlbarer Chip in der Leiste.
+  await page.goto("/hardware?q=max%40example.com");
   await expect(page.getByText("Max Mustermann")).toBeVisible();
-  await page.getByRole("searchbox", { name: "Suche" }).first().fill("");
+  await page.getByRole("button", { name: /Suche: max@example.com/ }).click();
   await page.getByRole("button", { name: "Spalten auswählen" }).click();
   await page.locator("label").filter({ hasText: "Telefon" }).click();
   await expect(page.getByRole("columnheader", { name: "Telefon sortieren" })).toHaveCount(0);

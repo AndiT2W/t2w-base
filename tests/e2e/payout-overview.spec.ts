@@ -79,8 +79,11 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
   await expect(page.getByRole("cell", { name: "100.00 EUR" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "50.00 CHF" })).toBeVisible();
   await expect(page.getByText("Event nachzuordnen")).toBeVisible();
-  await page.getByLabel("Auszahlungen durchsuchen").fill("Alpin");
+  // Kein eigenes Suchfeld mehr: die Frage kommt als "?q=" und laesst sich
+  // ueber den Chip wieder abwaehlen.
+  await page.goto("/auszahlungen?q=Alpin");
   await expect(page.getByText("T260002")).toBeVisible();
+  await page.getByRole("button", { name: /Suche: Alpin/ }).click();
   // Die Chips tragen ihre Anzahl; „Mail gesendet" führt genau einen Beleg.
   const chip = page
     .getByRole("group", { name: "Liste filtern" })

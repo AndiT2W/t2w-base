@@ -33,7 +33,17 @@ type Payout = {
   event?: { eventCode: string; name: string } | null;
   recipient?: { name: string } | null;
 };
-export const Route = createFileRoute("/auszahlungen")({ component: Auszahlungen });
+/*
+ * Wie auf den uebrigen Listen: die Frage kommt als "?q=" von aussen, eine
+ * leere steht nicht in der Adresse.
+ */
+export const Route = createFileRoute("/auszahlungen")({
+  validateSearch: (search: Record<string, unknown>) => {
+    const frage = typeof search["q"] === "string" ? search["q"] : "";
+    return frage ? { q: frage } : {};
+  },
+  component: Auszahlungen,
+});
 function status(p: Payout) {
   if (p.paymentStatus === "STORNIERT") return "Storniert";
   if (p.paymentStatus === "AUSBEZAHLT") return "Ausbezahlt";
@@ -76,7 +86,11 @@ function Auszahlungen() {
     () => createPayoutWorkspace<Payout>(createHttpPayoutAdapter<Payout>()),
     [],
   );
-  const [q, setQ] = useState("");
+  const { q: frage = "" } = Route.useSearch();
+  const [q, setQ] = useState(frage);
+  useEffect(() => {
+    setQ(frage);
+  }, [frage]);
   const [filter, setFilter] = useState("");
   const [eventId, setEventId] = useState("");
   const [year, setYear] = useState("");
@@ -271,19 +285,25 @@ function Auszahlungen() {
           />
         }
       >
-        <label className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            aria-label="Auszahlungen durchsuchen"
-            placeholder="Nummer, Event oder Empfänger …"
-            className="h-11 w-64 rounded-full pl-8 sm:h-8"
-          />
-        </label>
+        {/* Kein eigenes Suchfeld mehr: das Artboard filtert hier ueber die
+            Statuschips und Event, Empfaenger, Jahr.  Eine von aussen
+            mitgebrachte Frage bleibt als abwaehlbarer Chip sichtbar. */}
+        {q.trim() && (
+          <>
+            <button
+              type="button"
+              onClick={() => setQ("")}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-primary bg-primary/10 px-3 text-sm font-medium sm:min-h-8"
+            >
+              <Search className="size-3.5" aria-hidden="true" />
+              <span className="max-w-48 truncate">Suche: {q}</span>
+              <span aria-hidden="true">×</span>
+              <span className="sr-only">Suche zurücksetzen</span>
+            </button>
 
-        <FilterTrenner />
+            <FilterTrenner />
+          </>
+        )}
 
         {/* Chips mit Anzahl statt eines Auswahlfelds: wie viele Belege offen
             sind, ist die erste Frage auf dieser Seite -- sie soll nicht erst
