@@ -124,3 +124,12 @@ Before changing Event tasks, the global task overview, task creation, task detai
 ### Communication UI
 
 Before changing the event communication tab, read [the communication display foundation](wiki/concepts/communication-display-design.md). It records the agreed target state, which the shipped code does not match yet: implement towards it instead of extending the current timeline, and update that page and the wiki log when design rules change.
+
+### Oberflächengestaltung
+
+Before any UI work — new views as well as changes to existing ones — read
+[DESIGN.md](DESIGN.md). It is the binding design foundation: it carries the approved
+artboards (colours, type, spacing, page scaffold, component patterns, mobile, accessibility
+rules), maps each artboard pattern to the component that already implements it, and lists
+the deliberate deviations. Build on those components instead of inventing new ones, and
+update DESIGN.md and the wiki log when design rules change.

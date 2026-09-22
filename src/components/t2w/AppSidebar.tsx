@@ -147,6 +147,24 @@ const HAUPT_NAV_KEYS = {
   "/styleguide": "nav.styleguide",
 } as const;
 
+/**
+ * Die Breite der Leiste, aus dem freigegebenen Artboard: 248 px in der
+ * Grundstellung, 68 px als schmale Symbolleiste (siehe DESIGN.md).
+ *
+ * Die Werte stehen hier an einer Stelle, weil die Inhaltsfläche in
+ * `__root.tsx` denselben Betrag als linken Abstand braucht.  Liefen die
+ * beiden auseinander, läge die Leiste über dem Inhalt oder es bliebe ein
+ * Streifen Hintergrund daneben — genau das ist beim vorherigen Paar aus
+ * `w-60`/`lg:pl-60` nur deshalb nicht passiert, weil beide zufällig
+ * dieselbe Zahl trugen.
+ *
+ * 68 px ist kein runder Zufallswert: Rahmen, zweimal Rand und die 44 px
+ * Fingerkuppe dazwischen.  Bei den bisherigen 64 px fehlten vier davon und
+ * die Symbolfelder ragten in den Rand der Leiste.
+ */
+export const SIDEBAR_BREITE = { voll: "w-[248px]", schmal: "w-[68px]" } as const;
+export const SIDEBAR_ABSTAND = { voll: "lg:pl-[248px]", schmal: "lg:pl-[68px]" } as const;
+
 const SidebarUiContext = createContext<{
   offen: boolean;
   setOffen: (v: boolean) => void;
@@ -438,7 +456,7 @@ export function AppSidebar() {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 hidden border-r border-nav-active lg:block",
-          schmal ? "w-16" : "w-60",
+          schmal ? SIDEBAR_BREITE.schmal : SIDEBAR_BREITE.voll,
         )}
       >
         {schmal ? (

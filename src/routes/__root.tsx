@@ -13,7 +13,12 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
-import { AppSidebar, SidebarShellProvider, useSidebarSchmal } from "@/components/t2w/AppSidebar";
+import {
+  AppSidebar,
+  SIDEBAR_ABSTAND,
+  SidebarShellProvider,
+  useSidebarSchmal,
+} from "@/components/t2w/AppSidebar";
 import { MobileNav } from "@/components/t2w/MobileNav";
 import { AppTopbar } from "@/components/t2w/AppTopbar";
 import { cn } from "@/lib/utils";
@@ -147,7 +152,12 @@ function AppShell() {
 function AppLayout({ allowed, organizer }: { allowed: boolean; organizer: boolean }) {
   const schmal = useSidebarSchmal();
   return (
-    <div className={cn("min-h-screen bg-background", schmal ? "lg:pl-16" : "lg:pl-60")}>
+    <div
+      className={cn(
+        "min-h-screen bg-background",
+        schmal ? SIDEBAR_ABSTAND.schmal : SIDEBAR_ABSTAND.voll,
+      )}
+    >
       <AppSidebar />
       <AppTopbar />
       {/* "overflow-x-clip" statt "-hidden": "hidden" macht die Flaeche auch
