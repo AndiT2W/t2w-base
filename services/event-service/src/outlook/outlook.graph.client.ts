@@ -131,4 +131,15 @@ export class MicrosoftGraphClient implements OutlookGraphClient {
       { method: "POST", body: JSON.stringify({ destinationId: destinationFolderId }) },
     );
   }
+
+  async updateMessage(
+    mailbox: string,
+    messageId: string,
+    patch: { subject?: string; categories?: string[] },
+  ): Promise<OutlookMessage> {
+    return this.request<OutlookMessage>(
+      `/users/${encodeURIComponent(mailbox)}/messages/${encodeURIComponent(messageId)}`,
+      { method: "PATCH", body: JSON.stringify(patch) },
+    );
+  }
 }

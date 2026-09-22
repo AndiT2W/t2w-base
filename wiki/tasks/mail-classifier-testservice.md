@@ -7,7 +7,10 @@ sources:
   - ../decisions/2026-09-19-mailkategorisierung-mit-ollama-cloud.md
   - ../../services/event-service/src/mail-classifier/mail-classifier.service.ts
   - ../../services/event-service/src/mail-classifier/mail-classifier.controller.ts
+  - ../../services/event-service/src/mail-classifier/mail-classifier.apply.service.ts
+  - ../../services/event-service/src/outlook/outlook.graph.client.ts
   - ../../src/components/t2w/MailClassifierTestSheet.tsx
+  - ../../src/components/t2w/MailClassifierApplyButton.tsx
   - ../../tests/e2e/mail-classifier.spec.ts
 ---
 
@@ -30,6 +33,14 @@ Der Testendpunkt ist `POST /api/v1/mail-classifier/test`. Wenn keine Eventkandid
 Der erste Test ist im Eventdetail unter **Kommunikation → Mail analysieren** als rechtes Sheet eingebaut. Das aktuelle Event dient als sichtbarer Kontext; die Analyse vergleicht die Mail trotzdem mit allen aktiven Events, damit gerade der problematische Fall „Veranstaltung unbekannt“ getestet werden kann. Das Sheet zeigt Eingabefelder für Absender, Empfänger, Betreff und Mailtext sowie den kompletten Vorschlag.
 
 Der Ablauf ist bewusst ein Dry-Run: kein Outlook-Update, kein Verschieben, keine automatische Betreffänderung und kein Versand. Die Weiterleitung wird nur als Entwurf mit dem Hinweis „Noch nicht freigegeben — kein Versand“ angezeigt.
+
+## Eventpräfix anwenden
+
+Im Kommunikationsreiter gibt es zusätzlich **Präfixe anwenden**, sobald synchronisierte E-Mails zum Event vorhanden sind. Nach einer Bestätigung werden diese E-Mails einzeln gegen alle aktiven Events klassifiziert.
+
+Nur wenn der erkannte Eventcode exakt dem aktuellen Event entspricht und Ollama `eventConfidence === 1` liefert, wird der Outlook-Betreff per Graph aktualisiert: `[Eventname] Originalbetreff`. Die lokale Kommunikationszeile wird anschließend ebenfalls aktualisiert und die Änderung im Auditlog festgehalten. Bereits präfixierte Mails sind idempotent.
+
+Bei einem niedrigeren Wert, einem unbekannten Event oder einem Fehler bleibt der Betreff unverändert. Es gibt dabei keine automatische Ordnerbewegung, keine Kategorieänderung und keinen Versand.
 
 ## Kategorien
 
@@ -57,7 +68,7 @@ Die bestehenden Kommunikationsthemen (`Teilnehmer`, `Rechnung`, …) sind ein se
 Der Dry-Run schlägt folgende Kombination vor:
 
 1. **Kategorie:** feste Kategorien wie `T2W | Event`, `T2W | Frage`, `T2W | Finanzen` und `T2W | Prüfung`. Diese Kategorien sollten einmalig im Outlook-Postfach mit Farben angelegt werden.
-2. **Betreffpräfix:** bei sicherem Treffer `[Eventcode · Eventname] Originalbetreff`. Der Name wird aus dem Event-Kandidaten übernommen, nie aus einer freien Modellantwort.
+2. **Betreffpräfix:** der Dry-Run schlägt bei einem sicheren Treffer `[Eventname] Originalbetreff` vor. Die echte Anwendung im Kommunikationsreiter verlangt zusätzlich die explizite Bestätigung und `eventConfidence === 1`; der Name wird aus dem Event-Kandidaten übernommen, nie aus einer freien Modellantwort.
 3. **Eventordner:** bei sicherem Treffer kann die Mail in den bereits bestehenden Eventordner verschoben werden. Dieser Ordner bleibt die belastbare Eventrelation.
 4. **Flag:** erkannte Eventfragen erhalten einen Follow-up-Flag. Die Anwendung behauptet dadurch nicht, dass die Frage beantwortet ist.
 5. **Prüfung:** unsichere oder mehrdeutige Mails erhalten nur `T2W | Prüfung`; kein Eventname wird ergänzt und keine Mail wird verschoben.

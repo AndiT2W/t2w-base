@@ -106,6 +106,7 @@ import { Segment, segmentFeld } from "@/components/t2w/Segment";
 import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
 import { OrganizerLink } from "@/components/t2w/OrganizerLink";
 import { MailClassifierTestSheet } from "@/components/t2w/MailClassifierTestSheet";
+import { MailClassifierApplyButton } from "@/components/t2w/MailClassifierApplyButton";
 
 /** Betrag mit Waehrung, oesterreichische Schreibweise. */
 const geldbetrag = (wert: number, waehrung: string) =>
@@ -2158,6 +2159,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             </div>
             <div className="flex items-center gap-2">
               <MailClassifierTestSheet event={event} />
+              <MailClassifierApplyButton
+                eventId={event.id}
+                messageCount={
+                  form.kommunikation.filter((message) => message.kanal === "E-Mail").length
+                }
+                onApplied={() => void kommunikationSynchronisieren()}
+              />
               <Button
                 variant="outline"
                 aria-expanded={showActivityForm}

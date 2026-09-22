@@ -30,6 +30,7 @@ describe("EventCommunicationHub", () => {
       ]),
       listMessagesByConversationIds: vi.fn().mockResolvedValue([]),
       moveMessage: vi.fn(),
+      updateMessage: vi.fn(),
     };
 
     const result = await new EventCommunicationHub(repository, graph).syncEvent("event-1");
@@ -96,6 +97,7 @@ describe("EventCommunicationHub", () => {
         },
       ]),
       moveMessage: vi.fn().mockResolvedValue({ id: "moved-reply-1" }),
+      updateMessage: vi.fn(),
     };
 
     await new EventCommunicationHub(repository, graph).syncEvent("event-1");
@@ -134,6 +136,7 @@ describe("EventCommunicationHub", () => {
         .mockResolvedValue([{ id: "incoming-1", conversationId: "conversation-1" }]),
       listMessagesByConversationIds: vi.fn().mockResolvedValue([]),
       moveMessage: vi.fn(),
+      updateMessage: vi.fn(),
     };
 
     await new EventCommunicationHub(repository, graph).syncEvent("event-1");

@@ -26,6 +26,6 @@ import { EventRecordRetrieval } from "../event-record-retrieval.js";
       inject: [PrismaEventCommunicationAdapter, "OUTLOOK_GRAPH_CLIENT"],
     },
   ],
-  exports: [OutlookFolderService, EventCommunicationHub],
+  exports: [OutlookFolderService, EventCommunicationHub, "OUTLOOK_GRAPH_CLIENT"],
 })
 export class OutlookModule {}

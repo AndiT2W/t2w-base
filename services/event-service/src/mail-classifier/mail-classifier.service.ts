@@ -117,7 +117,7 @@ function category(value: unknown): MailCategory {
 
 function subjectWithEvent(subject: string, event: MailClassificationResult["event"]) {
   if (!event) return subject;
-  const prefix = `[${event.eventCode} · ${event.name}]`;
+  const prefix = `[${event.name}]`;
   return subject.startsWith(prefix) ? subject : `${prefix} ${subject}`.slice(0, 255);
 }
 

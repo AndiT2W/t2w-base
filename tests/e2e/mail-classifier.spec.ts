@@ -21,7 +21,7 @@ test("testet eine Mail im Kommunikationsreiter als Dry-Run", async ({ page }) =>
         reviewRequired: true,
         outlookPlan: {
           categories: ["T2W | Event", "T2W | Frage"],
-          subject: "[260820_demo_event · Bestehendes Event] Frage zur Startnummernausgabe",
+          subject: "[Bestehendes Event] Frage zur Startnummernausgabe",
           flag: "flagged",
           moveToFolderId: "event-folder-id",
           requiresApproval: true,
@@ -54,4 +54,40 @@ test("testet eine Mail im Kommunikationsreiter als Dry-Run", async ({ page }) =>
     "Frage zur Startnummernausgabe",
   );
   expect(requestBody?.eventCandidates).toBeUndefined();
+});
+
+test("wendet den Eventpräfix nur nach expliziter Bestätigung an", async ({ page }) => {
+  await mockApi(page, {
+    communicationMessages: [
+      {
+        id: "mail-1",
+        direction: "INCOMING",
+        author: "Veranstalter <event@example.com>",
+        recipients: "info@time2win.at",
+        subject: "Frage zum Ablauf",
+        preview: "Gibt es am Freitag eine Ausgabe der Startnummern?",
+        occurredAt: "2026-08-19T09:00:00.000Z",
+        hasAttachments: false,
+        webUrl: "https://outlook.example/mail-1",
+        conversationId: "conversation-1",
+        topicId: null,
+      },
+    ],
+  });
+  let applied = false;
+  await page.route("**/api/v1/mail-classifier/events/*/apply-prefixes", async (route) => {
+    applied = true;
+    return route.fulfill({
+      json: { total: 1, updated: 1, skipped: 0, failed: 0, messages: [] },
+    });
+  });
+
+  await page.goto("/events/260820_demo_event?tab=kommunikation");
+  await page.getByRole("button", { name: "Eventpräfixe auf E-Mails anwenden" }).click();
+
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("100 % Konfidenz");
+  await dialog.getByRole("button", { name: "Präfixe anwenden", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(applied).toBe(true);
 });

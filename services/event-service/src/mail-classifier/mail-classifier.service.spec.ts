@@ -55,7 +55,7 @@ describe("MailClassifierService", () => {
     });
     expect(result.outlookPlan).toMatchObject({
       categories: ["T2W | Event", "T2W | Frage"],
-      subject: `[${candidate.eventCode} · ${candidate.name}] ${input.mail.subject}`,
+      subject: `[${candidate.name}] ${input.mail.subject}`,
       moveToFolderId: candidate.folderId,
       flag: "flagged",
       requiresApproval: true,

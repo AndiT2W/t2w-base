@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Param, ParseUUIDPipe, Post, Req } from "@nestjs/common";
 import {
   ArrayMinSize,
   IsArray,
@@ -12,6 +12,7 @@ import {
 import { Type } from "class-transformer";
 import { PrismaService } from "../prisma.service.js";
 import { Roles } from "../authorization.js";
+import { MailClassifierApplyService } from "./mail-classifier.apply.service.js";
 import {
   MailClassifierService,
   type MailClassificationInput,
@@ -52,6 +53,7 @@ export class MailClassifierController {
   constructor(
     private readonly classifier: MailClassifierService,
     private readonly prisma: PrismaService,
+    private readonly applyService: MailClassifierApplyService,
   ) {}
 
   /** Dry-run endpoint. It returns proposed Outlook changes and never mutates Outlook. */
@@ -65,6 +67,14 @@ export class MailClassifierController {
       eventCandidates,
     };
     return this.classifier.classify(input);
+  }
+
+  @Post("events/:eventId/apply-prefixes")
+  applyPrefixes(
+    @Param("eventId", ParseUUIDPipe) eventId: string,
+    @Req() request: { user: { id: string } },
+  ) {
+    return this.applyService.applyEventPrefixes(eventId, request.user.id);
   }
 
   private async defaultEventCandidates(): Promise<MailEventCandidate[]> {

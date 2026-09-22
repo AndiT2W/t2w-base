@@ -73,4 +73,27 @@ describe("MicrosoftGraphClient messages", () => {
       body: JSON.stringify({ destinationId: "event-folder" }),
     });
   });
+
+  it("updates a message subject through Graph", async () => {
+    process.env.OUTLOOK_GRAPH_ACCESS_TOKEN = "test-token";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: "mail-1", subject: "[Sommerfest] Einladung" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      new MicrosoftGraphClient().updateMessage("info@time2win.at", "mail-1", {
+        subject: "[Sommerfest] Einladung",
+      }),
+    ).resolves.toEqual({ id: "mail-1", subject: "[Sommerfest] Einladung" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("/users/info%40time2win.at/messages/mail-1");
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: "PATCH",
+      body: JSON.stringify({ subject: "[Sommerfest] Einladung" }),
+    });
+  });
 });

@@ -38,4 +38,9 @@ export interface OutlookGraphClient {
     messageId: string,
     destinationFolderId: string,
   ): Promise<OutlookMessage>;
+  updateMessage(
+    mailbox: string,
+    messageId: string,
+    patch: { subject?: string; categories?: string[] },
+  ): Promise<OutlookMessage>;
 }

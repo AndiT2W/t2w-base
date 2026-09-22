@@ -32,6 +32,7 @@ import { UserManagementService } from "./user-management.service.js";
 import { SecurityMailService } from "./security-mail.service.js";
 import { FinanceDataInterceptor } from "./finance-data.interceptor.js";
 import { MailClassifierController } from "./mail-classifier/mail-classifier.controller.js";
+import { MailClassifierApplyService } from "./mail-classifier/mail-classifier.apply.service.js";
 import {
   MailClassifierService,
   OLLAMA_CHAT_CLIENT,
@@ -73,6 +74,7 @@ import { OllamaCloudClient } from "./mail-classifier/ollama-cloud.client.js";
     IconService,
     SearchService,
     MailClassifierService,
+    MailClassifierApplyService,
     OllamaCloudClient,
     { provide: OLLAMA_CHAT_CLIENT, useExisting: OllamaCloudClient },
     {

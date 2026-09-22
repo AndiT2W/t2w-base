@@ -31,6 +31,7 @@ describe("OutlookFolderService", () => {
       listMessages: vi.fn(),
       listMessagesByConversationIds: vi.fn(),
       moveMessage: vi.fn(),
+      updateMessage: vi.fn(),
     };
     const { subject } = service(graph);
 
@@ -61,6 +62,7 @@ describe("OutlookFolderService", () => {
       listMessages: vi.fn(),
       listMessagesByConversationIds: vi.fn(),
       moveMessage: vi.fn(),
+      updateMessage: vi.fn(),
     };
     const { subject } = service(graph);
 
@@ -77,6 +79,7 @@ describe("OutlookFolderService", () => {
       listMessages: vi.fn(),
       listMessagesByConversationIds: vi.fn(),
       moveMessage: vi.fn(),
+      updateMessage: vi.fn(),
     };
     const { subject } = service(graph);
 
@@ -101,6 +104,7 @@ describe("OutlookFolderService", () => {
       listMessages: vi.fn(),
       listMessagesByConversationIds: vi.fn(),
       moveMessage: vi.fn(),
+      updateMessage: vi.fn(),
     };
     const { subject, prisma } = service(graph);
 
@@ -153,6 +157,7 @@ describe("OutlookFolderService", () => {
       listMessages: vi.fn(),
       listMessagesByConversationIds: vi.fn(),
       moveMessage: vi.fn(),
+      updateMessage: vi.fn(),
     };
     const { subject, prisma } = service(graph);
 
@@ -178,6 +183,7 @@ describe("OutlookFolderService", () => {
       listMessages: vi.fn(),
       listMessagesByConversationIds: vi.fn(),
       moveMessage: vi.fn(),
+      updateMessage: vi.fn(),
     };
     const { subject } = service(graph);
     await expect(subject.ensureFolder("shared@example.com", "root", "2026")).resolves.toEqual({
