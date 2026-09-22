@@ -792,19 +792,27 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       .sort((a, b) => b.anzahl - a.anzahl || a.name.localeCompare(b.name, "de"));
   }, [selectionLists.eventRoles, form.kontakte]);
 
-  // Dieselbe Notiz steht im Artboard auf mehreren Reitern in der Schiene --
-  // eine Notiz je Event, nicht je Reiter.  Deshalb steht die Karte hier
-  // einmal und wird von jedem Reiter eingesetzt, der sie zeigt.
-  const notizenKarte = (
-    <DetailKarte titel="Notizen" hinweis="Gilt für das ganze Event">
-      <Textarea
-        id="d-notizen"
-        rows={4}
-        value={form.notizen}
-        onChange={(e) => set("notizen", e.target.value)}
-      />
-    </DetailKarte>
-  );
+  // Jeder Detailreiter fuehrt seine eigene Notiz: was auf der Anmeldung zu
+  // merken ist, gehoert nicht in die Stammdaten und nicht zur Abrechnung.
+  // Die Karte sieht ueberall gleich aus, das Feld dahinter ist ein anderes.
+  function notizenKarte(
+    titel: string,
+    id: string,
+    feld: "notizen" | "anmeldungNotizen" | "finanzNotizen" | "kontakteNotizen",
+    platzhalter: string,
+  ) {
+    return (
+      <DetailKarte titel={titel} hinweis="Gilt nur für diesen Reiter">
+        <Textarea
+          id={id}
+          rows={4}
+          placeholder={platzhalter}
+          value={form[feld] ?? ""}
+          onChange={(e) => set(feld, e.target.value)}
+        />
+      </DetailKarte>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -1014,7 +1022,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <DetailRaster
             schiene={
               <>
-                {notizenKarte}
+                {notizenKarte(
+                  "Stammdatennotiz",
+                  "d-notizen",
+                  "notizen",
+                  "z. B. Absprachen zum Eventrahmen …",
+                )}
 
                 <DetailKarte
                   titel="Ordner"
@@ -1466,7 +1479,12 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <DetailRaster
             schiene={
               <>
-                {notizenKarte}
+                {notizenKarte(
+                  "Anmeldenotiz",
+                  "d-notizen-anmeldung",
+                  "anmeldungNotizen",
+                  "z. B. Nachmeldefenster oder Sonderfälle …",
+                )}
 
                 <DetailKarte
                   titel="TIME2WIN-Verknüpfung"
@@ -1609,16 +1627,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <DetailRaster
               schiene={
                 <>
-                  {notizenKarte}
-
-                  {/* Die eigene Finanznotiz ist entfallen; die Eventnotiz
-                      darüber ersetzt sie.  Was früher eingetippt wurde, bleibt
-                      lesbar, damit nichts unerreichbar in der Datenbank
-                      liegt. */}
-                  {form.finanzNotizen && (
-                    <DetailKarte titel="Frühere Finanznotiz" hinweis="nur noch zum Nachlesen">
-                      <p className="whitespace-pre-line text-sm">{form.finanzNotizen}</p>
-                    </DetailKarte>
+                  {notizenKarte(
+                    "Finanznotiz",
+                    "d-notizen-finanz",
+                    "finanzNotizen",
+                    "z. B. abweichende Zahlungsvereinbarungen …",
                   )}
 
                   <DetailKarte
@@ -1743,12 +1756,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
           <DetailRaster
             schiene={
               <>
-                {notizenKarte}
-
-                {form.kontakteNotizen && (
-                  <DetailKarte titel="Frühere Kontaktnotiz" hinweis="nur noch zum Nachlesen">
-                    <p className="whitespace-pre-line text-sm">{form.kontakteNotizen}</p>
-                  </DetailKarte>
+                {notizenKarte(
+                  "Kontaktnotiz",
+                  "d-notizen-kontakte",
+                  "kontakteNotizen",
+                  "z. B. bevorzugte Ansprechpartner oder Erreichbarkeit …",
                 )}
 
                 <DetailKarte

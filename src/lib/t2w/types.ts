@@ -126,6 +126,7 @@ export type T2WEvent = {
   notizen: string;
   finanzNotizen?: string;
   kontakteNotizen?: string;
+  anmeldungNotizen?: string;
   outlookOrdner: string | null;
   outlookWebUrl: string | null;
   outlookMailbox?: string | null;

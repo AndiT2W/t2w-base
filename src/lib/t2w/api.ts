@@ -23,6 +23,7 @@ type ApiEvent = {
   notes: string | null;
   financeNotes?: string | null;
   contactsNotes?: string | null;
+  registrationNotes?: string | null;
   outlookFolder: string | null;
   outlookWebUrl: string | null;
   outlookMailbox?: string | null;
@@ -121,6 +122,7 @@ export function mapApiEvent(event: ApiEvent): T2WEvent {
     notizen: event.notes ?? "",
     finanzNotizen: event.financeNotes ?? "",
     kontakteNotizen: event.contactsNotes ?? "",
+    anmeldungNotizen: event.registrationNotes ?? "",
     outlookOrdner: event.outlookFolder,
     outlookWebUrl: event.outlookWebUrl,
     outlookMailbox: event.outlookMailbox ?? null,
@@ -391,6 +393,7 @@ export async function apiCreateEvent(input: {
   notizen: string;
   finanzNotizen?: string;
   kontakteNotizen?: string;
+  anmeldungNotizen?: string;
   status: string;
   veranstalterId?: string;
   sportartId?: string;
@@ -426,6 +429,7 @@ export async function apiCreateEvent(input: {
       notes: input.notizen,
       ...(financeView ? { financeNotes: input.finanzNotizen } : {}),
       contactsNotes: input.kontakteNotizen,
+      registrationNotes: input.anmeldungNotizen,
       status,
     }),
   });
@@ -766,6 +770,7 @@ export async function apiUpdateEvent(id: string, patch: Partial<T2WEvent>) {
       notes: patch.notizen,
       ...(financeView ? { financeNotes: patch.finanzNotizen } : {}),
       contactsNotes: patch.kontakteNotizen,
+      registrationNotes: patch.anmeldungNotizen,
       organizerId: patch.veranstalterId,
       sportId: patch.sportartId,
       serviceIds: patch.serviceIds,

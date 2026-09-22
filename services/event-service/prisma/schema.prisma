@@ -190,6 +190,7 @@ model Event {
   notes                 String?
   financeNotes          String?
   contactsNotes         String?
+  registrationNotes     String?
   outlookFolder         String?
   outlookWebUrl         String?
   outlookMailbox        String?

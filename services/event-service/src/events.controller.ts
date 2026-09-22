@@ -53,6 +53,7 @@ export class CreateEventDto {
   @IsOptional() @IsString() notes?: string;
   @IsOptional() @IsString() financeNotes?: string;
   @IsOptional() @IsString() contactsNotes?: string;
+  @IsOptional() @IsString() registrationNotes?: string;
   @IsOptional() @IsString() outlookFolder?: string;
   @IsOptional() @IsString() outlookWebUrl?: string;
   @IsOptional() @IsString() sharepointFolder?: string;

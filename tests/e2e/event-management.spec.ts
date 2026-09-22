@@ -1534,9 +1534,7 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
   await expect(invoiceDetails).toContainText("Nordwerk GmbH");
   await expect(invoiceDetails).toContainText("Jonas Feld");
   await expect(invoiceDetails).toContainText("BKAUATWW");
-  // Die eigene Finanznotiz ist entfallen; die Eventnotiz in der Schiene
-  // ersetzt sie.
-  await page.locator("#d-notizen").fill("Zahlung nach Freigabe durch den Veranstalter.");
+  await page.locator("#d-notizen-finanz").fill("Zahlung nach Freigabe durch den Veranstalter.");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -1545,7 +1543,7 @@ test("pflegt Auszahlungs- und mehrere Rechnungsempfänger im Finanz-Reiter", asy
         request.method === "PATCH" &&
         request.body?.includes('"payoutRecipientId":"c2"') &&
         request.body.includes('"invoiceRecipientIds":["c1","c2"]') &&
-        request.body.includes('"notes":"Zahlung nach Freigabe durch den Veranstalter."'),
+        request.body.includes('"financeNotes":"Zahlung nach Freigabe durch den Veranstalter."'),
     ),
   ).toBeTruthy();
 });
@@ -1563,8 +1561,7 @@ test("zeigt Veranstalterkontakte und übernimmt sie als Eventkontakt", async ({ 
     .click();
   await expect(page.getByRole("button", { name: "Bereits Eventkontakt" })).toBeVisible();
   await expect(page.getByText("Marion Kessler", { exact: true })).toHaveCount(2);
-  // Auch hier tritt die Eventnotiz an die Stelle der eigenen Kontaktnotiz.
-  await page.locator("#d-notizen").fill("Kontakt bevorzugt per E-Mail.");
+  await page.locator("#d-notizen-kontakte").fill("Kontakt bevorzugt per E-Mail.");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
   expect(
@@ -1579,7 +1576,7 @@ test("zeigt Veranstalterkontakte und übernimmt sie als Eventkontakt", async ({ 
     requests.some(
       (request) =>
         request.method === "PATCH" &&
-        request.body?.includes('"notes":"Kontakt bevorzugt per E-Mail."'),
+        request.body?.includes('"contactsNotes":"Kontakt bevorzugt per E-Mail."'),
     ),
   ).toBeTruthy();
 });

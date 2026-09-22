@@ -16,6 +16,7 @@ export type CreateEventMutation = {
   notes?: string;
   financeNotes?: string;
   contactsNotes?: string;
+  registrationNotes?: string;
   outlookFolder?: string;
   outlookWebUrl?: string;
   sharepointFolder?: string;
