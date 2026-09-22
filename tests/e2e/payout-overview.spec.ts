@@ -114,3 +114,55 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
     .poll(() => requestsForPayouts.some((request) => request.method() === "POST"))
     .toBe(true);
 });
+
+test("zeigt Offen, Versand, Ausbezahlt und Storniert als eigene Kennzahlkacheln", async ({
+  page,
+}) => {
+  // Vorher stand hier eine einzige Kachel "Summe gefiltert"; das Artboard
+  // teilt die Summe nach dem Zustand auf, damit ohne Klick zu sehen ist, was
+  // offen ist und was schon geflossen.
+  await page.route("**/api/v1/payouts**", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "p1",
+          payoutNumber: "T260001",
+          amount: "100.00",
+          currency: "EUR",
+          mailStatus: "OFFEN",
+          paymentStatus: "OFFEN",
+          event: { id: event.id, name: event.name, eventCode: event.eventCode },
+        },
+        {
+          id: "p2",
+          payoutNumber: "T260002",
+          amount: "40.00",
+          currency: "EUR",
+          mailStatus: "VERSENDEN",
+          paymentStatus: "OFFEN",
+          event: { id: event.id, name: event.name, eventCode: event.eventCode },
+        },
+        {
+          id: "p3",
+          payoutNumber: "T260003",
+          amount: "25.00",
+          currency: "EUR",
+          mailStatus: "GESENDET",
+          paymentStatus: "AUSBEZAHLT",
+          event: { id: event.id, name: event.name, eventCode: event.eventCode },
+        },
+      ],
+    }),
+  );
+  await page.goto("/auszahlungen");
+
+  const kacheln = page.getByRole("group", { name: "Kennzahlen" });
+  await expect(kacheln.getByText("Offen", { exact: true })).toBeVisible();
+  await expect(kacheln.getByText("Zum Versand markiert")).toBeVisible();
+  await expect(kacheln.getByText(/^Ausbezahlt/)).toBeVisible();
+  await expect(kacheln.getByText(/^Storniert/)).toBeVisible();
+  // 100,00 offen, 40,00 zum Versand markiert, 25,00 ausbezahlt.
+  await expect(kacheln.getByText("100.00", { exact: true })).toBeVisible();
+  await expect(kacheln.getByText("40.00", { exact: true })).toBeVisible();
+  await expect(kacheln.getByText("25.00", { exact: true })).toBeVisible();
+});

@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, PackageOpen, Plus, Search, TriangleAlert, type LucideIcon } from "lucide-react";
+import {
+  Bell,
+  CalendarClock,
+  PackageOpen,
+  Plus,
+  Search,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
 import { normalizeHardwareResponse } from "@/lib/t2w/hardware-response";
 import { hardwareLifecycle } from "@/lib/t2w/hardware-lifecycle";
 import { formatDatum } from "@/lib/t2w/format";
 import { useT2W } from "@/lib/t2w/store";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/t2w/PageHeader";
@@ -221,10 +229,16 @@ function HardwarePage() {
   useEffect(() => {
     setQ(frage);
   }, [frage]);
-  const [status, setStatus] = useState("active");
+  /*
+   * Ein Statuschip statt Auswahlfeld und Schalter: wie viele Vorgaenge offen
+   * oder ueberfaellig sind, ist die erste Frage auf dieser Seite -- sie soll
+   * nicht erst nach dem Aufklappen zu sehen sein.  So zeichnet es das
+   * Artboard, und so steht es auch auf der Auszahlungsliste.
+   */
+  const [lage, setLage] = useState<"offen" | "ueberfaellig" | "zurueck" | "alle">("offen");
   const [issueType, setIssueType] = useState("all");
   const [event, setEvent] = useState("");
-  const [overdue, setOverdue] = useState(false);
+  const [empfaenger, setEmpfaenger] = useState("alle");
   const [events, setEvents] = useState<{ id: string; name: string; eventCode: string }[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("none");
   const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
@@ -248,14 +262,16 @@ function HardwarePage() {
       .catch(() => setEvents([]));
   }, []);
   const loadItems = useCallback(() => {
+    // Die Lage (offen, ueberfaellig, zurueck) entscheidet sich an den Daten,
+    // die schon da sind -- sonst koennte der Chip seine Anzahl nicht zeigen.
+    // Der Dienst liefert deshalb alle Vorgaenge zur Frage.
     const params = new URLSearchParams({ q });
-    if (status !== "active") params.set("status", status);
     if (issueType !== "all") params.set("issueType", issueType);
     return fetch(`/api/v1/events/hardware?${params}`, { credentials: "include" })
       .then((r) => r.json())
       .then((value) => setItems(normalizeHardwareResponse<Hardware>(value)))
       .catch(() => setItems([]));
-  }, [q, status, issueType]);
+  }, [q, issueType]);
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
@@ -281,7 +297,13 @@ function HardwarePage() {
     return () => document.removeEventListener("pointerdown", finishEditing);
   }, [inlineEditingId]);
   const today = new Date().toISOString().slice(0, 10);
-  const active = items.filter(
+  const zurueck = (i: Hardware) => i.status === "RETURNED" || i.status === "COMPLETED";
+  const passtLage = (i: Hardware) =>
+    lage === "alle" ||
+    (lage === "offen" && !zurueck(i)) ||
+    (lage === "ueberfaellig" && isOverdue(i, today)) ||
+    (lage === "zurueck" && zurueck(i));
+  const grundmenge = items.filter(
     (i) =>
       (!q ||
         [i.recipientName, i.email, i.phone, i.objectName, i.note, number(i), i.event?.name]
@@ -289,9 +311,20 @@ function HardwarePage() {
           .join(" ")
           .toLowerCase()
           .includes(q.toLowerCase())) &&
-      (status !== "active" || (i.status !== "RETURNED" && i.status !== "COMPLETED")) &&
       (!event || i.event?.name.toLowerCase().includes(event.toLowerCase())) &&
-      (!overdue || isOverdue(i, today)),
+      // Die Ausgabeart stand im Filterzaehler, wirkte aber nicht auf die Liste.
+      (issueType === "all" || i.issueType === issueType) &&
+      (empfaenger === "alle" || i.recipientName === empfaenger),
+  );
+  const active = grundmenge.filter(passtLage);
+  const lageZahl = {
+    alle: grundmenge.length,
+    offen: grundmenge.filter((i) => !zurueck(i)).length,
+    ueberfaellig: grundmenge.filter((i) => isOverdue(i, today)).length,
+    zurueck: grundmenge.filter(zurueck).length,
+  };
+  const empfaengerListe = [...new Set(items.map((i) => i.recipientName).filter(Boolean))].sort(
+    (a, b) => a.localeCompare(b, "de"),
   );
   const rows = useMemo(() => table.rows(active), [active, table]);
   const overdueCount = active.filter((item) => isOverdue(item, today)).length;
@@ -299,15 +332,15 @@ function HardwarePage() {
   const activeFilterCount =
     (q ? 1 : 0) +
     (event ? 1 : 0) +
-    (overdue ? 1 : 0) +
-    (status === "active" ? 0 : 1) +
-    (issueType === "all" ? 0 : 1);
+    (lage === "offen" ? 0 : 1) +
+    (issueType === "all" ? 0 : 1) +
+    (empfaenger === "alle" ? 0 : 1);
   const resetFilters = () => {
     setQ("");
     setEvent("");
-    setStatus("active");
+    setLage("offen");
     setIssueType("all");
-    setOverdue(false);
+    setEmpfaenger("alle");
   };
   const hardwareObjectNames = selectionLists.hardwareObjects
     .filter((value) => value.active)
@@ -351,24 +384,42 @@ function HardwarePage() {
       if (pendingSaves.current === 0) setSavingInline(false);
     });
   };
-  const metrics: { title: string; value: number; Icon: LucideIcon; ton?: "warn" | "krit" }[] = [
+  const inSiebenTagen = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const draussen = items.filter(
+    (item) => item.status !== "RETURNED" && item.status !== "COMPLETED",
+  );
+  const eventsMitAusgabe = new Set(draussen.map((item) => item.event?.id).filter(Boolean)).size;
+  const dieseWoche = draussen.filter(
+    (item) =>
+      item.dueDate &&
+      item.dueDate.slice(0, 10) > today &&
+      item.dueDate.slice(0, 10) <= inSiebenTagen,
+  ).length;
+  const metrics: {
+    title: string;
+    value: number;
+    Icon: LucideIcon;
+    hinweis?: string;
+    ton?: "warn" | "krit";
+  }[] = [
     {
-      title: "Offen",
-      value: active.filter((item) => item.status === "OPEN").length,
+      title: "Aktuell ausgegeben",
+      value: draussen.length,
       Icon: PackageOpen,
+      hinweis: `in ${eventsMitAusgabe} ${eventsMitAusgabe === 1 ? "Event" : "Events"}`,
     },
     {
-      title: "Benachrichtigt",
-      value: active.filter((item) => item.status === "NOTIFIED").length,
+      title: "Rückgabe offen",
+      value: draussen.filter((item) => item.status === "OPEN" || item.status === "NOTIFIED").length,
       Icon: Bell,
     },
     {
-      title: "Überfällig",
+      title: "Rückgabe überfällig",
       value: overdueCount,
       Icon: TriangleAlert,
       ...(overdueCount ? { ton: "krit" as const } : {}),
     },
-    { title: "Gesamt aktiv", value: active.length, Icon: PackageOpen },
+    { title: "Diese Woche fällig", value: dieseWoche, Icon: CalendarClock },
   ];
   return (
     <div>
@@ -377,10 +428,22 @@ function HardwarePage() {
         titel="Hardware"
         beschreibung="Eventübergreifende Rückgabeübersicht"
         aktion={
-          <Button onClick={() => setNewHardware(true)}>
-            <Plus className="size-4" />
-            Hardware-Ausgabe anlegen
-          </Button>
+          <>
+            {/* Die Objekte selbst liegen in den Auswahllisten; das Artboard
+                stellt den Weg dorthin neben das Anlegen einer Ausgabe. */}
+            <Link
+              to="/einstellungen"
+              search={{ tab: "auswahllisten", liste: "hardwareobjekte" }}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              Objekt anlegen
+            </Link>
+            <Button onClick={() => setNewHardware(true)}>
+              <Plus className="size-4" />
+              Hardware-Ausgabe anlegen
+            </Button>
+          </>
         }
       />
       <div className="space-y-3">
@@ -429,12 +492,13 @@ function HardwarePage() {
           />
         </RecordSheet>
         <MetricRow>
-          {metrics.map(({ title, value, Icon, ton }) => (
+          {metrics.map(({ title, value, Icon, hinweis, ton }) => (
             <MetricTile
               key={title}
               icon={Icon}
               label={title}
               wert={value}
+              {...(hinweis ? { hinweis } : {})}
               {...(ton ? { ton } : {})}
             />
           ))}
@@ -478,6 +542,26 @@ function HardwarePage() {
             </>
           )}
 
+          {/* Die Anzahl steht am Chip: wie viele Vorgaenge offen oder
+              ueberfaellig sind, ist die erste Frage dieser Seite -- sie soll
+              nicht erst nach dem Aufklappen eines Auswahlfeldes zu sehen
+              sein.  So zeichnet es das Artboard. */}
+          {(
+            [
+              ["alle", "Alle"],
+              ["offen", "Offen"],
+              ["ueberfaellig", "Überfällig"],
+              ["zurueck", "Zurück"],
+            ] as const
+          ).map(([wert, beschriftung]) => (
+            <ToggleChip key={wert} aktiv={lage === wert} onToggle={() => setLage(wert)}>
+              {beschriftung}{" "}
+              <span className="tabular-nums text-muted-foreground">{lageZahl[wert]}</span>
+            </ToggleChip>
+          ))}
+
+          <FilterTrenner />
+
           <Input
             placeholder="Event filtern …"
             aria-label="Event filtern"
@@ -485,25 +569,6 @@ function HardwarePage() {
             onChange={(e) => setEvent(e.target.value)}
             className="h-11 w-44 rounded-full sm:h-8"
           />
-          <label className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input bg-card px-3 text-sm text-muted-foreground md:min-h-8">
-            Status
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger
-                aria-label="Status filtern"
-                className="h-7 border-0 bg-transparent px-1 shadow-none"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Aktive</SelectItem>
-                <SelectItem value="OPEN">Offen</SelectItem>
-                <SelectItem value="MAIL_SEND">Mail senden</SelectItem>
-                <SelectItem value="NOTIFIED">Benachrichtigt</SelectItem>
-                <SelectItem value="RETURNED">Retourniert</SelectItem>
-                <SelectItem value="COMPLETED">Abgeschlossen</SelectItem>
-              </SelectContent>
-            </Select>
-          </label>
           <label className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input bg-card px-3 text-sm text-muted-foreground md:min-h-8">
             Ausgabeart
             <Select value={issueType} onValueChange={setIssueType}>
@@ -521,11 +586,25 @@ function HardwarePage() {
               </SelectContent>
             </Select>
           </label>
-          {/* Chip wie jeder andere Filter der Anwendung; als Ankreuzfeld fiel
-              er als einziger aus der Reihe. */}
-          <ToggleChip aktiv={overdue} onToggle={() => setOverdue(!overdue)}>
-            Überfällig
-          </ToggleChip>
+          <label className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input bg-card px-3 text-sm text-muted-foreground md:min-h-8">
+            Empfänger
+            <Select value={empfaenger} onValueChange={setEmpfaenger}>
+              <SelectTrigger
+                aria-label="Empfänger filtern"
+                className="h-7 border-0 bg-transparent px-1 shadow-none"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="alle">Alle Empfänger</SelectItem>
+                {empfaengerListe.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
         </FilterBar>
 
         <p className="text-sm text-muted-foreground" aria-live="polite">

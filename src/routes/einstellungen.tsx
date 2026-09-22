@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT2W } from "@/lib/t2w/store";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import {
@@ -282,6 +282,25 @@ function Einstellungen() {
           }
           className="space-y-4"
         >
+          {/* Die fuenf Bereiche hingen nur im Untermenue der Seitenleiste:
+              wer die Seite ueber einen Link betrat, kam von dort nicht mehr
+              weiter.  Das Artboard fuehrt sie zusaetzlich als Reiterleiste
+              auf der Seite -- im selben Unterstrich-Stil wie das Eventdetail. */}
+          <TabsList variante="unterstrich" className="w-full max-w-full flex-wrap justify-start">
+            {(
+              [
+                ["allgemein", "Allgemein"],
+                ["benutzer", "Benutzer"],
+                ["auswahllisten", "Auswahllisten"],
+                ["outlook", "Outlook"],
+                ["auditlog", "Auditlog"],
+              ] as const
+            ).map(([wert, beschriftung]) => (
+              <TabsTrigger key={wert} variante="unterstrich" value={wert}>
+                {beschriftung}
+              </TabsTrigger>
+            ))}
+          </TabsList>
           <TabsContent value="allgemein" className="space-y-5">
             <Card>
               <CardHeader>

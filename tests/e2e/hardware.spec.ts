@@ -324,3 +324,64 @@ test.skip("creates a central hardware issue in the side sheet and keeps inline e
   await page.getByRole("row", { name: /Bestehende Ausgabe/ }).click();
   await expect(page.getByLabel("Empfänger bearbeiten")).toBeVisible();
 });
+
+test("filtert Hardware über Lagechips mit Anzahl und den Empfängerfilter", async ({ page }) => {
+  // Das Artboard fuehrt die Lage als Chips mit Anzahl statt als Auswahlfeld:
+  // wie viele Vorgaenge offen oder ueberfaellig sind, ist die erste Frage
+  // dieser Seite.  Dazu kommt der Empfaengerfilter aus dem Entwurf.
+  await page.route("**/api/v1/settings**", (route) =>
+    route.fulfill({ json: { outlookJahresordner: [], jahresSites: [], outlookMailbox: null } }),
+  );
+  await page.route("**/api/v1/hardware-objects**", (route) => route.fulfill({ json: [] }));
+  await page.route("**/api/v1/events/hardware**", (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: "h1",
+          recipientName: "Anna Offen",
+          issueType: "PARTICIPANT",
+          objectName: "Transponder",
+          quantity: 1,
+          status: "OPEN",
+          dueDate: "2099-01-01",
+          event: null,
+        },
+        {
+          id: "h2",
+          recipientName: "Bert Zurueck",
+          issueType: "RENTAL",
+          objectName: "Matte",
+          quantity: 1,
+          status: "RETURNED",
+          dueDate: "2099-01-01",
+          event: null,
+        },
+      ],
+    }),
+  );
+  await page.goto("/hardware");
+
+  const leiste = page.getByRole("group", { name: "Liste filtern" });
+  await expect(leiste.getByRole("button", { name: /^Alle/ })).toContainText("2");
+  await expect(leiste.getByRole("button", { name: /^Offen/ })).toContainText("1");
+  await expect(leiste.getByRole("button", { name: /^Zurück/ })).toContainText("1");
+
+  // Grundstellung "Offen": der zurueckgegebene Vorgang steht nicht in der Liste.
+  await expect(page.getByText("Anna Offen")).toBeVisible();
+  await expect(page.getByText("Bert Zurueck")).toHaveCount(0);
+
+  await leiste.getByRole("button", { name: /^Zurück/ }).click();
+  await expect(page.getByText("Bert Zurueck")).toBeVisible();
+  await expect(page.getByText("Anna Offen")).toHaveCount(0);
+
+  await leiste.getByRole("button", { name: /^Alle/ }).click();
+  await page.getByRole("combobox", { name: "Empfänger filtern" }).click();
+  await page.getByRole("option", { name: "Anna Offen" }).click();
+  await expect(page.getByText("Bert Zurueck")).toHaveCount(0);
+
+  // Der Weg zu den Objekten selbst steht im Seitenkopf.
+  await expect(page.getByRole("link", { name: "Objekt anlegen" })).toHaveAttribute(
+    "href",
+    /liste=hardwareobjekte/,
+  );
+});

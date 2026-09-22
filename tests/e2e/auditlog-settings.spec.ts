@@ -52,3 +52,30 @@ test("zeigt den Auditlog in den Einstellungen und filtert nach Entität", async 
   await page.getByLabel("Auditlog nach Entität filtern").selectOption("Payout");
   await expect(page).toHaveURL(/tab=auditlog/);
 });
+
+test("führt die fünf Einstellungsbereiche als Reiterleiste auf der Seite", async ({ page }) => {
+  // Die Bereiche hingen nur im Untermenü der Seitenleiste: wer die Seite über
+  // einen Link betrat, kam von dort nicht weiter. Das Artboard führt sie
+  // zusätzlich als Reiterleiste.
+  await page.route("**/api/v1/settings**", (route) =>
+    route.fulfill({ json: { outlookJahresordner: [], jahresSites: [], outlookMailbox: null } }),
+  );
+  await page.goto("/einstellungen");
+
+  const leiste = page.getByRole("tablist");
+  await expect(leiste).toHaveCSS("border-bottom-width", "1px");
+  for (const name of ["Allgemein", "Benutzer", "Auswahllisten", "Outlook", "Auditlog"]) {
+    await expect(page.getByRole("tab", { name, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("tab", { name: "Allgemein" })).toHaveAttribute(
+    "data-state",
+    "active",
+  );
+
+  await page.getByRole("tab", { name: "Auswahllisten" }).click();
+  await expect(page).toHaveURL(/tab=auswahllisten/);
+  await expect(page.getByRole("tab", { name: "Auswahllisten" })).toHaveAttribute(
+    "data-state",
+    "active",
+  );
+});

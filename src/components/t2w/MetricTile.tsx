@@ -101,5 +101,12 @@ export function MetricTile({
 
 /** Die Kachelreihe.  Gleicher Abstand über allen Modulen. */
 export function MetricRow({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap gap-2.5">{children}</div>;
+  // Die Reihe traegt einen Namen: eine Vorlesehilfe soll sie als Block
+  // ansagen koennen statt vier lose Zahlen, und die Browsertests greifen die
+  // Kacheln damit an, ohne auf Text zu raten, der auch in der Tabelle steht.
+  return (
+    <div role="group" aria-label="Kennzahlen" className="flex flex-wrap gap-2.5">
+      {children}
+    </div>
+  );
 }

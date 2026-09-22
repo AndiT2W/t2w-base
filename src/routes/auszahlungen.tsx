@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Plus, Receipt, Search } from "lucide-react";
+import { Ban, CircleCheck, Mail, Plus, Receipt, Search } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { RecordSheet } from "@/components/t2w/RecordSheet";
 import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
@@ -151,6 +151,32 @@ function Auszahlungen() {
       ),
     [gefiltert],
   );
+  /*
+   * Die vier Kacheln des Artboards: was offen ist, was zum Versand
+   * bereitliegt, was geflossen ist und was storniert wurde -- jeweils Betrag
+   * und Belegzahl.  Sie zaehlen die Menge des gesetzten Jahres- und
+   * Eventfilters, nicht die Statusauswahl darunter: sonst zeigte die Kachel
+   * "Offen" nach einem Klick auf "Ausbezahlt" eine Null.
+   */
+  const kennzahlen = useMemo(() => {
+    const leer = () => ({ betrag: 0, anzahl: 0 });
+    const gruppen: Record<string, { betrag: number; anzahl: number }> = {
+      Offen: leer(),
+      "Mail versenden": leer(),
+      Ausbezahlt: leer(),
+      Storniert: leer(),
+    };
+    for (const p of rows) {
+      const name = status(p);
+      const ziel = name === "Mail gesendet" ? "Mail versenden" : name;
+      const gruppe = gruppen[ziel];
+      if (!gruppe) continue;
+      gruppe.betrag += Number(p.amount);
+      gruppe.anzahl += 1;
+    }
+    return gruppen;
+  }, [rows]);
+  const belege = (anzahl: number) => `${anzahl} ${anzahl === 1 ? "Beleg" : "Belege"}`;
   /**
    * Eine Zelle je Spalte.  Vorher standen die Zellen fest in der Zeile und
    * die Spaltenwahl hatte nichts, woran sie sich haette festhalten koennen.
@@ -258,15 +284,31 @@ function Auszahlungen() {
       </RecordSheet>
 
       <MetricRow>
-        {Object.entries(sums).map(([currency, sum]) => (
-          <MetricTile
-            key={currency}
-            icon={Receipt}
-            label={`Summe gefiltert (${currency})`}
-            wert={sum.toFixed(2)}
-            hinweis={`${gefiltert.length} ${gefiltert.length === 1 ? "Beleg" : "Belege"}`}
-          />
-        ))}
+        <MetricTile
+          icon={Receipt}
+          label="Offen"
+          wert={kennzahlen["Offen"]!.betrag.toFixed(2)}
+          hinweis={belege(kennzahlen["Offen"]!.anzahl)}
+          {...(kennzahlen["Offen"]!.anzahl > 0 ? { ton: "warn" as const } : {})}
+        />
+        <MetricTile
+          icon={Mail}
+          label="Zum Versand markiert"
+          wert={kennzahlen["Mail versenden"]!.betrag.toFixed(2)}
+          hinweis={belege(kennzahlen["Mail versenden"]!.anzahl)}
+        />
+        <MetricTile
+          icon={CircleCheck}
+          label={`Ausbezahlt ${year || "gesamt"}`}
+          wert={kennzahlen["Ausbezahlt"]!.betrag.toFixed(2)}
+          hinweis={belege(kennzahlen["Ausbezahlt"]!.anzahl)}
+        />
+        <MetricTile
+          icon={Ban}
+          label={`Storniert ${year || "gesamt"}`}
+          wert={kennzahlen["Storniert"]!.betrag.toFixed(2)}
+          hinweis={belege(kennzahlen["Storniert"]!.anzahl)}
+        />
       </MetricRow>
 
       <FilterBar
