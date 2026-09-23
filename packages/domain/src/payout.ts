@@ -1,20 +1,35 @@
-export type PayoutMailStatus = "ENTWURF" | "VERSENDEN" | "GESENDET";
-export type PayoutPaymentStatus = "OFFEN" | "AUSBEZAHLT" | "STORNIERT";
+export type PayoutStatus =
+  "ENTWURF" | "VERSANDBEREIT" | "VERSAND_LAEUFT" | "MAIL_GESENDET" | "AUSBEZAHLT" | "STORNIERT";
+
 export type Payout = {
-  mailStatus: PayoutMailStatus;
-  paymentStatus: PayoutPaymentStatus;
+  status: PayoutStatus;
   amount: string;
   currency: string;
   eventId: string | null;
   payoutNumber: string;
 };
-export function payoutOverallStatus(p: Payout) {
-  if (p.paymentStatus === "STORNIERT") return "STORNIERT";
-  if (p.paymentStatus === "AUSBEZAHLT") return "AUSBEZAHLT";
-  if (p.mailStatus === "GESENDET") return "MAIL GESENDET";
-  if (p.mailStatus === "VERSENDEN") return "MAIL VERSENDEN";
-  return "OFFEN";
+
+export function payoutStatusLabel(status: PayoutStatus) {
+  switch (status) {
+    case "ENTWURF":
+      return "Offen";
+    case "VERSANDBEREIT":
+      return "Mail versenden";
+    case "VERSAND_LAEUFT":
+      return "Versand läuft";
+    case "MAIL_GESENDET":
+      return "Mail gesendet";
+    case "AUSBEZAHLT":
+      return "Ausbezahlt";
+    case "STORNIERT":
+      return "Storniert";
+  }
 }
+
+export function isPayoutUnpaid(status: PayoutStatus) {
+  return status !== "AUSBEZAHLT" && status !== "STORNIERT";
+}
+
 export function normalizePayoutAmount(value: string | number) {
   const n = Number(String(value).replace(",", "."));
   if (!Number.isFinite(n) || n < 0) throw new Error("INVALID_AMOUNT");

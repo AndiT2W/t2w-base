@@ -836,3 +836,6 @@ Der Kommunikationsreiter kann jetzt synchronisierte E-Mails nach Bestätigung mi
 ## 2026-09-23 — Drei Architekturvertiefungen umgesetzt
 
 Der Nutzer wählte alle drei Kandidaten des aktuellen Architekturberichts. „Nachfolger“ ist nun eine atomare Planungsintention; ein Konflikt bewahrt den Entwurf und erzeugt keine Teilaufgabe. Die Kommunikationsanzeige besitzt ein eigenes Such-, Filter-, Auswahl- und Themenzuordnungsmodul. Die Eventlisten teilen sich ein Präsentationsmodul für Sortierung, Präferenzen, Werkzeugleiste und Zeilen/Karten; fachliche Filter und Präferenzkennungen bleiben je Ansicht. Begriffe, Evidenz und Prüfungen: [Architekturvertiefung 2026-09-23](concepts/architecture-deepening-2026-09-23.md).
+## 2026-09-23 — Auszahlungsmodell auf einen Lebenszyklusstatus vereinfacht
+
+Payout verwendet nun `status` statt separater Mail-/Zahlungsstatusfelder. `MAIL_GESENDET` und `AUSBEZAHLT` bleiben getrennte Prüfpunkte; `VERSAND_LAEUFT` schützt den atomaren Automations-Claim. Empfänger-E-Mail liegt in `recipientSnapshot.email`; Workflow-, Fehler- und Retry-Metadaten liegen in `AutomationClaim`. Schema-/Service-/UI-Migration, Importzuordnung, Audit und Browserregressionen sind nachgezogen. Die ClickUp-Arbeitsmappe erhält zusätzlich primäre und weitere Event-Quell-IDs für spätere Syncs. Kein Produktivdatenbankimport wurde ausgeführt.

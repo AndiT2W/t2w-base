@@ -11,7 +11,7 @@ Monatliche Nenngeld-Auszahlungen pro Event im Event-Finanzreiter erfassen, per n
 
 ## Bestehende ClickUp-Felder
 
-Die Liste enthält aktuell 1.013 Datensätze und die Felder `Name`, `Veranstaltung`, `Status`, `Auszahlungsbetrag`, `Transaktionsbestätigung` und `Datum aktualisiert`. Sichtbare Statusgruppen sind `erstellt`, `gesendet` und `ausbezahlt`; in der Beschreibung ist zusätzlich der Versandstatus `versenden` dokumentiert.
+Der aktuelle Quellstand vom 2026-09-23 enthält 1.034 Datensätze. Der 2026-Ausschnitt umfasst 320 `T26xxxx`-Tasks: 305 `ausbezahlt`, 14 `erstellt` und 1 `gesendet`. Die Felder umfassen `Name`, `Veranstaltung`, `Status`, `Auszahlungsbetrag`, `Transaktionsbestätigung`, `Überweisungsdatum`, `Kommentar` und `Datum aktualisiert`; in der Beschreibung ist zusätzlich der Versandstatus `versenden` dokumentiert. Siehe [ClickUp-Auszahlungen 2026](../sources/2026-09-23-clickup-auszahlungen-2026.md).
 
 ## Empfohlenes Domänenmodell
 
@@ -22,37 +22,37 @@ Die Liste enthält aktuell 1.013 Datensätze und die Felder `Name`, `Veranstaltu
 - `id`: interne UUID/ID
 - `payoutNumber`: globale Jahressequenz, Darstellung `T260001` (`T` = Transaktion, `26` = Jahr); niemals wiederverwenden
 - `eventId`: optionale Referenz auf ein Event; historische Datensätze ohne eindeutige Zuordnung werden mit `null` importiert und als nachzuordnen markiert
+- ClickUp-Auszahlungen mit mehreren Eventbeziehungen lassen sich in diesem Einzelfeld nicht vollständig darstellen; der Import behält die Primärzuordnung und hält weitere Quell-IDs zur Prüfung/Nachsync im Arbeitsblatt fest, bis das Zielmodell dafür entschieden ist.
 - kein Abrechnungsmonat im MVP
 - `recipientId`: wird aus dem Event-Auszahlungsempfänger übernommen
 - `recipientSnapshot`: Name, Adresse, IBAN, BIC und E-Mail zum Zeitpunkt der Freigabe/Versendung
 - `amount`: Decimal, >= 0
 - `currency`: Währung je Auszahlung, mindestens `EUR` und `CHF`
-- `mailStatus`: `ENTWURF`, `VERSENDEN`, `GESENDET`
-- `paymentStatus`: `OFFEN`, `AUSBEZAHLT`, optional `STORNIERT`
-- sichtbarer Gesamtstatus: kompakte Projektion aus beiden Statusfeldern
+- `status`: `ENTWURF`, `VERSANDBEREIT`, `VERSAND_LAEUFT`, `MAIL_GESENDET`, `AUSBEZAHLT`, `STORNIERT`
 - `transactionReference`: Transaktionsbestätigung als Freitext; Belege/Dateilinks später
 - `paidAt`: Auszahlungsdatum; `mailSentAt`
-- `mailRecipient`: beim Versand verwendete Adresse aus dem Event-Auszahlungsempfänger
-- `n8nCorrelationId`/`externalMessageId`: Idempotenz- und Nachvollziehbarkeitsreferenz
 - `notes`, `createdAt`, `updatedAt`
+- Die tatsächlich verwendete Empfängeradresse liegt in `recipientSnapshot.email`; ein separates `mailRecipient`-Feld entfällt.
+- Technische Claim- und Versanddaten liegen zentral in `AutomationClaim`, nicht an `Payout`: Idempotenzschlüssel, Workflow, Claim-/Abschlusszeit, Ergebnis, Fehler, Wiederholungszahl und externe Nachrichten-ID. Ein separates `n8nCorrelationId` entfällt.
 - Änderungen an Betrag, Empfänger, Mailadresse und Status werden im zentralen, unveränderlichen Auditlog mit Vorher-/Nachherwert, Benutzer und Zeitpunkt protokolliert. Der Auditlog ist ein plattformweiter Baustein für alle relevanten Änderungen in `t2w-base`.
 - Dauerhafte Löschung ist erlaubt; die Löschung selbst bleibt im Auditlog erhalten und die vergebene Nummer wird nicht wiederverwendet.
 
 ## Statusregeln
 
-- `ENTWURF`: bearbeitbar, noch kein Versand
-- `VERSENDEN`: explizite Versandfreigabe; n8n darf abholen
-- `GESENDET`: Mail erfolgreich versendet, Zahlung noch offen
+- `ENTWURF`: bearbeitbar, noch keine Versandfreigabe
+- `VERSANDBEREIT`: explizite Versandfreigabe; n8n darf abholen
+- `VERSAND_LAEUFT`: temporärer, atomar vergebener Claim; kein zweiter Versand darf starten
+- `MAIL_GESENDET`: Mail erfolgreich versendet, Zahlung noch offen
 - `AUSBEZAHLT`: Zahlung durchgeführt; `paidAt` und möglichst `transactionReference` erforderlich
 - `STORNIERT`: annulliert; keine weitere Mail-/Zahlungsaktion
 
-Der Übergang `VERSENDEN -> GESENDET` darf nur nach bestätigtem n8n-Erfolg erfolgen. Wiederholte Abfragen dürfen keine zweite Mail versenden; dafür braucht es atomare Claim-/Idempotenzlogik. Fehler lassen den Status auf `VERSENDEN` und speichern die Fehlermeldung.
+`MAIL_GESENDET` und `AUSBEZAHLT` bleiben getrennte fachliche Prüfpunkte innerhalb desselben Statusfelds. Der Versandübergang `VERSANDBEREIT -> VERSAND_LAEUFT -> MAIL_GESENDET` erfolgt über den bestätigten n8n-Ergebnisweg. Ein Versandfehler setzt den Status zurück auf `VERSANDBEREIT`; Fehler und Wiederholung werden am `AutomationClaim` gespeichert. Wiederholte Abfragen dürfen keine zweite Mail versenden.
 
 Die n8n-Anbindung soll als generisches Automationsmuster für weitere Bereiche wie Hardware und Rechnungen umgesetzt werden: statusbasierte Abholung, atomarer Claim, Ergebnis-/Status-Callback, externe Workflow-ID, Retry-Information und Idempotenz.
 
 ## Event-Finanzreiter
 
-Tabelle „Auszahlungen“ mit laufender Nummer, Empfänger, Betrag, Gesamtstatus, Versanddatum und Auszahlungsdatum; Anlegen, Öffnen und Bearbeiten; Empfänger aus dem Event übernehmen; Snapshot spätestens bei `VERSENDEN`; Aktion „Für Mailversand markieren“. Änderungen bleiben auch nach Versand möglich und sind im Auditlog sichtbar.
+Tabelle „Auszahlungen“ mit laufender Nummer, Empfänger, Betrag, einem Status, Versanddatum und Auszahlungsdatum; Anlegen, Öffnen und Bearbeiten; Empfänger aus dem Event übernehmen; Snapshot spätestens bei `VERSANDBEREIT`; Aktion „Für Mailversand markieren“. Änderungen bleiben auch nach Versand möglich und sind im Auditlog sichtbar.
 
 ## Zentrale Übersichtsseite
 
@@ -64,9 +64,8 @@ Export/API-Snapshot unverändert unter `raw/` ablegen; Event und Empfänger übe
 
 ## Vor der Umsetzung zu entscheiden
 
-- `gesendet` bedeutet Mailversand, `ausbezahlt` tatsächliche Überweisung? Empfohlen: getrennte Zustände wie oben.
 - Darf es mehrere Teil-/Korrekturauszahlungen je Event und Monat geben? Empfohlen: ja, mit optionaler Korrektur-/Storno-Referenz.
-- Stammdatenadresse oder Eventkontakt als Mailziel? Empfohlen: explizite Adresse je Auszahlung speichern.
+- Die Empfängeradresse wird beim Versandfreigeben aus dem Event-Auszahlungsempfänger übernommen und als konkreter Wert in `recipientSnapshot.email` gespeichert; spätere Stammdatenänderungen verändern den Snapshot nicht automatisch.
 - Nummernformat: global je Kalenderjahr, Darstellung `T26XXXX`, nicht wiederverwendbar.
 - Verbindliche n8n-Schnittstelle, Mailvorlage, Absender und Fehler-/Retry-Verhalten?
 

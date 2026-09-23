@@ -45,8 +45,7 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
       payoutNumber: "T260001",
       amount: "100.00",
       currency: "EUR",
-      mailStatus: "ENTWURF",
-      paymentStatus: "OFFEN",
+      status: "ENTWURF",
       recipient: { name: "Nordwerk" },
       event: { eventCode: "demo", name: "Demo Event" },
     },
@@ -55,8 +54,7 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
       payoutNumber: "T260002",
       amount: "50.00",
       currency: "CHF",
-      mailStatus: "GESENDET",
-      paymentStatus: "OFFEN",
+      status: "MAIL_GESENDET",
       recipient: { name: "Alpin" },
       event: null,
     },
@@ -93,7 +91,7 @@ test("sucht, filtert, summiert und markiert Auszahlungen gesammelt", async ({ pa
   await expect(page.getByText("T260001")).toHaveCount(0);
   await page.getByLabel("T260002 auswählen").check();
   await expect(page.getByRole("button", { name: /Für Mailversand markieren/ })).toBeEnabled();
-  await page.getByLabel("T260002 Mailstatus").selectOption("ENTWURF");
+  await page.getByLabel("T260002 Status").selectOption("ENTWURF");
   await expect
     .poll(() => requestsForPayouts.some((request) => request.method() === "PATCH"))
     .toBe(true);
@@ -129,8 +127,7 @@ test("zeigt Offen, Versand, Ausbezahlt und Storniert als eigene Kennzahlkacheln"
           payoutNumber: "T260001",
           amount: "100.00",
           currency: "EUR",
-          mailStatus: "OFFEN",
-          paymentStatus: "OFFEN",
+          status: "ENTWURF",
           event: { id: event.id, name: event.name, eventCode: event.eventCode },
         },
         {
@@ -138,8 +135,7 @@ test("zeigt Offen, Versand, Ausbezahlt und Storniert als eigene Kennzahlkacheln"
           payoutNumber: "T260002",
           amount: "40.00",
           currency: "EUR",
-          mailStatus: "VERSENDEN",
-          paymentStatus: "OFFEN",
+          status: "VERSANDBEREIT",
           event: { id: event.id, name: event.name, eventCode: event.eventCode },
         },
         {
@@ -147,8 +143,7 @@ test("zeigt Offen, Versand, Ausbezahlt und Storniert als eigene Kennzahlkacheln"
           payoutNumber: "T260003",
           amount: "25.00",
           currency: "EUR",
-          mailStatus: "GESENDET",
-          paymentStatus: "AUSBEZAHLT",
+          status: "AUSBEZAHLT",
           event: { id: event.id, name: event.name, eventCode: event.eventCode },
         },
       ],

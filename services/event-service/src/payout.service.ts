@@ -1,11 +1,36 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, PayoutMailStatus, PayoutPaymentStatus } from "@prisma/client";
+import { Prisma, PayoutStatus } from "@prisma/client";
 import { AuditService } from "./audit.service.js";
 import { PrismaService } from "./prisma.service.js";
 const include = {
   event: { select: { id: true, eventCode: true, name: true } },
   recipient: true,
 } as const;
+
+const snapshotWithEmail = (recipient: any, email?: string | null) => {
+  const snapshot: Record<string, unknown> = {};
+  for (const key of [
+    "id",
+    "name",
+    "type",
+    "country",
+    "city",
+    "street",
+    "postalCode",
+    "uid",
+    "iban",
+    "bic",
+    "bankName",
+    "email",
+  ]) {
+    if (recipient?.[key] !== undefined) snapshot[key] = recipient[key];
+  }
+  if (email !== undefined) snapshot.email = email?.trim() || null;
+  return Object.keys(snapshot).length ? (snapshot as Prisma.InputJsonObject) : null;
+};
+
+const PAYOUT_STATUSES = Object.values(PayoutStatus);
+
 @Injectable()
 export class PayoutService {
   constructor(
@@ -27,14 +52,7 @@ export class PayoutService {
         eventId: q.eventId,
         year: q.year ? Number(q.year) : undefined,
         recipientId: q.recipientId,
-        ...(q.status
-          ? {
-              OR: [
-                { mailStatus: q.status as PayoutMailStatus },
-                { paymentStatus: q.status as PayoutPaymentStatus },
-              ],
-            }
-          : {}),
+        status: q.status ? (q.status as PayoutStatus) : undefined,
         ...(x
           ? {
               OR: [
@@ -57,6 +75,10 @@ export class PayoutService {
   async create(input: any) {
     const amount = Number(String(input.amount ?? "").replace(",", "."));
     if (!Number.isFinite(amount) || amount < 0) throw new BadRequestException("INVALID_AMOUNT");
+    if (input.status && !PAYOUT_STATUSES.includes(input.status))
+      throw new BadRequestException("INVALID_PAYOUT_STATUS");
+    if (input.status === PayoutStatus.VERSAND_LAEUFT)
+      throw new BadRequestException("PAYOUT_STATUS_SYSTEM_MANAGED");
     const year = Number(input.year ?? new Date(input.paidAt ?? Date.now()).getFullYear());
     return this.prisma.$transaction(async (tx) => {
       let recipient = input.recipientId
@@ -68,21 +90,29 @@ export class PayoutService {
           ? await tx.organizer.findUnique({ where: { id: e.payoutRecipientId } })
           : null;
       }
+      const recipientEmail =
+        input.recipientEmail ??
+        input.mailRecipient ??
+        input.recipientSnapshot?.email ??
+        recipient?.email ??
+        null;
       const p = await tx.payout.create({
         data: {
           payoutNumber: await this.number(tx, year),
           year,
           eventId: input.eventId ?? null,
           recipientId: recipient?.id ?? null,
-          recipientSnapshot: recipient as any,
+          recipientSnapshot: snapshotWithEmail(
+            input.recipientSnapshot ?? recipient,
+            recipientEmail,
+          ) as any,
           amount: new Prisma.Decimal(amount.toFixed(2)),
           currency: String(input.currency ?? "EUR")
             .trim()
             .toUpperCase(),
-          mailStatus: input.mailStatus ?? PayoutMailStatus.ENTWURF,
-          paymentStatus: input.paymentStatus ?? PayoutPaymentStatus.OFFEN,
+          status: input.status ?? PayoutStatus.ENTWURF,
           paidAt: input.paidAt ? new Date(input.paidAt) : undefined,
-          mailRecipient: input.mailRecipient ?? recipient?.email,
+          mailSentAt: input.mailSentAt ? new Date(input.mailSentAt) : undefined,
           transactionReference: input.transactionReference,
           clickUpId: input.clickUpId,
           notes: input.notes,
@@ -108,8 +138,22 @@ export class PayoutService {
       if (!old) throw new NotFoundException();
       const data: any = { ...input };
       for (const k of ["userId", "id", "payoutNumber", "createdAt", "updatedAt"]) delete data[k];
+      const recipientEmail = data.recipientEmail ?? data.mailRecipient;
+      delete data.recipientEmail;
+      delete data.mailRecipient;
+      if (recipientEmail !== undefined) {
+        data.recipientSnapshot = snapshotWithEmail(old.recipientSnapshot, recipientEmail);
+      }
+      if (data.status && !PAYOUT_STATUSES.includes(data.status))
+        throw new BadRequestException("INVALID_PAYOUT_STATUS");
+      if (old.status === PayoutStatus.VERSAND_LAEUFT && data.status && data.status !== old.status)
+        throw new BadRequestException("PAYOUT_SEND_IN_PROGRESS");
+      if (data.status === PayoutStatus.VERSAND_LAEUFT && old.status !== data.status)
+        throw new BadRequestException("PAYOUT_STATUS_SYSTEM_MANAGED");
+      if (data.status === PayoutStatus.MAIL_GESENDET && old.status !== data.status)
+        throw new BadRequestException("PAYOUT_MAIL_STATUS_SYSTEM_MANAGED");
       for (const k of ["paidAt", "mailSentAt"]) if (data[k]) data[k] = new Date(data[k]);
-      if (data.paymentStatus === PayoutPaymentStatus.AUSBEZAHLT && !data.paidAt && !old.paidAt)
+      if (data.status === PayoutStatus.AUSBEZAHLT && !data.paidAt && !old.paidAt)
         data.paidAt = new Date();
       if (data.amount !== undefined)
         data.amount = new Prisma.Decimal(Number(data.amount).toFixed(2));
@@ -151,23 +195,32 @@ export class PayoutService {
     for (const id of ids) {
       const p = await this.prisma.payout.findUnique({ where: { id } });
       if (!p) result.push({ id, marked: false, reason: "NOT_FOUND" });
-      else if (p.paymentStatus === PayoutPaymentStatus.STORNIERT)
-        result.push({ id, marked: false, reason: "STORNIERT" });
+      else if (
+        p.status === PayoutStatus.STORNIERT ||
+        p.status === PayoutStatus.AUSBEZAHLT ||
+        p.status === PayoutStatus.VERSAND_LAEUFT
+      )
+        result.push({ id, marked: false, reason: "STATUS_NOT_SENDABLE" });
       else if (p.amount.lessThanOrEqualTo(0))
         result.push({ id, marked: false, reason: "INVALID_AMOUNT" });
       else {
         const recipient = p.recipientId
           ? await this.prisma.organizer.findUnique({ where: { id: p.recipientId } })
           : null;
-        const mailRecipient = (recipient?.email ?? p.mailRecipient)?.trim();
-        if (!mailRecipient) {
+        const previousEmail =
+          p.recipientSnapshot &&
+          typeof p.recipientSnapshot === "object" &&
+          !Array.isArray(p.recipientSnapshot)
+            ? (p.recipientSnapshot as Prisma.JsonObject).email
+            : null;
+        const recipientEmail = String(previousEmail ?? recipient?.email ?? "").trim();
+        if (!recipientEmail) {
           result.push({ id, marked: false, reason: "MISSING_MAIL_RECIPIENT" });
           continue;
         }
         await this.update(id, {
-          mailStatus: PayoutMailStatus.VERSENDEN,
-          recipientSnapshot: recipient ?? p.recipientSnapshot,
-          mailRecipient,
+          status: PayoutStatus.VERSANDBEREIT,
+          recipientSnapshot: snapshotWithEmail(recipient ?? p.recipientSnapshot, recipientEmail),
           userId,
         });
         result.push({ id, marked: true });
@@ -181,40 +234,5 @@ export class PayoutService {
       newValue: result,
     });
     return result;
-  }
-  claim(key: string, workflowId?: string) {
-    return this.prisma.$transaction(async (tx) => {
-      const old = await tx.automationClaim.findUnique({ where: { idempotencyKey: key } });
-      if (old) return tx.payout.findUnique({ where: { id: old.recordId }, include });
-      const p = await tx.payout.findFirst({
-        where: { mailStatus: PayoutMailStatus.VERSENDEN, automationClaimedAt: null },
-        include,
-      });
-      if (!p) return null;
-      const claimed = await tx.payout.updateMany({
-        where: { id: p.id, automationClaimedAt: null },
-        data: { automationClaimedAt: new Date(), automationWorkflowId: workflowId },
-      });
-      if (!claimed.count) return null;
-      await tx.automationClaim.create({
-        data: { domain: "payout", recordId: p.id, idempotencyKey: key, workflowId },
-      });
-      return tx.payout.findUnique({ where: { id: p.id }, include });
-    });
-  }
-  result(id: string, b: any) {
-    return b.success
-      ? this.update(id, {
-          mailStatus: PayoutMailStatus.GESENDET,
-          mailSentAt: b.mailSentAt ?? new Date(),
-          externalMessageId: b.externalMessageId,
-          n8nCorrelationId: b.correlationId,
-          automationLastError: null,
-        })
-      : this.update(id, {
-          automationLastError: b.error ?? "Automation failed",
-          automationRetryCount: { increment: 1 },
-          automationClaimedAt: null,
-        });
   }
 }

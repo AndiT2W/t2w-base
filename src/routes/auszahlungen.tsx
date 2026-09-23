@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { payoutStatusLabel, type PayoutStatus } from "@t2w/domain/payout";
 import { Ban, CircleCheck, Mail, Plus, Receipt, Search } from "lucide-react";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { RecordSheet } from "@/components/t2w/RecordSheet";
@@ -24,10 +25,9 @@ type Payout = {
   payoutNumber: string;
   amount: string;
   currency: string;
-  mailStatus: string;
-  paymentStatus: string;
+  status: PayoutStatus;
   transactionReference?: string | null;
-  mailRecipient?: string | null;
+  recipientSnapshot?: { name?: string | null; email?: string | null } | null;
   paidAt?: string | null;
   mailSentAt?: string | null;
   event?: { eventCode: string; name: string } | null;
@@ -45,11 +45,7 @@ export const Route = createFileRoute("/auszahlungen")({
   component: Auszahlungen,
 });
 function status(p: Payout) {
-  if (p.paymentStatus === "STORNIERT") return "Storniert";
-  if (p.paymentStatus === "AUSBEZAHLT") return "Ausbezahlt";
-  if (p.mailStatus === "GESENDET") return "Mail gesendet";
-  if (p.mailStatus === "VERSENDEN") return "Mail versenden";
-  return "Offen";
+  return payoutStatusLabel(p.status);
 }
 
 /**
@@ -70,7 +66,8 @@ type Spalte = (typeof SPALTEN_NAMEN)[number];
 const SORTIERWERT: Record<Spalte, (p: Payout) => string | number> = {
   "T-Nummer": (p) => p.payoutNumber,
   Event: (p) => p.event?.name ?? "",
-  Empfänger: (p) => p.recipient?.name ?? p.mailRecipient ?? "",
+  Empfänger: (p) =>
+    p.recipient?.name ?? p.recipientSnapshot?.name ?? p.recipientSnapshot?.email ?? "",
   Betrag: (p) => Number(p.amount),
   Status: (p) => status(p),
   "Mail gesendet am": (p) => p.mailSentAt ?? "",
@@ -80,7 +77,14 @@ const SORTIERWERT: Record<Spalte, (p: Payout) => string | number> = {
 const SPALTEN = SPALTEN_NAMEN.map((key) => ({ key, sortValue: SORTIERWERT[key] }));
 
 /** Die Reihenfolge der Chips; "Alle" steht vorne und ist die Grundstellung. */
-const STATUS_CHIPS = ["Offen", "Mail versenden", "Mail gesendet", "Ausbezahlt", "Storniert"];
+const STATUS_CHIPS = [
+  "Offen",
+  "Mail versenden",
+  "Versand läuft",
+  "Mail gesendet",
+  "Ausbezahlt",
+  "Storniert",
+];
 function Auszahlungen() {
   const workspace = useMemo(
     () => createPayoutWorkspace<Payout>(createHttpPayoutAdapter<Payout>()),
@@ -167,8 +171,14 @@ function Auszahlungen() {
       Storniert: leer(),
     };
     for (const p of rows) {
-      const name = status(p);
-      const ziel = name === "Mail gesendet" ? "Mail versenden" : name;
+      const ziel =
+        p.status === "VERSANDBEREIT" || p.status === "VERSAND_LAEUFT"
+          ? "Mail versenden"
+          : p.status === "AUSBEZAHLT"
+            ? "Ausbezahlt"
+            : p.status === "STORNIERT"
+              ? "Storniert"
+              : "Offen";
       const gruppe = gruppen[ziel];
       if (!gruppe) continue;
       gruppe.betrag += Number(p.amount);
@@ -489,22 +499,21 @@ function Auszahlungen() {
                 ))}
                 <td className="px-2 py-1">
                   <select
-                    aria-label={`${p.payoutNumber} Mailstatus`}
-                    value={p.mailStatus}
-                    onChange={(e) => void update(p.id, { mailStatus: e.target.value })}
+                    aria-label={`${p.payoutNumber} Status`}
+                    value={p.status}
+                    disabled={p.status === "VERSAND_LAEUFT"}
+                    onChange={(e) => void update(p.id, { status: e.target.value })}
                   >
                     <option value="ENTWURF">Entwurf</option>
-                    <option value="VERSENDEN">Mail versenden</option>
-                    <option value="GESENDET">Mail gesendet</option>
-                  </select>
-                  <select
-                    aria-label={`${p.payoutNumber} Zahlungsstatus`}
-                    value={p.paymentStatus}
-                    onChange={(e) => void update(p.id, { paymentStatus: e.target.value })}
-                  >
-                    <option>OFFEN</option>
-                    <option>AUSBEZAHLT</option>
-                    <option>STORNIERT</option>
+                    <option value="VERSANDBEREIT">Mail versenden</option>
+                    {p.status === "VERSAND_LAEUFT" && (
+                      <option value="VERSAND_LAEUFT">Versand läuft</option>
+                    )}
+                    {p.status === "MAIL_GESENDET" && (
+                      <option value="MAIL_GESENDET">Mail gesendet</option>
+                    )}
+                    <option value="AUSBEZAHLT">Ausbezahlt</option>
+                    <option value="STORNIERT">Storniert</option>
                   </select>
                   <Button variant="ghost" size="sm" onClick={() => void remove(p.id)}>
                     Löschen

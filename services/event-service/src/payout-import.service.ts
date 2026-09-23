@@ -10,12 +10,14 @@ export type ClickUpPayoutRow = {
   eventId?: string | null;
   eventCode?: string | null;
   recipientId?: string | null;
+  recipientEmail?: string | null;
+  /** Accepted temporarily for older import payloads; stored in recipientSnapshot.email. */
+  mailRecipient?: string | null;
   amount?: string | number;
   currency?: string;
   status?: string;
   transactionReference?: string;
   updatedAt?: string;
-  mailRecipient?: string;
 };
 export type PayoutImportReport = {
   total: number;
@@ -42,6 +44,15 @@ export class PayoutImportService {
     const amount = Number(raw);
     if (!raw || !Number.isFinite(amount) || amount < 0) throw new Error("INVALID_AMOUNT");
     const status = String(row.status ?? "").toLowerCase();
+    const payoutStatus = status.includes("ausbezahlt")
+      ? "AUSBEZAHLT"
+      : status.includes("storniert")
+        ? "STORNIERT"
+        : status.includes("gesendet")
+          ? "MAIL_GESENDET"
+          : status.includes("versenden")
+            ? "VERSANDBEREIT"
+            : "ENTWURF";
     return {
       clickUpId: row.id ?? row.taskId,
       eventId: row.eventId ?? null,
@@ -50,19 +61,10 @@ export class PayoutImportService {
       amount: amount.toFixed(2),
       currency: row.currency?.trim().toUpperCase() || "EUR",
       transactionReference: row.transactionReference,
-      mailRecipient: row.mailRecipient,
+      recipientEmail: row.recipientEmail ?? row.mailRecipient,
       notes: row.name,
       paidAt: status.includes("ausbezahlt") && row.updatedAt ? row.updatedAt : undefined,
-      paymentStatus: status.includes("ausbezahlt")
-        ? "AUSBEZAHLT"
-        : status.includes("storniert")
-          ? "STORNIERT"
-          : "OFFEN",
-      mailStatus: status.includes("gesendet")
-        ? "GESENDET"
-        : status.includes("versenden")
-          ? "VERSENDEN"
-          : "ENTWURF",
+      status: payoutStatus,
     };
   }
   async run(

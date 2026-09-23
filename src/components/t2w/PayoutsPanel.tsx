@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { isPayoutUnpaid, payoutStatusLabel, type PayoutStatus } from "@t2w/domain/payout";
 import { Button } from "@/components/ui/button";
 import { createHttpPayoutAdapter, createPayoutWorkspace } from "@/lib/t2w/payout-workspace";
 import { formatDatum } from "@/lib/t2w/format";
@@ -9,9 +10,8 @@ type P = {
   payoutNumber: string;
   amount: string;
   currency: string;
-  mailStatus: string;
-  paymentStatus: string;
-  mailRecipient?: string | null;
+  status: PayoutStatus;
+  recipientSnapshot?: { name?: string | null; email?: string | null } | null;
   paidAt?: string | null;
   mailSentAt?: string | null;
   transactionReference?: string | null;
@@ -38,7 +38,11 @@ type Props = {
 /** Sortierwerte der Auszahlungsspalten; die Aktionsspalte bleibt ungeordnet. */
 const SPALTEN = [
   { key: "Nummer", sortValue: (p: P) => p.payoutNumber },
-  { key: "Empfänger", sortValue: (p: P) => p.recipient?.name ?? p.mailRecipient ?? "" },
+  {
+    key: "Empfänger",
+    sortValue: (p: P) =>
+      p.recipient?.name ?? p.recipientSnapshot?.name ?? p.recipientSnapshot?.email ?? "",
+  },
   { key: "Betrag", sortValue: (p: P) => Number(p.amount) },
   { key: "Status", sortValue: (p: P) => label(p) },
   { key: "Maildatum", sortValue: (p: P) => p.mailSentAt ?? "" },
@@ -55,17 +59,14 @@ export type PayoutEventOption = {
 };
 
 function label(p: P) {
-  if (p.paymentStatus === "STORNIERT") return "Storniert";
-  if (p.paymentStatus === "AUSBEZAHLT") return "Ausbezahlt";
-  if (p.mailStatus === "GESENDET") return "Mail gesendet";
-  if (p.mailStatus === "VERSENDEN") return "Mail versenden";
-  return "Offen";
+  return payoutStatusLabel(p.status);
 }
-function statusClasses(p: P) {
-  if (p.paymentStatus === "AUSBEZAHLT") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (p.paymentStatus === "STORNIERT") return "border-red-200 bg-red-50 text-red-700";
-  if (p.mailStatus === "GESENDET") return "border-blue-200 bg-blue-50 text-blue-700";
-  if (p.mailStatus === "VERSENDEN") return "border-amber-200 bg-amber-50 text-amber-700";
+function statusClasses(status: PayoutStatus) {
+  if (status === "AUSBEZAHLT") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "STORNIERT") return "border-red-200 bg-red-50 text-red-700";
+  if (status === "MAIL_GESENDET") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (status === "VERSANDBEREIT" || status === "VERSAND_LAEUFT")
+    return "border-amber-200 bg-amber-50 text-amber-700";
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 export function PayoutsPanel({
@@ -88,8 +89,8 @@ export function PayoutsPanel({
    */
   useEffect(() => {
     if (!onKennzahlen) return;
-    const offen = items.filter((p) => p.paymentStatus === "OFFEN");
-    const ausbezahlt = items.filter((p) => p.paymentStatus === "AUSBEZAHLT");
+    const offen = items.filter((p) => isPayoutUnpaid(p.status));
+    const ausbezahlt = items.filter((p) => p.status === "AUSBEZAHLT");
     const summe = (liste: P[]) => liste.reduce((wert, p) => wert + Number(p.amount || 0), 0);
     onKennzahlen({
       waehrung: items[0]?.currency ?? "EUR",
@@ -114,7 +115,7 @@ export function PayoutsPanel({
     await workspace.create(scope, {
       eventId,
       recipientId,
-      mailRecipient: recipientEmail,
+      recipientEmail,
       amount,
       currency,
     });
@@ -186,7 +187,7 @@ export function PayoutsPanel({
             <tr key={p.id} className="border-t align-middle">
               <td className="px-2 py-1 font-mono">{p.payoutNumber}</td>
               <td className="px-2 py-1">
-                {p.recipient?.name ?? p.mailRecipient ?? recipientEmail ?? "—"}
+                {p.recipient?.name ?? p.recipientSnapshot?.name ?? recipientEmail ?? "—"}
               </td>
               <td className="px-2 py-1">
                 {p.amount} {p.currency}
@@ -194,7 +195,7 @@ export function PayoutsPanel({
               <td className="px-2 py-2">
                 <span
                   aria-label={`${p.payoutNumber} Status`}
-                  className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClasses(p)}`}
+                  className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusClasses(p.status)}`}
                 >
                   {label(p)}
                 </span>
@@ -206,20 +207,24 @@ export function PayoutsPanel({
                   sogar uebereinander. */}
               <td className="px-2 py-2">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void update(p.id, { mailStatus: "VERSENDEN" })}
-                  >
-                    Für Mail markieren
-                  </Button>
-                  {p.paymentStatus === "OFFEN" && p.mailStatus === "GESENDET" && (
+                  {p.status !== "AUSBEZAHLT" &&
+                    p.status !== "STORNIERT" &&
+                    p.status !== "VERSAND_LAEUFT" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void update(p.id, { status: "VERSANDBEREIT" })}
+                      >
+                        Für Mail markieren
+                      </Button>
+                    )}
+                  {p.status === "MAIL_GESENDET" && (
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() =>
                         void update(p.id, {
-                          paymentStatus: "AUSBEZAHLT",
+                          status: "AUSBEZAHLT",
                           paidAt: new Date().toISOString(),
                         })
                       }
@@ -260,7 +265,7 @@ export function PayoutCreateForm({
       body: JSON.stringify({
         eventId,
         recipientId: event?.payoutRecipientId,
-        mailRecipient: event?.payoutRecipient?.email,
+        recipientEmail: event?.payoutRecipient?.email,
         amount,
         currency,
       }),

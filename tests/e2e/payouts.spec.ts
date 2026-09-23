@@ -16,9 +16,8 @@ test("legt eine Auszahlung im Event-Finanzreiter an und lädt sie nach Reload", 
           payoutNumber: "T260001",
           amount: "125.50",
           currency: body.currency,
-          mailStatus: "ENTWURF",
-          paymentStatus: "OFFEN",
-          mailRecipient: "finance@example.test",
+          status: "ENTWURF",
+          recipientSnapshot: { name: "Nordwerk GmbH", email: "finance@example.test" },
         },
       ];
       return route.fulfill({ status: 201, json: payouts[0] });
@@ -52,11 +51,11 @@ test("legt eine Auszahlung im Event-Finanzreiter an und lädt sie nach Reload", 
   await expect(page.getByText("Mail versenden").last()).toBeVisible();
 
   // "Fuer Mail markieren" stellt den Beleg nur in die Warteschlange; auf
-  // GESENDET setzt ihn der Versandlauf im Dienst (automation.service.ts).
+  // MAIL_GESENDET setzt ihn der Versandlauf im Dienst (automation.service.ts).
   // Erst danach laesst sich ausbezahlt markieren -- die Attrappe muss diesen
   // Schritt also nachstellen, sonst wartet der Test auf eine Schaltflaeche,
   // die es zu Recht noch nicht gibt.
-  payouts = payouts.map((p) => ({ ...p, mailStatus: "GESENDET" }));
+  payouts = payouts.map((p) => ({ ...p, status: "MAIL_GESENDET" }));
   await page.reload();
   await page.getByRole("tab", { name: "Finanz" }).click();
   await expect(page.getByText("Mail gesendet").last()).toBeVisible();

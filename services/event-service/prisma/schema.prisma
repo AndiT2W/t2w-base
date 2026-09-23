@@ -345,13 +345,11 @@ model PmLegacySnapshot {
   createdAt DateTime @default(now())
 }
 
-enum PayoutMailStatus {
+enum PayoutStatus {
   ENTWURF
-  VERSENDEN
-  GESENDET
-}
-enum PayoutPaymentStatus {
-  OFFEN
+  VERSANDBEREIT
+  VERSAND_LAEUFT
+  MAIL_GESENDET
   AUSBEZAHLT
   STORNIERT
 }
@@ -370,26 +368,18 @@ model Payout {
   recipientSnapshot Json?
   amount Decimal @db.Decimal(18, 2)
   currency String @default("EUR")
-  mailStatus PayoutMailStatus @default(ENTWURF)
-  paymentStatus PayoutPaymentStatus @default(OFFEN)
+  status PayoutStatus @default(ENTWURF)
   transactionReference String?
   paidAt DateTime?
   mailSentAt DateTime?
-  mailRecipient String?
-  n8nCorrelationId String?
-  externalMessageId String?
-  automationWorkflowId String?
-  automationClaimedAt DateTime?
-  automationRetryCount Int @default(0)
-  automationLastError String?
   clickUpId String? @unique
   notes String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   event Event? @relation(fields: [eventId], references: [id], onDelete: SetNull)
   recipient Organizer? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
-  @@index([eventId, paymentStatus])
-  @@index([year, mailStatus])
+  @@index([eventId, status])
+  @@index([year, status])
   @@index([recipientId])
 }
 

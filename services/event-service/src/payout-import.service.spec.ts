@@ -20,8 +20,19 @@ describe("PayoutImportService", () => {
       eventId: null,
       amount: "125.50",
       currency: "CHF",
-      paymentStatus: "AUSBEZAHLT",
+      status: "AUSBEZAHLT",
     });
+  });
+  it("maps ClickUp mail and payment milestones into one payout status", () => {
+    expect(service.normalize({ taskId: "sent", amount: 10, status: "gesendet" }).status).toBe(
+      "MAIL_GESENDET",
+    );
+    expect(service.normalize({ taskId: "queued", amount: 10, status: "versenden" }).status).toBe(
+      "VERSANDBEREIT",
+    );
+    expect(service.normalize({ taskId: "created", amount: 10, status: "erstellt" }).status).toBe(
+      "ENTWURF",
+    );
   });
   it("normalizes European thousands separators without losing cents", () => {
     expect(service.normalize({ taskId: "cu-eu", amount: "€ 1.234,56" })).toMatchObject({

@@ -4,6 +4,8 @@ Track ingested evidence and source summaries here.
 
 ## Active Sources
 
+- [ClickUp-Auszahlungen 2026 (2026-09-23)](2026-09-23-clickup-auszahlungen-2026.md)
+
 - [Architecture scan: successor creation, category drafts and Event tables (2026-09-19)](2026-09-19-architecture-scan.md)
 
 - [Claude-Kommunikationsdesign: Nutzerauftrag und geprüfter Stand (2026-09-19)](2026-09-19-claude-kommunikation-design.md)

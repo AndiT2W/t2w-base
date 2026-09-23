@@ -40,10 +40,7 @@ export class PayoutController {
 @FinanceAccess()
 @Controller("api/v1/automation")
 export class AutomationController {
-  constructor(
-    private readonly payouts: PayoutService,
-    private readonly automation: AutomationService,
-  ) {}
+  constructor(private readonly automation: AutomationService) {}
   @Post("claims") claimGeneric(
     @Body() body: { domain: string; recordId: string; idempotencyKey: string; workflowId?: string },
   ) {
@@ -66,8 +63,16 @@ export class AutomationController {
   @Post("payouts/claim") claim(@Body() body: { idempotencyKey: string; workflowId?: string }) {
     return this.automation.claimNext({ domain: "payout", ...body });
   }
-  @Post("payouts/:id/result") result(@Param("id") id: string, @Body() body: any) {
-    return this.automation.result(id, body);
+  @Post("payouts/:id/result")
+  result(
+    @Param("id") id: string,
+    @Body()
+    body: { success: boolean; error?: string; externalId?: string; externalMessageId?: string },
+  ) {
+    return this.automation.result(id, {
+      ...body,
+      externalId: body.externalId ?? body.externalMessageId,
+    });
   }
 }
 
