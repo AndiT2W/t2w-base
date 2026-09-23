@@ -4,6 +4,7 @@ import {
   Bell,
   Calendar,
   Camera,
+  Check,
   CircleCheck,
   ClipboardList,
   Cloud,
@@ -133,6 +134,17 @@ const colorClasses: Record<ColorKey, string> = {
   petrol: "border-teal-300 bg-teal-100 text-teal-950",
   beere: "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-950",
 };
+/** Kräftige Punktfarbe für `SelectionToggleChip` -- ein Farbakzent statt eines eigenen Badges. */
+const dotClasses: Record<ColorKey, string> = {
+  tanne: "bg-emerald-600",
+  blau: "bg-sky-600",
+  violett: "bg-violet-600",
+  amber: "bg-amber-600",
+  rot: "bg-rose-600",
+  graphit: "bg-slate-600",
+  petrol: "bg-teal-600",
+  beere: "bg-fuchsia-600",
+};
 /** Symbole der Nachrichtenarten; die Sprechblase ist der Rückfall für unbekannte Arten. */
 /**
  * Ein Symbolsatz für alle Auswahllisten.  Vorher gab es drei getrennte --
@@ -261,3 +273,52 @@ export function ServiceBadge({
 }
 
 export const SelectionBadge = ServiceBadge;
+
+/**
+ * Toggle-Chip für Mehrfachauswahl (z.B. Leistungen im Eventformular).  Anders
+ * als `ServiceBadge` steckt hier kein Badge in einem Button -- die Farbe
+ * zeigt sich als Punkt, Auswahl über Rahmen/Hintergrund und ein Häkchen.
+ */
+export function SelectionToggleChip({
+  name,
+  icon,
+  color,
+  selected,
+  onClick,
+}: {
+  name: string;
+  icon?: string | null | undefined;
+  color?: string | null | undefined;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const presentation = servicePresentation({
+    name,
+    ...(icon === undefined ? {} : { icon }),
+    ...(color === undefined ? {} : { color }),
+  });
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border px-3 text-sm transition-colors",
+        selected
+          ? "border-foreground/30 bg-secondary font-medium text-foreground"
+          : "border-input text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <span
+        className={cn(
+          "size-3 shrink-0 rounded-full",
+          dotClasses[presentation.color],
+          !selected && "opacity-40",
+        )}
+        aria-hidden="true"
+      />
+      <span className="truncate">{name}</span>
+      {selected && <Check className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+    </button>
+  );
+}

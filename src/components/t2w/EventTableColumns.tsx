@@ -70,7 +70,7 @@ const HEAD_CLASS: Partial<Record<EventColumn, string>> = {
 const CELL_CLASS: Partial<Record<EventColumn, string>> = {
   Status: "w-12 max-w-[3rem] !px-1",
   TIME2WIN: "w-14 max-w-14 whitespace-nowrap !px-1 tabular-nums",
-  Event: "max-w-[16rem] font-medium",
+  Event: "max-w-[26rem] font-medium",
   Veranstalter: "max-w-[10rem]",
   Sportart: "max-w-[9rem]",
   Services: "max-w-[12rem]",

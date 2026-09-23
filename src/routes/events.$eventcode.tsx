@@ -101,7 +101,11 @@ import { personName, type Kunde } from "@/lib/crm/types";
 import { HardwareWorkspace } from "@/components/t2w/HardwareWorkspace";
 import { PayoutsPanel, type PayoutKennzahlen } from "@/components/t2w/PayoutsPanel";
 import { FilterResetChip } from "@/components/t2w/FilterChip";
-import { ServiceBadge, SelectionBadge, selectionPresentation } from "@/components/t2w/ServiceBadge";
+import {
+  SelectionBadge,
+  SelectionToggleChip,
+  selectionPresentation,
+} from "@/components/t2w/ServiceBadge";
 import { PageHeader } from "@/components/t2w/PageHeader";
 import { Segment, segmentFeld } from "@/components/t2w/Segment";
 import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
@@ -1354,10 +1358,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 {services.map((service) => {
                   const gesetzt = form.serviceIds?.includes(service.id) ?? false;
                   return (
-                    <button
+                    <SelectionToggleChip
                       key={service.id}
-                      type="button"
-                      aria-pressed={gesetzt}
+                      {...service}
+                      selected={gesetzt}
                       onClick={() => {
                         const bisher = form.serviceIds ?? [];
                         const serviceIds = gesetzt
@@ -1371,15 +1375,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                             .map((item) => item.name),
                         );
                       }}
-                      className={cn(
-                        "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-sm transition-colors",
-                        gesetzt
-                          ? "border-primary bg-primary/10 font-semibold text-foreground"
-                          : "border-input text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      <ServiceBadge {...service} />
-                    </button>
+                    />
                   );
                 })}
                 {services.length === 0 && (
