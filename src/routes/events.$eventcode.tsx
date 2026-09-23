@@ -103,6 +103,7 @@ import { PayoutsPanel, type PayoutKennzahlen } from "@/components/t2w/PayoutsPan
 import { FilterResetChip } from "@/components/t2w/FilterChip";
 import {
   SelectionBadge,
+  SelectionIcon,
   SelectionToggleChip,
   selectionPresentation,
 } from "@/components/t2w/ServiceBadge";
@@ -1283,12 +1284,25 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <Feld label="Sportart">
                 <Select value={form.sportartId ?? ""} onValueChange={(id) => set("sportartId", id)}>
                   <SelectTrigger aria-label="Sportart">
-                    <SelectValue placeholder="Sportart auswählen" />
+                    {(() => {
+                      const gewaehlt = sportarten.find((sport) => sport.id === form.sportartId);
+                      return gewaehlt ? (
+                        <span className="flex min-w-0 items-center gap-2">
+                          <SelectionIcon {...gewaehlt} />
+                          <span className="truncate">{gewaehlt.name}</span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">Sportart auswählen</span>
+                      );
+                    })()}
                   </SelectTrigger>
                   <SelectContent>
                     {sportarten.map((sport) => (
                       <SelectItem key={sport.id} value={sport.id}>
-                        <SelectionBadge {...sport} />
+                        <span className="flex min-w-0 items-center gap-2">
+                          <SelectionIcon {...sport} />
+                          <span className="truncate">{sport.name}</span>
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>

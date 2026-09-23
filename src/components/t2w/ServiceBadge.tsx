@@ -144,6 +144,17 @@ const fillClasses: Record<ColorKey, string> = {
   petrol: "bg-teal-600",
   beere: "bg-fuchsia-600",
 };
+/** Textfarbe für freistehende Symbole (z.B. im Sportart-Feld) -- kein Badge, nur ein farbiges Icon. */
+const accentTextClasses: Record<ColorKey, string> = {
+  tanne: "text-emerald-600",
+  blau: "text-sky-600",
+  violett: "text-violet-600",
+  amber: "text-amber-600",
+  rot: "text-rose-600",
+  graphit: "text-slate-600",
+  petrol: "text-teal-600",
+  beere: "text-fuchsia-600",
+};
 /** Symbole der Nachrichtenarten; die Sprechblase ist der Rückfall für unbekannte Arten. */
 /**
  * Ein Symbolsatz für alle Auswahllisten.  Vorher gab es drei getrennte --
@@ -228,6 +239,46 @@ export function servicePresentation(service: {
   return { Icon: icons[icon], className: colorClasses[color], icon, color, hochgeladen: null };
 }
 export const selectionPresentation = servicePresentation;
+
+/**
+ * Freistehendes Symbol in Auswahllistenfarbe, ohne Badge-Rahmen -- für
+ * Stellen wie den Sportart-Select, wo ein Badge im Trigger doppelten
+ * Rahmen erzeugen würde.
+ */
+export function SelectionIcon({
+  name,
+  icon,
+  color,
+  className,
+}: {
+  name: string;
+  icon?: string | null | undefined;
+  color?: string | null | undefined;
+  className?: string;
+}) {
+  const presentation = servicePresentation({
+    name,
+    ...(icon === undefined ? {} : { icon }),
+    ...(color === undefined ? {} : { color }),
+  });
+  if (presentation.hochgeladen)
+    return (
+      <img
+        src={symbolQuelle(presentation.hochgeladen)}
+        alt=""
+        aria-hidden="true"
+        className={cn("size-4 shrink-0 object-contain", className)}
+      />
+    );
+  const Icon = presentation.Icon;
+  return (
+    <Icon
+      className={cn("size-4 shrink-0", accentTextClasses[presentation.color], className)}
+      aria-hidden="true"
+    />
+  );
+}
+
 export function ServiceBadge({
   name,
   icon,
