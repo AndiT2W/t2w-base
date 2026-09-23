@@ -185,12 +185,11 @@ export function ProjectManagement({
                             ? {}
                             : {
                                 onAppend: async (predecessorId: string, title: string) => {
-                                  const created = await interaction.create(
+                                  const created = await interaction.createSuccessor(
                                     { title, groupId: category.groupId, eventId: state.event.id },
-                                    true,
+                                    predecessorId,
                                   );
-                                  if (created) await interaction.addDependency(predecessorId);
-                                  interaction.close();
+                                  return created;
                                 },
                               })}
                         />

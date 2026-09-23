@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -11,31 +11,16 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import { StatusDot, StatusLegend } from "@/components/t2w/StatusBadge";
+import { StatusLegend } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
-import { heuteIso, tageZwischen } from "@/lib/t2w/format";
-import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
-import { cn } from "@/lib/utils";
+import { heuteIso } from "@/lib/t2w/format";
+import { STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
 import { useI18n } from "@/lib/i18n";
 import { activeEvents } from "@/lib/t2w/event-projections";
-import {
-  ColumnPicker,
-  DataTable,
-  TableToolbar,
-  useTableBehavior,
-} from "@/components/t2w/DataTable";
-import {
-  EVENT_COLUMNS,
-  EVENT_SORT_COLUMNS,
-  EventHeaderCells,
-  EventRowCells,
-  type EventColumn,
-} from "@/components/t2w/EventTableColumns";
-import { EventMobileList } from "@/components/t2w/EventMobileList";
+import { EventTablePresentation } from "@/components/t2w/EventTablePresentation";
 import { FilterChip, FilterResetChip, ToggleChip } from "@/components/t2w/FilterChip";
 import { MetricRow, MetricTile } from "@/components/t2w/MetricTile";
-import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
-import { Input } from "@/components/ui/input";
+import { FilterTrenner } from "@/components/t2w/FilterBar";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -82,14 +67,6 @@ function Uebersicht() {
   const [filter, setFilter] = useState<Schnellfilter>("alle");
   const [status, setStatus] = useState<EventStatus | "alle">("alle");
   const [suche, setSuche] = useState("");
-  const tableRef = useRef<HTMLTableElement>(null);
-  const table = useTableBehavior<T2WEvent, EventColumn>({
-    storageKey: "t2w-overview-table-columns",
-    columns: EVENT_SORT_COLUMNS,
-    initialSort: { key: "Zeitraum", direction: "asc" },
-  });
-  const { visibleColumns, toggleColumn, moveColumn, sort } = table;
-
   const aktive = useMemo(() => activeEvents(events), [events]);
 
   const kpi = useMemo(() => {
@@ -124,9 +101,6 @@ function Uebersicht() {
           : true,
       );
   }, [aktive, filter, status, suche, heute]);
-  const zeilen = table.rows(gefilterte);
-  const sortiere = table.sortBy;
-
   return (
     <div>
       <PageHeader
@@ -230,23 +204,14 @@ function Uebersicht() {
           />
         </MetricRow>
 
-        <FilterBar
-          werkzeuge={
-            <div className="hidden md:block">
-              <TableToolbar
-                tableRef={tableRef}
-                exportName="Übersicht"
-                columnPicker={
-                  <ColumnPicker
-                    columns={EVENT_COLUMNS}
-                    visibleColumns={visibleColumns}
-                    toggleColumn={toggleColumn}
-                    moveColumn={moveColumn}
-                  />
-                }
-              />
-            </div>
-          }
+        <EventTablePresentation
+          events={gefilterte}
+          settings={settings}
+          selectionLists={selectionLists}
+          tableId="t2w-overview-table-columns"
+          exportName="Übersicht"
+          emptyText="Keine Events für diese Schnellfilter."
+          statusTitle={(status) => t(`status.${status}` as Parameters<typeof t>[0])}
         >
           {/* Kein eigenes Suchfeld: die Uebersicht zeigt die naechsten 14 Tage
               und filtert ueber die Chips.  Gesucht wird oben in der Kopfzeile
@@ -288,52 +253,12 @@ function Uebersicht() {
               setSuche("");
             }}
           />
-        </FilterBar>
-
-        <EventMobileList
-          events={zeilen}
-          settings={settings}
-          selectionLists={selectionLists}
-          emptyText="Keine Events für diese Schnellfilter."
-        />
-        <div className="hidden md:block">
-          <DataTable ref={tableRef} exportName="Übersicht" tools="extern" className="min-w-[54rem]">
-            <thead className="text-left">
-              <tr>
-                <EventHeaderCells visibleColumns={visibleColumns} sort={sort} onSort={sortiere} />
-              </tr>
-            </thead>
-            <tbody>
-              {zeilen.map((e) => (
-                <tr key={e.id}>
-                  <EventRowCells
-                    event={e}
-                    visibleColumns={visibleColumns}
-                    context={{
-                      settings,
-                      selectionLists,
-                      statusTitle: (status) => t(`status.${status}` as Parameters<typeof t>[0]),
-                    }}
-                  />
-                </tr>
-              ))}
-              {zeilen.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={visibleColumns.length}
-                    className="px-2 py-8 text-center text-muted-foreground"
-                  >
-                    Keine Events für diese Schnellfilter.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </DataTable>
-        </div>
+        </EventTablePresentation>
         <StatusLegend />
 
         <p className="text-xs text-muted-foreground">
-          {zeilen.length} Zeilen · Aufg. = offene Aufgaben, OL/SP = Outlook- bzw. SharePoint-Ordner
+          {gefilterte.length} Zeilen · Aufg. = offene Aufgaben, OL/SP = Outlook- bzw.
+          SharePoint-Ordner
         </p>
       </div>
     </div>

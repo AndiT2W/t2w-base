@@ -6,6 +6,8 @@ This project is now defined as GCW Base, an integrated CRM, project management, 
 
 ## Current State
 
+- Architekturvertiefung vom 2026-09-23: Die Nachfolgeranlage ist eine atomare Planungsintention mit erhaltener Eingabe bei Konflikt; Kommunikationssuche und -auswahl liegen in einem eigenen Anzeigemodul; Übersicht und Veranstaltungsliste teilen sich ein Präsentationsmodul mit getrennten Filtern und Präferenzen. Siehe [Architekturvertiefung 2026-09-23](concepts/architecture-deepening-2026-09-23.md).
+
 - Die gemeinsamen `DataTable`-Listen bieten einen Excel-Export als `.xlsx` des aktuell sichtbaren Tabellenstands; Auswahl- und Aktionsspalten bleiben ausgenommen. Der Auditlog behält zusätzlich seinen CSV-Export. Die neuen PM-Darstellungen sind derzeit ausgenommen; siehe [Gemeinsame kompakte Datentabellen](concepts/shared-compact-data-tables.md) und [Design-Quellnachweis](sources/2026-09-18-claude-pm-design.md).
 
 - Der Kunden-Importstand wurde am 2026-09-15 gegen 164 PDF-Rechnungen abgeglichen und anschließend produktiv nach Hostinger importiert: 123 Rechnungs-Kunden, alle Belege genau einmal zugeordnet, 18 zuvor fehlende Belege ergänzt und vier klare Dublettenzeilen zusammengeführt. Der Import aktualisierte 109 bestehende Organisationskonten und ergänzte 14 neue; 106 Primärkontakte sind gesetzt. Widersprüchliche oder abgeleitete Werte bleiben in der Arbeitsmappe markiert. Siehe [Rechnungen-Kundenstamm-Abgleich 2026](sources/2026-09-15-rechnungen-kundenstamm-abgleich.md).

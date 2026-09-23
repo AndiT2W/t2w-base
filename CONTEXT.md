@@ -32,9 +32,13 @@ The Event detail workspace coordinates a single Event detail interaction. It own
 
 A TIME2WIN synchronization outcome is a user-facing result of refreshing the linked TIME2WIN Event. A failed outcome does not block Event editing and preserves the last successful TIME2WIN snapshot.
 
+**Event communication display**: The searchable, filterable account of messages and recorded activities for one Event, shown as a chronological history or grouped conversations. It answers what happened and where to find it; replies and completion remain in Outlook. Source: [communication display decision](wiki/concepts/communication-display-design.md), 2026-09-19.
+
 ## Table preferences
 
 Table behavior consists of generic column definitions, persisted visibility, locale-aware sorting, stable ordering, and preference recovery. Domain-specific filtering remains owned by the containing workspace. Browser storage is an adapter, not part of the table behavior’s core interface.
+
+**Event list presentation**: The shared visible Event rows and mobile cards used by Übersicht and Veranstaltungen. Each view retains its own Event selection and filter criteria. Source: [Event list display foundation](wiki/concepts/event-list-display-design.md), 2026-09-19.
 
 ## Selection lists
 

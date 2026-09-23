@@ -55,7 +55,8 @@ export type PmGlobal = {
   readOnly?: boolean;
 };
 export type PmCommand = {
-  type: "create" | "update" | "delete" | "add-dependency" | "remove-dependency";
+  type:
+    "create" | "create-successor" | "update" | "delete" | "add-dependency" | "remove-dependency";
   taskId?: string;
   taskVersion?: number;
   task?: Partial<Task>;
@@ -149,6 +150,8 @@ function createPmTaskInteractionAdapter<TState extends { tasks: readonly Task[] 
   };
   return {
     create: (draft) => execute({ type: "create", task: draft }),
+    createSuccessor: (draft, predecessorId) =>
+      execute({ type: "create-successor", task: draft, predecessorId }),
     update: (task, draft) =>
       execute({ type: "update", taskId: task.id, taskVersion: task.version, task: draft }),
     delete: (task) => execute({ type: "delete", taskId: task.id, taskVersion: task.version }),

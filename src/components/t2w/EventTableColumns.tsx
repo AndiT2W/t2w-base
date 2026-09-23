@@ -16,8 +16,8 @@ import { STATUS_LABEL, type EventStatus, type Settings, type T2WEvent } from "@/
 /**
  * Die Eventtabelle von Übersicht und Veranstaltungen.  Beide Seiten zeigen
  * dieselben Spalten mit denselben Zellen; hier stehen sie einmal, damit sie
- * nicht auseinanderlaufen.  Die Seiten behalten ihre eigenen Filter, ihre
- * Zeilenmarkierungen und ihre Präferenzkennung.
+ * nicht auseinanderlaufen. `EventTablePresentation` hält die gemeinsame
+ * Darstellung zusammen; die Seiten wählen Events und ihre Präferenzkennung.
  *
  * Kopf und Zellen werden in der Reihenfolge von `visibleColumns` ausgegeben —
  * die im Spaltenmenü gewählte Reihenfolge ist damit auch die Anzeigereihenfolge.

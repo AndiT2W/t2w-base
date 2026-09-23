@@ -1,13 +1,15 @@
 ---
 title: Architecture scan after planning and category changes
 type: source
-status: candidates-awaiting-selection
-updated: 2026-09-19
+status: partly-implemented
+updated: 2026-09-23
 ---
 
 # Architecture candidates at `81c694b3`
 
 Source: user invocation of `improve-codebase-architecture`, 2026-09-19; source inspection at commit `81c694b3`, an independent PM explorer, and an isolated in-memory failure probe. These are proposals, not accepted architectural decisions. No application implementation changed.
+
+Update, 2026-09-23: Candidate 1 and the shared Event table candidate 3 were implemented after a fresh review; see [architecture deepening](../concepts/architecture-deepening-2026-09-23.md). Candidate 2 (category draft/version recovery) remains open. The 2026-09-23 review instead selected an additional Event communication display candidate, also implemented. The observations below remain the original scan evidence.
 
 ## Scope and prior work
 

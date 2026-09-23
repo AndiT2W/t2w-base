@@ -27,7 +27,8 @@ type Command = {
   graphVersion?: number;
   taskVersion?: number;
   taskId?: string;
-  type: "create" | "update" | "delete" | "add-dependency" | "remove-dependency";
+  type:
+    "create" | "create-successor" | "update" | "delete" | "add-dependency" | "remove-dependency";
   task?: Partial<Task> & { scope?: "EVENT" | "GLOBAL"; eventId?: string | null };
   predecessorId?: string;
 };
@@ -170,9 +171,18 @@ export class ProjectManagementService {
   private async mutate(scope: Scope, input: Command, actor: PmActor) {
     if (
       !input ||
-      !["create", "update", "delete", "add-dependency", "remove-dependency"].includes(input.type)
+      ![
+        "create",
+        "create-successor",
+        "update",
+        "delete",
+        "add-dependency",
+        "remove-dependency",
+      ].includes(input.type)
     )
       throw new BadRequestException("Ungültiges Kommando.");
+    if (input.type === "create-successor" && input.taskId)
+      throw new BadRequestException("Nachfolger benötigt eine neue Aufgabe.");
     return this.prisma.$transaction(async (tx) => {
       await this.ensureScope(tx, scope, actor);
       if (scope.scope === "EVENT") {
@@ -187,7 +197,11 @@ export class ProjectManagementService {
       }
       const current = await this.state(tx, scope),
         before = current.tasks.find((task) => task.id === input.taskId);
-      if (input.type !== "create" && (!before || before.version !== input.taskVersion))
+      if (
+        input.type !== "create" &&
+        input.type !== "create-successor" &&
+        (!before || before.version !== input.taskVersion)
+      )
         throw new ConflictException("Aufgabe wurde geändert.");
       const taskId = before?.id ?? randomUUID();
       try {
@@ -206,7 +220,11 @@ export class ProjectManagementService {
             },
             tx,
           );
-        } else if (input.type === "create" || input.type === "update") {
+        } else if (
+          input.type === "create" ||
+          input.type === "create-successor" ||
+          input.type === "update"
+        ) {
           const patch = input.task ?? {};
           const after: Task = {
             id: taskId,
@@ -237,6 +255,12 @@ export class ProjectManagementService {
           )
             throw new Error("Ungültiger Text.");
           validateTaskChange(before ?? null, after, current.tasks, current.edges, current);
+          const successorEdge =
+            input.type === "create-successor"
+              ? { predecessorId: input.predecessorId ?? "", successorId: taskId }
+              : null;
+          if (successorEdge)
+            validateDependency([...current.tasks, after], current.edges, successorEdge);
           const data = {
             scope: after.scope,
             eventId: after.eventId,
@@ -253,12 +277,17 @@ export class ProjectManagementService {
           if (after.ownerId) await this.validateOwner(tx, scope, after.ownerId);
           if (before) await tx.pmTask.update({ where: { id: taskId }, data });
           else await tx.pmTask.create({ data: { id: taskId, ...data } });
+          if (successorEdge) await tx.pmDependency.create({ data: successorEdge });
           await tx.pmActivity.create({
             data: {
               taskId,
               actorId: actor.id,
               action: input.type,
-              details: json({ before: before ?? null, after }),
+              details: json({
+                before: before ?? null,
+                after,
+                ...(successorEdge ? { dependency: successorEdge } : {}),
+              }),
             },
           });
           await this.audit.append(
@@ -267,7 +296,11 @@ export class ProjectManagementService {
               entityId: taskId,
               action: input.type,
               userId: actor.id,
-              details: { before: before ?? null, after },
+              details: {
+                before: before ?? null,
+                after,
+                ...(successorEdge ? { dependency: successorEdge } : {}),
+              },
             },
             tx,
           );

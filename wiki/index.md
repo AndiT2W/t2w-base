@@ -2,7 +2,8 @@
 
 ## Core Pages
 
-- [Architecture candidates, 2026-09-19](sources/2026-09-19-architecture-scan.md) (review complete; selection pending)
+- [Architekturvertiefung vom 2026-09-23](concepts/architecture-deepening-2026-09-23.md) (Nachfolger, Kommunikation, Eventlisten)
+- [Architecture candidates, 2026-09-19](sources/2026-09-19-architecture-scan.md) (historischer Scan; Kategorie-Entwurf offen)
 
 - [Projektmanagement: verbindliche Designgrundlage](concepts/project-management-design.md) (Claude-Überarbeitung, bestätigt am 2026-09-18; vor PM-UI-Änderungen lesen)
 

@@ -48,14 +48,21 @@ test("keeps a duplicate-title Aufgabe selected after creation and reload", async
   const title = `Doppelte Aufgabe ${randomUUID().slice(0, 6)}`;
 
   await page.goto("/aufgaben");
-  await page.getByRole("button", { name: "Globale Aufgabe anlegen" }).click();
+  await page
+    .locator("header")
+    .getByRole("button", { name: "Globale Aufgabe", exact: true })
+    .click();
   await page.getByLabel("Titel").fill(title);
   await page.getByRole("button", { name: "Aufgabe anlegen" }).click();
   await page.getByLabel("Beschreibung").fill("Erste gleichnamige Aufgabe");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
-  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Detail schließen" }).click();
+  await expect(page.getByRole("dialog", { name: "Aufgabe bearbeiten" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Globale Aufgabe anlegen" }).click();
+  await page
+    .locator("header")
+    .getByRole("button", { name: "Globale Aufgabe", exact: true })
+    .click();
   await page.getByLabel("Titel").fill(title);
   await page.getByRole("button", { name: "Aufgabe anlegen" }).click();
   await expect(page.getByLabel("Beschreibung")).toHaveValue("");
@@ -99,16 +106,17 @@ test("keeps categories closed, expands the sequential table and blocks premature
   });
   expect(response.ok()).toBeTruthy();
   await page.goto(`/events/${event.eventCode}?tab=aufgaben`);
-  await expect(page.getByRole("heading", { name: "Aufgaben", exact: true })).toBeVisible();
-  await expect(page.getByRole("table")).toHaveCount(0);
-  const category = page.getByRole("button", { name: /Ohne Kategorie.*Blockiert oder überfällig/ });
+  const planning = page.getByRole("region", { name: "Projektmanagement" });
+  await expect(planning).toBeVisible();
+  await expect(planning.getByRole("table")).toHaveCount(0);
+  const category = planning.getByRole("button", { name: /Ohne Kategorie.*warten auf Vorgänger/ });
   await category.click();
-  await expect(page.getByRole("table")).toContainText(printTitle);
-  await page.getByRole("table").getByRole("button", { name: printTitle }).click();
-  await expect(page.getByText(`Blockiert durch ${setupTitle}`, { exact: true })).toBeVisible();
+  await expect(planning).toContainText(printTitle);
+  await planning.getByRole("button", { name: printTitle }).click();
+  await expect(page.getByRole("dialog", { name: "Aufgabe bearbeiten" })).toContainText(setupTitle);
   await page.getByLabel("Beschreibung").fill("Freigabe: https://example.test/print");
-  await page.getByLabel("Start").fill("2026-09-15");
-  await page.getByLabel("Ende").fill("2026-09-18");
+  await page.getByRole("textbox", { name: "Start", exact: true }).fill("2026-09-15");
+  await page.getByRole("textbox", { name: "Ende", exact: true }).fill("2026-09-18");
   await expect(page.getByLabel("Beschreibung")).toHaveValue(/example\.test/);
 });
 test("shows dependent and independent category tasks separately", async ({ page }) => {
@@ -133,13 +141,69 @@ test("shows dependent and independent category tasks separately", async ({ page 
   expect(response.ok()).toBeTruthy();
 
   await page.goto(`/events/${event.eventCode}?tab=aufgaben`);
-  const dependentFlow = page.getByRole("group", { name: "Abhängiger Ablauf" });
-  await expect(dependentFlow).toContainText(designTitle);
-  await expect(dependentFlow).toContainText(printTitle);
-  await expect(dependentFlow).not.toContainText(allocationTitle);
-  await expect(page.getByRole("group", { name: "Weitere Aufgaben" })).toContainText(
+  const planning = page.getByRole("region", { name: "Projektmanagement" });
+  await planning.getByRole("button", { name: /Ohne Kategorie/ }).click();
+  await expect(
+    planning.getByRole("button", { name: new RegExp(`^${designTitle} `) }),
+  ).toBeVisible();
+  await expect(planning.getByRole("button", { name: new RegExp(`^${printTitle} `) })).toBeVisible();
+  await expect(planning.getByRole("table", { name: /Aufgaben ohne Vorgänger/ })).toContainText(
     allocationTitle,
   );
+  await expect(planning.getByRole("table", { name: /Aufgaben ohne Vorgänger/ })).not.toContainText(
+    printTitle,
+  );
+});
+test("creates a successor as one intent and keeps the draft after a conflict", async ({ page }) => {
+  const event = await fixture(page);
+  const first = await create(page, event.id, "Briefing vorbereiten");
+  const last = await create(page, event.id, "Briefing freigeben");
+  const beforeLink = await (await page.request.get(`/api/v1/pm/events/${event.id}`)).json();
+  const linked = await page.request.post(`/api/v1/pm/events/${event.id}/commands`, {
+    data: {
+      type: "add-dependency",
+      graphVersion: beforeLink.event.pmGraphVersion,
+      taskId: last.id,
+      taskVersion: last.version,
+      predecessorId: first.id,
+    },
+  });
+  expect(linked.ok()).toBeTruthy();
+
+  await page.goto(`/events/${event.eventCode}?tab=aufgaben`);
+  await page.getByRole("button", { name: /Ohne Kategorie/ }).click();
+  await page.getByRole("button", { name: "Nachfolger", exact: true }).click();
+  const input = page.getByLabel("Nachfolger von Briefing freigeben");
+  const title = `Druck beauftragen ${randomUUID().slice(0, 6)}`;
+  await input.fill(title);
+
+  let rejected = false;
+  await page.route(`**/api/v1/pm/events/${event.id}/commands`, async (route) => {
+    if (!rejected && route.request().postDataJSON()?.type === "create-successor") {
+      rejected = true;
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Event wurde geändert. Aktuellen Stand laden." }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  await input.press("Enter");
+  await expect(page.getByRole("alert")).toContainText("Event wurde geändert");
+  await expect(input).toHaveValue(title);
+  expect(
+    (await (await page.request.get(`/api/v1/pm/events/${event.id}`)).json()).tasks,
+  ).toHaveLength(2);
+
+  await input.press("Enter");
+  await expect(page.getByText(title, { exact: true })).toBeVisible();
+  await page.reload();
+  const state = await (await page.request.get(`/api/v1/pm/events/${event.id}`)).json();
+  const successor = state.tasks.find((task: { title: string }) => task.title === title);
+  expect(successor).toBeTruthy();
+  expect(state.edges).toContainEqual({ predecessorId: last.id, successorId: successor.id });
 });
 test("keeps an Event Task detail editable from the Event and combined planning views", async ({
   page,
@@ -213,16 +277,9 @@ test("groups the combined overview by event and category, then retains filters a
   const taskOverview = page.getByTestId("task-overview");
   await expect(taskOverview).toContainText(globalTitle);
   await expect(taskOverview).toContainText("Event-Aufgabe");
-  const globalCategory = taskOverview
-    .getByTestId("task-category-card")
-    .filter({ hasText: globalTitle });
-  await expect(globalCategory).toHaveAttribute("data-category-tone", "hardware");
-  await globalCategory.getByRole("button", { name: /Workflow anzeigen/ }).click();
-  await expect(
-    globalCategory.locator("ul").getByRole("button", { name: new RegExp(globalTitle) }),
-  ).toBeVisible();
-  await page.getByText("Weitere Filter", { exact: true }).click();
-  await page.locator("#task-priority").selectOption("HIGH");
+  await expect(taskOverview).toContainText(categoryName);
+  await expect(taskOverview.getByRole("button", { name: globalTitle })).toBeVisible();
+  await page.getByRole("combobox", { name: "Priorität" }).selectOption("HIGH");
   await expect(taskOverview).toContainText(globalTitle);
   await expect(taskOverview).not.toContainText("Event-Aufgabe");
   await page.getByRole("button", { name: "Gantt", exact: true }).click();

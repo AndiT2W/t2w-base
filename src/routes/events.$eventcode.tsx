@@ -93,7 +93,8 @@ import { useI18n } from "@/lib/i18n";
 import { formatDatum, formatDatumMitZeit, formatZeitraum, heuteIso } from "@/lib/t2w/format";
 import { buildEventcode, copyDateSuggestion, jahr } from "@/lib/t2w/eventcode";
 import { createEventDetailWorkspace } from "@/lib/t2w/event-detail-workspace";
-import { highlightSegments, projectCommunicationTimeline } from "@/lib/t2w/communication-timeline";
+import { highlightSegments } from "@/lib/t2w/communication-timeline";
+import { createCommunicationDisplayWorkspace } from "@/lib/t2w/communication-display-workspace";
 import { resolveEventFolderNavigation } from "@/lib/t2w/folder-navigation";
 import { STATUS_ORDER, type Contact, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
 import { personName, type Kunde } from "@/lib/crm/types";
@@ -513,62 +514,31 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     ),
   );
   const [createRelationship, setCreateRelationship] = useState(true);
-  // "all" oder der Name einer konfigurierten Nachrichtenart.
-  const [communicationChannel, setCommunicationChannel] = useState<string>("all");
-  const [communicationContactFilter, setCommunicationContactFilter] = useState("all");
-  const [communicationTopicFilter, setCommunicationTopicFilter] = useState("all");
-  const [communicationDirection, setCommunicationDirection] = useState<
-    "all" | "INCOMING" | "OUTGOING"
-  >("all");
-  const [communicationSearch, setCommunicationSearch] = useState("");
-  const [communicationAttachmentsOnly, setCommunicationAttachmentsOnly] = useState(false);
-  const [communicationView, setCommunicationView] = useState<"verlauf" | "konversationen">(
-    "verlauf",
-  );
-  const [openConversation, setOpenConversation] = useState<string | null>(null);
   const [showActivityForm, setShowActivityForm] = useState(false);
-  const [selectedCommunicationId, setSelectedCommunicationId] = useState<string | null>(null);
   const communicationChannelOptions = selectionLists.communicationChannels;
   const communicationTopicOptions = selectionLists.communicationTopics;
   const sportarten = selectionListChoices(selectionLists.sports, form.sportartId);
   const services = selectionListChoices(selectionLists.services).filter(
     (service) => service.active || form.serviceIds?.includes(service.id),
   );
-  const communicationTimeline = useMemo(
-    () =>
-      projectCommunicationTimeline({
-        messages: form.kommunikation,
-        eventContacts: form.kontakte,
-        contacts: personen.map((person) => ({
-          id: person.id,
-          name: personName(person),
-          ...(person.email ? { email: person.email } : {}),
-        })),
-        ...((form.outlookMailbox ?? settings.outlookMailbox)
-          ? { mailbox: form.outlookMailbox ?? settings.outlookMailbox ?? "" }
-          : {}),
-        channels: selectionListChoices(selectionLists.communicationChannels).map(
-          (channel) => channel.name,
-        ),
-        criteria: {
-          channel: communicationChannel,
-          contactId: communicationContactFilter,
-          topicId: communicationTopicFilter,
-          direction: communicationDirection,
-          search: communicationSearch,
-          attachmentsOnly: communicationAttachmentsOnly,
-          view: communicationView,
-        },
-      }),
+  const communicationSource = useMemo(
+    () => ({
+      messages: form.kommunikation,
+      eventContacts: form.kontakte,
+      contacts: personen.map((person) => ({
+        id: person.id,
+        name: personName(person),
+        ...(person.email ? { email: person.email } : {}),
+      })),
+      ...((form.outlookMailbox ?? settings.outlookMailbox)
+        ? { mailbox: form.outlookMailbox ?? settings.outlookMailbox ?? "" }
+        : {}),
+      channels: selectionListChoices(selectionLists.communicationChannels).map(
+        (channel) => channel.name,
+      ),
+    }),
     [
       selectionLists.communicationChannels,
-      communicationAttachmentsOnly,
-      communicationChannel,
-      communicationContactFilter,
-      communicationTopicFilter,
-      communicationDirection,
-      communicationSearch,
-      communicationView,
       form.kontakte,
       form.kommunikation,
       form.outlookMailbox,
@@ -576,28 +546,29 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
       settings.outlookMailbox,
     ],
   );
-  const communicationGroups = communicationTimeline.groups;
-  const selectedCommunication = useMemo(
-    () =>
-      communicationTimeline.visibleMessages.find(
-        (message) => message.id === selectedCommunicationId,
-      ) ?? null,
-    [communicationTimeline.visibleMessages, selectedCommunicationId],
+  const [communicationDisplay] = useState(() =>
+    createCommunicationDisplayWorkspace(communicationSource, {
+      assignTopic: (entryId, topicId) => detailWorkspace.assignCommunicationTopic(entryId, topicId),
+    }),
   );
-  const selectedThread = communicationTimeline.selectedThread(selectedCommunicationId);
-  const communicationFilterCount =
-    (communicationContactFilter === "all" ? 0 : 1) +
-    (communicationTopicFilter === "all" ? 0 : 1) +
-    (communicationDirection === "all" ? 0 : 1) +
-    (communicationAttachmentsOnly ? 1 : 0) +
-    (communicationChannel === "all" ? 0 : 1);
-  const resetCommunicationFilters = () => {
-    setCommunicationChannel("all");
-    setCommunicationContactFilter("all");
-    setCommunicationTopicFilter("all");
-    setCommunicationDirection("all");
-    setCommunicationAttachmentsOnly(false);
-  };
+  const communication = useSyncExternalStore(
+    communicationDisplay.subscribe,
+    communicationDisplay.snapshot,
+    communicationDisplay.snapshot,
+  );
+  const {
+    criteria: communicationCriteria,
+    timeline: communicationTimeline,
+    selectedMessage: selectedCommunication,
+    selectedThread,
+    selectedPosition,
+    openConversation,
+    filterCount: communicationFilterCount,
+  } = communication;
+  useEffect(
+    () => communicationDisplay.accept(communicationSource),
+    [communicationDisplay, communicationSource],
+  );
 
   useEffect(() => {
     detailWorkspace.accept(event, personen, kunden, events);
@@ -665,12 +636,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
     }
   }
   async function assignCommunicationTopic(entryId: string, topicId: string | null) {
-    try {
-      await detailWorkspace.assignCommunicationTopic(entryId, topicId);
-      toast.success(topicId ? "Thema zugeordnet." : "Thema entfernt.");
-    } catch {
-      toast.error("Thema konnte nicht gespeichert werden.");
-    }
+    const outcome = await communicationDisplay.assignTopic(entryId, topicId);
+    if (outcome.kind === "success") toast.success(outcome.message);
+    else toast.error(outcome.message);
   }
   async function kommunikationSynchronisieren() {
     const outcome = await detailWorkspace.execute("sync-communication");
@@ -2215,8 +2183,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <Input
                 aria-label="Kommunikation durchsuchen"
                 className="pl-9"
-                value={communicationSearch}
-                onChange={(event) => setCommunicationSearch(event.target.value)}
+                value={communicationCriteria.search}
+                onChange={(event) => communicationDisplay.update({ search: event.target.value })}
                 placeholder="Betreff, Absender, Adresse oder Text durchsuchen …"
               />
             </div>
@@ -2230,9 +2198,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 <button
                   key={value}
                   type="button"
-                  aria-pressed={communicationView === value}
-                  onClick={() => setCommunicationView(value)}
-                  className={segmentFeld(communicationView === value)}
+                  aria-pressed={communicationCriteria.view === value}
+                  onClick={() => communicationDisplay.update({ view: value })}
+                  className={segmentFeld(communicationCriteria.view === value)}
                 >
                   {label}
                 </button>
@@ -2244,9 +2212,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <Button
               size="sm"
               className="rounded-full"
-              variant={communicationChannel === "all" ? "secondary" : "outline"}
-              aria-pressed={communicationChannel === "all"}
-              onClick={() => setCommunicationChannel("all")}
+              variant={communicationCriteria.channel === "all" ? "secondary" : "outline"}
+              aria-pressed={communicationCriteria.channel === "all"}
+              onClick={() => communicationDisplay.update({ channel: "all" })}
             >
               Alle{" "}
               <span className="tabular-nums text-muted-foreground">
@@ -2255,7 +2223,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             </Button>
             {communicationTimeline.channelNames.map((channel) => {
               const ChannelIcon = communicationChannelIcon(channel, communicationChannelOptions);
-              const active = communicationChannel === channel;
+              const active = communicationCriteria.channel === channel;
               return (
                 <Button
                   key={channel}
@@ -2263,7 +2231,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   className="rounded-full"
                   variant={active ? "secondary" : "outline"}
                   aria-pressed={active}
-                  onClick={() => setCommunicationChannel(active ? "all" : channel)}
+                  onClick={() => communicationDisplay.toggleChannel(channel)}
                 >
                   <ChannelIcon className="size-4" aria-hidden="true" />
                   {channel}{" "}
@@ -2275,8 +2243,8 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             })}
             <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
             <Select
-              value={communicationContactFilter}
-              onValueChange={setCommunicationContactFilter}
+              value={communicationCriteria.contactId}
+              onValueChange={(contactId) => communicationDisplay.update({ contactId })}
             >
               <SelectTrigger aria-label="Nach Bezug filtern" className="h-8 w-auto rounded-full">
                 <SelectValue placeholder="Bezug: Alle" />
@@ -2291,7 +2259,10 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={communicationTopicFilter} onValueChange={setCommunicationTopicFilter}>
+            <Select
+              value={communicationCriteria.topicId}
+              onValueChange={(topicId) => communicationDisplay.update({ topicId })}
+            >
               <SelectTrigger aria-label="Nach Thema filtern" className="h-8 w-auto rounded-full">
                 <SelectValue placeholder="Thema: Alle" />
               </SelectTrigger>
@@ -2305,9 +2276,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               </SelectContent>
             </Select>
             <Select
-              value={communicationDirection}
+              value={communicationCriteria.direction}
               onValueChange={(value) =>
-                setCommunicationDirection(value as "all" | "INCOMING" | "OUTGOING")
+                communicationDisplay.update({
+                  direction: value as "all" | "INCOMING" | "OUTGOING",
+                })
               }
             >
               <SelectTrigger aria-label="Nach Richtung filtern" className="h-8 w-auto rounded-full">
@@ -2322,9 +2295,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
             <Button
               size="sm"
               className="rounded-full"
-              variant={communicationAttachmentsOnly ? "secondary" : "outline"}
-              aria-pressed={communicationAttachmentsOnly}
-              onClick={() => setCommunicationAttachmentsOnly((only) => !only)}
+              variant={communicationCriteria.attachmentsOnly ? "secondary" : "outline"}
+              aria-pressed={communicationCriteria.attachmentsOnly}
+              onClick={() => communicationDisplay.toggleAttachments()}
             >
               <Paperclip className="size-4" aria-hidden="true" />
               mit Anlagen{" "}
@@ -2332,15 +2305,18 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                 {communicationTimeline.attachmentCount}
               </span>
             </Button>
-            <FilterResetChip count={communicationFilterCount} onReset={resetCommunicationFilters} />
+            <FilterResetChip
+              count={communicationFilterCount}
+              onReset={() => communicationDisplay.resetFilters()}
+            />
           </div>
 
-          {communicationSearch.trim() && (
+          {communicationCriteria.search.trim() && (
             <p className="text-sm text-muted-foreground">
               <span className="font-semibold tabular-nums text-foreground">
                 {communicationTimeline.matchCount}
               </span>{" "}
-              Treffer für „{communicationSearch.trim()}“
+              Treffer für „{communicationCriteria.search.trim()}“
             </p>
           )}
 
@@ -2361,7 +2337,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                   size="sm"
                   variant="outline"
                   className="mt-3"
-                  onClick={resetCommunicationFilters}
+                  onClick={() => communicationDisplay.resetFilters()}
                 >
                   {communicationFilterCount} Filter zurücksetzen
                 </Button>
@@ -2372,16 +2348,18 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
               <div className="hidden items-center gap-3.5 border-b bg-muted/30 px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground md:flex">
                 <span className="w-9">Art</span>
                 <span className="flex-1">
-                  {communicationView === "verlauf" ? "Betreff und Vorschau" : "Konversation"}
+                  {communicationCriteria.view === "verlauf"
+                    ? "Betreff und Vorschau"
+                    : "Konversation"}
                 </span>
                 <span className="w-52">Bezug</span>
                 <span className="w-20 text-right">
-                  {communicationView === "verlauf" ? "Zeit" : "Zeitraum"}
+                  {communicationCriteria.view === "verlauf" ? "Zeit" : "Zeitraum"}
                 </span>
               </div>
 
-              {communicationView === "verlauf"
-                ? communicationGroups.map((group) => (
+              {communicationCriteria.view === "verlauf"
+                ? communicationTimeline.groups.map((group) => (
                     <section key={group.key} aria-label={`Kommunikation ${group.label}`}>
                       <h3 className="flex items-center gap-2 border-b bg-muted/40 px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                         {group.label}
@@ -2420,11 +2398,11 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                 (topic) => topic.id === message.themaId,
                               ) ?? null
                             }
-                            query={communicationSearch}
+                            query={communicationCriteria.search}
                             threadSize={communicationTimeline.threadSize(message)}
                             bezug={bezug}
                             sent={communicationTimeline.time2winOutgoingIds.has(message.id)}
-                            onOpen={() => setSelectedCommunicationId(message.id)}
+                            onOpen={() => communicationDisplay.selectMessage(message.id)}
                           />
                         );
                       })}
@@ -2459,7 +2437,9 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                             <button
                               type="button"
                               aria-expanded={open}
-                              onClick={() => setOpenConversation(open ? null : conversation.key)}
+                              onClick={() =>
+                                communicationDisplay.toggleConversation(conversation.key)
+                              }
                               className="flex w-full items-center gap-3.5 px-4 py-2 text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                             >
                               <span className="flex w-9 shrink-0 items-center gap-0.5 text-muted-foreground">
@@ -2475,7 +2455,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                   <span className="min-w-0 truncate text-sm font-semibold text-foreground">
                                     <Highlighted
                                       text={conversation.label}
-                                      query={communicationSearch}
+                                      query={communicationCriteria.search}
                                     />
                                   </span>
                                   {conversation.messages.length > 1 && (
@@ -2542,13 +2522,13 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                                           (topic) => topic.id === message.themaId,
                                         ) ?? null
                                       }
-                                      query={communicationSearch}
+                                      query={communicationCriteria.search}
                                       threadSize={1}
                                       bezug={bezug}
                                       sent={communicationTimeline.time2winOutgoingIds.has(
                                         message.id,
                                       )}
-                                      onOpen={() => setSelectedCommunicationId(message.id)}
+                                      onOpen={() => communicationDisplay.selectMessage(message.id)}
                                     />
                                   );
                                 })}
@@ -2564,7 +2544,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
 
           <Sheet
             open={!!selectedCommunication}
-            onOpenChange={(shown) => !shown && setSelectedCommunicationId(null)}
+            onOpenChange={(shown) => !shown && communicationDisplay.selectMessage(null)}
           >
             <SheetContent
               closeLabel="Nachricht schließen"
@@ -2597,9 +2577,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                       <p className="mt-3 text-xs text-muted-foreground">
                         Nachricht{" "}
                         <span className="font-semibold tabular-nums text-foreground">
-                          {selectedThread.findIndex(
-                            (message) => message.id === selectedCommunication.id,
-                          ) + 1}
+                          {selectedPosition}
                         </span>{" "}
                         von{" "}
                         <span className="font-semibold tabular-nums text-foreground">
@@ -2731,7 +2709,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                             <button
                               key={message.id}
                               type="button"
-                              onClick={() => setSelectedCommunicationId(message.id)}
+                              onClick={() => communicationDisplay.selectMessage(message.id)}
                               className={cn(
                                 "block w-full rounded-md px-2 py-1.5 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                 message.id === selectedCommunication.id && "bg-muted",
@@ -2768,7 +2746,7 @@ function DetailInhalt({ event }: { event: T2WEvent }) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setSelectedCommunicationId(null)}
+                      onClick={() => communicationDisplay.selectMessage(null)}
                     >
                       Schließen
                     </Button>

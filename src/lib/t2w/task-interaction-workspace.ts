@@ -30,6 +30,7 @@ type TaskCommentInput = { id?: string; text?: string; delete?: boolean };
  */
 export type TaskInteractionAdapter<TState> = {
   create(draft: Partial<Task>): Promise<TaskIntentResult<TState>>;
+  createSuccessor(draft: Partial<Task>, predecessorId: string): Promise<TaskIntentResult<TState>>;
   update(task: Task, draft: Partial<Task>): Promise<TaskIntentResult<TState>>;
   delete(task: Task): Promise<TaskIntentResult<TState>>;
   addDependency(task: Task, predecessorId: string): Promise<TaskIntentResult<TState>>;
@@ -60,6 +61,7 @@ export type TaskInteractionWorkspace<TState> = {
   close(): void;
   updateDraft(patch: Partial<Task>): void;
   create(draft: Partial<Task>, selectCreated?: boolean): Promise<TState | undefined>;
+  createSuccessor(draft: Partial<Task>, predecessorId: string): Promise<TState | undefined>;
   save(): Promise<TState | undefined>;
   addDependency(predecessorId: string): Promise<TState | undefined>;
   removeDependency(predecessorId: string): Promise<TState | undefined>;
@@ -185,6 +187,9 @@ export function createTaskInteractionWorkspace<TState>(
         ? apply(() => adapter.create(draft))
         : applyWithoutSelection(() => adapter.create(draft));
     },
+    async createSuccessor(draft, predecessorId) {
+      return applyWithoutSelection(() => adapter.createSuccessor(draft, predecessorId));
+    },
     async save() {
       const task = snapshot.task;
       if (!task) return undefined;
@@ -286,6 +291,10 @@ export function createInMemoryTaskInteractionAdapter(initial: {
       };
       tasks = [...tasks, task];
       return { state: tasks, task };
+    },
+    async createSuccessor(draft, predecessorId) {
+      taskOrFail(predecessorId);
+      return this.create(draft);
     },
     async update(before, draft) {
       return save({ ...taskOrFail(before.id), ...draft, version: before.version + 1 });

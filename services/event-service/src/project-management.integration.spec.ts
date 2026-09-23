@@ -161,6 +161,62 @@ describe.skipIf(!enabled)("simplified PM persistence", () => {
       global.tasks.some((task) => task.title === "Globale Aufgabe" && task.event === null),
     ).toBe(true);
   });
+  it("creates a successor and its dependency atomically", async () => {
+    const e = await event();
+    const first = await pm.command(
+      e.id,
+      { type: "create", graphVersion: 0, task: { title: "Briefing" } },
+      actor,
+    );
+    const predecessorId = first.affectedTaskId!;
+    const version = (await pm.read(e.id, actor)).event.pmGraphVersion;
+
+    await expect(
+      pm.command(
+        e.id,
+        {
+          type: "create-successor",
+          graphVersion: version,
+          predecessorId: randomUUID(),
+          task: { title: "Druck" },
+        },
+        actor,
+      ),
+    ).rejects.toThrow("Kontext");
+    expect((await pm.read(e.id, actor)).tasks.map((task) => task.title)).toEqual(["Briefing"]);
+
+    const created = await pm.command(
+      e.id,
+      {
+        type: "create-successor",
+        graphVersion: version,
+        predecessorId,
+        task: { title: "Druck" },
+      },
+      actor,
+    );
+    expect(created.affectedTaskId).toEqual(expect.any(String));
+    expect(created.edges).toContainEqual({
+      predecessorId,
+      successorId: created.affectedTaskId,
+    });
+    expect((await pm.read(e.id, actor)).edges).toContainEqual({
+      predecessorId,
+      successorId: created.affectedTaskId,
+    });
+    expect(
+      await prisma.pmActivity.findFirst({
+        where: { taskId: created.affectedTaskId!, action: "create-successor" },
+      }),
+    ).toMatchObject({
+      details: { dependency: { predecessorId, successorId: created.affectedTaskId } },
+    });
+    expect(
+      await prisma.auditLog.findFirst({
+        where: { entity: "PmTask", entityId: created.affectedTaskId!, action: "create-successor" },
+      }),
+    ).toBeTruthy();
+  });
   it("records comments and limits editing to their author", async () => {
     const e = await event();
     const state = await pm.command(

@@ -1,44 +1,26 @@
-import { useMemo, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/t2w/EventDialog";
 import { GanttSeite } from "@/routes/gantt";
 import { KalenderSeite } from "@/routes/kalender";
 import { PageHeader } from "@/components/t2w/PageHeader";
-import {
-  ColumnPicker,
-  DataTable,
-  TableToolbar,
-  useTableBehavior,
-} from "@/components/t2w/DataTable";
-import {
-  EVENT_COLUMNS,
-  EVENT_SORT_COLUMNS,
-  EventHeaderCells,
-  EventRowCells,
-  type EventColumn,
-} from "@/components/t2w/EventTableColumns";
+import { EventTablePresentation } from "@/components/t2w/EventTablePresentation";
 import { FilterChip, FilterResetChip } from "@/components/t2w/FilterChip";
-import { FilterBar, FilterTrenner } from "@/components/t2w/FilterBar";
+import { FilterTrenner } from "@/components/t2w/FilterBar";
 import { EventViewTabs } from "@/components/t2w/EventViewTabs";
-import { Input } from "@/components/ui/input";
 import { StatusLegend } from "@/components/t2w/StatusBadge";
 import { useT2W } from "@/lib/t2w/store";
 import { heuteIso } from "@/lib/t2w/format";
-import { STATUS_LABEL, STATUS_ORDER, type EventStatus, type T2WEvent } from "@/lib/t2w/types";
+import { STATUS_LABEL, STATUS_ORDER, type EventStatus } from "@/lib/t2w/types";
 import {
   selectEventCatalogue,
   type ArchiveSelection,
   type EventPeriod,
 } from "@/lib/t2w/event-catalogue";
-import { EventMobileList } from "@/components/t2w/EventMobileList";
-import {
-  EventDateCollisionLegend,
-  eventDateCollisionSurfaceClass,
-} from "@/components/t2w/EventDateCollision";
+import { EventDateCollisionLegend } from "@/components/t2w/EventDateCollision";
 import { createEventDateCollisionMap } from "@/lib/t2w/event-date-collisions";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/veranstaltungen")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -89,13 +71,6 @@ function Veranstaltungen() {
     FILTER_GRUNDSTELLUNG.veranstalter,
   );
   const [service, setService] = useState<string>(FILTER_GRUNDSTELLUNG.service);
-  const tableRef = useRef<HTMLTableElement>(null);
-  const table = useTableBehavior<T2WEvent, EventColumn>({
-    storageKey: "t2w-event-table-columns",
-    columns: EVENT_SORT_COLUMNS,
-    initialSort: { key: "Zeitraum", direction: "asc" },
-  });
-  const { visibleColumns, toggleColumn, moveColumn, sort } = table;
   const heute = heuteIso();
 
   const gefiltert = useMemo(() => {
@@ -140,8 +115,6 @@ function Veranstaltungen() {
       ),
     [events],
   );
-  const sortiere = table.sortBy;
-  const zeilen = table.rows(gefiltert);
   const dateCollisions = useMemo(
     () =>
       createEventDateCollisionMap(
@@ -194,21 +167,18 @@ function Veranstaltungen() {
 
       <div className="space-y-3">
         <EventViewTabs aktiv="liste" />
-        <FilterBar
-          werkzeuge={
-            <div className="hidden md:block">
-              <TableToolbar
-                tableRef={tableRef}
-                exportName="Veranstaltungen"
-                columnPicker={
-                  <ColumnPicker
-                    columns={EVENT_COLUMNS}
-                    visibleColumns={visibleColumns}
-                    toggleColumn={toggleColumn}
-                    moveColumn={moveColumn}
-                  />
-                }
-              />
+        <EventTablePresentation
+          events={gefiltert}
+          settings={settings}
+          selectionLists={selectionLists}
+          tableId="t2w-event-table-columns"
+          exportName="Veranstaltungen"
+          emptyText="Keine Events für die aktuelle Filterauswahl."
+          emptyReset={{ count: aktiveFilter, onReset: filterZuruecksetzen }}
+          dateCollisions={dateCollisions}
+          desktopFooter={
+            <div className="mt-2">
+              <StatusLegend />
             </div>
           }
         >
@@ -317,71 +287,7 @@ function Veranstaltungen() {
           </FilterChip>
 
           <FilterResetChip count={aktiveFilter} onReset={filterZuruecksetzen} />
-        </FilterBar>
-
-        <EventMobileList
-          events={zeilen}
-          settings={settings}
-          selectionLists={selectionLists}
-          emptyText="Keine Events für die aktuelle Filterauswahl."
-          dateCollisions={dateCollisions}
-        />
-        <div className="hidden md:block">
-          <DataTable
-            ref={tableRef}
-            exportName="Veranstaltungen"
-            tools="extern"
-            className="min-w-[54rem]"
-          >
-            <thead className="text-left">
-              <tr>
-                <EventHeaderCells visibleColumns={visibleColumns} sort={sort} onSort={sortiere} />
-              </tr>
-            </thead>
-            <tbody>
-              {zeilen.map((e) => {
-                const dateCollision = dateCollisions.get(e.id);
-                return (
-                  <tr
-                    key={e.id}
-                    className={cn(eventDateCollisionSurfaceClass(dateCollision, "table"))}
-                    data-date-collision-group={
-                      dateCollision ? String(dateCollision.groupIndex + 1) : undefined
-                    }
-                  >
-                    <EventRowCells
-                      event={e}
-                      visibleColumns={visibleColumns}
-                      context={{ settings, selectionLists, dateCollision }}
-                    />
-                  </tr>
-                );
-              })}
-              {gefiltert.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={visibleColumns.length}
-                    className="!h-auto !max-w-none !overflow-visible !whitespace-normal py-8"
-                  >
-                    <div className="flex flex-col items-center gap-2 text-center">
-                      <p className="text-sm font-medium text-foreground">
-                        Keine Events für die aktuelle Filterauswahl.
-                      </p>
-                      {aktiveFilter > 0 && (
-                        <Button size="sm" variant="outline" onClick={filterZuruecksetzen}>
-                          {aktiveFilter} Filter zurücksetzen
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </DataTable>
-          <div className="mt-2">
-            <StatusLegend />
-          </div>
-        </div>
+        </EventTablePresentation>
         {dateCollisions.size > 0 && (
           <div className="mt-1.5">
             <EventDateCollisionLegend />

@@ -80,6 +80,37 @@ test("lädt Tabellenspalten aus dem Konto und speichert Änderungen zurück", as
   await expect.poll(() => putBody).toMatchObject({ visible: expect.arrayContaining(["Tage"]) });
 });
 
+test("hält die Spaltenpräferenzen von Übersicht und Veranstaltungen getrennt", async ({ page }) => {
+  await mockEventManagementApi(page);
+  const preferences = new Map<string, unknown>();
+  const writes: string[] = [];
+  await page.route("**/api/v1/table-preferences/**", (route) => {
+    const tableId = new URL(route.request().url()).pathname.split("/").at(-1)!;
+    if (route.request().method() === "GET")
+      return route.fulfill({ json: { value: preferences.get(tableId) ?? null } });
+    if (route.request().method() === "PUT") {
+      preferences.set(tableId, route.request().postDataJSON());
+      writes.push(tableId);
+      return route.fulfill({ json: { value: preferences.get(tableId) } });
+    }
+    return route.fallback();
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Spalten auswählen" }).click();
+  await page.getByRole("checkbox", { name: "Tage" }).uncheck();
+  await expect(page.getByRole("button", { name: "Tage sortieren" })).toHaveCount(0);
+  await expect.poll(() => writes).toContain("t2w-overview-table-columns");
+
+  await page.goto("/veranstaltungen");
+  await expect(page.getByRole("button", { name: "Tage sortieren" })).toBeVisible();
+  await page.getByRole("button", { name: "Tage sortieren" }).click();
+  await expect.poll(() => writes).toContain("t2w-event-table-columns");
+
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Tage sortieren" })).toHaveCount(0);
+});
+
 test("ordnet Tabellenspalten um und behält die Reihenfolge nach dem Neuladen", async ({ page }) => {
   await mockEventManagementApi(page);
   let preference: { version: 1; visible: string[]; sort: { key: string; direction: string } } = {

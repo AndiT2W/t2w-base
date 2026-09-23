@@ -44,6 +44,7 @@ describe("Task interaction workspace", () => {
     const resolvers = new Map<string, (value: TaskHistory) => void>();
     const adapter: TaskInteractionAdapter<Task[]> = {
       create: async () => ({ state: [task, nextTask], task }),
+      createSuccessor: async () => ({ state: [task, nextTask], task: nextTask }),
       update: async (current) => ({ state: [task, nextTask], task: current }),
       delete: async () => ({ state: [], task: null }),
       addDependency: async (current) => ({ state: [task, nextTask], task: current }),
@@ -115,5 +116,19 @@ describe("Task interaction workspace", () => {
     const attachment = workspace.snapshot().attachments[0]!;
     expect(attachment.fileName).toBe("briefing.txt");
     await expect(workspace.downloadAttachment(attachment)).resolves.toBeInstanceOf(Blob);
+  });
+
+  it("keeps a failed successor intent visible without creating a task", async () => {
+    const workspace = createTaskInteractionWorkspace(
+      createInMemoryTaskInteractionAdapter({ tasks: [task] }),
+    );
+    const draft = { title: "Druck", scope: "GLOBAL" as const };
+
+    await expect(workspace.createSuccessor(draft, "missing")).resolves.toBeUndefined();
+    expect(workspace.snapshot()).toMatchObject({ error: "Aufgabe nicht gefunden.", task: null });
+
+    const state = await workspace.createSuccessor(draft, task.id);
+    expect(state).toHaveLength(2);
+    expect(workspace.snapshot()).toMatchObject({ error: null, task: null });
   });
 });

@@ -268,8 +268,8 @@ function QuickAdd({
   const submit = async () => {
     const value = title.trim();
     if (!value) return;
-    await onCreate(value);
-    setTitle("");
+    const result = await onCreate(value);
+    if (result !== undefined) setTitle("");
   };
 
   return (
@@ -410,8 +410,9 @@ export function TaskFlowChain({
                     {...(busy === undefined ? {} : { busy })}
                     className="w-[300px] shrink-0"
                     onCreate={async (title) => {
-                      await onAppend(last, title);
-                      setAppendTo(null);
+                      const created = await onAppend(last, title);
+                      if (created !== undefined) setAppendTo(null);
+                      return created;
                     }}
                   />
                 ) : (
