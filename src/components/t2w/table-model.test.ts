@@ -81,6 +81,9 @@ describe("table model", () => {
         visible: ["count", "unknown"],
         sort: { key: "count", direction: "desc" },
       }),
-    ).toEqual({ visibleColumns: ["count"], sort: { key: "count", direction: "desc" } });
+    ).toEqual({
+      visibleColumns: ["count", "name"],
+      sort: { key: "count", direction: "desc" },
+    });
   });
 });

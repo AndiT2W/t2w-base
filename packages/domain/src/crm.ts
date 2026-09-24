@@ -38,6 +38,8 @@ export type Kunde = {
   name: string;
   personId: string | null;
   primaryContactId?: string | null;
+  /** Optional invoice/address attention line; not a substitute for a Person. */
+  zuHaenden?: string;
   uid: string;
   iban: string;
   bic: string;

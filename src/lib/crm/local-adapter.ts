@@ -20,9 +20,11 @@ export function createLocalCrmAdapter(
     const state = JSON.parse(saved) as CrmState;
     const normalized = {
       ...state,
-      kunden: state.kunden.map((kunde) =>
-        (kunde.status as string) === "pruefung" ? { ...kunde, status: "aktiv" as const } : kunde,
-      ),
+      kunden: state.kunden.map((kunde) => ({
+        ...kunde,
+        zuHaenden: kunde.zuHaenden ?? "",
+        ...((kunde.status as string) === "pruefung" ? { status: "aktiv" as const } : {}),
+      })),
     };
     if (JSON.stringify(normalized) !== saved) storage.setItem(key, JSON.stringify(normalized));
     return normalized;

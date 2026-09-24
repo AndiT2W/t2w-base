@@ -65,6 +65,7 @@ type Modus = "person" | "kunde" | "beides";
 const CUSTOMER_COLUMN_STORAGE_KEY = "t2w-customer-table-columns";
 const CUSTOMER_COLUMNS = [
   "Kunde",
+  "Zu Händen",
   "Hauptansprechperson",
   "E-Mail",
   "UID",
@@ -132,6 +133,8 @@ function customerCell(customer: Kunde, column: CustomerColumn, people: Person[])
   switch (column) {
     case "Kunde":
       return customer.name;
+    case "Zu Händen":
+      return customer.zuHaenden || "–";
     case "Hauptansprechperson":
       return customer.primaryContactId
         ? personName(people.find((p) => p.id === customer.primaryContactId) ?? ({} as Person))
@@ -850,6 +853,7 @@ function useCustomerTable(people: Person[]) {
       sortValue: (customer) =>
         ({
           Kunde: customer.name,
+          "Zu Händen": customer.zuHaenden,
           Hauptansprechperson: customer.primaryContactId
             ? personName(people.find((p) => p.id === customer.primaryContactId) ?? ({} as Person))
             : "",
@@ -1235,6 +1239,13 @@ function CustomerDetail({
 
       <Abschnitt titel="Anschrift">
         <div className="grid gap-3 sm:grid-cols-2">
+          <Feld label="Zu Händen" htmlFor="ku-zu-haenden">
+            <Input
+              id="ku-zu-haenden"
+              value={werte.zuHaenden ?? ""}
+              onChange={(e) => setzen("zuHaenden", e.target.value)}
+            />
+          </Feld>
           <Feld label="Straße" htmlFor="ku-strasse">
             <Input
               id="ku-strasse"
@@ -1573,6 +1584,7 @@ function CreateDialog({
   });
   const [k, setK] = useState({
     name: "",
+    zuHaenden: "",
     uid: "",
     iban: "",
     bic: "",
@@ -1680,6 +1692,7 @@ function CreateDialog({
           {mode !== "person" && (
             <>
               {f(k, setK, "name", "Kundenname")}
+              {f(k, setK, "zuHaenden", "Zu Händen")}
               {f(k, setK, "uid", "UID")}
               {financeAccess && f(k, setK, "iban", "IBAN")}
               {financeAccess && f(k, setK, "bic", "BIC")}

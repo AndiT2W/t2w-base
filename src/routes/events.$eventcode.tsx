@@ -144,6 +144,10 @@ function RecipientMasterData({ recipient }: { recipient: Kunde }) {
         <dd>{address || "—"}</dd>
       </div>
       <div>
+        <dt className="text-xs text-muted-foreground">Zu Händen</dt>
+        <dd>{recipient.zuHaenden || "—"}</dd>
+      </div>
+      <div>
         <dt className="text-xs text-muted-foreground">UID</dt>
         <dd>{recipient.uid || "—"}</dd>
       </div>

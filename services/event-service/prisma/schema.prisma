@@ -103,6 +103,7 @@ model Organizer {
   email        String?
   personId     String?     @unique @db.Uuid
   primaryContactId String? @db.Uuid
+  attentionLine String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   events       Event[]

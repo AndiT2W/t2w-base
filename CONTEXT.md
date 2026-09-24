@@ -20,6 +20,8 @@
 
 The CRM workspace manages people, customer profiles, and their independent relationships. A person may have customer associations and event roles simultaneously. Removing a customer association preserves the person and any event roles.
 
+**Zu-Händen-Zeile**: Optionale Textzeile am Kunden für die Rechnungs- oder Adressdarstellung. Sie ist unabhängig von der Person-Zuordnung und ersetzt keinen Kontakt.
+
 ## Event workspace
 
 The Event workspace owns event participant and recipient rules: organizer assignment, payout recipients, invoice recipients, contact roles, deletion eligibility, defaults, and optimistic-concurrency behavior. Multi-relationship commands are atomic. Referenced organizers are not deleted; they may be deactivated.

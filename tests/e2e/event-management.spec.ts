@@ -1271,6 +1271,33 @@ test("speichert die Hauptansprechperson eines Kunden", async ({ page }) => {
   );
 });
 
+test("speichert die Zu-Händen-Zeile eines Kunden nach dem Neuladen", async ({ page }) => {
+  const requests = await mockApi(page);
+  await page.goto("/kontakte");
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
+  await page.getByText("Nordwerk GmbH", { exact: true }).click();
+
+  await page.getByRole("textbox", { name: "Zu Händen" }).fill("Frau Marion Kessler");
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  await expect(page.getByText("Änderungen gespeichert.")).toBeVisible();
+  await expect
+    .poll(() =>
+      requests.some(
+        ({ method, url, body }) =>
+          method === "PATCH" &&
+          url.endsWith("/api/v1/organizers/c1") &&
+          JSON.parse(body ?? "{}").attentionLine === "Frau Marion Kessler",
+      ),
+    )
+    .toBeTruthy();
+
+  await page.reload();
+  await page.getByRole("tab", { name: /Kunden \(2\)/ }).click();
+  await expect(page.getByRole("cell", { name: "Frau Marion Kessler", exact: true })).toBeVisible();
+  await page.getByText("Nordwerk GmbH", { exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Zu Händen" })).toHaveValue("Frau Marion Kessler");
+});
+
 test("sortiert Kunden und Kontakte über die Tabellenüberschriften", async ({ page }) => {
   await mockApi(page);
   await page.goto("/kontakte");

@@ -1,5 +1,9 @@
 # Maintenance Log
 
+## 2026-09-23
+
+- Das Kundenmodell hat eine optionale **Zu-Händen-Zeile** erhalten. Sie wird als Rechnungs-/Adressangabe am Kunden gespeichert, in der Anlage und Bearbeitung gepflegt, in Kundenliste und Excel-Export angezeigt und bei Event-Zahlungs- bzw. Rechnungsempfängern mit den Stammdaten dargestellt. Die Zeile bleibt bewusst unabhängig von `Hauptansprechperson`: Ein unvollständiger Personen-Kontakt muss nicht nur für eine Adresszeile angelegt werden. Regression: [`event-management.spec.ts`](../tests/e2e/event-management.spec.ts).
+
 ## 2026-09-22
 
 - Nachgezogen auf Nutzerentscheidung: die Übersicht führt auf dem Telefon jetzt auch die **zwei Kacheln und drei Schnellfilter** des Artboards — Offene Aufgaben und Überfällige Aufgaben, dazu die Chips „Alle aktiven", „Nächste 14 Tage" und „Überfällige Aufgaben". „Events nächste 14 Tage", „Ordner fehlt", der Chip „Offene Aufgaben" und die Statusauswahl stehen ab `md` wieder da; auf dem Telefon kosteten sie den Platz bis zur ersten Zeile der Liste. `MetricTile`, `ToggleChip`, `FilterChip` und `FilterTrenner` nehmen dafür eine Klasse entgegen, damit eine Seite einzelne davon weglassen kann, ohne dass die Bausteine selbst von der Seite wissen. Der frühere Test „hält die Kennzahlkacheln im Bild" lief nach der Reduktion über null Elemente und prüfte nichts mehr — er prüft jetzt, was auf dem Telefon steht und was ab `md` zurückkommt.

@@ -25,6 +25,7 @@ const customerResponse = {
   name: "Nordwerk",
   type: "ORGANISATION",
   active: true,
+  attentionLine: "Frau Beispiel",
   uid: "ATU1",
   contacts: [{ contact: { id: "p1" } }],
   events: [{ eventCode: "260820_demo_event", name: "Demo Event" }],
@@ -59,6 +60,7 @@ describe("CRM module", () => {
       expect.objectContaining({
         id: "c1",
         name: "Nordwerk",
+        zuHaenden: "Frau Beispiel",
         kontaktIds: ["p1"],
         status: "aktiv",
         events: [

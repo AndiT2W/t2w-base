@@ -122,7 +122,7 @@ export function createTableBehavior<T, K extends string>(options: {
     },
     hydrate(preference: unknown) {
       if (isStoredPreference(preference)) {
-        const visible = validVisibleColumns(preference.visible, keys);
+        const visible = recoverVisibleColumns(preference.visible, keys);
         visibleColumns = visible.length ? visible : [...keys];
         const candidate = preference.sort;
         if (

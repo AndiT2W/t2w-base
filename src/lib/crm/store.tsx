@@ -92,6 +92,6 @@ export const passtPerson = (person: Person, query: string, kunden: Kunde[]) =>
     .toLowerCase()
     .includes(query.toLowerCase());
 export const passtKunde = (kunde: Kunde, query: string) =>
-  `${kunde.name} ${kunde.uid} ${kunde.iban} ${kunde.email} ${kunde.ort} ${kunde.plz}`
+  `${kunde.name} ${kunde.zuHaenden ?? ""} ${kunde.uid} ${kunde.iban} ${kunde.email} ${kunde.ort} ${kunde.plz}`
     .toLowerCase()
     .includes(query.toLowerCase());

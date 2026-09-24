@@ -48,6 +48,7 @@ type ApiKunde = {
   active?: boolean;
   personId?: string | null;
   primaryContactId?: string | null;
+  attentionLine?: string | null;
   uid?: string | null;
   iban?: string | null;
   bic?: string | null;
@@ -115,6 +116,7 @@ function mapKunde(value: ApiKunde): Kunde {
     name: value.name,
     personId: value.personId ?? null,
     primaryContactId: value.primaryContactId ?? null,
+    zuHaenden: value.attentionLine ?? "",
     uid: value.uid ?? "",
     iban: value.iban ?? "",
     bic: value.bic ?? "",
@@ -193,6 +195,7 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
             name: input.name,
             personId: input.personId,
             primaryContactId: input.primaryContactId,
+            attentionLine: input.zuHaenden,
             country: input.land,
             city: input.ort,
             street: input.strasse,
@@ -242,6 +245,7 @@ export function createHttpCrmAdapter(request: Request = fetch): CrmModule {
           body: JSON.stringify({
             name: next.name,
             primaryContactId: next.primaryContactId,
+            attentionLine: next.zuHaenden,
             country: next.land,
             city: next.ort,
             street: next.strasse,

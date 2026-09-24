@@ -935,6 +935,7 @@ export async function apiCreateCustomer(input: {
   iban?: string;
   bic?: string;
   bankName?: string;
+  attentionLine?: string;
   email?: string;
   personId?: string;
 }) {

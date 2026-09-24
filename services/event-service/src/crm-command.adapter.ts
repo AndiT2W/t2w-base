@@ -11,6 +11,7 @@ export type CustomerProfileInput = {
   bic?: string;
   bankName?: string;
   email?: string;
+  attentionLine?: string;
 };
 export type OrganizerInput = CustomerProfileInput & {
   name: string;

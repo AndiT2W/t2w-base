@@ -19,6 +19,7 @@ sources:
 - Der sichtbare Menüpunkt heißt **Kunden & Kontakte**.
 - `Veranstalter`, `Auszahlungsempfänger` und `Rechnungsempfänger` sind Eventrollen, die auf Kunden verweisen.
 - Ein Event hat genau einen Veranstalter, genau einen Auszahlungsempfänger und einen oder mehrere Rechnungsempfänger.
+- Ein Kunde kann eine optionale **Zu-Händen-Zeile** für Rechnungs- und Adressdarstellungen tragen. Sie ist kein eigener Kontakt und unabhängig von der Hauptansprechperson.
 - Der Veranstalter wird standardmäßig als Auszahlungsempfänger und Rechnungsempfänger vorbelegt; manuelle Abweichungen bleiben unabhängig erhalten.
 - Importregel: Wenn beim Import eines Events kein Rechnungsempfänger vorhanden ist, wird der Auszahlungsempfänger als Rechnungsempfänger übernommen. Die Quelle der Übernahme sollte als automatisch übernommen markiert bleiben, damit sie später überprüft oder geändert werden kann.
 - Initiale Eventkontaktrollen sind `Anmeldung`, `Finanzen` und `Timing`.
